@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Responsible persons') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Responsible persons') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/responsible/groups" class="btn btn-sm btn-ghost">👥 {{ _('Groups') }}</a>
+        <button class="btn btn-primary" onclick="document.getElementById('addPersonModal').style.display='flex'">+ {{ _('Add Person') }}</button>
+    </div>
+</div>
+
+<div class="filters">
+    <select onchange="location.href='/responsible?group='+this.value">
+        <option value="">{{ _('All') }} {{ _('Groups') }}</option>
+        {% for g in groups %}
+        <option value="{{ g.id }}" {% if group_filter==g.id %}selected{% endif %}>{{ g.name }} ({{ g.members|length }})</option>
+        {% endfor %}
+    </select>
+</div>
+
+{% for c in verantwoordelijken %}
+<div class="card" style="padding:14px 18px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:14px;cursor:pointer" onclick="togglePerson({{ c.id }})">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#5b9cf6,#3b7dd8);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:17px;flex-shrink:0">
+            {{ (c.naam or '?')[0]|upper }}
+        </div>
+        <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:15px;color:#1a1a2e">{{ c.naam }}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px">
+                {% if c.position %}{{ c.position }} · {% endif %}
+                {% if c.telefoon %}📞 {{ c.telefoon }}{% endif %}
+                {% if c.email %} · ✉️ {{ c.email }}{% endif %}
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            {% if c.resp_sections %}
+            <span class="badge badge-active" style="font-size:11px">{{ c.resp_sections|length }} {{ _('sections') }}</span>
+            {% endif %}
+            {% if c.resp_group %}
+            <span class="badge badge-purple" style="font-size:11px">{{ c.resp_group.name }}</span>
+            {% endif %}
+            <form method="POST" action="/responsible/{{ c.id }}/delete" style="display:inline" onclick="event.stopPropagation()" onsubmit="return confirm('{{ _('Delete') }} {{ c.naam }}?')">
+                <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:11px">🗑</button>
+            </form>
+            <span id="arrow-{{ c.id }}" style="font-size:11px;color:#999;transition:transform 0.2s">▶</span>
+        </div>
+    </div>
+
+    <!-- Expandable content -->
+    <div id="person-{{ c.id }}" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #f0f2f5">
+        <!-- Sections -->
+        <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <h3 style="margin:0;font-size:13px;color:#555;text-transform:uppercase;letter-spacing:0.5px">{{ _('Departments') }}</h3>
+                <button class="btn btn-sm btn-ghost" onclick="openSectionModal({{ c.id }})" style="font-size:11px">+ {{ _('Add') }}</button>
+            </div>
+            {% if c.resp_sections %}
+            <div style="display:flex;flex-direction:column;gap:8px">
+                {% for section in c.resp_sections %}
+                <div style="padding:10px 14px;background:#f8f9fc;border-radius:10px;border-left:3px solid {{ section.color or '#5b9cf6' }}" data-section-id="{{ section.id }}">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                        <span style="font-weight:700;font-size:14px;color:#1a1a2e">{{ section.name }}</span>
+                        {% if section.description %}
+                        <span style="font-size:12px;color:#888">{{ section.description }}</span>
+                        {% endif %}
+                        <span style="font-size:12px;color:#888;margin-left:auto">{{ section.machines|length }} {{ _('machines') }}</span>
+                        <button class="btn btn-sm btn-ghost" onclick="openMachineModal({{ section.id }},'{{ section.name }}')" style="font-size:11px;padding:4px 8px">+ ⚙️</button>
+                        <span style="color:#ccc;cursor:pointer;font-size:16px" onclick="removeSection({{ c.id }},{{ section.id }})">✕</span>
+                    </div>
+                    {% if section.machines %}
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        {% for m in section.machines %}
+                        <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:white;border:1px solid #e8ecf1;border-radius:8px;font-size:13px">
+                            <span style="font-size:14px">⚙️</span>
+                            <a href="/machines/{{ m.id }}" style="color:#333;text-decoration:none;font-weight:600">{{ m.name }}</a>
+                            <span style="color:#bbb;cursor:pointer;font-size:12px" onclick="removeMachine({{ section.id }}, {{ m.id }})">✕</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="font-size:12px;color:#999">{{ _('No machines') }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="font-size:12px;color:#999;padding:8px 0">{{ _('No departments') }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Edit form -->
+        <form onsubmit="savePerson(event, {{ c.id }})" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Name') }}</label>
+                <input type="text" name="naam" value="{{ c.naam or '' }}" required style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
+            </div>
+            <div style="flex:1;min-width:120px">
+                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Position') }}</label>
+                <input type="text" name="position" value="{{ c.position or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
+            </div>
+            <div style="flex:1;min-width:120px">
+                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Phone') }}</label>
+                <input type="text" name="telefoon" value="{{ c.telefoon or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
+            </div>
+            <div style="flex:1;min-width:140px">
+                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Email') }}</label>
+                <input type="email" name="email" value="{{ c.email or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                <button type="submit" class="btn btn-sm btn-primary" style="height:36px">{{ _('Save') }}</button>
+                <span id="save-status-{{ c.id }}" style="font-size:12px;color:#27ae60;display:none">✓</span>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+{% if not verantwoordelijken %}
+<div class="card">
+    <div style="text-align:center;padding:40px;color:#999">
+        <div style="font-size:48px;margin-bottom:12px">👤</div>
+        <div>{{ _('No responsible persons') }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- SECTION ASSIGN MODAL -->
+<div id="sectionModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:16px">{{ _('Assign Department') }}</h2>
+            <button onclick="document.getElementById('sectionModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div id="sectionCheckboxes" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+            {% for s in all_sections %}
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e8ecf1;border-radius:8px;cursor:pointer">
+                <input type="checkbox" value="{{ s.id }}" style="width:auto;padding:0">
+                <div style="width:8px;height:8px;border-radius:50%;background:{{ s.color or '#5b9cf6' }}"></div>
+                <div>
+                    <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
+                    <div style="font-size:11px;color:#888">{{ s.machines|length }} {{ _('machines') }}</div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('sectionModal').style.display='none'">{{ _('Cancel') }}</button>
+            <button type="button" class="btn btn-primary" onclick="saveSections()">{{ _('Save') }}</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADD PERSON MODAL -->
+<div id="addPersonModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:16px">{{ _('Add Person') }}</h2>
+            <button onclick="document.getElementById('addPersonModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <form method="POST" action="/responsible/quick-add">
+            <div class="form-group">
+                <label>{{ _('Name') }}</label>
+                <input type="text" name="naam" required placeholder="{{ _('Full name') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Position') }}</label>
+                <input type="text" name="position" placeholder="{{ _('Job title') }}">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Phone') }}</label>
+                    <input type="text" name="telefoon">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Email') }}</label>
+                    <input type="email" name="email">
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('addPersonModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Add') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MACHINE ASSIGN MODAL -->
+<div id="machineModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="machineModalTitle" style="margin:0;font-size:16px">{{ _('Add Machine') }}</h2>
+            <button onclick="document.getElementById('machineModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Select Machines') }}</label>
+            <select id="machineSelect" multiple style="width:100%;height:200px">
+                {% for m in all_machines %}
+                <option value="{{ m.id }}">{{ m.name }} {% if m.serial_number %}({{ m.serial_number }}){% endif %}</option>
+                {% endfor %}
+            </select>
+            <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('machineModal').style.display='none'">{{ _('Cancel') }}</button>
+            <button type="button" class="btn btn-primary" onclick="saveMachine()">{{ _('Add') }}</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPersonId = null;
+let currentSectionId = null;
+
+function togglePerson(id) {
+    const el = document.getElementById('person-' + id);
+    const arrow = document.getElementById('arrow-' + id);
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        arrow.style.transform = 'rotate(90deg)';
+    } else {
+        el.style.display = 'none';
+        arrow.style.transform = '';
+    }
+}
+
+function openSectionModal(personId) {
+    currentPersonId = personId;
+    const personCard = document.getElementById('person-' + personId);
+    const assignedIds = [];
+    personCard.querySelectorAll('[data-section-id]').forEach(el => {
+        assignedIds.push(el.dataset.sectionId);
+    });
+    document.querySelectorAll('#sectionCheckboxes input[type="checkbox"]').forEach(cb => {
+        cb.checked = assignedIds.includes(cb.value);
+    });
+    document.getElementById('sectionModal').style.display = 'flex';
+}
+
+function saveSections() {
+    const checked = [...document.querySelectorAll('#sectionCheckboxes input:checked')].map(cb => parseInt(cb.value));
+    csrfFetch('/responsible/' + currentPersonId + '/assign-sections', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({section_ids: checked})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+
+function removeSection(personId, sectionId) {
+    if (!confirm('{{ _("Remove department?") }}')) return;
+    const personCard = document.getElementById('person-' + personId);
+    const sections = [];
+    personCard.querySelectorAll('[data-section-id]').forEach(el => {
+        const sid = parseInt(el.dataset.sectionId);
+        if (sid !== sectionId) sections.push(sid);
+    });
+    csrfFetch('/responsible/' + personId + '/assign-sections', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({section_ids: sections})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+
+function openMachineModal(sectionId, sectionName) {
+    currentSectionId = sectionId;
+    document.getElementById('machineModalTitle').textContent = '{{ _("Add Machine") }}: ' + sectionName;
+    document.getElementById('machineModal').style.display = 'flex';
+}
+
+function saveMachine() {
+    const sel = document.getElementById('machineSelect');
+    const ids = [...sel.selectedOptions].map(o => parseInt(o.value));
+    if (!ids.length) return;
+    csrfFetch('/sections/' + currentSectionId + '/assign-machine', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({machine_ids: ids})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+
+function removeMachine(sectionId, machineId) {
+    if (!confirm('{{ _("Remove machine?") }}')) return;
+    csrfFetch('/sections/' + sectionId + '/remove-machine/' + machineId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+
+function savePerson(e, personId) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const status = document.getElementById('save-status-' + personId);
+    csrfFetch('/responsible/' + personId + '/quick-edit', {
+        method: 'POST',
+        body: formData
+    }).then(r => {
+        if (r.ok) {
+            status.style.display = 'inline';
+            status.textContent = '✓ {{ _("Saved") }}';
+            setTimeout(() => { status.style.display = 'none'; }, 2000);
+        }
+    });
+}
+
+document.querySelectorAll('[id$="Modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+</script>
+{% endblock %}

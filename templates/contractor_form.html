@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit contractor') if contractor else _('New contractor') }} — CRM{% endblock %}
+{% block content %}
+<h1>🏢 {{ _('Edit contractor') + ': ' + contractor.company_name if contractor else _('New contractor') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="card" style="background:#f0fff0;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">🏢 {{ _('Company') }}</h3>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Company name') }} *</label><input type="text" name="company_name" value="{{ contractor.company_name if contractor else '' }}" required></div>
+                <div class="form-group"><label>{{ _('Service type') }}</label><input type="text" name="service_type" value="{{ contractor.service_type if contractor else '' }}" placeholder="Repair, maintenance..."></div>
+            </div>
+            <div class="form-group"><label>{{ _('Address') }}</label><input type="text" name="address" value="{{ contractor.address if contractor else '' }}"></div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Postcode') }}</label><input type="text" name="postcode" value="{{ contractor.postcode if contractor else '' }}"></div>
+                <div class="form-group"><label>{{ _('City') }}</label><input type="text" name="city" value="{{ contractor.city if contractor else '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Country') }}</label><input type="text" name="country" value="{{ contractor.country if contractor else 'Nederland' }}"></div>
+                <div class="form-group"><label>{{ _('KVK') }}</label><input type="text" name="kvk_number" value="{{ contractor.kvk_number if contractor else '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('VAT') }}</label><input type="text" name="btw_number" value="{{ contractor.btw_number if contractor else '' }}"></div>
+                <div class="form-group"><label>{{ _('IBAN') }}</label><input type="text" name="iban" value="{{ contractor.iban if contractor else '' }}"></div>
+            </div>
+        </div>
+        <div class="card" style="background:#f0f7ff;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">👤 {{ _('Contact person') }}</h3>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Name') }}</label><input type="text" name="contact_person" value="{{ contractor.contact_person if contractor else '' }}"></div>
+                <div class="form-group"><label>{{ _('Position') }}</label><input type="text" name="contact_position" value="{{ contractor.contact_position if contractor else '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Phone') }} 1</label><input type="text" name="phone" value="{{ contractor.phone if contractor else '' }}"></div>
+                <div class="form-group"><label>{{ _('Phone') }} 2</label><input type="text" name="phone2" value="{{ contractor.phone2 if contractor else '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Email') }}</label><input type="email" name="email" value="{{ contractor.email if contractor else '' }}"></div>
+                <div class="form-group"><label>{{ _('Website') }}</label><input type="text" name="website" value="{{ contractor.website if contractor else '' }}"></div>
+            </div>
+        </div>
+        <div class="card" style="background:#fff8f0;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">📄 {{ _('Contract') }}</h3>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Contract number') }}</label><input type="text" name="contract_number" value="{{ contractor.contract_number if contractor else '' }}"></div>
+                <div class="form-group"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Start') }}</label><input type="date" name="contract_start" value="{{ contractor.contract_start.strftime('%Y-%m-%d') if contractor and contractor.contract_start else '' }}"></div>
+                <div class="form-group"><label>{{ _('End') }}</label><input type="date" name="contract_end" value="{{ contractor.contract_end.strftime('%Y-%m-%d') if contractor and contractor.contract_end else '' }}"></div>
+            </div>
+        </div>
+        <div class="form-group"><label>{{ _('Notes') }}</label><textarea name="notes" rows="3">{{ contractor.notes if contractor else '' }}</textarea></div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/contractors" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

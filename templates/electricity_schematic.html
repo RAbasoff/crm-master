@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Electrical Schematic') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🗺️ {{ _('Interactive Electrical Schematic') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/electricity" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/electricity/cabinet/new" class="btn btn-sm btn-primary">+ {{ _('New Cabinet') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if cabinets %}
+<div class="card" style="padding:0;overflow:auto">
+    <div id="fullSchematic" style="min-height:500px;background:#0d1117;padding:20px">
+        <svg id="fullSvg" xmlns="http://www.w3.org/2000/svg" style="width:100%"></svg>
+    </div>
+</div>
+
+<div style="margin-top:12px;display:flex;gap:16px;font-size:12px;color:#666;flex-wrap:wrap">
+    <span>🟢 {{ _('Breaker ON') }}</span>
+    <span>🔴 {{ _('Breaker OFF') }}</span>
+    <span>🖱️ {{ _('Click breaker to toggle') }}</span>
+    <span>📋 {{ _('Click cabinet name for details') }}</span>
+</div>
+
+<!-- Cabinet cards below schematic -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:20px">
+    {% for cab in cabinets %}
+    <div class="card" style="cursor:pointer" onclick="window.location='/electricity/cabinet/{{ cab.id }}'">
+        <h2 style="display:flex;align-items:center;gap:8px">
+            ⚡ {{ cab.name }}
+            <span class="badge badge-active" style="font-size:11px">{{ cab.breakers|length }} {{ _('breakers') }}</span>
+        </h2>
+        <div style="font-size:13px;color:#666;margin-top:4px">{{ cab.location or '' }} · {{ cab.voltage or '' }}</div>
+        <div style="display:flex;gap:12px;margin-top:8px;font-size:12px">
+            <span style="color:#27ae60">● {{ cab.breakers|selectattr('status','equalto','on')|list|length }} ON</span>
+            {% if cab.breakers|selectattr('status','equalto','off')|list|length > 0 %}
+            <span style="color:#e74c3c">● {{ cab.breakers|selectattr('status','equalto','off')|list|length }} OFF</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function renderFullSchematic() {
+    const cabinetsData = [
+        {% for cab in cabinets %}
+        {
+            id: {{ cab.id }},
+            name: {{ cab.name|tojson }},
+            location: {{ (cab.location or '')|tojson }},
+            voltage: {{ (cab.voltage or '')|tojson }},
+            mainFuse: {{ cab.main_fuse_amps|default(0) }},
+            x: {{ cab.schematic_x or (loop.index0 * 320) }},
+            y: {{ cab.schematic_y or 0 }},
+            breakers: [
+                {% for b in cab.breakers|sort(attribute='row,position') %}
+                {
+                    id: {{ b.id }},
+                    label: {{ b.label|tojson }},
+                    description: {{ (b.description or '')|tojson }},
+                    type: {{ b.breaker_type|tojson }},
+                    amperage: {{ b.amperage|default(0) }},
+                    poles: {{ b.poles }},
+                    status: '{{ b.status }}',
+                    row: {{ b.row }},
+                    position: {{ b.position }},
+                    connectedTo: {{ (b.connected_to or '')|tojson }}
+                },
+                {% endfor %}
+            ]
+        },
+        {% endfor %}
+    ];
+
+    const svg = document.getElementById('fullSvg');
+    if (!svg) return;
+
+    const cabinetWidth = 280;
+    const cabinetPadding = 20;
+    const breakerW = 50;
+    const breakerH = 70;
+    const breakerGap = 8;
+    const rowGap = 20;
+    const cabinetGap = 40;
+
+    // Calculate total dimensions
+    let totalWidth = 0;
+    let totalHeight = 0;
+    cabinetsData.forEach((cab, ci) => {
+        const rows = {};
+        cab.breakers.forEach(b => {
+            if (!rows[b.row]) rows[b.row] = [];
+            rows[b.row].push(b);
+        });
+        const maxBreakersInRow = Math.max(...Object.values(rows).map(r => r.length), 1);
+        const numRows = Object.keys(rows).length || 1;
+        cab._width = Math.max(cabinetWidth, maxBreakersInRow * (breakerW + breakerGap) + cabinetPadding * 2);
+        cab._height = 60 + numRows * (breakerH + rowGap) + cabinetPadding;
+        cab._rows = rows;
+        cab._x = ci * (cab._width + cabinetGap);
+        cab._y = 0;
+        totalWidth = cab._x + cab._width;
+        if (cab._height > totalHeight) totalHeight = cab._height;
+    });
+
+    totalWidth += 20;
+    totalHeight += 40;
+
+    svg.setAttribute('width', totalWidth);
+    svg.setAttribute('height', totalHeight);
+    svg.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+    svg.innerHTML = '';
+
+    // Global mains line
+    const mainsLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    mainsLine.setAttribute('x1', 10);
+    mainsLine.setAttribute('y1', 15);
+    mainsLine.setAttribute('x2', totalWidth - 10);
+    mainsLine.setAttribute('y2', 15);
+    mainsLine.setAttribute('stroke', '#f39c12');
+    mainsLine.setAttribute('stroke-width', 4);
+    svg.appendChild(mainsLine);
+
+    const mainsLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    mainsLabel.setAttribute('x', 10);
+    mainsLabel.setAttribute('y', 10);
+    mainsLabel.setAttribute('fill', '#f39c12');
+    mainsLabel.setAttribute('font-size', '10');
+    mainsLabel.setAttribute('font-weight', '700');
+    mainsLabel.textContent = 'MAINS';
+    svg.appendChild(mainsLabel);
+
+    // Arrow marker
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+    marker.setAttribute('id', 'arrow');
+    marker.setAttribute('markerWidth', '6');
+    marker.setAttribute('markerHeight', '4');
+    marker.setAttribute('refX', '3');
+    marker.setAttribute('refY', '2');
+    marker.setAttribute('orient', 'auto');
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', '0 0, 6 2, 0 4');
+    arrow.setAttribute('fill', '#778');
+    marker.appendChild(arrow);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    cabinetsData.forEach((cab, ci) => {
+        const cx = cab._x + 10;
+        const cy = 30;
+
+        // Connection to mains
+        const connToMain = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        connToMain.setAttribute('x1', cx + cab._width / 2);
+        connToMain.setAttribute('y1', 15);
+        connToMain.setAttribute('x2', cx + cab._width / 2);
+        connToMain.setAttribute('y2', cy);
+        connToMain.setAttribute('stroke', '#f39c12');
+        connToMain.setAttribute('stroke-width', 3);
+        svg.appendChild(connToMain);
+
+        // Cabinet frame
+        const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        frame.setAttribute('x', cx);
+        frame.setAttribute('y', cy);
+        frame.setAttribute('width', cab._width);
+        frame.setAttribute('height', cab._height);
+        frame.setAttribute('rx', 10);
+        frame.setAttribute('fill', '#161b22');
+        frame.setAttribute('stroke', '#30363d');
+        frame.setAttribute('stroke-width', 2);
+        svg.appendChild(frame);
+
+        // Cabinet name (clickable)
+        const nameLink = document.createElementNS('http://www.w3.org/2000/svg', 'a');
+        nameLink.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/electricity/cabinet/${cab.id}`);
+        const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        nameText.setAttribute('x', cx + cab._width / 2);
+        nameText.setAttribute('y', cy + 22);
+        nameText.setAttribute('text-anchor', 'middle');
+        nameText.setAttribute('fill', '#58a6ff');
+        nameText.setAttribute('font-size', '12');
+        nameText.setAttribute('font-weight', '700');
+        nameText.setAttribute('cursor', 'pointer');
+        nameText.textContent = cab.name;
+        nameLink.appendChild(nameText);
+        svg.appendChild(nameLink);
+
+        // Sub info
+        const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        infoText.setAttribute('x', cx + cab._width / 2);
+        infoText.setAttribute('y', cy + 38);
+        infoText.setAttribute('text-anchor', 'middle');
+        infoText.setAttribute('fill', '#8b949e');
+        infoText.setAttribute('font-size', '9');
+        infoText.textContent = `${cab.voltage || ''}${cab.mainFuse ? ' · ' + cab.mainFuse + 'A' : ''}`;
+        svg.appendChild(infoText);
+
+        // Internal bus bar
+        const busY = cy + 48;
+        const bus = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        bus.setAttribute('x1', cx + cabinetPadding);
+        bus.setAttribute('y1', busY);
+        bus.setAttribute('x2', cx + cab._width - cabinetPadding);
+        bus.setAttribute('y2', busY);
+        bus.setAttribute('stroke', '#f39c12');
+        bus.setAttribute('stroke-width', 2);
+        svg.appendChild(bus);
+
+        // Breakers
+        const rowKeys = Object.keys(cab._rows).map(Number).sort((a, b) => a - b);
+        rowKeys.forEach((rowNum, ri) => {
+            const rowBreakers = cab._rows[rowNum].sort((a, b) => a.position - b.position);
+            const rowW = rowBreakers.length * (breakerW + breakerGap) - breakerGap;
+            const startX = cx + (cab._width - rowW) / 2;
+            const startY = cy + 58 + ri * (breakerH + rowGap);
+
+            rowBreakers.forEach((b, bi) => {
+                const bx = startX + bi * (breakerW + breakerGap);
+                const by = startY;
+                const isOn = b.status === 'on';
+
+                // Connection to bus
+                const bc = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                bc.setAttribute('x1', bx + breakerW / 2);
+                bc.setAttribute('y1', busY);
+                bc.setAttribute('x2', bx + breakerW / 2);
+                bc.setAttribute('y2', by);
+                bc.setAttribute('stroke', isOn ? '#f39c12' : '#30363d');
+                bc.setAttribute('stroke-width', 1.5);
+                svg.appendChild(bc);
+
+                // Breaker group
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.style.cursor = 'pointer';
+
+                const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                body.setAttribute('x', bx);
+                body.setAttribute('y', by);
+                body.setAttribute('width', breakerW);
+                body.setAttribute('height', breakerH);
+                body.setAttribute('rx', 5);
+                body.setAttribute('fill', isOn ? '#0d2818' : '#2d1111');
+                body.setAttribute('stroke', isOn ? '#238636' : '#da3633');
+                body.setAttribute('stroke-width', 1.5);
+                g.appendChild(body);
+
+                // Lever
+                const lever = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                lever.setAttribute('x', bx + breakerW / 2 - 3);
+                lever.setAttribute('y', isOn ? by + 4 : by + 16);
+                lever.setAttribute('width', 6);
+                lever.setAttribute('height', 12);
+                lever.setAttribute('rx', 2);
+                lever.setAttribute('fill', isOn ? '#238636' : '#da3633');
+                g.appendChild(lever);
+
+                // Label
+                const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                lbl.setAttribute('x', bx + breakerW / 2);
+                lbl.setAttribute('y', by + 42);
+                lbl.setAttribute('text-anchor', 'middle');
+                lbl.setAttribute('fill', '#e6edf3');
+                lbl.setAttribute('font-size', '9');
+                lbl.setAttribute('font-weight', '700');
+                lbl.textContent = b.label;
+                g.appendChild(lbl);
+
+                // Amp
+                const amp = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                amp.setAttribute('x', bx + breakerW / 2);
+                amp.setAttribute('y', by + 55);
+                amp.setAttribute('text-anchor', 'middle');
+                amp.setAttribute('fill', '#8b949e');
+                amp.setAttribute('font-size', '8');
+                amp.textContent = b.amperage ? `${b.amperage}A` : b.type;
+                g.appendChild(amp);
+
+                // Status dot
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', bx + breakerW - 6);
+                dot.setAttribute('cy', by + 8);
+                dot.setAttribute('r', 3);
+                dot.setAttribute('fill', isOn ? '#238636' : '#da3633');
+                g.appendChild(dot);
+
+                // Tooltip
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = `${b.label}: ${b.description || b.type}\n${b.amperage ? b.amperage + 'A' : ''} ${b.poles}P\n${b.connectedTo ? '→ ' + b.connectedTo : ''}\nStatus: ${b.status.toUpperCase()}`;
+                g.appendChild(title);
+
+                // Click
+                g.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    csrfFetch(`/electricity/breaker/${b.id}/toggle`, {method: 'POST'})
+                        .then(r => r.json())
+                        .then(() => {
+                            b.status = b.status === 'on' ? 'off' : 'on';
+                            renderFullSchematic();
+                        });
+                });
+
+                svg.appendChild(g);
+            });
+        });
+    });
+}
+
+renderFullSchematic();
+</script>
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:60px;color:#999">
+        <div style="font-size:64px;margin-bottom:20px">⚡</div>
+        <h3 style="color:#666">{{ _('No cabinets yet') }}</h3>
+        <p>{{ _('Add electrical cabinets to see the schematic') }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

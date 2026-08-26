@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Search & Reports') }} — {{ _('Warehouse') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔍 {{ _('Warehouse Search & Reports') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/warehouse" class="btn btn-sm" style="background:#eee">← {{ _('Warehouse') }}</a>
+        <a href="/warehouse/movements" class="btn btn-sm" style="background:#eee">📋 {{ _('Movements') }}</a>
+    </div>
+</div>
+
+<!-- SEARCH FORM -->
+<div class="card" style="border-left:4px solid #3498db">
+    <form method="GET" action="/warehouse/report">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px">
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Search text') }}</label>
+                <input type="text" name="q" value="{{ f_q }}" placeholder="{{ _('Name, description, SPN...') }}" style="width:100%">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">Supplier Part Number</label>
+                <input type="text" name="spn" value="{{ f_spn }}" placeholder="SPN..." style="width:100%">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Location') }}</label>
+                <input type="text" name="locatie" value="{{ f_locatie }}" placeholder="{{ _('Shelf, rack...') }}" style="width:100%">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Category') }}</label>
+                <select name="categorie" style="width:100%">
+                    <option value="">{{ _('All') }}</option>
+                    {% for c in cats %}
+                    <option value="{{ c }}" {% if f_categorie==c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Group') }}</label>
+                <select name="group" style="width:100%">
+                    <option value="">{{ _('All') }}</option>
+                    {% for g in groups %}
+                    <option value="{{ g.id }}" {% if f_group|string==g.id|string %}selected{% endif %}>{{ g.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Movement type') }}</label>
+                <select name="move_type" style="width:100%">
+                    <option value="">{{ _('All') }}</option>
+                    <option value="inkomend" {% if f_move_type=='inkomend' %}selected{% endif %}>📥 {{ _('Incoming') }}</option>
+                    <option value="uitgaand" {% if f_move_type=='uitgaand' %}selected{% endif %}>📤 {{ _('Outgoing') }}</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Date from') }}</label>
+                <input type="date" name="date_from" value="{{ f_date_from }}" style="width:100%">
+            </div>
+            <div class="form-group" style="margin:0">
+                <label style="font-size:11px;color:#888">{{ _('Date to') }}</label>
+                <input type="date" name="date_to" value="{{ f_date_to }}" style="width:100%">
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="submit" class="btn btn-primary">🔍 {{ _('Search') }}</button>
+            <button type="submit" name="report" value="1" class="btn" style="background:#2c3e50;color:white">📊 {{ _('Report') }}</button>
+            <a href="/warehouse/report" class="btn" style="background:#eee">↺ {{ _('Reset') }}</a>
+        </div>
+    </form>
+</div>
+
+<!-- SUMMARY STATS -->
+{% if movements %}
+<div class="stats" style="margin-top:16px">
+    <div class="stat-card" style="border-left:4px solid #27ae60">
+        <div class="number" style="color:#27ae60">+{{ "%.1f"|format(total_in) }}</div>
+        <div class="label">{{ _('Incoming qty') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number" style="color:#e74c3c">-{{ "%.1f"|format(total_out) }}</div>
+        <div class="label">{{ _('Outgoing qty') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #27ae60">
+        <div class="number" style="color:#27ae60">€{{ "%.2f"|format(total_in_value) }}</div>
+        <div class="label">{{ _('Incoming value') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number" style="color:#e74c3c">€{{ "%.2f"|format(total_out_value) }}</div>
+        <div class="label">{{ _('Outgoing value') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #3498db">
+        <div class="number">{{ movements|length }}</div>
+        <div class="label">{{ _('Records') }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- REPORT BY ITEM -->
+{% if report_mode and item_report %}
+<div class="card" style="margin-top:16px;border-left:4px solid #8e44ad">
+    <h2 style="margin-bottom:12px">📊 {{ _('Report by Item') }}</h2>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Item') }}</th>
+            <th>SPN</th>
+            <th>{{ _('Location') }}</th>
+            <th style="text-align:right;color:#27ae60">{{ _('Incoming') }}</th>
+            <th style="text-align:right;color:#27ae60">{{ _('In Value') }}</th>
+            <th style="text-align:right;color:#e74c3c">{{ _('Outgoing') }}</th>
+            <th style="text-align:right;color:#e74c3c">{{ _('Out Value') }}</th>
+            <th style="text-align:right">{{ _('Balance') }}</th>
+        </tr>
+        {% for r in item_report %}
+        <tr>
+            <td><a href="/warehouse/{{ r.item.id }}/edit" style="color:#3498db">{{ r.item.naam }}</a></td>
+            <td style="font-size:11px;color:#888">{{ r.item.supplier_part_number or '—' }}</td>
+            <td>{{ r.item.locatie or '—' }}</td>
+            <td style="text-align:right;font-weight:bold;color:#27ae60">{% if r.in_qty > 0 %}+{{ "%.1f"|format(r.in_qty) }}{% else %}—{% endif %}</td>
+            <td style="text-align:right;color:#27ae60">{% if r.in_val > 0 %}€{{ "%.2f"|format(r.in_val) }}{% else %}—{% endif %}</td>
+            <td style="text-align:right;font-weight:bold;color:#e74c3c">{% if r.out_qty > 0 %}-{{ "%.1f"|format(r.out_qty) }}{% else %}—{% endif %}</td>
+            <td style="text-align:right;color:#e74c3c">{% if r.out_val > 0 %}€{{ "%.2f"|format(r.out_val) }}{% else %}—{% endif %}</td>
+            <td style="text-align:right;font-weight:bold">{{ "%.1f"|format(r.in_qty - r.out_qty) }}</td>
+        </tr>
+        {% endfor %}
+        <tr style="background:#f8f9fa;font-weight:bold">
+            <td colspan="3">{{ _('TOTAL') }}</td>
+            <td style="text-align:right;color:#27ae60">+{{ "%.1f"|format(total_in) }}</td>
+            <td style="text-align:right;color:#27ae60">€{{ "%.2f"|format(total_in_value) }}</td>
+            <td style="text-align:right;color:#e74c3c">-{{ "%.1f"|format(total_out) }}</td>
+            <td style="text-align:right;color:#e74c3c">€{{ "%.2f"|format(total_out_value) }}</td>
+            <td style="text-align:right">{{ "%.1f"|format(total_in - total_out) }}</td>
+        </tr>
+    </table></div>
+</div>
+{% endif %}
+
+<!-- ITEMS FOUND -->
+{% if items and not report_mode %}
+<div class="card" style="margin-top:16px">
+    <h2 style="margin-bottom:12px">📦 {{ _('Items found') }} ({{ items|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Name') }}</th>
+            <th>SPN</th>
+            <th>{{ _('Category') }}</th>
+            <th>{{ _('Location') }}</th>
+            <th>{{ _('Qty') }}</th>
+            <th>{{ _('Unit') }}</th>
+            <th>{{ _('Price') }}</th>
+            <th></th>
+        </tr>
+        {% for i in items %}
+        <tr>
+            <td><a href="/warehouse/{{ i.id }}/edit" style="color:#3498db">{{ i.naam }}</a></td>
+            <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
+            <td>{{ i.categorie or '—' }}</td>
+            <td>{{ i.locatie or '—' }}</td>
+            <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ i.hoeveelheid }}</td>
+            <td>{{ i.eenheid }}</td>
+            <td>€{{ "%.2f"|format(i.prijs) }}</td>
+            <td><a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- MOVEMENTS -->
+{% if movements %}
+<div class="card" style="margin-top:16px;padding:0">
+    <h2 style="margin:16px 16px 12px">📋 {{ _('Movements') }} ({{ movements|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Date') }}</th>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Item') }}</th>
+            <th>SPN</th>
+            <th>{{ _('Location') }}</th>
+            <th style="text-align:right">{{ _('Quantity') }}</th>
+            <th>{{ _('Unit') }}</th>
+            <th style="text-align:right">{{ _('Value') }}</th>
+            <th>{{ _('Comment') }}</th>
+        </tr>
+        {% for m in movements %}
+        <tr{% if m.type == 'inkomend' %} style="background:#f0faf0"{% else %} style="background:#faf0f0"{% endif %}>
+            <td style="font-size:12px">{{ m.aangemaakt.strftime('%d-%m-%Y %H:%M') }}</td>
+            <td>
+                {% if m.type == 'inkomend' %}
+                <span class="badge badge-active">📥 IN</span>
+                {% else %}
+                <span class="badge badge-broken">📤 OUT</span>
+                {% endif %}
+            </td>
+            <td><a href="/warehouse/{{ m.item.id }}/edit" style="color:#3498db">{{ m.item.naam }}</a></td>
+            <td style="font-size:11px;color:#888">{{ m.item.supplier_part_number or '—' }}</td>
+            <td>{{ m.item.locatie or '—' }}</td>
+            <td style="text-align:right;font-weight:bold;color:{% if m.type == 'inkomend' %}#27ae60{% else %}#e74c3c{% endif %}">
+                {% if m.type == 'inkomend' %}+{% else %}-{% endif %}{{ m.hoeveelheid }}
+            </td>
+            <td>{{ m.item.eenheid }}</td>
+            <td style="text-align:right">€{{ "%.2f"|format(m.hoeveelheid * m.item.prijs) }}</td>
+            <td style="font-size:12px">{{ m.opmerking or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% elif f_q or f_spn or f_locatie or f_categorie or f_move_type or f_date_from or f_date_to %}
+<div class="card" style="margin-top:16px">
+    <div style="text-align:center;padding:40px;color:#999">
+        <div style="font-size:48px;margin-bottom:12px">🔍</div>
+        <h3 style="color:#666">{{ _('Nothing found') }}</h3>
+        <p>{{ _('Try changing your search filters') }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

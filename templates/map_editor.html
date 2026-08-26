@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Map Editor') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🗺️ {{ _('Map Editor') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="addSection()" class="btn btn-primary btn-sm">+ {{ _('Add Section') }}</button>
+        <button onclick="saveAll()" class="btn btn-success btn-sm">💾 {{ _('Save All') }}</button>
+        <button onclick="toggleMachines()" id="toggleMachinesBtn" class="btn btn-sm" style="background:#e67e22;color:white">👁️ {{ _('Hide Machines') }}</button>
+        <a href="/sections" class="btn btn-sm" style="background:#8e44ad;color:white">🏗️ {{ _('Sections') }}</a>
+        <a href="/floor" class="btn btn-sm" style="background:#eee">{{ _('View Map') }}</a>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start">
+    <!-- Canvas -->
+    <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:#1a1a2e;color:#aab;padding:8px 12px;font-size:12px;display:flex;gap:20px">
+            <span>🖱️ {{ _('Drag to move') }}</span>
+            <span>🔲 {{ _('Drag edges/corners to resize') }}</span>
+        </div>
+        <div id="canvasWrap" style="position:relative;overflow:auto;background:#e8ecf1;max-height:65vh">
+            <div id="canvas" style="position:relative;width:100%;min-height:550px">
+                <img src="/static/floor_plan.jpeg" style="display:block;width:100%;height:auto;opacity:0.3;pointer-events:none;user-select:none" draggable="false">
+                <div id="sectionsLayer" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
+                <div id="machinesLayer" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right panel -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+        <!-- Section editor -->
+        <div class="card" id="propsPanel" style="border-left:4px solid #3498db">
+            <h3 style="margin-bottom:12px">{{ _('Section Properties') }}</h3>
+            <div class="form-group">
+                <label>{{ _('Name') }}</label>
+                <input type="text" id="propName" oninput="updateSelected()">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Description') }}</label>
+                <textarea id="propDesc" rows="2" oninput="updateSelected()"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Type') }}</label>
+                    <select id="propType" onchange="updateSelected()">
+                        <option value="workshop">workshop</option>
+                        <option value="storage">storage</option>
+                        <option value="office">office</option>
+                        <option value="utility">utility</option>
+                        <option value="loading">loading</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Color') }}</label>
+                    <input type="color" id="propColor" onchange="updateSelected()" style="width:100%;height:34px;padding:2px;cursor:pointer">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Responsible persons') }}</label>
+                <select id="propResponsible" multiple onchange="updateSelected()" size="4" style="height:auto;min-height:80px">
+                    {% for v in verantwoordelijken %}
+                    <option value="{{ v.id }}">{{ v.naam }}{% if v.telefoon %} ({{ v.telefoon }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+                <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+                <button onclick="deleteSelected()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
+                <button onclick="deselectAll()" class="btn btn-sm" style="background:#eee">{{ _('Deselect') }}</button>
+            </div>
+        </div>
+
+        <!-- Machine assignment -->
+        <div class="card">
+            <h3 style="margin-bottom:12px">{{ _('Assign Machine') }}</h3>
+            <div class="form-group">
+                <label>{{ _('Machine') }}</label>
+                <select id="assignMachine">
+                    {% for m in machines %}
+                    <option value="{{ m.id }}">{{ m.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('To Section') }}</label>
+                <select id="assignSection">
+                    <option value="">{{ _('No section') }}</option>
+                    {% for s in sections %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button onclick="assignMachineToSection()" class="btn btn-primary btn-sm btn-block">{{ _('Assign') }}</button>
+        </div>
+
+        <!-- Sections list -->
+        <div class="card">
+            <h3 style="margin-bottom:8px">{{ _('Sections') }}</h3>
+            <div id="sectionsList" style="max-height:180px;overflow-y:auto"></div>
+        </div>
+
+        <!-- Machines list -->
+        <div class="card">
+            <h3 style="margin-bottom:8px">{{ _('Machines') }}</h3>
+            <div id="machinesList" style="max-height:160px;overflow-y:auto"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sec {
+        position: absolute; cursor: move; user-select: none; border-radius: 8px;
+        transition: box-shadow 0.15s;
+    }
+    .sec:hover { box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 6px 20px rgba(0,0,0,0.3); }
+    .sec.sel { box-shadow: 0 0 0 3px #fff, 0 0 0 7px #3498db; z-index: 50 !important; }
+    .sec-body {
+        width: 100%; height: 100%; border-radius: 8px; padding: 10px;
+        overflow: hidden; display: flex; flex-direction: column; gap: 3px;
+        border: 3px solid;
+    }
+    .sec-name { font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+    .sec-type { font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* BIG VISIBLE resize handles */
+    .rh {
+        position: absolute; width: 16px; height: 16px;
+        background: #3498db; border: 2px solid #fff; border-radius: 3px;
+        z-index: 70; display: none; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .sec:hover .rh, .sec.sel .rh { display: block; }
+    .rh-tl { top: -8px; left: -8px; cursor: nwse-resize; }
+    .rh-tr { top: -8px; right: -8px; cursor: nesw-resize; }
+    .rh-bl { bottom: -8px; left: -8px; cursor: nesw-resize; }
+    .rh-br { bottom: -8px; right: -8px; cursor: nwse-resize; }
+    .rh-t  { top: -8px; left: calc(50% - 8px); cursor: ns-resize; }
+    .rh-b  { bottom: -8px; left: calc(50% - 8px); cursor: ns-resize; }
+    .rh-l  { top: calc(50% - 8px); left: -8px; cursor: ew-resize; }
+    .rh-r  { top: calc(50% - 8px); right: -8px; cursor: ew-resize; }
+
+    /* Edge bars (bigger hit area) */
+    .edge {
+        position: absolute; z-index: 65; display: none;
+    }
+    .sec:hover .edge, .sec.sel .edge { display: block; }
+    .edge-t { top: -5px; left: 10px; right: 10px; height: 10px; cursor: ns-resize; }
+    .edge-b { bottom: -5px; left: 10px; right: 10px; height: 10px; cursor: ns-resize; }
+    .edge-l { top: 10px; bottom: 10px; left: -5px; width: 10px; cursor: ew-resize; }
+    .edge-r { top: 10px; bottom: 10px; right: -5px; width: 10px; cursor: ew-resize; }
+
+    .mach {
+        position: absolute; width: 30px; height: 30px;
+        transform: translate(-50%, -50%);
+        cursor: move; user-select: none; z-index: 20;
+        transition: transform 0.12s;
+    }
+    .mach:hover { transform: translate(-50%, -50%) scale(1.3); z-index: 30; }
+    .mach-icon {
+        width: 100%; height: 100%; background: #fff; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center; font-size: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25); border: 2px solid #3498db;
+    }
+    .mach.st-broken .mach-icon { border-color: #e74c3c; }
+    .mach.st-maintenance .mach-icon { border-color: #f39c12; }
+    .mach.st-offline .mach-icon { border-color: #95a5a6; }
+    .mach-lbl {
+        position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+        font-size: 9px; font-weight: 600; white-space: nowrap;
+        background: rgba(255,255,255,0.92); padding: 2px 5px; border-radius: 3px; margin-top: 2px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .li { padding: 5px 8px; border-bottom: 1px solid #eee; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .li:hover { background: #f0f4f8; }
+    .li.act { background: #e0f0ff; }
+    .li .cdot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
+    .li .sdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+</style>
+
+<script>
+const T = {
+    noSection: '{{ _("No section") }}',
+    newSection: '{{ _("New Section") }}',
+    deleteConfirm: '{{ _("Delete this section?") }}',
+    nothingToSave: '{{ _("Nothing to save") }}',
+    allSaved: '{{ _("All saved!") }}'
+};
+
+let sections = [], machines = [], sel = null, drag = null;
+const sLay = document.getElementById('sectionsLayer');
+const mLay = document.getElementById('machinesLayer');
+const canvasEl = document.getElementById('canvas');
+
+fetch('/api/map/all').then(r=>r.json()).then(d => { sections=d.sections; machines=d.machines; render(); });
+
+function render() { renderSections(); renderMachines(); renderLists(); updSelectors(); }
+
+function renderSections() {
+    sLay.innerHTML = '';
+    sections.forEach(s => {
+        const el = document.createElement('div');
+        el.className = 'sec' + (sel===s.id ? ' sel' : '');
+        el.dataset.id = s.id;
+        el.style.cssText = `left:${s.x}%;top:${s.y}%;width:${s.w}%;height:${s.h}%;z-index:10`;
+        el.innerHTML = `
+            <div class="sec-body" style="border-color:${s.color};background:${s.color}55">
+                <span class="sec-name">${esc(s.name)}</span>
+                <span class="sec-type">${esc(s.type)}</span>
+            </div>
+            <div class="rh rh-tl" data-d="tl"></div><div class="rh rh-tr" data-d="tr"></div>
+            <div class="rh rh-bl" data-d="bl"></div><div class="rh rh-br" data-d="br"></div>
+            <div class="rh rh-t" data-d="t"></div><div class="rh rh-b" data-d="b"></div>
+            <div class="rh rh-l" data-d="l"></div><div class="rh rh-r" data-d="r"></div>
+            <div class="edge edge-t" data-d="t"></div><div class="edge edge-b" data-d="b"></div>
+            <div class="edge edge-l" data-d="l"></div><div class="edge edge-r" data-d="r"></div>
+        `;
+        el.querySelectorAll('.rh, .edge').forEach(h => {
+            h.addEventListener('mousedown', e => { e.stopPropagation(); startResize(e, s, el, h.dataset.d); });
+        });
+        el.addEventListener('mousedown', e => {
+            if (e.target.closest('.rh') || e.target.closest('.edge')) return;
+            e.stopPropagation();
+            startDrag(e, s, el, 'section');
+        });
+        el.addEventListener('click', e => { e.stopPropagation(); selectSection(s.id); });
+        sLay.appendChild(el);
+    });
+}
+
+function renderMachines() {
+    mLay.innerHTML = '';
+    machines.forEach(m => {
+        const el = document.createElement('div');
+        el.className = `mach st-${m.status}`;
+        el.dataset.id = m.id;
+        el.style.left = m.x + '%'; el.style.top = m.y + '%';
+        el.innerHTML = `<div class="mach-icon">⚙️</div><div class="mach-lbl">${esc(m.name)}</div>`;
+        el.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(e, m, el, 'machine'); });
+        mLay.appendChild(el);
+    });
+}
+
+function renderLists() {
+    const sList = document.getElementById('sectionsList');
+    sList.innerHTML = '';
+    const sc = {active:'#27ae60',broken:'#e74c3c',maintenance:'#f39c12',offline:'#95a5a6'};
+    sections.forEach(s => {
+        const cnt = machines.filter(m=>m.section_id===s.id).length;
+        const el = document.createElement('div');
+        el.className = 'li' + (sel===s.id ? ' act' : '');
+        el.innerHTML = `<span class="cdot" style="background:${s.color}"></span><span style="flex:1">${esc(s.name)}</span><span style="color:#888;font-size:10px">${cnt}⚙️</span>`;
+        el.onclick = () => selectSection(s.id);
+        sList.appendChild(el);
+    });
+    const mList = document.getElementById('machinesList');
+    mList.innerHTML = '';
+    machines.forEach(m => {
+        const sec = sections.find(s=>s.id===m.section_id);
+        const el = document.createElement('div');
+        el.className = 'li';
+        el.innerHTML = `<span class="sdot" style="background:${sc[m.status]||'#999'}"></span><span style="flex:1">${esc(m.name)}</span><span style="color:#888;font-size:10px">${sec?sec.name:'—'}</span>`;
+        mList.appendChild(el);
+    });
+}
+
+function updSelectors() {
+    const s = document.getElementById('assignSection');
+    const v = s.value;
+    s.innerHTML = '<option value="">'+T.noSection+'</option>';
+    sections.forEach(sec => { s.innerHTML += `<option value="${sec.id}">${esc(sec.name)}</option>`; });
+    s.value = v;
+}
+
+// ---- SELECTION ----
+function selectSection(id) {
+    sel = id;
+    const s = sections.find(s=>s.id===id);
+    if (s) {
+        document.getElementById('propsPanel').style.display = 'block';
+        document.getElementById('propName').value = s.name;
+        document.getElementById('propDesc').value = s.description||'';
+        document.getElementById('propType').value = s.type;
+        document.getElementById('propColor').value = s.color;
+        const sel = document.getElementById('propResponsible');
+        for (let opt of sel.options) { opt.selected = (s.responsible_ids||[]).includes(parseInt(opt.value)); }
+    }
+    renderSections(); renderLists();
+}
+
+function deselectAll() {
+    sel = null;
+    document.getElementById('propsPanel').style.display = 'none';
+    renderSections(); renderLists();
+}
+
+function updateSelected() {
+    if (!sel) return;
+    const s = sections.find(s=>s.id===sel);
+    if (!s) return;
+    s.name = document.getElementById('propName').value;
+    s.description = document.getElementById('propDesc').value;
+    s.type = document.getElementById('propType').value;
+    s.color = document.getElementById('propColor').value;
+    s.responsible_ids = Array.from(document.getElementById('propResponsible').selectedOptions).map(o=>parseInt(o.value));
+    render();
+    selectSection(s.id);
+}
+
+// ---- DRAG ----
+function startDrag(e, data, el, type) {
+    e.preventDefault();
+    const r = el.parentElement.getBoundingClientRect();
+    drag = {mode:'drag', type, data, el, sx:e.clientX, sy:e.clientY, r,
+            ox:parseFloat(el.style.left), oy:parseFloat(el.style.top)};
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+}
+
+function onDrag(e) {
+    if (!drag || drag.mode !== 'drag') return;
+    const dx = (e.clientX - drag.sx) / drag.r.width * 100;
+    const dy = (e.clientY - drag.sy) / drag.r.height * 100;
+    const nx = Math.round(Math.max(0, Math.min(97, drag.ox + dx)) * 10) / 10;
+    const ny = Math.round(Math.max(0, Math.min(97, drag.oy + dy)) * 10) / 10;
+    drag.el.style.left = nx + '%'; drag.el.style.top = ny + '%';
+    drag.data.x = nx; drag.data.y = ny;
+}
+
+function stopDrag() {
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+    if (drag && drag.type === 'machine') {
+        fetch('/api/map/save-machine-pos', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:drag.data.id, x:drag.data.x, y:drag.data.y})
+        });
+    }
+    drag = null;
+}
+
+// ---- RESIZE ----
+function startResize(e, data, el, dir) {
+    e.preventDefault();
+    const r = el.parentElement.getBoundingClientRect();
+    drag = {mode:'resize', data, el, dir, sx:e.clientX, sy:e.clientY, r,
+            ox:parseFloat(el.style.left), oy:parseFloat(el.style.top),
+            ow:parseFloat(el.style.width), oh:parseFloat(el.style.height)};
+    document.addEventListener('mousemove', onResize);
+    document.addEventListener('mouseup', stopResize);
+}
+
+function onResize(e) {
+    if (!drag || drag.mode !== 'resize') return;
+    const dx = (e.clientX - drag.sx) / drag.r.width * 100;
+    const dy = (e.clientY - drag.sy) / drag.r.height * 100;
+    let {ox, oy, ow, oh, dir} = drag;
+
+    let nx = ox, ny = oy, nw = ow, nh = oh;
+
+    // Calculate new dimensions based on direction
+    if (dir === 'tl') { nx = ox+dx; ny = oy+dy; nw = ow-dx; nh = oh-dy; }
+    else if (dir === 'tr') { ny = oy+dy; nw = ow+dx; nh = oh-dy; }
+    else if (dir === 'bl') { nx = ox+dx; nw = ow-dx; nh = oh+dy; }
+    else if (dir === 'br') { nw = ow+dx; nh = oh+dy; }
+    else if (dir === 't') { ny = oy+dy; nh = oh-dy; }
+    else if (dir === 'b') { nh = oh+dy; }
+    else if (dir === 'l') { nx = ox+dx; nw = ow-dx; }
+    else if (dir === 'r') { nw = ow+dx; }
+
+    // Enforce minimums
+    if (nw < 5) { if (dir.includes('l')) nx = ox+ow-5; nw = 5; }
+    if (nh < 5) { if (dir.includes('t')) ny = oy+oh-5; nh = 5; }
+    // Enforce bounds
+    nx = Math.max(0, nx); ny = Math.max(0, ny);
+    if (nx+nw > 100) nw = 100-nx;
+    if (ny+nh > 100) nh = 100-ny;
+
+    drag.el.style.left = nx+'%'; drag.el.style.top = ny+'%';
+    drag.el.style.width = nw+'%'; drag.el.style.height = nh+'%';
+    drag.data.x = Math.round(nx*10)/10;
+    drag.data.y = Math.round(ny*10)/10;
+    drag.data.w = Math.round(nw*10)/10;
+    drag.data.h = Math.round(nh*10)/10;
+}
+
+function stopResize() {
+    document.removeEventListener('mousemove', onResize);
+    document.removeEventListener('mouseup', stopResize);
+    drag = null;
+}
+
+canvasEl.addEventListener('click', e => {
+    if (e.target === canvasEl || e.target.tagName === 'IMG') deselectAll();
+});
+
+// ---- ACTIONS ----
+function addSection() {
+    const ns = {id:null, name:T.newSection, description:'', type:'workshop', color:'#3498db', x:10, y:10, w:25, h:25, responsible_ids:[]};
+    csrfFetch('/api/map/save-section',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ns)})
+    .then(r=>r.json()).then(d => { ns.id=d.id; sections.push(ns); render(); selectSection(d.id); });
+}
+
+function deleteSelected() {
+    if (!sel) return;
+    if (!confirm(T.deleteConfirm)) return;
+    csrfFetch('/api/map/delete-section',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:sel})})
+    .then(() => { sections=sections.filter(s=>s.id!==sel); deselectAll(); render(); });
+}
+
+function assignMachineToSection() {
+    const mid = parseInt(document.getElementById('assignMachine').value);
+    const sid = document.getElementById('assignSection').value;
+    csrfFetch('/api/map/assign-machine',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({machine_id:mid, section_id:sid?parseInt(sid):null})})
+    .then(() => { const m=machines.find(m=>m.id===mid); if(m) m.section_id=sid?parseInt(sid):null; render(); });
+}
+
+function saveAll() {
+    if (!sections.length) { alert(T.nothingToSave); return; }
+    let done=0;
+    sections.forEach(s => {
+        csrfFetch('/api/map/save-section',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({id:s.id,name:s.name,description:s.description,section_type:s.type,color:s.color,x:s.x,y:s.y,w:s.w,h:s.h,responsible_ids:s.responsible_ids||[]})
+        }).then(()=>{ done++; if(done===sections.length) alert(T.allSaved); });
+    });
+}
+
+function esc(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+// ---- TOGGLE MACHINES VISIBILITY ----
+let machinesVisible = true;
+function toggleMachines() {
+    machinesVisible = !machinesVisible;
+    mLay.style.display = machinesVisible ? '' : 'none';
+    const btn = document.getElementById('toggleMachinesBtn');
+    btn.textContent = machinesVisible ? '👁️ {{ _("Hide Machines") }}' : '👁️‍🗨️ {{ _("Show Machines") }}';
+}
+</script>
+{% endblock %}

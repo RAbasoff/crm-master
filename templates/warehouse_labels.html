@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ _('Warehouse Labels') }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; }
+            .page-break { page-break-after: always; }
+        }
+        .toolbar {
+            padding: 16px; background: #f0f0f0; text-align: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .toolbar button {
+            padding: 10px 24px; font-size: 16px; cursor: pointer;
+            border: none; border-radius: 8px; margin: 0 8px;
+        }
+        .btn-print { background: #3498db; color: white; }
+        .labels-grid {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            padding: 16px; justify-content: center;
+        }
+        .label {
+            width: 200px; border: 2px solid #333; border-radius: 8px;
+            padding: 10px; text-align: center; page-break-inside: avoid;
+            background: white;
+        }
+        .label-name {
+            font-size: 13px; font-weight: 700; margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .label-location {
+            font-size: 10px; color: #666; margin-bottom: 6px;
+            background: #f0f0f0; padding: 2px 6px; border-radius: 4px;
+        }
+        .label-category {
+            font-size: 9px; color: #888; margin-bottom: 6px;
+        }
+        .label-code {
+            margin: 6px 0;
+        }
+        .label-code img {
+            max-width: 100%; height: auto;
+        }
+        .label-id {
+            font-size: 10px; color: #888; font-family: monospace;
+        }
+        .label-qr {
+            margin: 4px 0;
+        }
+        .label-qr img {
+            width: 80px; height: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar no-print">
+        <button class="btn-print" onclick="window.print()">{{ _('Print') }}</button>
+        <button onclick="window.close()" style="background:#eee">{{ _('Close') }}</button>
+        <span style="margin-left:16px;color:#888">{{ _('Labels') }}: {{ items|length }}</span>
+    </div>
+
+    <div class="labels-grid">
+        {% for item in items %}
+        <div class="label">
+            <div class="label-name">{{ item.naam }}</div>
+            {% if item.locatie %}
+            <div class="label-location">📍 {{ item.locatie }}</div>
+            {% endif %}
+            {% if item.categorie %}
+            <div class="label-category">{{ item.categorie }}</div>
+            {% endif %}
+            <div class="label-qr">
+                <img src="/api/warehouse/qr/{{ item.id }}" alt="QR">
+            </div>
+            <div class="label-code">
+                <img src="/api/warehouse/barcode/{{ item.id }}" alt="Barcode">
+            </div>
+            <div class="label-id">W{{ '%05d'|format(item.id) }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

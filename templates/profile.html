@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Profile') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Profile') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Username') }}</label>
+                <input type="text" value="{{ current_user.username }}" readonly style="background:#f5f5f5">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Role') }}</label>
+                <input type="text" value="{{ current_user.role }}" readonly style="background:#f5f5f5">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Display Name') }}</label>
+            <input type="text" name="display_name" value="{{ current_user.display_name or '' }}">
+        </div>
+        <div class="form-group">
+            <label>{{ _('New Password') }}</label>
+            <input type="password" name="new_password" placeholder="{{ _('Leave empty to keep current') }}">
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+    </form>
+</div>
+
+{% if current_user.assigned_machines %}
+<div class="card">
+    <h2>{{ _('Assigned Machines') }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+        {% for m in current_user.assigned_machines %}
+        <div style="padding:12px;background:#f8f9fa;border-radius:8px;border-left:3px solid {% if m.status == 'active' %}#27ae60{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'broken' %}#e74c3c{% else %}#95a5a6{% endif %}">
+            <div style="font-weight:600">{{ m.name }}</div>
+            <div style="font-size:12px;color:#888">{{ m.machine_type or '—' }}</div>
+            <a href="/floor?highlight={{ m.id }}" style="font-size:12px;color:#3498db">{{ _('View on floor plan') }}</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

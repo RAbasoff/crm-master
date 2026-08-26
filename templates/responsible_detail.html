@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ person.naam }} — {{ _('Contractor') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏢 {{ person.company or person.naam }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/responsible/{{ person.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        <a href="/responsible" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <!-- CONTACT PERSON -->
+    <div class="card">
+        <h2>👤 {{ _('Contact person') }}</h2>
+        <p><strong>{{ _('Name') }}:</strong> {{ person.naam }}</p>
+        {% if person.position %}<p><strong>{{ _('Position') }}:</strong> {{ person.position }}</p>{% endif %}
+        <p><strong>{{ _('Phone') }} 1:</strong>
+            {% if person.telefoon %}<a href="tel:{{ person.telefoon }}" style="color:#3498db">{{ person.telefoon }}</a>{% else %}—{% endif %}
+        </p>
+        {% if person.telefoon2 %}<p><strong>{{ _('Phone') }} 2:</strong> <a href="tel:{{ person.telefoon2 }}" style="color:#3498db">{{ person.telefoon2 }}</a></p>{% endif %}
+        <p><strong>{{ _('Email') }}:</strong>
+            {% if person.email %}<a href="mailto:{{ person.email }}" style="color:#3498db">{{ person.email }}</a>{% else %}—{% endif %}
+        </p>
+        {% if person.website %}<p><strong>{{ _('Website') }}:</strong> <a href="https://{{ person.website }}" target="_blank" style="color:#3498db">{{ person.website }}</a></p>{% endif %}
+        {% if person.resp_group %}<p><strong>{{ _('Group') }}:</strong> {{ person.resp_group.name }}</p>{% endif %}
+        {% if person.monteur %}<p><strong>{{ _('Linked worker') }}:</strong> <a href="/workers/{{ person.monteur.id }}/edit" style="color:#3498db">🔧 {{ person.monteur.naam }}</a>{% if person.monteur.specialisatie %} ({{ person.monteur.specialisatie }}){% endif %}</p>{% endif %}
+    </div>
+
+    <!-- COMPANY INFO -->
+    <div class="card">
+        <h2>🏢 {{ _('Company info') }}</h2>
+        {% if person.company %}<p><strong>{{ _('Company') }}:</strong> {{ person.company }}</p>{% endif %}
+        {% if person.service_type %}<p><strong>{{ _('Service type') }}:</strong> {{ person.service_type }}</p>{% endif %}
+        <p><strong>{{ _('Address') }}:</strong> {{ person.adres or '—' }}</p>
+        {% if person.postcode or person.stad %}
+        <p><strong>{{ _('Postcode / City') }}:</strong> {{ person.postcode }} {{ person.stad }}</p>
+        {% endif %}
+        <p><strong>{{ _('Country') }}:</strong> {{ person.land or '—' }}</p>
+        {% if person.kvk_nummer %}<p><strong>{{ _('KVK') }}:</strong> {{ person.kvk_nummer }}</p>{% endif %}
+        {% if person.btw_nummer %}<p><strong>{{ _('VAT') }}:</strong> {{ person.btw_nummer }}</p>{% endif %}
+        {% if person.iban %}<p><strong>{{ _('IBAN') }}:</strong> {{ person.iban }}</p>{% endif %}
+    </div>
+</div>
+
+<!-- CONTRACT -->
+{% if person.contract_nummer or person.contract_start %}
+<div class="card" style="margin-top:16px">
+    <h2>📄 {{ _('Contract') }}</h2>
+    <div class="detail-grid">
+        <div>
+            {% if person.contract_nummer %}<p><strong>{{ _('Contract number') }}:</strong> {{ person.contract_nummer }}</p>{% endif %}
+            {% if person.contract_start %}<p><strong>{{ _('Start') }}:</strong> {{ person.contract_start.strftime('%d-%m-%Y') }}</p>{% endif %}
+            {% if person.contract_einde %}<p><strong>{{ _('End') }}:</strong> {{ person.contract_einde.strftime('%d-%m-%Y') }}</p>{% endif %}
+        </div>
+        <div>
+            {% if person.contract_start and person.contract_einde %}
+                {% set days_left = (person.contract_einde - today).days %}
+                <p><strong>{{ _('Days left') }}:</strong>
+                    {% if days_left < 0 %}<span style="color:#e74c3c;font-weight:bold">{{ _('Expired') }}</span>
+                    {% elif days_left < 30 %}<span style="color:#f39c12;font-weight:bold">{{ days_left }} {{ _('days') }}</span>
+                    {% else %}<span style="color:#27ae60">{{ days_left }} {{ _('days') }}</span>{% endif %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- LOGIN STATUS -->
+<div class="card" style="margin-top:16px">
+    <h2>🔐 {{ _('Login Access') }}</h2>
+    <div class="detail-grid">
+        <div>
+            <p><strong>{{ _('Status') }}:</strong>
+                {% if person.password_hash %}
+                    <span style="color:#27ae60;font-weight:bold">✓ {{ _('Login set') }}</span>
+                {% else %}
+                    <span style="color:#999">✗ {{ _('No password') }}</span>
+                {% endif %}
+            </p>
+            <p><strong>{{ _('Access Level') }}:</strong>
+                {% if person.access_level == 'full' %}{{ _('Full map') }}
+                {% elif person.access_level == 'limited' %}{{ _('Limited') }}
+                {% else %}{{ _('Floor only') }}{% endif %}
+            </p>
+            <p><strong>{{ _('Active') }}:</strong>
+                {% if person.is_active %}<span style="color:#27ae60">✓</span>{% else %}<span style="color:#e74c3c">✗</span>{% endif %}
+            </p>
+            {% if person.last_login %}
+            <p><strong>{{ _('Last login') }}:</strong> {{ person.last_login.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <p><strong>{{ _('Login') }}:</strong> {{ person.email or person.naam }}</p>
+            <a href="/responsible/{{ person.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit password') }}</a>
+        </div>
+    </div>
+</div>
+
+{% if person.notities %}
+<div class="card" style="margin-top:16px">
+    <h2>📝 {{ _('Notes') }}</h2>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;white-space:pre-wrap">{{ person.notities }}</div>
+</div>
+{% endif %}
+
+<!-- LINKED MACHINES -->
+<div class="card" style="margin-top:16px">
+    <h2>⚙️ {{ _('Machines') }} ({{ machines|length }})</h2>
+    {% if machines %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Status') }}</th><th></th></tr>
+        {% for m in machines %}
+        <tr>
+            <td><a href="/machines/{{ m.id }}">{{ m.name }}</a></td>
+            <td>{{ m.machine_type or '—' }}</td>
+            <td>{{ m.serial_number or '—' }}</td>
+            <td><span class="badge badge-{{ m.status }}">{{ m.status }}</span></td>
+            <td><a href="/machines/{{ m.id }}" class="btn btn-sm" style="background:#eee;padding:4px 8px">→</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No linked machines') }}</p>
+    {% endif %}
+</div>
+
+<!-- GROUP WORKERS -->
+{% if workers %}
+<div class="card" style="margin-top:16px">
+    <h2>🔧 {{ _('Workers') }} ({{ workers|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('Phone') }}</th><th></th></tr>
+        {% for w in workers %}
+        <tr>
+            <td>{{ w.naam }}</td>
+            <td>{{ w.specialisatie or '—' }}</td>
+            <td>{{ w.telefoon or '—' }}</td>
+            <td><a href="/workers/{{ w.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">→</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- LINKED SECTIONS -->
+{% if sections %}
+<div class="card" style="margin-top:16px">
+    <h2>🏗️ {{ _('Sections') }} ({{ sections|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Machines') }}</th><th></th></tr>
+        {% for s in sections %}
+        <tr>
+            <td><strong>{{ s.name }}</strong></td>
+            <td><span class="badge badge-{{ s.section_type }}">{{ s.section_type }}</span></td>
+            <td>{{ s.machines|length }}</td>
+            <td><a href="/sections/{{ s.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">→</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- LINKED ORDERS -->
+{% if orders %}
+<div class="card" style="margin-top:16px">
+    <h2>📋 {{ _('Orders') }} ({{ orders|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Number') }}</th><th>{{ _('Device') }}</th><th>{{ _('Status') }}</th><th>{{ _('Total') }}</th><th>{{ _('Date') }}</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td><a href="/orders/{{ o.id }}">{{ o.nummer }}</a></td>
+            <td>{{ o.apparaat }} {{ o.model }}</td>
+            <td><span class="badge badge-{{ o.status.replace(' ','-') }}">{{ o.status }}</span></td>
+            <td>€{{ "%.0f"|format(o.totaal) }}</td>
+            <td>{{ o.aangemaakt.strftime('%d-%m') }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<p style="color:#888;margin-top:16px;font-size:12px">{{ _('Created') }}: {{ person.aangemaakt.strftime('%d-%m-%Y %H:%M') }}</p>
+{% endblock %}

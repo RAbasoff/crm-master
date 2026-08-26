@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Messages') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>💬 {{ _('Messages') }}</h1>
+    <a href="/messages/new" class="btn btn-primary">+ {{ _('New Message') }}</a>
+</div>
+
+<!-- TABS -->
+<div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="tab-btn active" onclick="showTab('all',this)" style="padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:#3498db;color:white">💬 {{ _('All') }}</button>
+    <button class="tab-btn" onclick="showTab('technician',this)" style="padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;background:#eee;color:#333">🔧 {{ _('Technical Service') }}</button>
+    <button class="tab-btn" onclick="showTab('responsible',this)" style="padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;background:#eee;color:#333">👤 {{ _('Responsible') }}</button>
+    <button class="tab-btn" onclick="showTab('director',this)" style="padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;background:#eee;color:#333">📋 {{ _('Director') }}</button>
+    <button class="tab-btn" onclick="showTab('quality',this)" style="padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;background:#eee;color:#333">✅ {{ _('Quality') }}</button>
+    <button class="tab-btn" onclick="showTab('sent',this)" style="padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;background:#eee;color:#333">📤 {{ _('Sent') }}</button>
+</div>
+
+<div class="card" style="padding:0">
+    <!-- RECEIVED ALL -->
+    <div id="tab-all" class="tab-content">
+        <div class="msg-list">
+            {% for m in received %}
+            <div class="msg-item {% if not m.is_read %}unread{% endif %}" onclick="location.href='/messages/{{ m.id }}'">
+                <div class="msg-avatar" style="background:{% if m.sender.role=='technician' %}#27ae60{% elif m.sender.role=='director' %}#3498db{% elif m.sender.role=='quality' %}#9b59b6{% else %}#e67e22{% endif %}">{{ (m.sender.display_name or m.sender.username)[0]|upper }}</div>
+                <div class="msg-content">
+                    <div style="display:flex;gap:6px;align-items:center">
+                        <span class="msg-subject">{{ m.subject or _('No subject') }}</span>
+                        <span class="badge badge-{{ m.sender.role }}" style="font-size:9px;padding:2px 6px">{{ m.sender.role }}</span>
+                    </div>
+                    <div class="msg-preview">{{ m.body[:80] }}{% if m.body|length > 80 %}...{% endif %}</div>
+                    <div class="msg-time">{{ m.sender.display_name or m.sender.username }} · {{ m.created_at.strftime('%d-%m %H:%M') }}</div>
+                </div>
+            </div>
+            {% else %}
+            <p style="color:#888;text-align:center;padding:40px">{{ _('No messages') }}</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- BY ROLE TABS -->
+    {% for role_key, role_name in [('technician', 'Technical Service'), ('responsible', 'Responsible'), ('director', 'Director'), ('quality', 'Quality')] %}
+    <div id="tab-{{ role_key }}" class="tab-content" style="display:none">
+        <div class="msg-list">
+            {% set role_msgs = received|selectattr('sender.role', 'equalto', role_key if role_key != 'responsible' else 'user')|list %}
+            {% for m in role_msgs %}
+            <div class="msg-item {% if not m.is_read %}unread{% endif %}" onclick="location.href='/messages/{{ m.id }}'">
+                <div class="msg-avatar">{{ (m.sender.display_name or m.sender.username)[0]|upper }}</div>
+                <div class="msg-content">
+                    <div class="msg-subject">{{ m.subject or _('No subject') }}</div>
+                    <div class="msg-preview">{{ m.body[:80] }}{% if m.body|length > 80 %}...{% endif %}</div>
+                    <div class="msg-time">{{ m.sender.display_name or m.sender.username }} · {{ m.created_at.strftime('%d-%m %H:%M') }}</div>
+                </div>
+            </div>
+            {% else %}
+            <p style="color:#888;text-align:center;padding:40px">{{ _('No messages') }}</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- SENT -->
+    <div id="tab-sent" class="tab-content" style="display:none">
+        <div class="msg-list">
+            {% for m in sent %}
+            <div class="msg-item" onclick="location.href='/messages/{{ m.id }}'">
+                <div class="msg-avatar" style="background:#27ae60">{{ (m.receiver.display_name or m.receiver.username)[0]|upper }}</div>
+                <div class="msg-content">
+                    <div class="msg-subject">{{ m.subject or _('No subject') }}</div>
+                    <div class="msg-preview">{{ m.body[:80] }}{% if m.body|length > 80 %}...{% endif %}</div>
+                    <div class="msg-time">{{ _('To') }}: {{ m.receiver.display_name or m.receiver.username }} · {{ m.created_at.strftime('%d-%m %H:%M') }}</div>
+                </div>
+            </div>
+            {% else %}
+            <p style="color:#888;text-align:center;padding:40px">{{ _('No messages') }}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ADMIN: ALL CONVERSATIONS -->
+{% if current_user.has_role('admin') %}
+<div class="card" style="margin-top:12px;border-left:4px solid #e74c3c">
+    <details>
+        <summary style="cursor:pointer;font-weight:600;font-size:14px">🔒 {{ _('Admin: All conversations') }} ({{ all_messages|length }})</summary>
+        <div class="msg-list" style="max-height:400px;overflow-y:auto;margin-top:8px">
+            {% for m in all_messages %}
+            <div class="msg-item" onclick="location.href='/messages/{{ m.id }}'" style="padding:8px">
+                <div style="display:flex;gap:8px;align-items:center;min-width:0">
+                    <span style="font-size:11px;color:#888;min-width:70px">{{ m.created_at.strftime('%d-%m %H:%M') }}</span>
+                    <span style="font-weight:600;font-size:12px;min-width:80px">{{ m.sender.display_name or m.sender.username }}</span>
+                    <span style="color:#888;font-size:11px">→</span>
+                    <span style="font-weight:600;font-size:12px;min-width:80px">{{ m.receiver.display_name or m.receiver.username }}</span>
+                    <span style="font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.subject or m.body[:40] }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+<script>
+function showTab(tab, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(el => { el.style.background = '#eee'; el.style.color = '#333'; });
+    document.getElementById('tab-' + tab).style.display = 'block';
+    if (btn) { btn.style.background = '#3498db'; btn.style.color = 'white'; }
+}
+</script>
+{% endblock %}

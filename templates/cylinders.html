@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gas Cylinders') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔴 {{ _('Gas Cylinders') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/repairs" class="btn btn-sm" style="background:#eee">🔧 {{ _('Equipment Repairs') }}</a>
+        <a href="/repairs/stats" class="btn btn-sm" style="background:#eee">📊 {{ _('Statistics') }}</a>
+        <button class="btn btn-primary" onclick="document.getElementById('orderModal').style.display='flex'">+ {{ _('Order cylinders') }}</button>
+    </div>
+</div>
+
+{% if warnings %}
+{% for w in warnings %}
+<div class="alert alert-error" style="display:flex;align-items:center;gap:12px;border-left:4px solid #e74c3c">
+    <span style="font-size:24px">⚠️</span>
+    <div><strong>{{ _('Low stock') }}: {{ w.gas }}</strong> — {{ w.remaining }} {{ _('cylinders remaining') }}</div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- MAIN LAYOUT -->
+<div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
+
+<!-- LEFT: CYLINDER STATUS -->
+<div class="card" style="padding:16px">
+    <h2 style="margin-bottom:12px;text-align:center;font-size:14px">📊 {{ _('Cylinder Status') }}</h2>
+    
+    <!-- N2 Cylinders with images -->
+    <h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N₂ {{ _('Nitrogen') }} ({{ count_n2 }})</h3>
+    <div style="display:flex;gap:10px;margin-bottom:6px;justify-content:center">
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_full }}</b> {{ _('Full') }}</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_in_use }}</b> {{ _('In use') }}</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_empty }}</b> {{ _('Empty') }}</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
+        {% for cyl in n2_active %}
+        <div style="text-align:center;cursor:pointer" onclick="showStats('nitrogen')">
+            <svg width="50" height="80" viewBox="0 0 75 120">
+                <defs><linearGradient id="sn2{{ loop.index }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="{% if cyl and cyl.status=='full' %}#2ecc71{% elif cyl and cyl.status=='in_use' %}#f1c40f{% else %}#e74c3c{% endif %}"/><stop offset="100%" stop-color="{% if cyl and cyl.status=='full' %}#27ae60{% elif cyl and cyl.status=='in_use' %}#f39c12{% else %}#c0392b{% endif %}"/></linearGradient></defs>
+                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
+                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
+                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sn2{{ loop.index }})" stroke="{% if cyl and cyl.status=='full' %}#1e8449{% elif cyl and cyl.status=='in_use' %}#d68910{% else %}#a93226{% endif %}" stroke-width="2"/>
+                <text x="37" y="60" text-anchor="middle" fill="white" font-size="16" font-weight="bold">N₂</text>
+                <text x="37" y="78" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">{% if cyl %}{{ cyl.cylinder_number[:8] }}{% else %}—{% endif %}</text>
+                <text x="37" y="93" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">{% if cyl %}{% if cyl.status=='full' %}FULL{% elif cyl.status=='in_use' %}USE{% else %}EMPTY{% endif %}{% else %}—{% endif %}</text>
+            </svg>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- CO2 Cylinders with images -->
+    <h3 style="color:#e67e22;margin-bottom:6px;font-size:13px;text-align:center">CO₂ {{ _('Carbon dioxide') }} ({{ count_co2 }})</h3>
+    <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_full }}</b> {{ _('Full') }}</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_in_use }}</b> {{ _('In use') }}</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_empty }}</b> {{ _('Empty') }}</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
+        {% for cyl in co2_active %}
+        <div style="text-align:center;cursor:pointer" onclick="showStats('co2')">
+            <svg width="50" height="80" viewBox="0 0 75 120">
+                <defs><linearGradient id="sco2{{ loop.index }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="{% if cyl and cyl.status=='full' %}#2ecc71{% elif cyl and cyl.status=='in_use' %}#f1c40f{% else %}#e74c3c{% endif %}"/><stop offset="100%" stop-color="{% if cyl and cyl.status=='full' %}#27ae60{% elif cyl and cyl.status=='in_use' %}#f39c12{% else %}#c0392b{% endif %}"/></linearGradient></defs>
+                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
+                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
+                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sco2{{ loop.index }})" stroke="{% if cyl and cyl.status=='full' %}#1e8449{% elif cyl and cyl.status=='in_use' %}#d68910{% else %}#a93226{% endif %}" stroke-width="2"/>
+                <text x="37" y="57" text-anchor="middle" fill="white" font-size="13" font-weight="bold">CO₂</text>
+                <text x="37" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">{% if cyl %}{{ cyl.cylinder_number[:8] }}{% else %}—{% endif %}</text>
+                <text x="37" y="90" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">{% if cyl %}{% if cyl.status=='full' %}FULL{% elif cyl.status=='in_use' %}USE{% else %}EMPTY{% endif %}{% else %}—{% endif %}</text>
+            </svg>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#888;text-align:center">{{ _('Click cylinder for details') }}</div>
+</div>
+
+<!-- STATS MODAL -->
+<div id="statsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:350px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="statsTitle" style="margin:0;font-size:16px"></h2>
+            <button onclick="document.getElementById('statsModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div id="statsContent" style="font-size:14px;line-height:2"></div>
+    </div>
+</div>
+
+<!-- RIGHT: GAS SYSTEM -->
+<div class="card" style="padding:16px">
+    <h2 style="margin-bottom:12px;text-align:center;font-size:14px">🔧 {{ _('Gas System') }}</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- N2 SYSTEM -->
+        <div>
+            <h3 style="color:#3498db;font-size:12px;margin-bottom:8px;text-align:center">N₂ {{ _('Nitrogen') }}</h3>
+            {% set n2h = n2_components|selectattr('component_type','equalto','heater')|list %}
+            {% set n2m = n2_components|selectattr('component_type','equalto','manometer')|list %}
+            {% set n2v = n2_components|selectattr('component_type','equalto','valve')|list %}
+            {% set n2s = n2_components|selectattr('component_type','equalto','shut_off')|list %}
+            <svg width="100%" height="380" viewBox="0 0 200 380" onclick="svgClick(event)">
+                <!-- Group frames -->
+                <rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="50" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">{{ _('Group') }} 1</text>
+                <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="150" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">{{ _('Group') }} 2</text>
+
+                <!-- Cylinder LEFT (Group 1) - clickable -->
+                <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="left" style="cursor:pointer" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
+                <text x="45" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold" class="cyl-svg-click" data-gas="nitrogen" data-position="left" style="cursor:pointer">N₂</text>
+                <text x="45" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-left-label" style="cursor:pointer">—</text>
+                <text x="45" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-left-status">—</text>
+
+                <!-- Cylinder RIGHT (Group 2) - clickable -->
+                <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="right" style="cursor:pointer" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
+                <text x="155" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold" class="cyl-svg-click" data-gas="nitrogen" data-position="right" style="cursor:pointer">N₂</text>
+                <text x="155" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-right-label" style="cursor:pointer">—</text>
+                <text x="155" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-right-status">—</text>
+
+                <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
+                <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
+
+                <!-- Heater 1 -->
+                <rect x="17" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ n2h[0].id if n2h|length > 0 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M27,240 Q32,235 37,240 Q42,245 47,240 Q52,235 57,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="45" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 1</text>
+                <text x="45" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ n2h[0].id if n2h|length > 0 }}" class="comp-txt">OK</text>
+
+                <!-- Heater 2 -->
+                <rect x="127" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ n2h[1].id if n2h|length > 1 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M137,240 Q142,235 147,240 Q152,245 157,240 Q162,235 167,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="155" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 2</text>
+                <text x="155" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ n2h[1].id if n2h|length > 1 }}" class="comp-txt">OK</text>
+
+                <line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>
+                <line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>
+
+                <!-- Switch -->
+                <rect x="77" y="192" rx="3" ry="3" width="46" height="16" data-cid="{{ n2s[0].id if n2s|length > 0 }}" class="comp-click" fill="#f39c12" stroke="#d68910" stroke-width="1.2"/>
+                <circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/>
+                <circle cx="110" cy="200" r="4" fill="#d68910"/>
+
+                <line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>
+
+                <!-- Valve -->
+                <rect x="78" y="148" rx="4" ry="4" width="44" height="20" data-cid="{{ n2v[0].id if n2v|length > 0 }}" class="comp-click" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+                <line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>
+                <rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>
+                <text x="100" y="162" text-anchor="middle" fill="white" font-size="6" data-cid="{{ n2v[0].id if n2v|length > 0 }}" class="comp-txt">OK</text>
+
+                <!-- Manometers -->
+                <circle cx="60" cy="118" r="16" data-cid="{{ n2m[0].id if n2m|length > 0 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="60" y1="118" x2="70" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="2" fill="#333"/>
+                <text x="60" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ n2m[0].id if n2m|length > 0 }}" class="comp-txt">OK</text>
+
+                <circle cx="140" cy="118" r="16" data-cid="{{ n2m[1].id if n2m|length > 1 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="140" y1="118" x2="150" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="2" fill="#333"/>
+                <text x="140" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ n2m[1].id if n2m|length > 1 }}" class="comp-txt">OK</text>
+
+                <line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>
+                <line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>
+                <line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>
+
+                <rect x="55" y="72" rx="4" ry="4" width="90" height="22" data-cid="{{ n2s[0].id if n2s|length > 0 }}" class="comp-click" fill="#555" stroke="#333" stroke-width="1.2"/>
+                <circle cx="80" cy="83" r="6" fill="#27ae60"/>
+                <circle cx="120" cy="83" r="6" fill="#95a5a6"/>
+                <line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+                <line x1="100" y1="72" x2="100" y2="52" stroke="#3498db" stroke-width="3"/>
+                <polygon points="100,48 94,58 106,58" fill="#3498db"/>
+                <text x="100" y="45" text-anchor="middle" fill="#3498db" font-size="10" font-weight="bold">OUT</text>
+            </svg>
+        </div>
+
+        <!-- CO2 SYSTEM -->
+        <div>
+            <h3 style="color:#e67e22;font-size:12px;margin-bottom:8px;text-align:center">CO₂ {{ _('Carbon dioxide') }}</h3>
+            {% set co2h = co2_components|selectattr('component_type','equalto','heater')|list %}
+            {% set co2m = co2_components|selectattr('component_type','equalto','manometer')|list %}
+            {% set co2v = co2_components|selectattr('component_type','equalto','valve')|list %}
+            {% set co2s = co2_components|selectattr('component_type','equalto','shut_off')|list %}
+            <svg width="100%" height="380" viewBox="0 0 200 380" onclick="svgClick(event)">
+                <rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="50" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">{{ _('Group') }} 1</text>
+                <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="150" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">{{ _('Group') }} 2</text>
+
+                <!-- Cylinder LEFT (Group 1) - clickable -->
+                <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="left" style="cursor:pointer" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+                <text x="45" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold" class="cyl-svg-click" data-gas="co2" data-position="left" style="cursor:pointer">CO₂</text>
+                <text x="45" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-left-label" style="cursor:pointer">—</text>
+                <text x="45" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-left-status">—</text>
+
+                <!-- Cylinder RIGHT (Group 2) - clickable -->
+                <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="right" style="cursor:pointer" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+                <text x="155" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold" class="cyl-svg-click" data-gas="co2" data-position="right" style="cursor:pointer">CO₂</text>
+                <text x="155" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-right-label" style="cursor:pointer">—</text>
+                <text x="155" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-right-status">—</text>
+
+                <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
+                <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
+
+                <rect x="17" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ co2h[0].id if co2h|length > 0 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M27,240 Q32,235 37,240 Q42,245 47,240 Q52,235 57,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="45" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 1</text>
+                <text x="45" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ co2h[0].id if co2h|length > 0 }}" class="comp-txt">OK</text>
+
+                <rect x="127" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ co2h[1].id if co2h|length > 1 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M137,240 Q142,235 147,240 Q152,245 157,240 Q162,235 167,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="155" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 2</text>
+                <text x="155" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ co2h[1].id if co2h|length > 1 }}" class="comp-txt">OK</text>
+
+                <line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>
+                <line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>
+
+                <!-- Switch -->
+                <rect x="77" y="192" rx="3" ry="3" width="46" height="16" data-cid="{{ co2s[0].id if co2s|length > 0 }}" class="comp-click" fill="#f39c12" stroke="#d68910" stroke-width="1.2"/>
+                <circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/>
+                <circle cx="110" cy="200" r="4" fill="#d68910"/>
+
+                <line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>
+
+                <!-- Valve -->
+                <rect x="78" y="148" rx="4" ry="4" width="44" height="20" data-cid="{{ co2v[0].id if co2v|length > 0 }}" class="comp-click" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+                <line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>
+                <rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>
+                <text x="100" y="162" text-anchor="middle" fill="white" font-size="6" data-cid="{{ co2v[0].id if co2v|length > 0 }}" class="comp-txt">OK</text>
+
+                <!-- Manometers -->
+                <circle cx="60" cy="118" r="16" data-cid="{{ co2m[0].id if co2m|length > 0 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="60" y1="118" x2="70" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="2" fill="#333"/>
+                <text x="60" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ co2m[0].id if co2m|length > 0 }}" class="comp-txt">OK</text>
+
+                <circle cx="140" cy="118" r="16" data-cid="{{ co2m[1].id if co2m|length > 1 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="140" y1="118" x2="150" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="2" fill="#333"/>
+                <text x="140" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ co2m[1].id if co2m|length > 1 }}" class="comp-txt">OK</text>
+
+                <line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>
+                <line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>
+                <line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>
+
+                <rect x="55" y="72" rx="4" ry="4" width="90" height="22" data-cid="{{ co2s[0].id if co2s|length > 0 }}" class="comp-click" fill="#555" stroke="#333" stroke-width="1.2"/>
+                <circle cx="80" cy="83" r="6" fill="#27ae60"/>
+                <circle cx="120" cy="83" r="6" fill="#95a5a6"/>
+                <line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+                <line x1="100" y1="72" x2="100" y2="52" stroke="#e67e22" stroke-width="3"/>
+                <polygon points="100,48 94,58 106,58" fill="#e67e22"/>
+                <text x="100" y="45" text-anchor="middle" fill="#e67e22" font-size="10" font-weight="bold">OUT</text>
+            </svg>
+        </div>
+    </div>
+    <p style="text-align:center;color:#888;font-size:10px">🔵 {{ _('Heater') }} | ⭕ {{ _('Manometer') }} | 🟢 {{ _('Valve') }} | 🟡 {{ _('Switch') }} | {{ _('Click cylinder to replace') }}</p>
+</div>
+
+</div>
+
+<!-- ORDERS + HISTORY -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div class="card"><h2 style="margin-bottom:12px">{{ _('Orders') }}</h2>{% if orders %}<div class="table-wrap"><table><tr><th>{{ _('Date') }}</th><th>Gas</th><th>Qty</th><th>{{ _('Status') }}</th><th>{{ _('Delivered') }}</th></tr>{% for o in orders %}<tr><td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td><td>{% if o.gas_type=='nitrogen' %}N₂{% else %}CO₂{% endif %}</td><td>{{ o.quantity }}</td><td><span class="badge badge-{{ o.status }}">{{ o.status }}</span>{% if current_user.has_role('admin','technician') and o.status in ('pending','ordered') %}<form method="POST" action="/cylinders/order/{{ o.id }}/status" style="display:inline"><select name="status" onchange="if(this.value==='delivered'){openDeliver({{ o.id }},{{ o.quantity }},'{{ o.gas_type }}')}else{this.form.submit()}" style="font-size:11px;padding:2px"><option value="">{{ _('Change') }}</option><option value="ordered">{{ _('Ordered') }}</option><option value="delivered">{{ _('Delivered') }}</option><option value="cancelled">{{ _('Cancelled') }}</option></select></form>{% endif %}</td><td>{{ o.delivered_at.strftime('%d-%m-%Y') if o.delivered_at else '—' }}</td></tr>{% endfor %}</table></div>{% else %}<p style="color:#888;text-align:center">{{ _('No orders') }}</p>{% endif %}</div>
+    <div class="card"><h2 style="margin-bottom:12px">{{ _('History') }}</h2>{% if recent_logs %}<div style="max-height:200px;overflow-y:auto">{% for log in recent_logs %}<div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">{{ log.date.strftime('%d-%m %H:%M') }}</span> <b>{{ log.action }}</b>{% if log.new_cylinder_number %} {{ log.new_cylinder_number }}{% endif %}</div>{% endfor %}</div>{% else %}<p style="color:#888;text-align:center">{{ _('No history') }}</p>{% endif %}</div>
+</div>
+
+<div class="card" style="margin-top:16px"><h2 style="margin-bottom:12px">{{ _('All Cylinders') }}</h2><div class="table-wrap"><table><tr><th>{{ _('Number') }}</th><th>Gas</th><th>{{ _('Status') }}</th><th>{{ _('Received') }}</th><th>{{ _('Installed') }}</th></tr>{% for c in all_cylinders %}<tr><td><b>{{ c.cylinder_number }}</b></td><td>{% if c.gas_type=='nitrogen' %}N₂{% else %}CO₂{% endif %}</td><td><span class="badge badge-{% if c.status=='full' %}active{% elif c.status=='in_use' %}high{% elif c.status=='leak' %}purple{% elif c.status=='faulty' %}broken{% else %}broken{% endif %}">{{ c.status }}</span></td><td>{{ c.received_at.strftime('%d-%m-%Y') if c.received_at else '—' }}</td><td>{{ c.installed_at.strftime('%d-%m-%Y') if c.installed_at else '—' }}</td></tr>{% endfor %}</table></div></div>
+
+<!-- MODALS -->
+<div id="statusModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:380px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="statusTitle" style="margin:0"></h2>
+            <button onclick="closeStatusModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+            <button class="btn" id="btn-full" onclick="setCylStatus('full')" style="background:#27ae60;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Full') }}</button>
+            <button class="btn" id="btn-in_use" onclick="setCylStatus('in_use')" style="background:#f39c12;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('In use') }}</button>
+            <button class="btn" id="btn-empty" onclick="setCylStatus('empty')" style="background:#e74c3c;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Empty') }}</button>
+            <button class="btn" id="btn-leak" onclick="setCylStatus('leak')" style="background:#9b59b6;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Leak') }}</button>
+            <button class="btn" id="btn-faulty" onclick="setCylStatus('faulty')" style="background:#566573;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Faulty') }}</button>
+        </div>
+        <div class="form-group"><label>{{ _('Notes') }}</label><textarea id="statusNotes" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn" style="background:#eee" onclick="closeStatusModal()">{{ _('Cancel') }}</button>
+            <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReplaceFromModal()">{{ _('Replace') }} ↗</button>
+        </div>
+    </div>
+</div>
+
+<div id="componentModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:400px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="compTitle" style="margin:0"></h2>
+            <button onclick="document.getElementById('componentModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div class="form-group"><label>{{ _('Status') }}</label>
+            <select id="compStatus">
+                <option value="ok">✅ OK</option>
+                <option value="warning">⚠️ {{ _('Warning') }}</option>
+                <option value="faulty">❌ {{ _('Faulty') }}</option>
+                <option value="replaced">🔄 {{ _('Replaced') }}</option>
+            </select>
+        </div>
+        <div class="form-group"><label>{{ _('Notes') }}</label><textarea id="compNotes" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn" style="background:#eee" onclick="document.getElementById('componentModal').style.display='none'">{{ _('Cancel') }}</button>
+            <button class="btn btn-primary" id="saveCompBtn" onclick="saveComp()">{{ _('Save') }}</button>
+        </div>
+    </div>
+</div>
+
+<div id="replaceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">{{ _('Replace Cylinder') }}</h2><button onclick="closeReplace()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><p style="margin:0 0 12px;color:#666" id="replaceInfo"></p><div class="form-group"><label>{{ _('Select new') }}</label><select id="newCylSelect"><option value="">{{ _('Available') }}</option></select></div><div class="form-group"><label>{{ _('Or enter number') }}</label><input type="text" id="newCylNumber"></div><div class="form-group"><label>{{ _('Notes') }}</label><textarea id="newCylNotes" rows="2"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" style="background:#eee" onclick="closeReplace()">{{ _('Cancel') }}</button><button class="btn btn-primary" onclick="submitReplace()">{{ _('Replace') }}</button></div></div></div>
+
+<div id="deliverModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">{{ _('Deliver') }}</h2><button onclick="closeDeliver()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><p id="deliverInfo" style="margin:0 0 12px;color:#666"></p><form method="POST" id="deliverForm"><input type="hidden" name="status" value="delivered"><div class="form-group"><label>{{ _('Numbers') }}</label><textarea name="cylinder_numbers" id="deliverNumbers" rows="4"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="closeDeliver()">{{ _('Cancel') }}</button><button type="submit" class="btn btn-success">{{ _('Confirm') }}</button></div></form></div></div>
+
+<div id="orderModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">{{ _('Order Cylinders') }}</h2><button onclick="document.getElementById('orderModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><form method="POST" action="/cylinders/order"><div class="form-row"><div class="form-group"><label>Gas</label><select name="gas_type" required><option value="nitrogen">N₂</option><option value="co2">CO₂</option></select></div><div class="form-group"><label>{{ _('Qty') }}</label><input type="number" name="quantity" value="1" min="1"></div></div><div class="form-group"><label>{{ _('Supplier') }}</label><input type="text" name="supplier"></div><div class="form-group"><label>{{ _('Reason') }}</label><textarea name="reason" rows="2"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="document.getElementById('orderModal').style.display='none'">{{ _('Cancel') }}</button><button type="submit" class="btn btn-primary">{{ _('Order') }}</button></div></form></div></div>
+
+<style>.comp-click{cursor:pointer;transition:filter .15s}.comp-click:hover{filter:brightness(1.2)}.cyl-svg-click:hover{filter:brightness(1.3);stroke-width:3}</style>
+<script>
+// === CYLINDER STATUS CHANGE ===
+let statusCylId = null, statusGas = null, statusCylNum = '';
+
+function openStatusModal(id, number, gas, currentStatus) {
+    if (!id) return;
+    statusCylId = id; statusGas = gas; statusCylNum = number;
+    document.getElementById('statusTitle').textContent = (gas === 'nitrogen' ? 'N₂' : 'CO₂') + ' #' + number;
+    ['full','in_use','empty','leak','faulty'].forEach(s => {
+        const btn = document.getElementById('btn-' + s);
+        btn.style.outline = (s === currentStatus) ? '3px solid #333' : 'none';
+        btn.style.opacity = (s === currentStatus) ? '1' : '0.7';
+    });
+    document.getElementById('statusNotes').value = '';
+    document.getElementById('statusModal').style.display = 'flex';
+}
+function closeStatusModal() { document.getElementById('statusModal').style.display = 'none'; }
+function openReplaceFromModal() { closeStatusModal(); openReplace(statusCylId, statusGas, statusCylNum); }
+
+function setCylStatus(newStatus) {
+    if (!statusCylId) return;
+    fetch('/cylinders/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({cylinder_id: statusCylId, status: newStatus, notes: document.getElementById('statusNotes').value})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { closeStatusModal(); location.reload(); }
+        else alert(d.error || 'Error');
+    }).catch(e => alert('Error: ' + e.message));
+}
+
+// === LOAD ACTIVE CYLINDERS INTO SVG ===
+function updateActiveCylinders() {
+    fetch('/cylinders/api/active').then(r => r.json()).then(d => {
+        // N2 left (Group 1) - first in_use
+        const n2l = d.n2_left;
+        const n2r = d.n2_right;
+        document.querySelector('.n2-left-label').textContent = n2l ? n2l.number : '—';
+        document.querySelector('.n2-left-status').textContent = n2l ? n2l.status.toUpperCase() : 'EMPTY';
+        document.querySelector('.n2-right-label').textContent = n2r ? n2r.number : '—';
+        document.querySelector('.n2-right-status').textContent = n2r ? n2r.status.toUpperCase() : 'EMPTY';
+        
+        // Color based on status
+        const n2lRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="left"]');
+        const n2rRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="right"]');
+        n2lRect.setAttribute('fill', n2l ? (n2l.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
+        n2rRect.setAttribute('fill', n2r ? (n2r.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
+        
+        // Store IDs for click
+        n2lRect.dataset.cylId = n2l ? n2l.id : '';
+        n2rRect.dataset.cylId = n2r ? n2r.id : '';
+        
+        // CO2
+        const co2l = d.co2_left;
+        const co2r = d.co2_right;
+        document.querySelector('.co2-left-label').textContent = co2l ? co2l.number : '—';
+        document.querySelector('.co2-left-status').textContent = co2l ? co2l.status.toUpperCase() : 'EMPTY';
+        document.querySelector('.co2-right-label').textContent = co2r ? co2r.number : '—';
+        document.querySelector('.co2-right-status').textContent = co2r ? co2r.status.toUpperCase() : 'EMPTY';
+        
+        const co2lRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="left"]');
+        const co2rRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="right"]');
+        co2lRect.setAttribute('fill', co2l ? (co2l.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
+        co2rRect.setAttribute('fill', co2r ? (co2r.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
+        
+        co2lRect.dataset.cylId = co2l ? co2l.id : '';
+        co2rRect.dataset.cylId = co2r ? co2r.id : '';
+    });
+}
+updateActiveCylinders();
+setInterval(updateActiveCylinders, 30000);
+
+// === CLICK CYLINDER IN SVG TO REPLACE ===
+document.querySelectorAll('.cyl-svg-click').forEach(el => {
+    el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const gas = this.dataset.gas;
+        const position = this.dataset.position;
+        const cylId = this.dataset.cylId;
+        const num = gas === 'nitrogen' 
+            ? document.querySelector(`.n2-${position}-label`).textContent 
+            : document.querySelector(`.co2-${position}-label`).textContent;
+        openReplace(cylId ? parseInt(cylId) : null, gas, num, position);
+    });
+});
+
+// === REPLACE MODAL ===
+const aN2 = [{% for c in available_n2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
+const aCO2 = [{% for c in available_co2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
+let rId = null, rGas = null, rPosition = '';
+
+function openReplace(id, gas, num, position) {
+    rId = id; rGas = gas; rPosition = position || '';
+    const posLabel = position === 'left' ? ' ({{ _("Left") }})' : position === 'right' ? ' ({{ _("Right") }})' : '';
+    document.getElementById('replaceInfo').textContent = `{{ _("Replace") }} ${gas === 'nitrogen' ? 'N₂' : 'CO₂'}${posLabel} #${num || '—'}`;
+    const sel = document.getElementById('newCylSelect');
+    const list = gas === 'nitrogen' ? aN2 : aCO2;
+    sel.innerHTML = '<option value="">' + T.select + '</option>';
+    function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+    list.forEach(c => { sel.innerHTML += `<option value="${parseInt(c.id)}">${esc(c.n)}</option>`; });
+    document.getElementById('newCylNumber').value = '';
+    document.getElementById('newCylNotes').value = '';
+    document.getElementById('replaceModal').style.display = 'flex';
+}
+function closeReplace() { document.getElementById('replaceModal').style.display = 'none'; }
+function submitReplace() {
+    const sid = document.getElementById('newCylSelect').value;
+    const num = document.getElementById('newCylNumber').value.trim();
+    if (!sid && !num) { alert(T.selectOrEnter); return; }
+    fetch('/cylinders/replace', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({cylinder_id: rId, new_cylinder_id: sid ? parseInt(sid) : null, new_number: num, gas_type: rGas, notes: document.getElementById('newCylNotes').value})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); else alert(d.error); });
+}
+
+function openDeliver(oid, qty, gas) {
+    document.getElementById('deliverInfo').textContent = `${gas === 'nitrogen' ? 'N₂' : 'CO₂'}: ${qty}`;
+    document.getElementById('deliverForm').action = `/cylinders/order/${oid}/status`;
+    document.getElementById('deliverNumbers').value = '';
+    document.getElementById('deliverModal').style.display = 'flex';
+}
+function closeDeliver() { document.getElementById('deliverModal').style.display = 'none'; }
+
+document.querySelectorAll('[id$="Modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+
+// Translation strings
+const T = {
+    nitrogen: '{{ _("Nitrogen") }}',
+    carbonDioxide: '{{ _("Carbon dioxide") }}',
+    full: '{{ _("Full") }}',
+    inUse: '{{ _("In use") }}',
+    empty: '{{ _("Empty") }}',
+    leak: '{{ _("Leak") }}',
+    faulty: '{{ _("Faulty") }}',
+    total: '{{ _("Total") }}',
+    attention: '{{ _("ATTENTION!") }}',
+    remaining: '{{ _("Remaining") }}',
+    fullCylinders: '{{ _("full cylinders N₂") }}',
+    needOrder: '{{ _("NEED TO ORDER!") }}',
+    understood: '{{ _("UNDERSTOOD") }}',
+    replace: '{{ _("Replace") }}',
+    select: '{{ _("Select") }}',
+    enterNumber: '{{ _("Enter number") }}',
+    selectOrEnter: '{{ _("Select or enter number") }}'
+};
+
+// === STATS MODAL ===
+const statsData = {
+    nitrogen: {
+        full: {{ stats.n2_full }},
+        in_use: {{ stats.n2_in_use }},
+        empty: {{ stats.n2_empty }},
+        leak: {{ stats.n2_leak }},
+        faulty: {{ stats.n2_faulty }},
+        total: {{ count_n2 }}
+    },
+    co2: {
+        full: {{ stats.co2_full }},
+        in_use: {{ stats.co2_in_use }},
+        empty: {{ stats.co2_empty }},
+        leak: {{ stats.co2_leak }},
+        faulty: {{ stats.co2_faulty }},
+        total: {{ count_co2 }}
+    }
+};
+
+function showStats(gas) {
+    const d = statsData[gas];
+    const label = gas === 'nitrogen' ? 'N₂ ' + T.nitrogen : 'CO₂ ' + T.carbonDioxide;
+    document.getElementById('statsTitle').textContent = label;
+    document.getElementById('statsContent').innerHTML = 
+        `<div style="display:flex;flex-direction:column;gap:8px">` +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#27ae60;color:white;border-radius:8px"><span>${T.full}:</span><b>${d.full}</b></div>` +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f39c12;color:white;border-radius:8px"><span>${T.inUse}:</span><b>${d.in_use}</b></div>` +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#e74c3c;color:white;border-radius:8px"><span>${T.empty}:</span><b>${d.empty}</b></div>` +
+        (d.leak > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#9b59b6;color:white;border-radius:8px"><span>${T.leak}:</span><b>${d.leak}</b></div>` : '') +
+        (d.faulty > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#566573;color:white;border-radius:8px"><span>${T.faulty}:</span><b>${d.faulty}</b></div>` : '') +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#eee;border-radius:8px;font-weight:600"><span>${T.total}:</span><b>${d.total}</b></div>` +
+        `</div>`;
+    document.getElementById('statsModal').style.display = 'flex';
+}
+
+// === LOW STOCK WARNING (N2 <= 4) ===
+(function() {
+    const n2Full = {{ stats.n2_full }};
+    if (n2Full <= 4 && n2Full > 0) {
+        const overlay = document.createElement('div');
+        overlay.id = 'lowStockWarning';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+        overlay.innerHTML = '<div id="flashBox" style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(231,76,60,0.8)">' +
+            '<div style="font-size:64px;margin-bottom:16px">⚠️</div>' +
+            '<div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">' + T.attention + '</div>' +
+            '<div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">' + T.remaining + ' ' + n2Full + ' ' + T.fullCylinders + '</div>' +
+            '<div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">' + T.needOrder + '</div>' +
+            '<button onclick="this.closest(\'#lowStockWarning\').remove()" style="padding:12px 30px;font-size:16px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T.understood + '</button>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        
+        // Flash effect for 5 seconds
+        const box = document.getElementById('flashBox');
+        let flashCount = 0;
+        const flashInterval = setInterval(() => {
+            box.style.background = flashCount % 2 === 0 ? '#000' : '#e74c3c';
+            box.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+            box.querySelectorAll('div').forEach(d => {
+                if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+            });
+            flashCount++;
+            if (flashCount >= 10) {
+                clearInterval(flashInterval);
+                box.style.background = '#e74c3c';
+                box.querySelectorAll('div').forEach(d => d.style.color = '#000');
+            }
+        }, 500);
+    }
+})();
+</script>
+<script>
+document.addEventListener('contextmenu', function(e) {
+    const el = e.target.closest('.comp-click[data-cid]');
+    if (!el) return;
+    e.preventDefault();
+    const cid = parseInt(el.dataset.cid);
+    if (!cid || !confirm('Reset to OK?')) return;
+    fetch('/cylinders/component/' + cid + '/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'ok', notes: ''})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+});
+</script>
+<script>
+const allComps = {{ n2_json|tojson }}.concat({{ co2_json|tojson }});
+const statusColors = {
+    ok:      {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'},
+    warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'},
+    faulty:  {fill: '#c0392b', circle: '#f8d7da', text: 'FAULT'},
+    replaced:{fill: '#8e44ad', circle: '#e8daef', text: 'NEW'}
+};
+const compById = {};
+allComps.forEach(c => { compById[c.id] = c; });
+
+function applyColors() {
+    document.querySelectorAll('.comp-click[data-cid]').forEach(el => {
+        const cid = parseInt(el.dataset.cid);
+        const comp = compById[cid];
+        if (!comp) return;
+        const sc = statusColors[comp.status] || statusColors.ok;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'rect') el.setAttribute('fill', sc.fill);
+        else if (tag === 'circle') el.setAttribute('fill', sc.circle);
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function(e) { e.stopPropagation(); openCompModal(cid); });
+    });
+    document.querySelectorAll('.comp-txt[data-cid]').forEach(el => {
+        const cid = parseInt(el.dataset.cid);
+        const comp = compById[cid];
+        if (!comp) return;
+        const sc = statusColors[comp.status] || statusColors.ok;
+        el.textContent = sc.text;
+    });
+}
+applyColors();
+
+let currentCompId = null;
+function openCompModal(id) {
+    if (!id || isNaN(id)) return;
+    currentCompId = id;
+    const comp = compById[id];
+    document.getElementById('compTitle').textContent = comp ? comp.name : 'Component #' + id;
+    document.getElementById('compStatus').value = comp ? (comp.status || 'ok') : 'ok';
+    document.getElementById('compNotes').value = '';
+    document.getElementById('componentModal').style.display = 'flex';
+}
+
+function svgClick(event) {
+    const el = event.target.closest('[data-cid]');
+    if (!el) return;
+    const id = parseInt(el.dataset.cid);
+    if (!id || isNaN(id)) return;
+    openCompModal(id);
+}
+
+function saveComp() {
+    if (!currentCompId) { alert('Компонент не выбран'); return; }
+    const status = document.getElementById('compStatus').value;
+    const notes = document.getElementById('compNotes').value;
+    const btn = document.getElementById('saveCompBtn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    fetch('/cylinders/component/' + currentCompId + '/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: status, notes: notes})
+    }).then(r => {
+        if (!r.ok) throw new Error('Ошибка сервера: ' + r.status);
+        return r.json();
+    }).then(d => {
+        if (d.ok) location.reload();
+        else { alert('Ошибка: ' + (d.error || 'Неизвестная')); btn.disabled = false; btn.textContent = 'Сохранить'; }
+    }).catch(err => {
+        alert('Ошибка: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Сохранить';
+    });
+}
+</script>
+{% endblock %}

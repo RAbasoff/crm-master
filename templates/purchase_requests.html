@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Purchase Requests') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🛒 {{ _('Purchase Requests') }}</h1>
+    <a href="/purchase-requests/new" class="btn btn-warning">+ {{ _('New Request') }}</a>
+</div>
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>#</th><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Urgency') }}</th><th>{{ _('Status') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for r in requests %}
+        <tr>
+            <td><a href="/purchase-requests/{{ r.id }}">{{ r.id }}</a></td>
+            <td>{{ r.machine.name }}</td>
+            <td>{{ r.part_name }}</td>
+            <td>{{ r.quantity }} {{ r.unit }}</td>
+            <td><span class="badge badge-{{ r.urgency }}">{{ r.urgency }}</span></td>
+            <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+            <td>{{ r.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><a href="/purchase-requests/{{ r.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center;color:#888">{{ _('No requests') }}</td></tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

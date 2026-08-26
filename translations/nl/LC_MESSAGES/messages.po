@@ -1,0 +1,934 @@
+# Dutch translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-08-10 18:44+0300\n"
+"PO-Revision-Date: 2026-08-10 18:44+0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Dutch <LL@li.org>\n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app.py:108
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: app.py:126
+msgid "Work Orders"
+msgstr "Werkorders"
+
+#: app.py:137
+msgid "New Work Order"
+msgstr "Nieuwe werkorder"
+
+#: app.py:159
+msgid "Work Order Details"
+msgstr "Werkorderdetails"
+
+#: app.py:164
+msgid "Edit Work Order"
+msgstr "Werkorder bewerken"
+
+#: app.py:195
+msgid "Responsible persons"
+msgstr "Verantwoordelijken"
+
+#: app.py:199
+msgid "New responsible person"
+msgstr "Nieuwe verantwoordelijke"
+
+#: app.py:211
+msgid "Edit responsible person"
+msgstr "Verantwoordelijke bewerken"
+
+msgid "Responsible person"
+msgstr "Verantwoordelijke"
+
+msgid "Responsible person added"
+msgstr "Verantwoordelijke toegevoegd"
+
+msgid "Responsible person updated"
+msgstr "Verantwoordelijke bijgewerkt"
+
+#: app.py:227
+msgid "Workers"
+msgstr "Technische Dienst"
+
+msgid "Permissions"
+msgstr "Rechten"
+
+msgid "Access Permissions"
+msgstr "Toegangsrechten"
+
+#: app.py:231
+msgid "New Worker"
+msgstr "Nieuwe monteur"
+
+#: app.py:242
+msgid "Edit Worker"
+msgstr "Monteur bewerken"
+
+#: app.py:259
+msgid "Warehouse"
+msgstr "Magazijn"
+
+#: app.py:269
+msgid "New Item"
+msgstr "Nieuw artikel"
+
+#: app.py:283
+msgid "Edit Item"
+msgstr "Artikel bewerken"
+
+#: app.py:319
+msgid "Reports"
+msgstr "Rapporten"
+
+#: app.py:323
+msgid "Period Report"
+msgstr "Periode rapport"
+
+#: app.py:351
+msgid "Worker Report"
+msgstr "Monteur rapport"
+
+#: app.py:390
+msgid "QR Scan"
+msgstr "QR scannen"
+
+#: app.py:396
+msgid "QR Generate"
+msgstr "QR genereren"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Total Work Orders"
+msgstr "Totaal werkorders"
+
+msgid "Active Work Orders"
+msgstr "Actieve werkorders"
+
+msgid "Today"
+msgstr "Vandaag"
+
+msgid "Active Workers"
+msgstr "Actieve monteurs"
+
+msgid "Low Stock"
+msgstr "Lage voorraad"
+
+msgid "Recent Work Orders"
+msgstr "Recente werkorders"
+
+msgid "Number"
+msgstr "Nummer"
+
+msgid "Client"
+msgstr "Verantwoordelijke"
+
+msgid "Device"
+msgstr "Apparaat"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Date"
+msgstr "Datum"
+
+msgid "Actions"
+msgstr "Acties"
+
+msgid "View"
+msgstr "Bekijken"
+
+msgid "Edit"
+msgstr "Bewerken"
+
+msgid "Delete"
+msgstr "Verwijderen"
+
+msgid "Save"
+msgstr "Opslaan"
+
+msgid "Cancel"
+msgstr "Annuleren"
+
+msgid "Back"
+msgstr "Terug"
+
+msgid "Search"
+msgstr "Zoeken"
+
+msgid "Filter"
+msgstr "Filter"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Name"
+msgstr "Naam"
+
+msgid "Phone"
+msgstr "Telefoon"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "Notes"
+msgstr "Notities"
+
+msgid "Specialization"
+msgstr "Specialisatie"
+
+msgid "Hourly Rate"
+msgstr "Tarief per uur"
+
+msgid "Active"
+msgstr "Actief"
+
+msgid "Category"
+msgstr "Categorie"
+
+msgid "Unit"
+msgstr "Eenheid"
+
+msgid "Quantity"
+msgstr "Hoeveelheid"
+
+msgid "Minimum"
+msgstr "Minimum"
+
+msgid "Price"
+msgstr "Prijs"
+
+msgid "Location"
+msgstr "Locatie"
+
+msgid "Date From"
+msgstr "Datum van"
+
+msgid "Date To"
+msgstr "Datum tot"
+
+msgid "Show Report"
+msgstr "Rapport tonen"
+
+msgid "Total Revenue"
+msgstr "Totale omzet"
+
+msgid "Completed"
+msgstr "Voltooid"
+
+msgid "Cancelled"
+msgstr "Geannuleerd"
+
+msgid "Average Time"
+msgstr "Gemiddelde tijd"
+
+msgid "Worker Statistics"
+msgstr "Monteur statistieken"
+
+msgid "Work Orders Count"
+msgstr "Aantal werkorders"
+
+msgid "Revenue"
+msgstr "Omzet"
+
+msgid "Scan QR Code"
+msgstr "QR-code scannen"
+
+msgid "Generate QR"
+msgstr "QR genereren"
+
+msgid "Accepted"
+msgstr "Aangenomen"
+
+msgid "Diagnosis"
+msgstr "Diagnose"
+
+msgid "In Progress"
+msgstr "In behandeling"
+
+msgid "Ready"
+msgstr "Gereed"
+
+msgid "Delivered"
+msgstr "Afgeleverd"
+
+msgid "Cancelled"
+msgstr "Geannuleerd"
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Serial Number"
+msgstr "Serienummer"
+
+msgid "Problem"
+msgstr "Probleem"
+
+msgid "Work Done"
+msgstr "Uitgevoerd werk"
+
+msgid "Labor Cost"
+msgstr "Arbeidskosten"
+
+msgid "Parts Cost"
+msgstr "Onderdelenkosten"
+
+msgid "Total"
+msgstr "Totaal"
+
+msgid "Created"
+msgstr "Aangemaakt"
+
+msgid "Started"
+msgstr "Gestart"
+
+msgid "Finished"
+msgstr "Gereed"
+
+msgid "Incoming"
+msgstr "Inkomend"
+
+msgid "Outgoing"
+msgstr "Uitgaand"
+
+msgid "Move Stock"
+msgstr "Voorraad verplaatsen"
+
+msgid "Work Order"
+msgstr "Werkorder"
+
+msgid "Comment"
+msgstr "Opmerking"
+
+msgid "Period"
+msgstr "Periode"
+
+msgid "Worker"
+msgstr "Monteur"
+
+msgid "Language"
+msgstr "Taal"
+
+msgid "Inactive"
+msgstr "Inactief"
+
+msgid "Last 30 Days"
+msgstr "Laatste 30 dagen"
+
+msgid "Scanned"
+msgstr "Gescand"
+
+msgid "History"
+msgstr "Geschiedenis"
+
+msgid "or"
+msgstr "of"
+
+msgid "Original"
+msgstr "Origineel"
+
+msgid "Translate"
+msgstr "Vertalen"
+
+msgid "Work Order created"
+msgstr "Werkorder aangemaakt"
+
+msgid "Work Order updated"
+msgstr "Werkorder bijgewerkt"
+
+# Factory Sections
+msgid "Factory Sections"
+msgstr "Fabriekssecties"
+msgid "Sections"
+msgstr "Secties"
+msgid "New Section"
+msgstr "Nieuwe sectie"
+msgid "Edit Section"
+msgstr "Sectie bewerken"
+msgid "Section created"
+msgstr "Sectie aangemaakt"
+msgid "Section updated"
+msgstr "Sectie bijgewerkt"
+msgid "Section deleted"
+msgstr "Sectie verwijderd"
+msgid "Total Sections"
+msgstr "Totaal secties"
+msgid "Total Machines"
+msgstr "Totaal machines"
+msgid "Section name"
+msgstr "Sectienaam"
+msgid "Section description"
+msgstr "Sectiebeschrijving"
+msgid "Position on Floor Plan"
+msgstr "Positie op plattegrond"
+msgid "X Position"
+msgstr "X positie"
+msgid "Y Position"
+msgstr "Y positie"
+msgid "Width"
+msgstr "Breedte"
+msgid "Height"
+msgstr "Hoogte"
+msgid "Add Section"
+msgstr "Sectie toevoegen"
+msgid "machines"
+msgstr "machines"
+msgid "Machines in Section"
+msgstr "Machines in sectie"
+msgid "Section"
+msgstr "Sectie"
+msgid "Type"
+msgstr "Type"
+msgid "Delete this section?"
+msgstr "Deze sectie verwijderen?"
+msgid "workshop"
+msgstr "werkplaats"
+msgid "storage"
+msgstr "opslag"
+msgid "office"
+msgstr "kantoor"
+msgid "utility"
+msgstr "nutsvoorziening"
+msgid "loading"
+msgstr "lading"
+msgid "Responsible"
+msgstr "Verantwoordelijk"
+msgid "Not assigned"
+msgstr "Niet toegewezen"
+
+# Map Editor
+msgid "Map Editor"
+msgstr "Kaart editor"
+msgid "View Map"
+msgstr "Bekijk kaart"
+msgid "Save All"
+msgstr "Alles opslaan"
+msgid "Section Properties"
+msgstr "Sectie eigenschappen"
+msgid "Assign Machine"
+msgstr "Machine toewijzen"
+msgid "To Section"
+msgstr "Naar sectie"
+msgid "Assign"
+msgstr "Toewijzen"
+msgid "Deselect"
+msgstr "Deselecteren"
+msgid "New Section"
+msgstr "Nieuwe sectie"
+msgid "Delete this section?"
+msgstr "Deze sectie verwijderen?"
+msgid "Nothing to save"
+msgstr "Niets op te slaan"
+msgid "All saved!"
+msgstr "Alles opgeslagen!"
+msgid "No section"
+msgstr "Geen sectie"
+msgid "Group on map"
+msgstr "Groep op kaart"
+msgid "Auto-set when section is selected, or set manually"
+msgstr "Automatisch ingesteld bij sectiekeuze of handmatig"
+msgid "Position on Map"
+msgstr "Positie op kaart"
+
+# Parts Maintenance
+msgid "Parts"
+msgstr "Onderdelen"
+msgid "Add Part"
+msgstr "Onderdeel toevoegen"
+msgid "Edit Part"
+msgstr "Onderdeel bewerken"
+msgid "Part added"
+msgstr "Onderdeel toegevoegd"
+msgid "Part updated"
+msgstr "Onderdeel bijgewerkt"
+msgid "Part deleted"
+msgstr "Onderdeel verwijderd"
+msgid "Part Name"
+msgstr "Onderdeelnaam"
+msgid "Part Number"
+msgstr "Onderdeelnummer"
+msgid "Replacement Schedule"
+msgstr "Vervangingsschema"
+msgid "Installed Date"
+msgstr "Installatiedatum"
+msgid "Replacement Interval (days)"
+msgstr "Vervangingsinterval (dagen)"
+msgid "Maintenance Schedule"
+msgstr "Onderhoudsschema"
+msgid "Maintenance Interval (days)"
+msgstr "Onderhoudsinterval (dagen)"
+msgid "Next replacement"
+msgstr "Volgende vervanging"
+msgid "Next maintenance"
+msgstr "Volgende onderhoud"
+msgid "Replace now"
+msgstr "Nu vervangen"
+msgid "Maintain now"
+msgstr "Nu onderhouden"
+msgid "Soon"
+msgstr "Binnenkort"
+msgid "No parts added yet"
+msgstr "Nog geen onderdelen toegevoegd"
+msgid "Recent logs"
+msgstr "Recente logs"
+msgid "Maintenance log added"
+msgstr "Onderhoudslog toegevoegd"
+msgid "Log"
+msgstr "Log"
+msgid "Save Log"
+msgstr "Log opslaan"
+msgid "What was done..."
+msgstr "Wat er gedaan is..."
+msgid "Back to Machine"
+msgstr "Terug naar machine"
+msgid "parts need attention!"
+msgstr "onderdelen hebben aandacht nodig!"
+msgid "Total Parts"
+msgstr "Totaal onderdelen"
+msgid "Needs Maintenance"
+msgstr "Onderhoud nodig"
+msgid "Needs Replacement"
+msgstr "Vervanging nodig"
+msgid "replacement"
+msgstr "vervanging"
+msgid "maintenance"
+msgstr "onderhoud"
+msgid "inspection"
+msgstr "inspectie"
+
+# Maintenance Calendar
+msgid "Maintenance Calendar"
+msgstr "Onderhoudskalender"
+msgid "Overdue"
+msgstr "Achterstallig"
+msgid "Days Overdue"
+msgstr "Dagen achterstallig"
+msgid "Fix"
+msgstr "Herstel"
+msgid "Mon"
+msgstr "Ma"
+msgid "Tue"
+msgstr "Di"
+msgid "Wed"
+msgstr "Wo"
+msgid "Thu"
+msgstr "Do"
+msgid "Fri"
+msgstr "Vr"
+msgid "Sat"
+msgstr "Za"
+msgid "Sun"
+msgstr "Zo"
+msgid "Upcoming Events"
+msgstr "Aankomende gebeurtenissen"
+msgid "No events this month"
+msgstr "Geen gebeurtenissen deze maand"
+msgid "Replacement"
+msgstr "Vervanging"
+msgid "Scheduled"
+msgstr "Gepland"
+
+msgid "Worker added"
+msgstr "Monteur toegevoegd"
+
+msgid "Worker updated"
+msgstr "Monteur bijgewerkt"
+
+msgid "Item added"
+msgstr "Artikel toegevoegd"
+
+msgid "Item updated"
+msgstr "Artikel bijgewerkt"
+
+msgid "Insufficient stock!"
+msgstr "Onvoldoende voorraad!"
+
+msgid "cylinders remaining"
+msgstr "cilinders resterend"
+
+msgid "threshold"
+msgstr "drempel"
+
+msgid "Order new cylinders"
+msgstr "Nieuwe cilinders bestellen"
+
+msgid "Showing your sections only"
+msgstr "Alleen uw secties worden weergegeven"
+
+msgid "Fit"
+msgstr "Passen"
+
+msgid "Linked Responsible Person"
+msgstr "Gekoppelde verantwoordelijke"
+
+msgid "None"
+msgstr "Geen"
+
+msgid "Link user to a responsible person to show their sections on the floor plan"
+msgstr "Koppel gebruiker aan een verantwoordelijke om hun secties op de plattegrond te tonen"
+
+msgid "Login Access"
+msgstr "Toegang inloggen"
+
+msgid "Leave empty to keep current"
+msgstr "Laat leeg om huidige te behouden"
+
+msgid "Login set"
+msgstr "Inloggen ingesteld"
+
+msgid "Set password to allow login"
+msgstr "Stel wachtwoord in om in te loggen"
+
+msgid "Floor only"
+msgstr "Alleen plattegrond"
+
+msgid "see own sections"
+msgstr "eigen secties bekijken"
+
+msgid "Full map"
+msgstr "Volledige kaart"
+
+msgid "see all machines"
+msgstr "alle machines bekijken"
+
+msgid "Limited"
+msgstr "Beperkt"
+
+msgid "floor plan only"
+msgstr "alleen plattegrond"
+
+msgid "Active"
+msgstr "Actief"
+
+msgid "can login"
+msgstr "kan inloggen"
+
+msgid "Assigned Sections"
+msgstr "Toegewezen secties"
+
+msgid "Цеха"
+msgstr "Afdelingen"
+
+msgid "Select sections this person is responsible for"
+msgstr "Selecteer secties waarvoor deze persoon verantwoordelijk is"
+
+msgid "No group"
+msgstr "Geen groep"
+
+msgid "No password"
+msgstr "Geen wachtwoord"
+
+msgid "Last login"
+msgstr "Laatste login"
+
+msgid "Edit password"
+msgstr "Wachtwoord bewerken"
+
+msgid "Mechanic"
+msgstr "Monteur"
+
+msgid "Equipment Repairs"
+msgstr "Apparatuur Reparatie"
+
+msgid "New Repair"
+msgstr "Nieuwe reparatie"
+
+msgid "Edit Repair"
+msgstr "Reparatie bewerken"
+
+msgid "New Repair Record"
+msgstr "Nieuw reparatieverslag"
+
+msgid "All Repairs"
+msgstr "Alle reparaties"
+
+msgid "Statistics"
+msgstr "Statistieken"
+
+msgid "Repair Statistics"
+msgstr "Reparatiestatistieken"
+
+msgid "Total Repairs"
+msgstr "Totaal reparaties"
+
+msgid "Total Cost"
+msgstr "Totale kosten"
+
+msgid "Avg Days to Repair"
+msgstr "Gem. dagen voor reparatie"
+
+msgid "By Component Type"
+msgstr "Per componenttype"
+
+msgid "By Repair Company"
+msgstr "Per reparatiebedrijf"
+
+msgid "Recent Repairs"
+msgstr "Recente reparaties"
+
+msgid "Component"
+msgstr "Component"
+
+msgid "Gas"
+msgstr "Gas"
+
+msgid "Fault"
+msgstr "Storing"
+
+msgid "Company"
+msgstr "Bedrijf"
+
+msgid "Broken"
+msgstr "Kapot"
+
+msgid "In repair"
+msgstr "In reparatie"
+
+msgid "Repaired"
+msgstr "Gerepareerd"
+
+msgid "Replaced"
+msgstr "Vervangen"
+
+msgid "Installed"
+msgstr "Geïnstalleerd"
+
+msgid "All gases"
+msgstr "Alle gassen"
+
+msgid "All statuses"
+msgstr "Alle statussen"
+
+msgid "No repair records"
+msgstr "Geen reparatieverslagen"
+
+msgid "All equipment is working fine!"
+msgstr "Alle apparatuur werkt goed!"
+
+msgid "Add Repair Record"
+msgstr "Reparatieverslag toevoegen"
+
+msgid "Select component"
+msgstr "Selecteer component"
+
+msgid "What broke"
+msgstr "Wat is kapot"
+
+msgid "Describe exactly what failed, symptoms, error codes..."
+msgstr "Beschrijf precies wat er kapot is, symptomen, foutcodes..."
+
+msgid "Date broken"
+msgstr "Datum kapot"
+
+msgid "Date sent for repair"
+msgstr "Datum naar reparatie"
+
+msgid "Repair Company"
+msgstr "Reparatiebedrijf"
+
+msgid "Company name"
+msgstr "Bedrijfsnaam"
+
+msgid "Who performed the repair"
+msgstr "Wie heeft de reparatie uitgevoerd"
+
+msgid "Repair cost"
+msgstr "Reparatiekosten"
+
+msgid "What was done"
+msgstr "Wat is er gedaan"
+
+msgid "Description of repair work"
+msgstr "Beschrijving reparatiewerk"
+
+msgid "Date repaired"
+msgstr "Datum gerepareerd"
+
+msgid "Date installed back"
+msgstr "Datum teruggeplaatst"
+
+msgid "Send to repair"
+msgstr "Naar reparatie sturen"
+
+msgid "Mark repaired"
+msgstr "Markeer als gerepareerd"
+
+msgid "Mark installed"
+msgstr "Markeer als geïnstalleerd"
+
+msgid "Repair record created"
+msgstr "Reparatieverslag aangemaakt"
+
+msgid "Repair record updated"
+msgstr "Reparatieverslag bijgewerkt"
+
+msgid "No data"
+msgstr "Geen gegevens"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Count"
+msgstr "Aantal"
+
+msgid "Avg Days"
+msgstr "Gem. dagen"
+
+msgid "Warehouse Movements"
+msgstr "Voorraadmutaties"
+
+msgid "Movements"
+msgstr "Mutaties"
+
+msgid "All items"
+msgstr "Alle artikelen"
+
+msgid "All types"
+msgstr "Alle types"
+
+msgid "Records"
+msgstr "Records"
+
+msgid "Order"
+msgstr "Order"
+
+msgid "Comment"
+msgstr "Opmerking"
+
+msgid "No movements found"
+msgstr "Geen mutaties gevonden"
+
+msgid "No stock movements recorded yet"
+msgstr "Nog geen voorraadmutaties geregistreerd"
+
+msgid "Export CSV"
+msgstr "Export CSV"
+
+msgid "Edit Report"
+msgstr "Rapport bewerken"
+
+msgid "Work report updated"
+msgstr "Werkrapport bijgewerkt"
+
+msgid "from warehouse"
+msgstr "uit voorraad"
+
+msgid "Part"
+msgstr "Onderdeel"
+
+msgid "Qty"
+msgstr "Aantal"
+
+msgid "Print Label"
+msgstr "Label afdrukken"
+
+msgid "Print Labels"
+msgstr "Labels afdrukken"
+
+msgid "Print"
+msgstr "Afdrukken"
+
+msgid "Close"
+msgstr "Sluiten"
+
+msgid "Select All"
+msgstr "Alles selecteren"
+
+msgid "Select machines first"
+msgstr "Selecteer eerst machines"
+
+# Auth & Users
+msgid "Login"
+msgstr "Inloggen"
+msgid "Logout"
+msgstr "Uitloggen"
+msgid "Username"
+msgstr "Gebruikersnaam"
+msgid "Password"
+msgstr "Wachtwoord"
+msgid "Invalid credentials"
+msgstr "Ongeldige inloggegevens"
+msgid "Profile"
+msgstr "Profiel"
+msgid "Profile updated"
+msgstr "Profiel bijgewerkt"
+msgid "Display Name"
+msgstr "Weergavenaam"
+msgid "New Password"
+msgstr "Nieuw wachtwoord"
+msgid "Confirm Password"
+msgstr "Wachtwoord bevestigen"
+msgid "Enter new password"
+msgstr "Voer nieuw wachtwoord in"
+msgid "Repeat new password"
+msgstr "Herhaal nieuw wachtwoord"
+msgid "Change Password"
+msgstr "Wachtwoord wijzigen"
+msgid "Password changed for %(username)s"
+msgstr "Wachtwoord gewijzigd voor %(username)s"
+msgid "Passwords do not match"
+msgstr "Wachtwoorden komen niet overeen"
+msgid "Leave empty to keep current"
+msgstr "Laat leeg om huidige te behouden"
+msgid "Delete user"
+msgstr "Gebruiker verwijderen"
+msgid "Cannot delete yourself"
+msgstr "Kan uzelf niet verwijderen"
+msgid "User %(username)s deleted"
+msgstr "Gebruiker %(username)s verwijderd"
+msgid "Personal Info"
+msgstr "Persoonlijke gegevens"
+msgid "Work Info"
+msgstr "Werkgegevens"
+msgid "First Name"
+msgstr "Voornaam"
+msgid "Last Name"
+msgstr "Achternaam"
+msgid "Current"
+msgstr "Huidig"
+msgid "Active"
+msgstr "Actief"
+msgid "Inactive"
+msgstr "Inactief"
+msgid "Hire Date"
+msgstr "Aanstellingsdatum"
+msgid "Fire Date"
+msgstr "Ontslagdatum"
+msgid "Linked person"
+msgstr "Gekoppelde persoon"
+msgid "User Cabinet"
+msgstr "Gebruikerskabinet"
+msgid "Users"
+msgstr "Gebruikers"
+msgid "New User"
+msgstr "Nieuwe gebruiker"
+msgid "Edit User"
+msgstr "Gebruiker bewerken"
+msgid "User created"
+msgstr "Gebruiker aangemaakt"
+msgid "User updated"
+msgstr "Gebruiker bijgewerkt"
+msgid "Role"
+msgstr "Rol"
+msgid "Assigned Machines"
+msgstr "Toegewezen machines"
+msgid "Videos"
+msgstr "Video's"
+msgid "Attach videos of the fault (mp4, mov, avi, webm)"
+msgstr "Voeg video's van de storing toe (mp4, mov, avi, webm)"
+msgid "Your browser does not support video playback"
+msgstr "Uw browser ondersteunt geen videoafspelen"

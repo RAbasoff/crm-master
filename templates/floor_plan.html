@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Floor Plan') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏭 {{ _('Floor Plan') }}</h1>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        {% if is_filtered %}
+        <span style="font-size:12px;color:#3498db;background:#eaf4fb;padding:4px 10px;border-radius:6px">👁 {{ _('Showing your sections only') }}</span>
+        {% endif %}
+        {% if current_user.has_role('admin') %}
+        <a href="/sections/new" class="btn btn-sm btn-primary">+ {{ _('Add Section') }}</a>
+        {% endif %}
+        <span style="font-size:12px"><span style="display:inline-block;width:12px;height:12px;background:#27ae60;border-radius:50%"></span> {{ _('Active') }}</span>
+        <span style="font-size:12px"><span style="display:inline-block;width:12px;height:12px;background:#f39c12;border-radius:50%"></span> {{ _('Maintenance') }}</span>
+        <span style="font-size:12px"><span style="display:inline-block;width:12px;height:12px;background:#e74c3c;border-radius:50%"></span> {{ _('Broken') }}</span>
+        <span style="font-size:12px"><span style="display:inline-block;width:12px;height:12px;background:#95a5a6;border-radius:50%"></span> {{ _('Offline') }}</span>
+        <button onclick="zoomIn()" class="btn btn-sm" style="background:#eee;padding:6px 12px">+</button>
+        <button onclick="zoomOut()" class="btn btn-sm" style="background:#eee;padding:6px 12px">−</button>
+        <button onclick="zoomToFit()" class="btn btn-sm" style="background:#eee;padding:6px 12px">{{ _('Fit') }}</button>
+        <button onclick="resetZoom()" class="btn btn-sm" style="background:#eee;padding:6px 12px">{{ _('Reset') }}</button>
+    </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;position:relative">
+    <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;max-height:70vh">
+        <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.2s">
+            <img src="/static/floor_plan.jpeg" id="floorPlanImg" style="display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none" draggable="false">
+            
+            <!-- Sections overlay -->
+            {% for s in sections %}
+            <div class="floor-section" 
+                 style="left:{{ s.floor_x }}%;top:{{ s.floor_y }}%;width:{{ s.width }}%;height:{{ s.height }}%;border-color:{{ s.color }}"
+                 data-section-id="{{ s.id }}"
+                 data-name="{{ s.name }}"
+                 data-type="{{ s.section_type }}"
+                 onclick="selectSection({{ s.id }})">
+                <div class="section-label" style="background:{{ s.color }}cc">
+                    <span class="section-name">{{ s.name }}</span>
+                    <span class="section-count">{{ s.machines|length }} {{ _('machines') }}</span>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Machines overlay -->
+            {% for m in machines %}
+            <div class="machine-marker status-{{ m.status }} shape-{{ m.marker_shape or 'circle' }}"
+                 style="left:{{ m.floor_x }}%;top:{{ m.floor_y }}%;width:{{ m.marker_size or 45 }}px;height:{{ m.marker_size or 45 }}px"
+                 onclick="event.stopPropagation();showMachineInfo({{ m.id }}, '{{ m.name }}', '{{ m.status }}', '{{ m.machine_type or '' }}', '{{ m.section.name if m.section else '' }}')"
+                 title="{{ m.name }}"
+                 data-id="{{ m.id }}"
+                 data-section="{{ m.section_id or '' }}">
+                <div class="machine-icon" style="font-size:{{ ((m.marker_size or 45) * 0.45)|int }}px">⚙️</div>
+                <div class="machine-label">{{ m.name }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Section Info Panel -->
+<div class="card" id="sectionInfo" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <h2 id="sectionName" style="margin:0"></h2>
+        <button onclick="closeSectionInfo()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
+    </div>
+    <div class="detail-grid">
+        <div>
+            <p><strong>{{ _('Type') }}:</strong> <span id="sectionType"></span></p>
+            <p><strong>{{ _('Description') }}:</strong> <span id="sectionDesc"></span></p>
+            <p><strong>{{ _('Responsible') }}:</strong> <span id="sectionResponsible"></span></p>
+        </div>
+        <div>
+            <p><strong>{{ _('Total Machines') }}:</strong> <span id="sectionMachinesCount"></span></p>
+            <p><strong>{{ _('Active') }}:</strong> <span id="sectionActiveCount" style="color:#27ae60;font-weight:bold"></span></p>
+            <p><strong>{{ _('Broken') }}:</strong> <span id="sectionBrokenCount" style="color:#e74c3c;font-weight:bold"></span></p>
+        </div>
+    </div>
+    <div id="sectionMachinesList" style="margin-top:12px">
+        <h3 style="font-size:14px;margin-bottom:8px">{{ _('Machines in Section') }}:</h3>
+        <div class="table-wrap">
+            <table>
+                <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th>{{ _('Serial') }}</th><th></th></tr>
+                <tbody id="sectionMachinesTable"></tbody>
+            </table>
+        </div>
+    </div>
+    {% if current_user.has_role('admin') %}
+    <div style="margin-top:12px;display:flex;gap:8px">
+        <a id="sectionEditBtn" href="#" class="btn btn-sm btn-primary">{{ _('Edit Section') }}</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Machine Info Panel -->
+<div class="card" id="machineInfo" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <h2 id="machineName" style="margin:0"></h2>
+        <button onclick="closeMachineInfo()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
+    </div>
+    <div class="detail-grid">
+        <div>
+            <p><strong>{{ _('Status') }}:</strong> <span id="machineStatus"></span></p>
+            <p><strong>{{ _('Type') }}:</strong> <span id="machineType"></span></p>
+            <p><strong>{{ _('Section') }}:</strong> <span id="machineSection"></span></p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+            <a id="machineDetailBtn" href="#" class="btn btn-sm btn-primary">{{ _('Details') }}</a>
+            <a id="machineFaultBtn" href="#" class="btn btn-sm btn-warning">{{ _('Report Fault') }}</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .floor-section {
+        position: absolute;
+        border: 3px dashed;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(255,255,255,0.1);
+        z-index: 5;
+    }
+    .floor-section:hover {
+        background: rgba(255,255,255,0.25);
+        transform: scale(1.01);
+        z-index: 15;
+    }
+    .floor-section.selected {
+        background: rgba(255,255,255,0.3);
+        border-width: 4px;
+        z-index: 15;
+    }
+    .floor-section .section-label {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        pointer-events: none;
+    }
+    .floor-section .section-count {
+        font-size: 10px;
+        opacity: 0.9;
+    }
+    
+    .machine-marker {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        z-index: 10;
+    }
+    .machine-marker:hover {
+        transform: translate(-50%, -50%) scale(1.2);
+        z-index: 20;
+    }
+    .machine-marker.selected {
+        transform: translate(-50%, -50%) scale(1.3);
+        z-index: 30;
+    }
+    .machine-marker .machine-icon {
+        width: 100%;
+        height: 100%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        border: 3px solid #3498db;
+        transition: all 0.2s;
+    }
+    .machine-marker.shape-circle .machine-icon { border-radius: 50%; }
+    .machine-marker.shape-square .machine-icon { border-radius: 6px; }
+    .machine-marker.shape-hexagon .machine-icon { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+    .machine-marker.shape-diamond .machine-icon { border-radius: 4px; transform: rotate(45deg); }
+    .machine-marker.shape-diamond .machine-icon > * { transform: rotate(-45deg); }
+    .machine-marker.status-broken .machine-icon { border-color: #e74c3c; background: #fff5f5; }
+    .machine-marker.status-maintenance .machine-icon { border-color: #f39c12; background: #fff9f0; }
+    .machine-marker.status-offline .machine-icon { border-color: #95a5a6; background: #f5f5f5; }
+    .machine-marker.selected .machine-icon {
+        box-shadow: 0 0 0 4px rgba(52,152,219,0.4), 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .machine-marker .machine-label {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        font-size: 9px;
+        font-weight: 600;
+        color: #333;
+        margin-top: 3px;
+        text-align: center;
+        background: rgba(255,255,255,0.9);
+        padding: 2px 5px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    #floorPlanContainer {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    #floorPlanContainer.grabbing {
+        cursor: grabbing;
+    }
+</style>
+
+<script>
+let scale = 1;
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
+const container = document.getElementById('floorPlanContainer');
+const wrapper = document.getElementById('floorPlanWrapper');
+
+// Zoom functions
+function zoomIn() {
+    scale = Math.min(scale + 0.2, 3);
+    applyZoom();
+}
+
+function zoomOut() {
+    scale = Math.max(scale - 0.2, 0.5);
+    applyZoom();
+}
+
+function resetZoom() {
+    scale = 1;
+    applyZoom();
+    container.scrollLeft = 0;
+    container.scrollTop = 0;
+}
+
+function applyZoom() {
+    wrapper.style.transform = `scale(${scale})`;
+}
+
+// Auto-zoom to fit all visible sections and machines
+function zoomToFit() {
+    const sections = document.querySelectorAll('.floor-section');
+    const machines = document.querySelectorAll('.machine-marker');
+    const items = [...sections, ...machines];
+    if (items.length === 0) return;
+
+    const img = document.getElementById('floorPlanImg');
+    const imgW = img.naturalWidth || img.clientWidth;
+    const imgH = img.naturalHeight || img.clientHeight;
+
+    let minXPct = 100, minYPct = 100, maxXPct = 0, maxYPct = 0;
+    items.forEach(el => {
+        const left = parseFloat(el.style.left);
+        const top = parseFloat(el.style.top);
+        const w = el.classList.contains('floor-section') ? parseFloat(el.style.width) : 3;
+        const h = el.classList.contains('floor-section') ? parseFloat(el.style.height) : 3;
+        minXPct = Math.min(minXPct, left);
+        minYPct = Math.min(minYPct, top);
+        maxXPct = Math.max(maxXPct, left + w);
+        maxYPct = Math.max(maxYPct, top + h);
+    });
+
+    // Add padding (10%)
+    const padPct = 10;
+    minXPct = Math.max(0, minXPct - padPct);
+    minYPct = Math.max(0, minYPct - padPct);
+    maxXPct = Math.min(100, maxXPct + padPct);
+    maxYPct = Math.min(100, maxYPct + padPct);
+
+    const regionW = (maxXPct - minXPct) / 100 * imgW;
+    const regionH = (maxYPct - minYPct) / 100 * imgH;
+    const containerW = container.clientWidth;
+    const containerH = container.clientHeight;
+
+    scale = Math.min(containerW / regionW, containerH / regionH, 3);
+    scale = Math.max(scale, 0.5);
+    applyZoom();
+
+    // Scroll to center of the region
+    const centerX = ((minXPct + maxXPct) / 2 / 100) * imgW * scale;
+    const centerY = ((minYPct + maxYPct) / 2 / 100) * imgH * scale;
+    container.scrollLeft = centerX - containerW / 2;
+    container.scrollTop = centerY - containerH / 2;
+}
+
+// Mouse wheel zoom
+container.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+        zoomIn();
+    } else {
+        zoomOut();
+    }
+});
+
+// Drag to pan
+container.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.machine-marker') || e.target.closest('.floor-section')) return;
+    isDragging = true;
+    container.classList.add('grabbing');
+    startX = e.pageX - container.offsetLeft;
+    startY = e.pageY - container.offsetTop;
+    scrollLeft = container.scrollLeft;
+    scrollTop = container.scrollTop;
+});
+
+container.addEventListener('mouseleave', function() {
+    isDragging = false;
+    container.classList.remove('grabbing');
+});
+
+container.addEventListener('mouseup', function() {
+    isDragging = false;
+    container.classList.remove('grabbing');
+});
+
+container.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const y = e.pageY - container.offsetTop;
+    const walkX = (x - startX) * 1.5;
+    const walkY = (y - startY) * 1.5;
+    container.scrollLeft = scrollLeft - walkX;
+    container.scrollTop = scrollTop - walkY;
+});
+
+// Touch support for mobile
+let touchStartX, touchStartY;
+container.addEventListener('touchstart', function(e) {
+    if (e.target.closest('.machine-marker') || e.target.closest('.floor-section')) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    scrollLeft = container.scrollLeft;
+    scrollTop = container.scrollTop;
+}, {passive: true});
+
+container.addEventListener('touchmove', function(e) {
+    if (!touchStartX) return;
+    const touchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+    const walkX = (touchStartX - touchX) * 1.5;
+    const walkY = (touchStartY - touchY) * 1.5;
+    container.scrollLeft = scrollLeft + walkX;
+    container.scrollTop = scrollTop + walkY;
+}, {passive: true});
+
+// Section info
+let selectedSection = null;
+let selectedMachine = null;
+
+function selectSection(sectionId) {
+    // Close machine info if open
+    closeMachineInfo();
+    
+    // Remove previous selection
+    if (selectedSection) {
+        selectedSection.classList.remove('selected');
+    }
+    
+    // Select new section
+    const sectionEl = document.querySelector(`.floor-section[data-section-id="${sectionId}"]`);
+    if (sectionEl) {
+        sectionEl.classList.add('selected');
+        selectedSection = sectionEl;
+    }
+    
+    // Fetch section info
+    fetch(`/api/sections/${sectionId}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('sectionInfo').style.display = 'block';
+            document.getElementById('sectionName').textContent = data.name;
+            document.getElementById('sectionType').textContent = data.type;
+            document.getElementById('sectionDesc').textContent = data.description || '—';
+            document.getElementById('sectionResponsible').textContent = data.responsible || '—';
+            document.getElementById('sectionMachinesCount').textContent = data.machines_count;
+            document.getElementById('sectionActiveCount').textContent = data.active_count;
+            document.getElementById('sectionBrokenCount').textContent = data.broken_count;
+            
+            // Fill machines table
+            const tbody = document.getElementById('sectionMachinesTable');
+            tbody.innerHTML = '';
+            function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+            data.machines.forEach(m => {
+                tbody.innerHTML += `<tr>
+                    <td><a href="/machines/${parseInt(m.id)}">${esc(m.name)}</a></td>
+                    <td>${esc(m.type || '—')}</td>
+                    <td><span class="badge badge-${esc(m.status)}">${esc(m.status)}</span></td>
+                    <td>${esc(m.serial || '—')}</td>
+                    <td><a href="/machines/${parseInt(m.id)}" class="btn btn-sm" style="background:#eee;padding:4px 8px">→</a></td>
+                </tr>`;
+            });
+            
+            // Highlight machines in this section
+            document.querySelectorAll('.machine-marker').forEach(el => {
+                if (el.dataset.section == sectionId) {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                } else {
+                    el.style.opacity = '0.3';
+                }
+            });
+            
+            // Edit button
+            {% if current_user.has_role('admin') %}
+            document.getElementById('sectionEditBtn').href = `/sections/${sectionId}/edit`;
+            {% endif %}
+            
+            document.getElementById('sectionInfo').scrollIntoView({behavior: 'smooth'});
+        });
+}
+
+function closeSectionInfo() {
+    document.getElementById('sectionInfo').style.display = 'none';
+    if (selectedSection) {
+        selectedSection.classList.remove('selected');
+        selectedSection = null;
+    }
+    // Reset machine opacity
+    document.querySelectorAll('.machine-marker').forEach(el => {
+        el.style.opacity = '1';
+        el.style.transform = '';
+    });
+}
+
+// Machine info
+function showMachineInfo(id, name, status, type, section) {
+    // Close section info if open
+    closeSectionInfo();
+    
+    // Remove previous selection
+    if (selectedMachine) {
+        selectedMachine.classList.remove('selected');
+    }
+    
+    // Select new marker
+    const marker = document.querySelector(`.machine-marker[data-id="${id}"]`);
+    if (marker) {
+        marker.classList.add('selected');
+        selectedMachine = marker;
+    }
+    
+    // Show info panel
+    document.getElementById('machineInfo').style.display = 'block';
+    document.getElementById('machineName').textContent = name;
+    function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+    document.getElementById('machineStatus').innerHTML = `<span class="badge badge-${esc(status)}">${esc(status)}</span>`;
+    document.getElementById('machineType').textContent = type || '—';
+    document.getElementById('machineSection').textContent = section || '—';
+    document.getElementById('machineDetailBtn').href = `/machines/${id}`;
+    document.getElementById('machineFaultBtn').href = `/faults/new?machine=${id}`;
+    
+    document.getElementById('machineInfo').scrollIntoView({behavior: 'smooth'});
+}
+
+function closeMachineInfo() {
+    document.getElementById('machineInfo').style.display = 'none';
+    if (selectedMachine) {
+        selectedMachine.classList.remove('selected');
+        selectedMachine = null;
+    }
+}
+
+// Close panels on click outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.floor-section') && !e.target.closest('#sectionInfo') && !e.target.closest('.machine-marker') && !e.target.closest('#machineInfo')) {
+        closeSectionInfo();
+        closeMachineInfo();
+    }
+});
+
+// Highlight from URL param
+const params = new URLSearchParams(window.location.search);
+const highlightSection = params.get('section');
+const highlightMachine = params.get('highlight');
+
+if (highlightSection) {
+    setTimeout(() => selectSection(parseInt(highlightSection)), 500);
+}
+if (highlightMachine) {
+    setTimeout(() => {
+        const marker = document.querySelector(`.machine-marker[data-id="${highlightMachine}"]`);
+        if (marker) {
+            marker.click();
+            marker.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+        }
+    }, 500);
+}
+
+// Auto-zoom to fit on load (for filtered users or always)
+window.addEventListener('load', function() {
+    setTimeout(zoomToFit, 300);
+});
+</script>
+{% endblock %}

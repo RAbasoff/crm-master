@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Part') if part else _('Add Part') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Edit Part') + ': ' + part.name if part else _('Add Part') }} — {{ machine.name }}</h1>
+</div>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Part Name') }} *</label>
+                <input type="text" name="name" value="{{ part.name if part else '' }}" required placeholder="{{ _('Part name') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Part Number') }}</label>
+                <input type="text" name="part_number" value="{{ part.part_number if part else '' }}" placeholder="SKU / Catalog #">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Category') }}</label>
+                <select name="category">
+                    {% for c in ['mechanical', 'electrical', 'hydraulic', 'pneumatic', 'consumable'] %}
+                    <option value="{{ c }}" {% if part and part.category == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    {% for s in ['ok', 'needs_maintenance', 'needs_replacement', 'replaced'] %}
+                    <option value="{{ s }}" {% if part and part.status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Description') }}</label>
+            <textarea name="description" rows="2" placeholder="{{ _('Part description, specifications...') }}">{{ part.description if part else '' }}</textarea>
+        </div>
+
+        <div class="card" style="background:#f0f4f8;margin-bottom:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Replacement Schedule') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Installed Date') }}</label>
+                    <input type="date" name="installed_date" value="{{ part.installed_date.strftime('%Y-%m-%d') if part and part.installed_date else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Replacement Interval (days)') }}</label>
+                    <input type="number" name="replacement_interval_days" value="{{ part.replacement_interval_days if part and part.replacement_interval_days else '' }}" min="1" placeholder="e.g. 365">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Responsible for replacement') }}</label>
+                    <select name="responsible_user_id">
+                        <option value="">{{ _('Not assigned') }}</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if part and part.responsible_user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }} ({{ u.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    {% if part and part.next_replacement %}
+                    <label>&nbsp;</label>
+                    <p style="font-size:13px;color:#888;padding:12px 0">{{ _('Next replacement') }}: <strong>{{ part.next_replacement.strftime('%d-%m-%Y') }}</strong></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="background:#f0f4f8;margin-bottom:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Maintenance Schedule') }}</h3>
+            <div class="form-group">
+                <label>{{ _('Maintenance Interval (days)') }}</label>
+                <input type="number" name="maintenance_interval_days" value="{{ part.maintenance_interval_days if part and part.maintenance_interval_days else '' }}" min="1" placeholder="e.g. 90">
+            </div>
+            {% if part and part.next_maintenance %}
+            <p style="font-size:12px;color:#888">{{ _('Next maintenance') }}: <strong>{{ part.next_maintenance.strftime('%d-%m-%Y') }}</strong></p>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2">{{ part.notes if part else '' }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/machines/{{ machine.id }}/parts" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

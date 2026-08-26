@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Access Levels') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👥 {{ _('Access Levels') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/responsible/groups/new" class="btn btn-primary">+ {{ _('New level') }}</a>
+        <a href="/responsible" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Access Level') }}</th><th>{{ _('Members') }}</th><th>{{ _('Description') }}</th><th></th></tr>
+        {% for g in groups %}
+        <tr>
+            <td><strong><a href="/responsible/groups/{{ g.id }}" style="color:#3498db">{{ g.name }}</a></strong></td>
+            <td>
+                <span class="badge badge-{{ g.access_level }}">{{ g.access_level }}</span>
+            </td>
+            <td>
+                {% if g.members %}
+                    {% for m in g.members %}<span class="badge" style="background:#3498db22;color:#3498db;margin:2px">{{ m.naam }}</span>{% endfor %}
+                {% else %}<span style="color:#888">—</span>{% endif %}
+            </td>
+            <td>{{ g.description[:60] if g.description else '—' }}</td>
+            <td style="white-space:nowrap">
+                <a href="/responsible/groups/{{ g.id }}/permissions" class="btn btn-sm btn-success">🔐 {{ _('Permissions') }}</a>
+                <a href="/responsible/groups/{{ g.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                <form method="POST" action="/responsible/groups/{{ g.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete level?') }}')">
+                    <button type="submit" class="btn btn-sm btn-danger">✕</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% if not groups %}
+<div class="card" style="text-align:center;padding:40px;color:#888">
+    <p>{{ _('No access levels yet') }}</p>
+</div>
+{% endif %}
+{% endblock %}

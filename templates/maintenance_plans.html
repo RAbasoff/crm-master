@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Maintenance Plans') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Maintenance Plans') }}</h1>
+    {% if current_user.has_role('admin', 'technician') %}
+    <a href="/maintenance-plans/new" class="btn btn-primary">+ {{ _('New plan') }}</a>
+    {% endif %}
+</div>
+
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ plans|length }}</div><div class="label">{{ _('Total plans') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ plans|selectattr('status', 'equalto', 'planned')|list|length }}</div><div class="label">{{ _('Planned') }}</div></div>
+    <div class="stat-card"><div class="number">{{ plans|selectattr('status', 'equalto', 'in_progress')|list|length }}</div><div class="label">{{ _('In progress') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ plans|selectattr('status', 'equalto', 'completed')|list|length }}</div><div class="label">{{ _('Completed') }}</div></div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Title') }}</th>
+                <th>{{ _('Machine') }}</th>
+                <th>{{ _('Type') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Start') }}</th>
+                <th>{{ _('End') }}</th>
+                <th>{{ _('Executor') }}</th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for p in plans if p.status != 'completed' %}
+            <tr>
+                <td><a href="/maintenance-plans/{{ p.id }}">{{ p.title }}</a></td>
+                <td><a href="/machines/{{ p.machine_id }}">{{ p.machine.name }}</a></td>
+                <td><span class="badge badge-{{ p.maintenance_type }}">{{ p.maintenance_type }}</span></td>
+                <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+                <td>{{ p.planned_start.strftime('%d-%m-%Y') }}</td>
+                <td>{{ p.planned_end.strftime('%d-%m-%Y') if p.planned_end else '—' }}</td>
+                <td>{% if p.is_external %}🏢 {{ p.company_name or '—' }}{% else %}🔧 {{ p.worker.naam if p.worker else '—' }}{% endif %}</td>
+                <td>
+                    {% if current_user.has_role('admin', 'technician') %}
+                    <a href="/maintenance-plans/{{ p.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% for p in plans if p.status == 'completed' %}
+            <tr style="background:#eef7f0">
+                <td><a href="/maintenance-plans/{{ p.id }}" style="color:#7fad90">{{ p.title }}</a></td>
+                <td><a href="/machines/{{ p.machine_id }}" style="color:#7fad90">{{ p.machine.name }}</a></td>
+                <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ p.maintenance_type }}</span></td>
+                <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ p.status }}</span></td>
+                <td style="color:#8aa88e">{{ p.planned_start.strftime('%d-%m-%Y') }}</td>
+                <td style="color:#8aa88e">{{ p.planned_end.strftime('%d-%m-%Y') if p.planned_end else '—' }}</td>
+                <td style="color:#8aa88e">{% if p.is_external %}🏢 {{ p.company_name or '—' }}{% else %}🔧 {{ p.worker.naam if p.worker else '—' }}{% endif %}</td>
+                <td>
+                    {% if current_user.has_role('admin', 'technician') %}
+                    <a href="/maintenance-plans/{{ p.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit TWO') if two else _('New TWO') }} — CRM{% endblock %}
+{% block content %}
+<h1>🔧 {{ _('Edit TWO') + ' ' + two.number if two else _('New Technical Work Order') }}</h1>
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <!-- FAULT SOURCE -->
+        <div class="card" style="background:#fff5f5;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">⚠️ {{ _('Source fault report') }} ({{ _('optional') }})</h3>
+            <div class="form-group">
+                <select name="fault_id" id="faultSelect" onchange="onFaultChange()">
+                    <option value="">{{ _('Without fault report') }}</option>
+                    {% for f in faults %}
+                    <option value="{{ f.id }}" {% if two and two.fault_id == f.id %}selected{% endif %}>
+                        #{{ f.id }} {{ f.title }} — {{ f.machine.name }} ({{ f.priority }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- WORK DETAILS -->
+        <div class="card" style="background:#f0f7ff;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">🏭 {{ _('Work details') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Machine') }} ({{ _('optional') }})</label>
+                    <select name="machine_id" id="machineSelect">
+                        <option value="">{{ _('Without machine') }}</option>
+                        {% for m in machines %}
+                        <option value="{{ m.id }}" {% if two and two.machine_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Section') }} ({{ _('optional') }})</label>
+                    <select name="section_id" id="sectionSelect">
+                        <option value="">{{ _('Without section') }}</option>
+                        {% for s in sections %}
+                        <option value="{{ s.id }}" {% if two and two.section_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Description') }} *</label>
+                <textarea name="description" id="descField" rows="4" required placeholder="{{ _('Describe the work to be done...') }}">{{ two.description if two else '' }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Additional work') }}</label>
+                <textarea name="additional_work" rows="3" placeholder="{{ _('Additional work beyond the fault report...') }}">{{ two.additional_work if two else '' }}</textarea>
+            </div>
+        </div>
+
+        <!-- WORKERS -->
+        <div class="card" style="background:#f0fff0;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">👷 {{ _('Workers') }} ({{ _('select one or more') }})</h3>
+            <div class="form-group">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;padding:12px;background:white;border-radius:8px">
+                    {% for w in workers %}
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px" class="worker-check">
+                        <input type="checkbox" name="worker_ids" value="{{ w.id }}"
+                            {% if two and w in two.workers %}checked{% endif %}>
+                        {{ w.naam }} <span style="color:#888;font-size:11px">({{ w.specialisatie }})</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- SCHEDULE -->
+        <div class="card" style="background:#f8f9fa;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">📅 {{ _('Schedule') }}</h3>
+            <div id="availabilityWarning" style="display:none;margin-bottom:12px;padding:12px;border-radius:8px;background:#fef5e7;border:1px solid #f39c12">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <span style="font-size:20px">⚠️</span>
+                    <strong style="color:#e67e22" id="warningTitle"></strong>
+                </div>
+                <p style="margin:0;font-size:13px;color:#666" id="warningText"></p>
+                <div style="margin-top:8px;display:flex;gap:8px">
+                    <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="document.getElementById('availabilityWarning').style.display='none'">{{ _('Continue anyway') }}</button>
+                    <button type="button" class="btn btn-sm" style="background:#eee" onclick="document.querySelector('[name=planned_date]').value='';checkAvailability()">{{ _('Change date') }}</button>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Planned date') }}</label>
+                    <input type="date" name="planned_date" id="plannedDate" value="{{ two.planned_date.strftime('%Y-%m-%d') if two and two.planned_date else '' }}" onchange="checkAvailability()">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Status') }}</label>
+                    <select name="status">
+                        {% for s in ['draft', 'assigned', 'in_progress', 'completed', 'cancelled'] %}
+                        <option value="{{ s }}" {% if two and two.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Started') }}</label>
+                    <input type="datetime-local" name="started_at" value="{{ two.started_at.strftime('%Y-%m-%dT%H:%M') if two and two.started_at else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Completed') }}</label>
+                    <input type="datetime-local" name="completed_at" value="{{ two.completed_at.strftime('%Y-%m-%dT%H:%M') if two and two.completed_at else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS — always visible -->
+        <div class="card" style="background:#fffff0;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">📝 {{ _('Results') }}</h3>
+            <div class="form-group">
+                <label>{{ _('Work result') }}</label>
+                <textarea name="result" rows="4" placeholder="{{ _('Describe what was done and the result...') }}">{{ two.result if two else '' }}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Parts used') }}</label>
+                    <textarea name="parts_used" rows="2" placeholder='[{"name": "Bearing", "qty": 2}]'>{{ two.parts_used if two else '' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Time spent') }} ({{ _('hours') }})</label>
+                    <input type="number" name="time_spent_hours" value="{{ two.time_spent_hours if two else 0 }}" step="0.5" min="0">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Photos') }}</label>
+            <input type="file" name="photos" multiple accept="image/*">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2">{{ two.notes if two else '' }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            {% if two and two.status != 'completed' %}
+            <button type="submit" formaction="/two/{{ two.id }}/complete" formmethod="POST" class="btn btn-success" onclick="return confirm('{{ _('Mark as completed?') }}')">✅ {{ _('Complete') }}</button>
+            {% endif %}
+            <a href="/two" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function onFaultChange() {
+    const faultId = document.getElementById('faultSelect').value;
+    if (!faultId) return;
+    fetch(`/api/two/from-fault/${faultId}`)
+        .then(r => r.json())
+        .then(d => {
+            if (d.machine_id) document.getElementById('machineSelect').value = d.machine_id;
+            if (d.section_id) document.getElementById('sectionSelect').value = d.section_id;
+            const desc = document.getElementById('descField');
+            if (!desc.value) desc.value = `[${d.priority.toUpperCase()}] ${d.title}\n${d.description}`;
+        });
+}
+
+// Add onchange to worker checkboxes
+document.querySelectorAll('.worker-check input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', checkAvailability);
+});
+
+function checkAvailability() {
+    const date = document.getElementById('plannedDate').value;
+    const checked = document.querySelectorAll('.worker-check input[type=checkbox]:checked');
+    if (!date || checked.length === 0) {
+        document.getElementById('availabilityWarning').style.display = 'none';
+        return;
+    }
+    const workerIds = Array.from(checked).map(cb => cb.value);
+    let warnings = [];
+    let allAlternatives = [];
+    let allNextDates = [];
+    let pending = workerIds.length;
+
+    workerIds.forEach(wid => {
+        fetch(`/api/check-worker-availability?worker_id=${wid}&date=${date}`)
+            .then(r => r.json())
+            .then(d => {
+                if (!d.available) {
+                    const name = document.querySelector(`.worker-check input[value="${wid}"]`).parentElement.textContent.trim();
+                    let reason = '';
+                    if (d.reason === 'off') reason = '{{ _("has day off") }}';
+                    else if (d.reason === 'sick') reason = '{{ _("is sick") }}';
+                    else if (d.reason === 'holiday') reason = `{{ _("holiday") }}: ${d.holiday}`;
+                    else if (d.reason === 'not_work_day') reason = `{{ _("not a working day") }} (${d.work_days || ''})`;
+                    else if (d.reason === 'weekend') reason = '{{ _("weekend") }}';
+                    warnings.push(`⚠️ <b>${name}</b> — ${reason}`);
+                    if (d.alternatives) allAlternatives = allAlternatives.concat(d.alternatives);
+                    if (d.next_dates) allNextDates = allNextDates.concat(d.next_dates);
+                }
+                pending--;
+                if (pending === 0) {
+                    const box = document.getElementById('availabilityWarning');
+                    if (warnings.length > 0) {
+                        let html = warnings.join('<br>');
+                        
+                        // Show alternative workers
+                        const uniqueAlts = [...new Map(allAlternatives.map(a => [a.id, a])).values()]
+                            .filter(a => !workerIds.includes(String(a.id)));
+                        if (uniqueAlts.length > 0) {
+                            html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d9a0">';
+                            html += '<b style="color:#27ae60">👤 {{ _("Available workers") }}:</b><br>';
+                            uniqueAlts.forEach(a => {
+                                html += `<span style="display:inline-block;margin:3px;padding:4px 10px;background:white;border:1px solid #d4edda;border-radius:6px;font-size:12px;cursor:pointer" onclick="selectAlternativeWorker(${a.id})">${a.name} <span style="color:#888">(${a.specialty})</span></span>`;
+                            });
+                            html += '</div>';
+                        }
+                        
+                        // Show next available dates
+                        const uniqueDates = [...new Set(allNextDates)].sort().slice(0, 5);
+                        if (uniqueDates.length > 0) {
+                            html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d9a0">';
+                            html += '<b style="color:#5b9cf6">📅 {{ _("Next available dates") }}:</b><br>';
+                            uniqueDates.forEach(d => {
+                                const parts = d.split('-');
+                                const label = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                                html += `<span style="display:inline-block;margin:3px;padding:4px 10px;background:white;border:1px solid #b8daff;border-radius:6px;font-size:12px;cursor:pointer" onclick="document.getElementById('plannedDate').value='${d}';checkAvailability()">${label}</span>`;
+                            });
+                            html += '</div>';
+                        }
+                        
+                        document.getElementById('warningText').innerHTML = html;
+                        document.getElementById('warningTitle').textContent = warnings.length > 1 ? '{{ _("Workers unavailable") }}' : '{{ _("Worker unavailable") }}';
+                        box.style.display = 'block';
+                    } else {
+                        box.style.display = 'none';
+                    }
+                }
+            });
+    });
+}
+
+function selectAlternativeWorker(userId) {
+    // Uncheck all current workers
+    document.querySelectorAll('.worker-check input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    // Check the alternative
+    const cb = document.querySelector(`.worker-check input[value="${userId}"]`);
+    if (cb) cb.checked = true;
+    checkAvailability();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Reports') }} — CRM Werkplaats{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ _('Reports') }}</h1></div>
+<div class="stats">
+    <a href="/reports/period" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">📊</div><div class="label">{{ _('Period') }}</div>
+    </a>
+</div>
+{% if current_user.has_role('admin', 'director') %}
+<div class="card">
+    <h2>📥 {{ _('Export') }}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/export/machines" class="btn btn-sm" style="background:#27ae60;color:white">⚙️ {{ _('Machines') }} CSV</a>
+        <a href="/export/warehouse" class="btn btn-sm" style="background:#3498db;color:white">📦 {{ _('Warehouse') }} CSV</a>
+        <a href="/export/maintenance" class="btn btn-sm" style="background:#f39c12;color:white">🔧 {{ _('Maintenance') }} CSV</a>
+        <a href="/export/faults" class="btn btn-sm" style="background:#e74c3c;color:white">⚠️ {{ _('Faults') }} CSV</a>
+    </div>
+</div>
+{% endif %}
+<div class="card">
+    <h2>{{ _('Worker') }}</h2>
+    <form id="wf" style="display:flex;gap:10px;flex-wrap:wrap">
+        <select id="ws" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;min-width:150px"><option value="">{{ _('Worker') }}</option></select>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Show Report') }}</button>
+    </form>
+</div>
+<div class="card">
+    <h2>{{ _('Last 30 Days') }}</h2>
+    <canvas id="chart" height="180"></canvas>
+</div>
+<script>
+fetch('/api/stats').then(r=>r.json()).then(d=>{
+    const s=document.getElementById('ws');
+    d.workers.forEach(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name+' ('+w.orders+')';s.appendChild(o)});
+    const c=document.getElementById('chart'),x=c.getContext('2d'),days=d.days;
+    const mx=Math.max(...days.map(d=>d.count),1);
+    c.width=c.parentElement.clientWidth-32;const h=180,bw=c.width/days.length-2;
+    x.fillStyle='#3498db';
+    days.forEach((d,i)=>{const bh=(d.count/mx)*(h-25);x.fillRect(i*(bw+2),h-bh-18,bw,bh);x.fillStyle='#888';x.font='9px sans-serif';x.fillText(d.date,i*(bw+2),h-4);x.fillStyle='#3498db'});
+});
+document.getElementById('wf').onsubmit=e=>{e.preventDefault();const v=document.getElementById('ws').value;if(v)location='/reports/worker/'+v};
+</script>
+{% endblock %}

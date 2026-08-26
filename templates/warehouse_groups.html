@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Warehouse Groups') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📦 {{ _('Warehouse Groups') }}</h1>
+    <div style="display:flex;gap:8px">
+        <form method="POST" action="/warehouse/groups/auto-create" style="display:inline">
+            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">{{ _('Auto-create from machines') }}</button>
+        </form>
+        <a href="/warehouse/groups/new" class="btn btn-primary">+ {{ _('New group') }}</a>
+        <a href="/warehouse" class="btn" style="background:#eee">{{ _('Back to warehouse') }}</a>
+    </div>
+</div>
+
+{% if manufacturers %}
+<div class="card" style="background:#f0f7ff">
+    <h3 style="font-size:14px;margin-bottom:8px">{{ _('Machine manufacturers') }}</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+        {% for m in manufacturers %}
+        <span class="badge" style="background:#3498db22;color:#3498db">{{ m }}</span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Manufacturer') }}</th><th>{{ _('Items') }}</th><th>{{ _('Description') }}</th><th></th></tr>
+        {% for g in groups %}
+        <tr>
+            <td><strong><a href="/warehouse?group={{ g.id }}" style="color:#3498db">{{ g.name }}</a></strong></td>
+            <td>{{ g.manufacturer or '—' }}</td>
+            <td>{{ g.items|length }}</td>
+            <td>{{ g.description[:50] if g.description else '—' }}</td>
+            <td style="white-space:nowrap">
+                <a href="/warehouse/groups/{{ g.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                <form method="POST" action="/warehouse/groups/{{ g.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete group?') }}')">
+                    <button type="submit" class="btn btn-sm btn-danger">✕</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% if not groups %}
+<div class="card" style="text-align:center;padding:40px;color:#888">
+    <p>{{ _('No groups yet') }}</p>
+    <p style="font-size:13px;margin-top:8px">{{ _('Click "Auto-create from machines" to generate groups from machine manufacturers') }}</p>
+</div>
+{% endif %}
+{% endblock %}

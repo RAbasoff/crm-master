@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Time Report') }} — {{ user.display_name or user.username }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Time Report') }} — {{ user.display_name or user.username }}</h1>
+    <a href="/time-tracking" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+
+<!-- PERIOD SELECTOR -->
+<div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-weight:600">{{ _('Period') }}:</span>
+        {% set prev_month = (month[:4]|int ~ '-' ~ ((month[5:]|int) - 1)|string ~ '-01') if month[5:]|int > 1 else ((month[:4]|int - 1)|string ~ '-12-01') %}
+        <a href="/time-report/{{ user.id }}?month={{ month[:4] }}-{{ '%02d'|format((month[5:]|int - 1) if month[5:]|int > 1 else 12) }}" class="btn btn-sm" style="background:#eee">◀</a>
+        <span style="font-size:18px;font-weight:bold;padding:0 12px">{{ month }}</span>
+        <a href="/time-report/{{ user.id }}?month={{ month[:4] }}-{{ '%02d'|format((month[5:]|int + 1) if month[5:]|int < 12 else 1) }}" class="btn btn-sm" style="background:#eee">▶</a>
+        
+        <div style="margin-left:auto;display:flex;gap:4px">
+            <a href="/time-report/{{ user.id }}?month={{ now().strftime('%Y-%m') if now is defined else month }}" class="btn btn-sm" style="background:#3498db;color:white">{{ _('Month') }}</a>
+        </div>
+    </div>
+</div>
+
+<!-- SUMMARY STATS -->
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ days_present }}</div><div class="label">{{ _('Days Present') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ days_absent }}</div><div class="label">{{ _('Days Absent') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ "%.1f"|format(total_hours) }}</div><div class="label">{{ _('Total Hours') }}</div></div>
+    <div class="stat-card {% if total_overtime > 0 %}warn{% endif %}"><div class="number">{{ "%.1f"|format(total_overtime) }}</div><div class="label">{{ _('Overtime') }}</div></div>
+</div>
+
+<!-- BAR CHART -->
+<div class="card">
+    <h2>{{ _('Daily Hours') }}</h2>
+    <canvas id="hoursChart" height="200"></canvas>
+</div>
+
+<!-- DAILY TABLE -->
+<div class="card">
+    <h2>{{ _('Daily Details') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('In') }}</th><th>{{ _('Out') }}</th><th>{{ _('Break') }}</th><th>{{ _('Hours') }}</th><th>{{ _('Overtime') }}</th><th>{{ _('Status') }}</th></tr>
+        {% for e in entries %}
+        <tr>
+            <td>{{ e.date.strftime('%d-%m (%a)') }}</td>
+            <td>{{ e.clock_in.strftime('%H:%M') if e.clock_in else '—' }}</td>
+            <td>{{ e.clock_out.strftime('%H:%M') if e.clock_out else '—' }}</td>
+            <td>{{ e.break_minutes }}m</td>
+            <td>{{ e.hours_worked }}</td>
+            <td style="{% if e.overtime_hours > 0 %}color:#e74c3c;font-weight:bold{% endif %}">{{ e.overtime_hours }}</td>
+            <td><span class="badge badge-{% if e.status == 'present' %}active{% elif e.status == 'sick' %}broken{% elif e.status == 'vacation' %}maintenance{% else %}offline{% endif %}">{{ e.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:#888">{{ _('No entries') }}</td></tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+{% if vacations %}
+<div class="card">
+    <h2>🏖 {{ _('Vacations') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Type') }}</th><th>{{ _('From') }}</th><th>{{ _('To') }}</th><th>{{ _('Days') }}</th><th>{{ _('Status') }}</th></tr>
+        {% for v in vacations %}
+        <tr>
+            <td>{{ v.vacation_type }}</td>
+            <td>{{ v.date_from.strftime('%d-%m-%Y') }}</td>
+            <td>{{ v.date_to.strftime('%d-%m-%Y') }}</td>
+            <td>{{ v.days_count }}</td>
+            <td><span class="badge badge-{% if v.status == 'approved' %}active{% elif v.status == 'rejected' %}broken{% else %}maintenance{% endif %}">{{ v.status }}</span></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<script>
+const entries = [
+    {% for e in entries %}
+    {date: '{{ e.date.strftime("%d") }}', hours: {{ e.hours_worked }}, overtime: {{ e.overtime_hours }}, status: '{{ e.status }}'}{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const canvas = document.getElementById('hoursChart');
+const ctx = canvas.getContext('2d');
+canvas.width = canvas.parentElement.clientWidth - 32;
+
+const maxHours = 10;
+const barWidth = Math.max(8, (canvas.width / entries.length) - 4);
+const chartHeight = 180;
+
+// Draw bars
+entries.forEach((e, i) => {
+    const x = i * (barWidth + 4) + 20;
+    const normalHeight = Math.min(e.hours, 8) / maxHours * (chartHeight - 30);
+    const overtimeHeight = e.overtime / maxHours * (chartHeight - 30);
+    
+    // Normal hours
+    ctx.fillStyle = e.status === 'present' ? '#3498db' : e.status === 'sick' ? '#e74c3c' : '#95a5a6';
+    ctx.fillRect(x, chartHeight - normalHeight - 20, barWidth, normalHeight);
+    
+    // Overtime
+    if (e.overtime > 0) {
+        ctx.fillStyle = '#f39c12';
+        ctx.fillRect(x, chartHeight - normalHeight - overtimeHeight - 20, barWidth, overtimeHeight);
+    }
+    
+    // Day label
+    ctx.fillStyle = '#888';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(e.date, x + barWidth/2, chartHeight - 4);
+});
+
+// 8h line
+ctx.strokeStyle = '#e74c3c';
+ctx.setLineDash([4, 4]);
+ctx.beginPath();
+ctx.moveTo(15, chartHeight - (8/maxHours * (chartHeight-30)) - 20);
+ctx.lineTo(canvas.width, chartHeight - (8/maxHours * (chartHeight-30)) - 20);
+ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#e74c3c';
+ctx.font = '10px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillText('8h', 0, chartHeight - (8/maxHours * (chartHeight-30)) - 22);
+</script>
+{% endblock %}

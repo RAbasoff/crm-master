@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}{{ _('New Message') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('New Message') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-group">
+            <label>{{ _('To') }} ({{ _('select users or leave empty for all') }})</label>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+                <button type="button" class="btn btn-sm" style="background:#3498db;color:white;padding:4px 10px" onclick="toggleAllUsers(true)">{{ _('Select all') }}</button>
+                <button type="button" class="btn btn-sm" style="background:#eee;padding:4px 10px" onclick="toggleAllUsers(false)">{{ _('Deselect all') }}</button>
+                <span id="selectedCount" style="padding:4px 10px;font-size:12px;color:#888">0 {{ _('selected') }}</span>
+            </div>
+
+            <!-- TECHNICAL SERVICE -->
+            {% set techs = users|selectattr('role', 'equalto', 'technician')|list %}
+            {% if techs %}
+            <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:#27ae60;margin-bottom:4px;padding:4px 8px;background:#e8f5e9;border-radius:6px;cursor:pointer" onclick="toggleGroup('tech')">
+                    🔧 {{ _('Technical Service') }} ({{ techs|length }})
+                </div>
+                <div id="group-tech" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:3px;padding:6px;background:#f8f9fa;border-radius:6px">
+                    {% for u in techs %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;font-size:12px;cursor:pointer" onmouseover="this.style.background='#e8f5e9'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="receiver_ids" value="{{ u.id }}" class="user-cb" onchange="updateCount()">
+                        <strong>{{ u.display_name or u.username }}</strong>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- RESPONSIBLE (user role) -->
+            {% set responsibles = users|selectattr('role', 'equalto', 'user')|list %}
+            {% if responsibles %}
+            <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:#e67e22;margin-bottom:4px;padding:4px 8px;background:#fef5e7;border-radius:6px;cursor:pointer" onclick="toggleGroup('resp')">
+                    👤 {{ _('Responsible') }} ({{ responsibles|length }})
+                </div>
+                <div id="group-resp" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:3px;padding:6px;background:#f8f9fa;border-radius:6px">
+                    {% for u in responsibles %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;font-size:12px;cursor:pointer" onmouseover="this.style.background='#fef5e7'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="receiver_ids" value="{{ u.id }}" class="user-cb" onchange="updateCount()">
+                        <strong>{{ u.display_name or u.username }}</strong>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- DIRECTOR -->
+            {% set directors = users|selectattr('role', 'equalto', 'director')|list %}
+            {% if directors %}
+            <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:#3498db;margin-bottom:4px;padding:4px 8px;background:#e8f4fd;border-radius:6px;cursor:pointer" onclick="toggleGroup('dir')">
+                    📋 {{ _('Director') }} ({{ directors|length }})
+                </div>
+                <div id="group-dir" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:3px;padding:6px;background:#f8f9fa;border-radius:6px">
+                    {% for u in directors %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;font-size:12px;cursor:pointer" onmouseover="this.style.background='#e8f4fd'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="receiver_ids" value="{{ u.id }}" class="user-cb" onchange="updateCount()">
+                        <strong>{{ u.display_name or u.username }}</strong>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- QUALITY -->
+            {% set quality = users|selectattr('role', 'equalto', 'quality')|list %}
+            {% if quality %}
+            <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:#9b59b6;margin-bottom:4px;padding:4px 8px;background:#f4ecf7;border-radius:6px;cursor:pointer" onclick="toggleGroup('qual')">
+                    ✅ {{ _('Quality') }} ({{ quality|length }})
+                </div>
+                <div id="group-qual" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:3px;padding:6px;background:#f8f9fa;border-radius:6px">
+                    {% for u in quality %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;font-size:12px;cursor:pointer" onmouseover="this.style.background='#f4ecf7'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="receiver_ids" value="{{ u.id }}" class="user-cb" onchange="updateCount()">
+                        <strong>{{ u.display_name or u.username }}</strong>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- VERANTWOORDELIJKEN (Responsible persons from client table) -->
+            {% if verantwoordelijken %}
+            <div style="margin-bottom:8px">
+                <div style="font-size:12px;font-weight:600;color:#16a085;margin-bottom:4px;padding:4px 8px;background:#e8f8f5;border-radius:6px;cursor:pointer" onclick="toggleGroup('verant')">
+                    👥 {{ _('Responsible persons') }} ({{ verantwoordelijken|length }})
+                </div>
+                <div id="group-verant" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:3px;padding:6px;background:#f8f9fa;border-radius:6px">
+                    {% for v in verantwoordelijken %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;font-size:12px;cursor:pointer" onmouseover="this.style.background='#e8f8f5'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="verant_ids" value="{{ v.id }}" class="user-cb" onchange="updateCount()">
+                        <span style="width:8px;height:8px;border-radius:50%;background:#16a085;display:inline-block"></span>
+                        <strong>{{ v.naam }}</strong>
+                        {% if v.company %}<small style="color:#888">({{ v.company }})</small>{% endif %}
+                        {% if v.telefoon %}<small style="color:#888">📞 {{ v.telefoon }}</small>{% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <small style="color:#888;font-size:11px">{{ _('If nobody selected — message will be sent to ALL users') }}</small>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Subject') }}</label>
+            <input type="text" name="subject" placeholder="{{ _('Message subject') }}">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Message') }} *</label>
+            <textarea name="body" rows="5" required placeholder="{{ _('Type your message...') }}"></textarea>
+        </div>
+        {% if fault_id %}
+        <input type="hidden" name="fault_id" value="{{ fault_id }}">
+        <p style="color:#888;font-size:13px;margin-bottom:12px">📎 {{ _('Linked to fault') }} #{{ fault_id }}</p>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">📤 {{ _('Send') }}</button>
+        <a href="/messages" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+    </form>
+</div>
+
+<script>
+function toggleAllUsers(state) {
+    document.querySelectorAll('.user-cb').forEach(cb => cb.checked = state);
+    updateCount();
+}
+function toggleGroup(group) {
+    const el = document.getElementById('group-' + group);
+    el.style.display = el.style.display === 'none' ? 'grid' : 'none';
+}
+function updateCount() {
+    const checked = document.querySelectorAll('.user-cb:checked').length;
+    const total = document.querySelectorAll('.user-cb').length;
+    document.getElementById('selectedCount').textContent = checked + ' / ' + total + ' {{ _("selected") }}';
+}
+updateCount();
+</script>
+{% endblock %}

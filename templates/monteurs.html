@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Monteurs') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Monteurs') }} ({{ monteurs|length }})</h1>
+    <a href="/users" class="btn btn-sm" style="background:#eee">← {{ _('Users') }}</a>
+</div>
+
+{% set labels = {
+    'machines': _('Machines'), 'warehouse': _('Warehouse'), 'orders': _('Work Orders'),
+    'clients': _('Responsible persons'), 'workers': _('Workers'), 'faults': _('Faults'),
+    'messages': _('Messages'), 'reports': _('Reports'), 'schedule': _('Schedule'),
+    'time_tracking': _('Time Tracking'), 'vacations': _('Vacations'),
+    'cylinders': _('Gas Cylinders'), 'maintenance': _('Maintenance'),
+    'purchase_requests': _('Purchase Requests'), 'users': _('Users'),
+    'sections': _('Sections'), 'floor': _('Floor Plan'),
+    'invoices': _('Invoices'), 'contractors': _('Contractors'),
+    'two': _('TWO'), 'audit_log': _('Audit Log')
+} %}
+
+{% for m in monteurs %}
+<div class="card" style="margin-bottom:12px;border-left:4px solid {% if m.is_active_user %}#27ae60{% else %}#e74c3c{% endif %}">
+    <form method="POST" action="/monteurs/{{ m.id }}/permissions">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <!-- INFO -->
+            <div style="min-width:200px;flex:1">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                    <div style="width:44px;height:44px;border-radius:50%;background:#3498db;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px">
+                        {{ (m.display_name or m.username)[0]|upper }}
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:700">{{ m.display_name or m.username }}</div>
+                        <div style="font-size:12px;color:#888">@{{ m.username }}
+                            {% if m.worker_profile %}
+                            · {{ m.worker_profile.specialisatie or '' }}
+                            {% if m.worker_profile.telefoon %} · 📞 {{ m.worker_profile.telefoon }}{% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+                    <label style="font-size:13px;display:flex;align-items:center;gap:4px">
+                        <input type="checkbox" name="is_active" {% if m.is_active_user %}checked{% endif %}> {{ _('Active') }}
+                    </label>
+                    <span class="badge badge-{% if m.access_level=='full' %}active{% elif m.access_level=='partial' %}high{% else %}broken{% endif %}">{{ m.access_level }}</span>
+                </div>
+            </div>
+
+            <!-- ACCESS LEVEL -->
+            <div style="min-width:160px">
+                <label style="font-size:11px;color:#888;font-weight:600;display:block;margin-bottom:4px">{{ _('Access level') }}</label>
+                <select name="access_level" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+                    <option value="full" {% if m.access_level=='full' %}selected{% endif %}>🟢 {{ _('Full') }}</option>
+                    <option value="partial" {% if m.access_level=='partial' %}selected{% endif %}>🟡 {{ _('Partial') }}</option>
+                    <option value="limited" {% if m.access_level=='limited' %}selected{% endif %}>🔴 {{ _('Limited') }}</option>
+                </select>
+            </div>
+
+            <!-- PASSWORD -->
+            <div style="min-width:140px">
+                <label style="font-size:11px;color:#888;font-weight:600;display:block;margin-bottom:4px">{{ _('New password') }}</label>
+                <input type="password" name="password" placeholder="{{ _('Keep current') }}" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+            </div>
+
+            <!-- SAVE -->
+            <div style="display:flex;align-items:flex-end">
+                <button type="submit" class="btn btn-sm btn-primary">💾 {{ _('Save') }}</button>
+            </div>
+        </div>
+
+        <!-- SECTIONS -->
+        <details style="margin-top:12px">
+            <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#3498db">🔑 {{ _('Allowed sections') }} ({{ m.allowed_sections|length }})</summary>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;padding:10px;background:#f8f9fa;border-radius:8px;margin-top:6px">
+                {% for key in section_keys %}
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:3px 4px;border-radius:4px;cursor:pointer" onmouseover="this.style.background='#e8f4fd'" onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" name="allowed_sections" value="{{ key }}"
+                        {% if m.allowed_sections|selectattr('section_key','equalto',key)|list|length > 0 %}checked{% endif %}>
+                    {{ labels.get(key, key) }}
+                </label>
+                {% endfor %}
+            </div>
+        </details>
+
+        <!-- MACHINES -->
+        <details style="margin-top:6px">
+            <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#3498db">🏭 {{ _('Assigned machines') }} ({{ m.assigned_machines|length }})</summary>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px;padding:10px;background:#f8f9fa;border-radius:8px;margin-top:6px">
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:3px 4px;border-radius:4px;cursor:pointer;font-weight:600;color:#3498db">
+                    <input type="checkbox" onchange="this.closest('details').querySelectorAll('input[name=machines]').forEach(cb=>cb.checked=this.checked)">
+                    {{ _('Select all') }}
+                </label>
+                {% for machine in machines %}
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:3px 4px;border-radius:4px;cursor:pointer" onmouseover="this.style.background='#e8f4fd'" onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" name="machines" value="{{ machine.id }}"
+                        {% if machine in m.assigned_machines %}checked{% endif %}>
+                    {{ machine.name }}
+                </label>
+                {% endfor %}
+            </div>
+        </details>
+    </form>
+</div>
+{% endfor %}
+
+{% if not monteurs %}
+<div class="card">
+    <div style="text-align:center;padding:40px;color:#999">
+        <div style="font-size:48px;margin-bottom:12px">🔧</div>
+        <h3 style="color:#666">{{ _('No monteurs found') }}</h3>
+        <p>{{ _('Create users with role "technician" to see them here') }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Workers') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Workers') }}</h1>
+    <div style="display:flex;gap:8px">
+        {% if current_user.has_role('admin') %}
+        <a href="/monteurs" class="btn btn-sm" style="background:#e67e22;color:white">🔑 {{ _('Access Permissions') }}</a>
+        {% endif %}
+        <a href="/workers/new" class="btn btn-primary">+ {{ _('New Worker') }}</a>
+    </div>
+</div>
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('User group') }}</th><th>{{ _('Responsible group') }}</th><th>{{ _('Hourly Rate') }}</th><th>{{ _('Orders') }}</th><th>{{ _('Status') }}</th><th></th></tr>
+        {% for w in workers %}
+        <tr>
+            <td>{{ w.naam }}</td>
+            <td>{{ w.specialisatie or '—' }}</td>
+            <td>{% if w.user %}{{ w.user.display_name or w.user.username }}{% else %}—{% endif %}</td>
+            <td>{% if w.resp_group %}{{ w.resp_group.name }}{% else %}—{% endif %}</td>
+            <td>€{{ "%.0f"|format(w.tarief_per_uur) }}/h</td>
+            <td>{{ w.opdrachten|length }}</td>
+            <td>{% if w.actief %}<span class="badge badge-gereed">{{ _('Active') }}</span>{% else %}<span class="badge badge-geannuleerd">{{ _('Inactive') }}</span>{% endif %}</td>
+            <td><a href="/workers/{{ w.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

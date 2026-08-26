@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Parts Statistics') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📦 {{ _('Parts Statistics') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/stats/faults" class="btn btn-sm" style="background:#eee">{{ _('Faults') }}</a>
+        <a href="/stats/parts" class="btn btn-sm btn-primary">{{ _('Parts') }}</a>
+    </div>
+</div>
+
+{% if low_stock %}
+<div class="card" style="border-left:4px solid #e74c3c">
+    <h2>⚠️ {{ _('Low Stock') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Minimum') }}</th><th>{{ _('Category') }}</th></tr>
+        {% for i in low_stock %}
+        <tr>
+            <td>{{ i.naam }}</td>
+            <td style="color:#e74c3c;font-weight:bold">{{ i.hoeveelheid }} {{ i.eenheid }}</td>
+            <td>{{ i.minimum }}</td>
+            <td>{{ i.categorie or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>{{ _('Recent Usage') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Item') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Comment') }}</th></tr>
+        {% for m in recent_usage %}
+        <tr>
+            <td>{{ m.aangemaakt.strftime('%d-%m %H:%M') }}</td>
+            <td>{{ m.item.naam }}</td>
+            <td>-{{ m.hoeveelheid }} {{ m.item.eenheid }}</td>
+            <td>{{ m.opmerking or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

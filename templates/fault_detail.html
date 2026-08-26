@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Fault') }} #{{ fault.id }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚠️ {{ _('Fault') }} #{{ fault.id }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% if fault.status == 'open' and current_user.has_role('technician') %}
+        <form method="POST" action="/faults/{{ fault.id }}/accept" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-success">{{ _('Accept') }}</button>
+        </form>
+        {% endif %}
+        {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
+        <button type="button" class="btn btn-sm btn-warning" onclick="document.getElementById('assignForm').style.display='block'">{{ _('Assign technicians') }}</button>
+        {% endif %}
+        {% if fault.status in ['accepted', 'in_progress', 'parts_ordered', 'waiting_parts'] and current_user.has_role('technician', 'admin') %}
+        <a href="/faults/{{ fault.id }}/work-report" class="btn btn-sm btn-primary">{{ _('Create Work Report') }}</a>
+        {% endif %}
+        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin') %}
+        <div style="position:relative;display:inline-block">
+            <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
+                <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
+                {% if fault.status == 'open' %}<option value="accepted" style="background:white;color:#333">{{ _('Accept') }}</option>{% endif %}
+                {% if fault.status in ['accepted', 'open'] %}<option value="in_progress" style="background:white;color:#333">{{ _('In progress') }}</option>{% endif %}
+                <option value="parts_ordered" style="background:white;color:#333">{{ _('Parts ordered') }}</option>
+                <option value="waiting_parts" style="background:white;color:#333">{{ _('Waiting for parts') }}</option>
+                {% if fault.status in ['accepted', 'in_progress'] %}<option value="resolved" style="background:white;color:#333">{{ _('Resolved') }}</option>{% endif %}
+            </select>
+        </div>
+        {% endif %}
+        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin') %}
+        <button type="button" class="btn btn-sm" style="background:#e67e22;color:white" onclick="openCloseModal()">{{ _('Close Fault') }}</button>
+        {% endif %}
+        {% if fault.status in ['closed', 'resolved'] and current_user.has_role('technician', 'admin') %}
+        <button type="button" class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReopenModal()">🔄 {{ _('Reopen') }}</button>
+        {% endif %}
+        <a href="/messages/new?fault_id={{ fault.id }}" class="btn btn-sm btn-primary">💬 {{ _('Send Message') }}</a>
+        <a href="/faults" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+{% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
+<div class="card" id="assignForm" style="display:none;border-left:4px solid #f39c12">
+    <h2 style="margin-bottom:12px">{{ _('Assign technicians & contractor') }}</h2>
+    <form method="POST" action="/faults/{{ fault.id }}/assign">
+        <div class="form-group">
+            <label style="font-weight:600;margin-bottom:8px">🔧 {{ _('Technicians') }} ({{ _('select 1, 2 or 3') }})</label>
+            {% if technicians %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;padding:12px;background:white;border-radius:8px">
+                {% for t in technicians %}
+                <label style="display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 10px;border-radius:6px;border:1px solid #eee;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='#3498db';this.style.background='#f0f7ff'" onmouseout="this.style.borderColor='#eee';this.style.background='transparent'">
+                    <input type="checkbox" name="technician_ids" value="{{ t.id }}" {% if t in fault.assigned_technicians %}checked{% endif %} style="width:18px;height:18px">
+                    <span style="display:inline-flex;flex-direction:column;line-height:1.3">
+                        <strong style="font-size:14px">{{ t.display_name or t.username }}</strong>
+                        <small style="color:#888">
+                        {% if t.worker_profile %}
+                            🔧 {{ t.worker_profile.specialisatie or '' }}
+                            {% if t.worker_profile.telefoon %} · 📞 {{ t.worker_profile.telefoon }}{% endif %}
+                        {% else %}
+                            {{ t.role }}
+                        {% endif %}
+                        </small>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:#e74c3c;padding:12px;background:#fdf0f0;border-radius:8px">{{ _('No technicians available. Create users with role "technician" first.') }}</p>
+            {% endif %}
+        </div>
+        <div class="form-group" style="margin-top:12px">
+            <label style="font-weight:600;margin-bottom:8px">🏢 {{ _('Contractor') }} ({{ _('optional') }})</label>
+            <select name="contractor_id" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+                <option value="">{{ _('— No contractor —') }}</option>
+                {% for c in contractors %}
+                <option value="{{ c.id }}" {% if fault.contractor_id == c.id %}selected{% endif %}>{{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+            <button type="submit" class="btn btn-sm btn-warning">{{ _('Assign') }}</button>
+            <button type="button" class="btn btn-sm" style="background:#eee" onclick="document.getElementById('assignForm').style.display='none'">{{ _('Cancel') }}</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="detail-grid">
+        <div>
+            <h2>{{ _('Details') }}</h2>
+            <p><strong>{{ _('Title') }}:</strong> {{ fault.title }}</p>
+            <p><strong>{{ _('Machine') }}:</strong> <a href="/floor?highlight={{ fault.machine_id }}">{{ fault.machine.name }}</a></p>
+            <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span></p>
+            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ fault.status }}</span></p>
+            <p><strong>{{ _('Reporter') }}:</strong> {{ fault.reporter.display_name or fault.reporter.username }}</p>
+            <p><strong>{{ _('Created') }}:</strong> {{ fault.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% if fault.assigned_technicians %}
+            <p><strong>{{ _('Assigned technicians') }}:</strong></p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+                {% for t in fault.assigned_technicians %}
+                <span class="badge badge-technician" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px">
+                    {{ t.display_name or t.username }}
+                    {% if t.worker_profile and t.worker_profile.specialisatie %}
+                    <small style="opacity:0.8">({{ t.worker_profile.specialisatie }})</small>
+                    {% endif %}
+                </span>
+                {% endfor %}
+            </div>
+            {% elif fault.technician %}
+            <p><strong>{{ _('Technician') }}:</strong> {{ fault.technician.display_name or fault.technician.username }}
+                {% if fault.technician.worker_profile and fault.technician.worker_profile.specialisatie %}
+                <small>({{ fault.technician.worker_profile.specialisatie }})</small>
+                {% endif %}
+            </p>
+            {% endif %}
+            {% if fault.accepted_at %}
+            <p><strong>{{ _('Accepted') }}:</strong> {{ fault.accepted_at.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% endif %}
+            {% if fault.resolved_at %}
+            <p><strong>{{ _('Resolved') }}:</strong> {{ fault.resolved_at.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% endif %}
+            {% if fault.contractor %}
+            <p><strong>🏢 {{ _('Contractor') }}:</strong> <a href="/contractors/{{ fault.contractor.id }}" style="color:#3498db">{{ fault.contractor.company_name }}</a>
+                {% if fault.contractor.contact_person %} · {{ fault.contractor.contact_person }}{% endif %}
+                {% if fault.contractor.phone %} · 📞 {{ fault.contractor.phone }}{% endif %}
+            </p>
+            {% endif %}
+        </div>
+        <div>
+            <h2>{{ _('Description') }}</h2>
+            <p>{{ fault.description }}</p>
+        </div>
+    </div>
+</div>
+
+{% if fault.photos %}
+<div class="card">
+    <h2>{{ _('Photos') }}</h2>
+    <div class="photo-grid">
+        {% for p in fault.photos %}
+        <img src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="window.open(this.src)">
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if fault.videos %}
+<div class="card">
+    <h2>{{ _('Videos') }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">
+        {% for v in fault.videos %}
+        <div>
+            <video controls style="width:100%;border-radius:8px;max-height:360px" preload="metadata">
+                <source src="/static/uploads/{{ v.filename }}">
+                {{ _('Your browser does not support video playback') }}
+            </video>
+            {% if v.description %}
+            <p style="font-size:12px;color:#888;margin-top:4px">{{ v.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if fault.work_report %}
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin:0">📝 {{ _('Work Reports') }} ({{ fault.work_report|length }})</h2>
+        {% if current_user.has_role('technician', 'admin') %}
+        <a href="/faults/{{ fault.id }}/work-report" class="btn btn-sm btn-primary">+ {{ _('Add Entry') }}</a>
+        {% endif %}
+    </div>
+    
+    {% set ns = namespace(last_date='') %}
+    {% for report in fault.work_report|sort(attribute='created_at', reverse=true) %}
+        {% set report_date = report.created_at.strftime('%d.%m.%Y') %}
+        {% if report_date != ns.last_date %}
+            {% set ns.last_date = report_date %}
+            <div style="display:flex;align-items:center;gap:10px;margin:{% if not loop.first %}16px{% else %}0{% endif %} 0 12px">
+                <div style="flex:1;height:1px;background:#e8ecf1"></div>
+                <span style="font-size:11px;font-weight:700;color:#5b9cf6;text-transform:uppercase;letter-spacing:1px;white-space:nowrap">
+                    {% if not loop.first %}{{ _('UPDATE') }} {% endif %}{{ report_date }}
+                </span>
+                <div style="flex:1;height:1px;background:#e8ecf1"></div>
+            </div>
+        {% endif %}
+        
+        <div style="display:flex;gap:12px;padding:12px 14px;background:#f8f9fc;border-radius:10px;margin-bottom:8px;border-left:3px solid #5b9cf6">
+            <div style="width:28px;height:28px;border-radius:50%;background:#5b9cf6;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">
+                {{ loop.revindex }}
+            </div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <div style="font-size:12px;color:#888">
+                        {{ report.technician.display_name or report.technician.username }} · {{ report.created_at.strftime('%H:%M') }}
+                        {% if report.time_spent_hours %} · {{ report.time_spent_hours }}h{% endif %}
+                    </div>
+                    {% if current_user.has_role('technician', 'admin') %}
+                    <a href="/faults/{{ fault.id }}/work-report/{{ report.id }}/edit" style="font-size:11px;color:#5b9cf6;text-decoration:none">✏️</a>
+                    {% endif %}
+                </div>
+                <div style="font-size:14px;color:#333;white-space:pre-wrap">{{ report.work_description }}</div>
+                
+                {% if report.parts_used %}
+                <div style="margin-top:8px" id="parts-display-{{ report.id }}"></div>
+                <script>
+                try {
+                    const parts{{ report.id }} = {{ report.parts_used|tojson }};
+                    if (Array.isArray(parts{{ report.id }}) && parts{{ report.id }}.length > 0) {
+                        let html = '<div style="background:white;padding:8px 10px;border-radius:6px;border:1px solid #e8ecf1;font-size:12px"><strong>📦 {{ _("Parts") }}:</strong> ';
+                        html += parts{{ report.id }}.map(p => (p.name || 'ID:' + p.part_id) + ' ×' + p.quantity).join(', ');
+                        html += '</div>';
+                        document.getElementById('parts-display-{{ report.id }}').innerHTML = html;
+                    }
+                } catch(e) {}
+                </script>
+                {% endif %}
+                
+                {% if report.photos %}
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    {% for p in report.photos %}
+                    <img src="/static/uploads/{{ p.filename }}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open(this.src)">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- CLOSE FAULT MODAL -->
+<div id="closeModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:500px;width:92%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:18px">{{ _('Close Fault') }} #{{ fault.id }}</h2>
+            <button onclick="closeCloseModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <p style="color:#666;margin-bottom:16px;font-size:13px">{{ _('Confirm that all work is complete before closing this fault report.') }}</p>
+
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Work report filled?') }} *</label>
+            <select id="closeReport" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
+                {% if fault.work_report %}
+                <option value="yes" selected>✅ {{ _('Yes') }} — {{ _('Report exists') }}</option>
+                {% else %}
+                <option value="no" selected>❌ {{ _('No') }} — {{ _('Report missing') }}</option>
+                {% endif %}
+                <option value="yes">✅ {{ _('Yes') }}</option>
+                <option value="no">❌ {{ _('No') }}</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Spare parts status?') }}</label>
+            <select id="closeParts" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
+                <option value="all_used">{{ _('All parts used / installed') }}</option>
+                <option value="none_needed">{{ _('No parts needed') }}</option>
+                <option value="returned">{{ _('Parts returned to warehouse') }}</option>
+                <option value="pending">{{ _('Parts still pending') }}</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Closing notes') }}</label>
+            <textarea id="closeNotes" rows="3" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px;resize:vertical" placeholder="{{ _('Optional notes about the repair...') }}"></textarea>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+            <button class="btn" style="background:#eee" onclick="closeCloseModal()">{{ _('Cancel') }}</button>
+            <button class="btn" style="background:#e67e22;color:white" onclick="submitClose()">{{ _('Confirm Close') }}</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function changeFaultStatus(newStatus) {
+    if (!newStatus) return;
+    fetch('/faults/{{ fault.id }}/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: newStatus})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    }).catch(e => alert('Error: ' + e.message));
+    document.getElementById('statusSelect').value = '';
+}
+
+function openCloseModal() {
+    document.getElementById('closeModal').style.display = 'flex';
+}
+function closeCloseModal() {
+    document.getElementById('closeModal').style.display = 'none';
+}
+
+function submitClose() {
+    const report = document.getElementById('closeReport').value;
+    if (report === 'no') {
+        alert('{{ _("Work report must be filled before closing. Please create a work report first.") }}');
+        return;
+    }
+    fetch('/faults/{{ fault.id }}/close', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            has_report: report,
+            has_parts: document.getElementById('closeParts').value,
+            close_notes: document.getElementById('closeNotes').value
+        })
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { closeCloseModal(); location.reload(); }
+        else alert(d.error || 'Error');
+    }).catch(e => alert('Error: ' + e.message));
+}
+
+document.getElementById('closeModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCloseModal();
+});
+
+// REOPEN
+function openReopenModal() {
+    document.getElementById('reopenDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('reopenModal').style.display = 'flex';
+}
+function closeReopenModal() {
+    document.getElementById('reopenModal').style.display = 'none';
+}
+function submitReopen() {
+    const reason = document.getElementById('reopenReason').value;
+    if (!reason.trim()) { alert('{{ _("Please enter the reason for reopening") }}'); return; }
+    fetch('/faults/{{ fault.id }}/reopen', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({reason: reason, reopen_date: document.getElementById('reopenDate').value})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { closeReopenModal(); location.reload(); }
+        else alert(d.error || 'Error');
+    }).catch(e => alert('Error: ' + e.message));
+}
+document.getElementById('reopenModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReopenModal();
+});
+</script>
+
+<!-- REOPEN MODAL -->
+<div id="reopenModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:450px;width:92%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:18px">🔄 {{ _('Reopen Fault') }} #{{ fault.id }}</h2>
+            <button onclick="closeReopenModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Date') }}</label>
+            <input type="date" id="reopenDate" value="" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Reason for reopening') }} *</label>
+            <textarea id="reopenReason" rows="3" style="width:100%" placeholder="{{ _('Why is this fault being reopened?') }}"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+            <button class="btn" style="background:#eee" onclick="closeReopenModal()">{{ _('Cancel') }}</button>
+            <button class="btn" style="background:#9b59b6;color:white" onclick="submitReopen()">🔄 {{ _('Reopen') }}</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

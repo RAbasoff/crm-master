@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Equipment Repairs') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Equipment Repairs') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/repairs/new" class="btn btn-primary">+ {{ _('New Repair') }}</a>
+        <a href="/repairs/stats" class="btn btn-sm" style="background:#eee">📊 {{ _('Statistics') }}</a>
+        <a href="/cylinders" class="btn btn-sm" style="background:#eee">{{ _('Gas Cylinders') }}</a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+    <select onchange="window.location.href='/repairs?gas='+this.value+'&status={{ status_filter }}'">
+        <option value="">{{ _('All gases') }}</option>
+        <option value="nitrogen" {% if gas_filter=='nitrogen' %}selected{% endif %}>N₂ {{ _('Nitrogen') }}</option>
+        <option value="co2" {% if gas_filter=='co2' %}selected{% endif %}>CO₂ {{ _('Carbon dioxide') }}</option>
+    </select>
+    <select onchange="window.location.href='/repairs?gas={{ gas_filter }}&status='+this.value">
+        <option value="">{{ _('All statuses') }}</option>
+        <option value="broken" {% if status_filter=='broken' %}selected{% endif %}>🔴 {{ _('Broken') }}</option>
+        <option value="in_repair" {% if status_filter=='in_repair' %}selected{% endif %}>🟡 {{ _('In repair') }}</option>
+        <option value="repaired" {% if status_filter=='repaired' %}selected{% endif %}>🔵 {{ _('Repaired') }}</option>
+        <option value="installed" {% if status_filter=='installed' %}selected{% endif %}>🟢 {{ _('Installed') }}</option>
+    </select>
+</div>
+
+{% if repairs %}
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>#</th>
+            <th>{{ _('Component') }}</th>
+            <th>{{ _('Gas') }}</th>
+            <th>{{ _('Fault') }}</th>
+            <th>{{ _('Date Broken') }}</th>
+            <th>{{ _('Company') }}</th>
+            <th>{{ _('Cost') }}</th>
+            <th>{{ _('Days') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th></th>
+        </tr>
+        {% for r in repairs %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td>
+                <strong>{{ r.component.name if r.component else '?' }}</strong>
+                <br><small style="color:#888">{{ r.component.component_type if r.component else '' }}</small>
+            </td>
+            <td><span class="badge badge-{{ 'active' if r.component and r.component.gas_type=='nitrogen' else 'maintenance' }}">{{ 'N₂' if r.component and r.component.gas_type=='nitrogen' else 'CO₂' }}</span></td>
+            <td style="max-width:200px">{{ r.fault_description[:60] }}{% if r.fault_description|length > 60 %}...{% endif %}</td>
+            <td>{{ r.date_broken.strftime('%d-%m-%Y %H:%M') }}</td>
+            <td>{{ r.repair_company or '—' }}</td>
+            <td>{% if r.repair_cost %}€{{ "%.0f"|format(r.repair_cost) }}{% else %}—{% endif %}</td>
+            <td>
+                {% if r.date_broken and r.date_installed %}
+                    {% set days = (r.date_installed - r.date_broken).days %}
+                    <span style="font-weight:bold;color:{% if days > 14 %}#e74c3c{% elif days > 7 %}#f39c12{% else %}#27ae60{% endif %}">{{ days }}d</span>
+                {% elif r.date_broken %}
+                    {% set days = (r.date_broken.now() - r.date_broken).days %}
+                    <span style="color:#e74c3c">{{ days }}d+</span>
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                {% if r.status == 'broken' %}<span class="badge badge-broken">🔴 {{ _('Broken') }}</span>
+                {% elif r.status == 'in_repair' %}<span class="badge badge-maintenance">🟡 {{ _('In repair') }}</span>
+                {% elif r.status == 'repaired' %}<span class="badge badge-accepted">🔵 {{ _('Repaired') }}</span>
+                {% elif r.status == 'installed' %}<span class="badge badge-active">🟢 {{ _('Installed') }}</span>
+                {% endif %}
+            </td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <a href="/repairs/{{ r.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                    {% if r.status == 'broken' %}
+                    <form method="POST" action="/repairs/{{ r.id }}/status" style="display:inline">
+                        <input type="hidden" name="status" value="in_repair">
+                        <button type="submit" class="btn btn-sm btn-warning" style="padding:4px 8px" title="{{ _('Send to repair') }}">📤</button>
+                    </form>
+                    {% elif r.status == 'in_repair' %}
+                    <form method="POST" action="/repairs/{{ r.id }}/status" style="display:inline">
+                        <input type="hidden" name="status" value="repaired">
+                        <button type="submit" class="btn btn-sm btn-primary" style="padding:4px 8px" title="{{ _('Mark repaired') }}">✅</button>
+                    </form>
+                    {% elif r.status == 'repaired' %}
+                    <form method="POST" action="/repairs/{{ r.id }}/status" style="display:inline">
+                        <input type="hidden" name="status" value="installed">
+                        <button type="submit" class="btn btn-sm btn-success" style="padding:4px 8px" title="{{ _('Mark installed') }}">🔄</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:60px 20px;color:#999">
+        <div style="font-size:64px;margin-bottom:20px">🔧</div>
+        <h3 style="margin-bottom:10px;color:#666">{{ _('No repair records') }}</h3>
+        <p>{{ _('All equipment is working fine!') }}</p>
+        <a href="/repairs/new" class="btn btn-primary" style="margin-top:20px">+ {{ _('Add Repair Record') }}</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

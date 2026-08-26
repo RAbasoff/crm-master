@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Repair') if repair else _('New Repair') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Edit Repair') if repair else _('New Repair Record') }}</h1>
+</div>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Component') }} *</label>
+                <select name="component_id" required>
+                    <option value="">{{ _('Select component') }}</option>
+                    {% for c in components %}
+                    <option value="{{ c.id }}" {% if repair and repair.component_id == c.id %}selected{% endif %}>
+                        {{ c.name }} — {{ c.component_type }} ({% if c.gas_type == 'nitrogen' %}N₂{% else %}CO₂{% endif %})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    {% for s, label in [('broken', _('Broken')), ('in_repair', _('In repair')), ('repaired', _('Repaired')), ('installed', _('Installed'))] %}
+                    <option value="{{ s }}" {% if repair and repair.status == s %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('What broke') }} *</label>
+            <textarea name="fault_description" rows="3" required placeholder="{{ _('Describe exactly what failed, symptoms, error codes...') }}">{{ repair.fault_description if repair else '' }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Date broken') }} *</label>
+                <input type="datetime-local" name="date_broken" required value="{{ repair.date_broken.strftime('%Y-%m-%dT%H:%M') if repair and repair.date_broken else '' }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Date sent for repair') }}</label>
+                <input type="datetime-local" name="date_sent" value="{{ repair.date_sent.strftime('%Y-%m-%dT%H:%M') if repair and repair.date_sent else '' }}">
+            </div>
+        </div>
+
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">🏭 {{ _('Repair Company') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Company name') }}</label>
+                    <input type="text" name="repair_company" value="{{ repair.repair_company if repair else '' }}" placeholder="{{ _('Who performed the repair') }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Repair cost') }} (€)</label>
+                    <input type="number" name="repair_cost" step="0.01" value="{{ repair.repair_cost if repair and repair.repair_cost else '' }}" placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('What was done') }}</label>
+                <textarea name="repair_description" rows="2" placeholder="{{ _('Description of repair work') }}">{{ repair.repair_description if repair else '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Date repaired') }}</label>
+                <input type="datetime-local" name="date_repaired" value="{{ repair.date_repaired.strftime('%Y-%m-%dT%H:%M') if repair and repair.date_repaired else '' }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Date installed back') }}</label>
+                <input type="datetime-local" name="date_installed" value="{{ repair.date_installed.strftime('%Y-%m-%dT%H:%M') if repair and repair.date_installed else '' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2" placeholder="{{ _('Additional notes...') }}">{{ repair.notes if repair else '' }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/repairs" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

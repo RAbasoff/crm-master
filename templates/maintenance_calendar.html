@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Maintenance Calendar') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📅 {{ _('Maintenance Calendar') }}</h1>
+    <div style="display:flex;gap:8px;align-items:center">
+        <a href="/maintenance-calendar?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
+        <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
+        <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
+        <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
+    </div>
+</div>
+
+<!-- Reminders / Overdue -->
+{% if overdue|length > 0 %}
+<div class="card" style="border-left:4px solid #e74c3c;background:#fff5f5">
+    <h2 style="color:#e74c3c;margin-bottom:12px">⚠️ {{ _('Overdue') }} ({{ overdue|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Due Date') }}</th><th>{{ _('Days Overdue') }}</th><th></th></tr>
+        {% for item in overdue %}
+        <tr>
+            <td><a href="/machines/{{ item.machine_id }}">{{ item.machine }}</a></td>
+            <td>{{ item.part }}</td>
+            <td><span class="badge badge-{{ item.type }}">{{ item.type }}</span></td>
+            <td style="color:#e74c3c;font-weight:bold">{{ item.date.strftime('%d-%m-%Y') }}</td>
+            <td style="color:#e74c3c;font-weight:bold">+{{ (today - item.date).days }}</td>
+            <td>
+                {% if item.part_id %}
+                <a href="/machines/{{ item.machine_id }}/parts" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px">{{ _('Fix') }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- Calendar Grid -->
+<div class="card" style="padding:0;overflow:hidden">
+    {% set first_day = month_start %}
+    {% set start_weekday = first_day.weekday() %}  {# 0=Mon #}
+    {% set days_in_month = (month_end - month_start).days %}
+    
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+        <thead>
+            <tr style="background:#1a1a2e;color:white">
+                <th style="padding:10px;text-align:center;font-size:12px">{{ _('Mon') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px">{{ _('Tue') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px">{{ _('Wed') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px">{{ _('Thu') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px">{{ _('Fri') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px;background:#16213e">{{ _('Sat') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px;background:#16213e">{{ _('Sun') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set ns = namespace(day=1, started=false) %}
+            {% for week in range(6) %}
+            {% if ns.day <= days_in_month %}
+            <tr>
+                {% for dow in range(7) %}
+                    {% set cell_date = namespace(val=none) %}
+                    {% if not ns.started and dow == start_weekday %}
+                        {% set ns.started = true %}
+                    {% endif %}
+                    {% if ns.started and ns.day <= days_in_month %}
+                        {% set cell_date.val = month_start + timedelta(days=ns.day - 1) %}
+                        {% set day_events = [] %}
+                        {% for ev in events %}
+                            {% if ev.date == cell_date.val %}
+                                {% if day_events.append(ev) %}{% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        <td style="vertical-align:top;height:90px;padding:4px 6px;border:1px solid #eee;{% if cell_date.val == today %}background:#e8f4fd{% endif %}{% if dow >= 5 %}background:#f8f9fa{% endif %}">
+                            <div style="font-size:12px;font-weight:600;color:{% if cell_date.val == today %}#3498db{% elif dow >= 5 %}#aaa{% else %}#333{% endif %};margin-bottom:4px">
+                                {{ ns.day }}
+                            </div>
+                            {% for ev in day_events %}
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}/parts{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.type == 'plan' %}{% if ev.status == 'completed' %}#27ae60{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#e74c3c{% else %}#9b59b6{% endif %}{% elif ev.type == 'replacement' %}{% if ev.overdue %}#e74c3c{% else %}#e67e22{% endif %}{% elif ev.type == 'maintenance' %}{% if ev.overdue %}#c0392b{% else %}#f39c12{% endif %}{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
+                                {% if ev.type == 'plan' %}📋{% elif ev.type == 'replacement' %}🔄{% elif ev.type == 'maintenance' %}🔧{% else %}⚙️{% endif %} {{ ev.part[:15] }}
+                            </a>
+                            {% endfor %}
+                        </td>
+                        {% set ns.day = ns.day + 1 %}
+                    {% else %}
+                        <td style="background:#fafafa;border:1px solid #eee;height:90px"></td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Upcoming Events List -->
+<div class="card">
+    <h2>📋 {{ _('Upcoming Events') }} ({{ events|length }})</h2>
+    {% if events %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th></tr>
+        {% for ev in events %}
+        <tr>
+            <td style="white-space:nowrap">{{ ev.date.strftime('%d-%m-%Y') }}</td>
+            <td><a href="/machines/{{ ev.machine_id }}">{{ ev.machine }}</a></td>
+            <td>{{ ev.part }}</td>
+            <td>
+                {% if ev.type == 'replacement' %}🔄 {{ _('Replacement') }}
+                {% elif ev.type == 'maintenance' %}🔧 {{ _('Maintenance') }}
+                {% else %}⚙️ {{ ev.category }}{% endif %}
+            </td>
+            <td>
+                {% if ev.overdue %}
+                    <span class="badge badge-critical">{{ _('Overdue') }}</span>
+                {% elif ev.date == today %}
+                    <span class="badge badge-high">{{ _('Today') }}</span>
+                {% elif (ev.date - today).days <= 3 %}
+                    <span class="badge badge-warning">{{ _('Soon') }}</span>
+                {% else %}
+                    <span class="badge badge-ok">{{ _('Scheduled') }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888;text-align:center;padding:20px">{{ _('No events this month') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

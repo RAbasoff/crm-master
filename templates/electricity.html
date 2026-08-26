@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Electricity') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚡ {{ _('Electricity') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/electricity/schematic" class="btn btn-sm" style="background:#9b59b6;color:white">🗺️ {{ _('Interactive Schematic') }}</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/electricity/cabinet/new" class="btn btn-sm btn-primary">+ {{ _('New Cabinet') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats" style="margin-bottom:16px">
+    <div class="stat-card" style="border-left:4px solid #3498db">
+        <div class="number">{{ cabinets|length }}</div>
+        <div class="label">{{ _('Cabinets') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #27ae60">
+        <div class="number">{{ stats.on }}</div>
+        <div class="label">{{ _('Breakers ON') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number">{{ stats.off }}</div>
+        <div class="label">{{ _('Breakers OFF') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="number">{{ stats.total }}</div>
+        <div class="label">{{ _('Total Breakers') }}</div>
+    </div>
+</div>
+
+<!-- 4 PANEL VISUALIZATION -->
+{% if panels %}
+<h2 style="margin:16px 0 10px;font-size:15px;color:#555">📦 {{ _('Cabinet Panels Overview') }} — {{ _('click section to open') }}</h2>
+<div id="panelsContainer" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+{% endif %}
+
+<!-- Cabinet cards -->
+{% if cabinets %}
+<h2 style="margin:16px 0 10px;font-size:15px;color:#555">🔌 {{ _('All Sections') }}</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:16px">
+    {% for cab in cabinets %}
+    <div class="card" style="cursor:pointer" onclick="window.location='/electricity/cabinet/{{ cab.id }}'">
+        <div style="display:flex;gap:14px;align-items:flex-start">
+            {% if cab.photo %}
+            <img src="/static/uploads/{{ cab.photo }}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;flex-shrink:0">
+            {% else %}
+            <div style="width:80px;height:80px;background:#e8f4fd;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0">⚡</div>
+            {% endif %}
+            <div style="flex:1;min-width:0">
+                <h2 style="margin:0 0 4px">{{ cab.name }}</h2>
+                <div style="font-size:13px;color:#666;margin-bottom:6px">{{ cab.location or '—' }}</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <span class="badge badge-active">{{ cab.cabinet_type }}</span>
+                    {% if cab.voltage %}<span class="badge" style="background:#e8f4fd;color:#2980b9">{{ cab.voltage }}</span>{% endif %}
+                    {% if cab.main_fuse_amps %}<span class="badge" style="background:#fef9e7;color:#f39c12">{{ cab.main_fuse_amps }}A</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:16px;font-size:13px;color:#555">
+            <span>🔌 {{ cab.breakers|length }} {{ _('breakers') }}</span>
+            <span style="color:#27ae60">● {{ cab.breakers|selectattr('status','equalto','on')|list|length }} {{ _('on') }}</span>
+            {% if cab.breakers|selectattr('status','equalto','off')|list|length > 0 %}
+            <span style="color:#e74c3c">● {{ cab.breakers|selectattr('status','equalto','off')|list|length }} {{ _('off') }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:60px 20px;color:#999">
+        <div style="font-size:64px;margin-bottom:20px">⚡</div>
+        <h3 style="margin-bottom:10px;color:#666">{{ _('No Electrical Cabinets') }}</h3>
+        <p>{{ _('Add your first electrical cabinet to get started') }}</p>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/electricity/cabinet/new" class="btn btn-primary" style="margin-top:20px">{{ _('Add Cabinet') }}</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+.panel-card { background: linear-gradient(180deg, #b8b8b8 0%, #a0a0a0 100%); border: 2px solid #888; border-radius: 6px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.2); cursor: default; }
+.panel-header { background: #2c3e50; color: #ecf0f1; padding: 5px 8px; font-size: 10px; font-weight: 700; text-align: center; letter-spacing: 0.3px; }
+.panel-section { margin: 4px; border-radius: 4px; overflow: hidden; cursor: pointer; transition: filter 0.15s, transform 0.1s; border: 1px solid rgba(0,0,0,0.15); }
+.panel-section:hover { filter: brightness(1.15); transform: scale(1.01); }
+.section-title { padding: 3px 6px; font-size: 8px; font-weight: 700; color: white; letter-spacing: 0.3px; display: flex; justify-content: space-between; align-items: center; }
+.breaker-row { display: flex; flex-wrap: wrap; gap: 1px; padding: 3px 4px; background: #c0c0c0; }
+.mini-mcb { width: 10px; height: 22px; border-radius: 1px; border: 0.5px solid #999; position: relative; }
+.mini-mcb-on { background: linear-gradient(180deg, #f5f5f0 0%, #e0e0d8 100%); }
+.mini-mcb-off { background: linear-gradient(180deg, #ccc 0%, #aaa 100%); }
+.mini-toggle { position: absolute; top: 1px; left: 2px; width: 6px; height: 4px; border-radius: 1px; }
+.mini-toggle-on { background: #27ae60; }
+.mini-toggle-off { background: #95a5a6; top: auto; bottom: 1px; }
+.mini-mccb { width: 18px; height: 30px; border-radius: 2px; border: 1px solid #555; position: relative; }
+.mini-mccb-on { background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%); }
+.mini-mccb-off { background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%); }
+.mini-mccb-toggle { position: absolute; top: 2px; left: 5px; width: 8px; height: 5px; border-radius: 1px; }
+.mini-mccb-toggle-on { background: #e74c3c; }
+.mini-mccb-toggle-off { background: #666; top: auto; bottom: 2px; }
+.panel-bus { height: 3px; background: linear-gradient(90deg, #f39c12, #e67e22); margin: 0 6px; border-radius: 1px; }
+</style>
+
+<script>
+const panelData = [
+    {% for panel in panels %}
+    {
+        name: {{ panel.name|tojson }},
+        cabinets: [
+            {% for cab in panel.cabinets %}
+            {
+                id: {{ cab.id }},
+                name: {{ cab.name|tojson }},
+                breakers: [
+                    {% for b in cab.breakers|sort(attribute='row,position') %}
+                    {id:{{ b.id }}, label:{{ b.label|tojson }}, amp:{{ b.amperage|default(0) }}, poles:{{ b.poles }}, type:{{ b.breaker_type|tojson }}, status:'{{ b.status }}', row:{{ b.row }}, pos:{{ b.position }}},
+                    {% endfor %}
+                ]
+            },
+            {% endfor %}
+        ]
+    },
+    {% endfor %}
+];
+
+const sectionColors = [
+    {bg:'#2980b9', border:'#2471a3'},
+    {bg:'#27ae60', border:'#1e8449'},
+    {bg:'#e67e22', border:'#d35400'},
+    {bg:'#8e44ad', border:'#7d3c98'},
+    {bg:'#c0392b', border:'#a93226'},
+    {bg:'#16a085', border:'#138d75'},
+    {bg:'#2c3e50', border:'#1a252f'},
+    {bg:'#d35400', border:'#ba4a00'},
+];
+
+function renderPanels() {
+    const container = document.getElementById('panelsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    panelData.forEach((panel, pi) => {
+        const card = document.createElement('div');
+        card.className = 'panel-card';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.textContent = `PANEL ${pi + 1}`;
+        card.appendChild(header);
+
+        // Bus bar
+        const bus = document.createElement('div');
+        bus.className = 'panel-bus';
+        card.appendChild(bus);
+
+        // Sections
+        panel.cabinets.forEach((cab, ci) => {
+            const color = sectionColors[ci % sectionColors.length];
+            const section = document.createElement('div');
+            section.className = 'panel-section';
+            section.style.background = color.bg;
+            section.onclick = () => window.location = '/electricity/cabinet/' + cab.id;
+
+            // Section title
+            const title = document.createElement('div');
+            title.className = 'section-title';
+            title.style.background = color.border;
+            const shortName = cab.name.length > 28 ? cab.name.substring(0, 28) + '...' : cab.name;
+            function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+            title.innerHTML = `<span>${esc(shortName)}</span><span style="font-size:7px;opacity:0.8">${cab.breakers.length}F</span>`;
+            section.appendChild(title);
+
+            // Group breakers by row
+            const rows = {};
+            cab.breakers.forEach(b => {
+                if (!rows[b.row]) rows[b.row] = [];
+                rows[b.row].push(b);
+            });
+
+            const rowKeys = Object.keys(rows).map(Number).sort((a, b) => a - b);
+            rowKeys.forEach(rowNum => {
+                const rowBreakers = rows[rowNum].sort((a, b) => a.pos - b.pos);
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'breaker-row';
+
+                rowBreakers.forEach(b => {
+                    const isOn = b.status === 'on';
+                    const isMCCB = b.type === 'MCCB' || b.amp >= 63;
+
+                    const mcb = document.createElement('div');
+                    mcb.title = `${b.label} ${b.amp}A ${b.poles}P — ${b.status.toUpperCase()}`;
+
+                    if (isMCCB) {
+                        mcb.className = `mini-mccb ${isOn ? 'mini-mccb-on' : 'mini-mccb-off'}`;
+                        const tog = document.createElement('div');
+                        tog.className = `mini-mccb-toggle ${isOn ? 'mini-mccb-toggle-on' : 'mini-mccb-toggle-off'}`;
+                        mcb.appendChild(tog);
+                    } else {
+                        mcb.className = `mini-mcb ${isOn ? 'mini-mcb-on' : 'mini-mcb-off'}`;
+                        const tog = document.createElement('div');
+                        tog.className = `mini-toggle ${isOn ? 'mini-toggle-on' : 'mini-toggle-off'}`;
+                        mcb.appendChild(tog);
+                    }
+
+                    rowDiv.appendChild(mcb);
+                });
+
+                section.appendChild(rowDiv);
+            });
+
+            card.appendChild(section);
+        });
+
+        // Bottom bus
+        const bus2 = document.createElement('div');
+        bus2.className = 'panel-bus';
+        bus2.style.marginTop = '2px';
+        card.appendChild(bus2);
+
+        // PE/N bar
+        const pe = document.createElement('div');
+        pe.style.cssText = 'text-align:center;color:#666;font-size:7px;padding:2px;background:#999;border-radius:0 0 4px 4px';
+        pe.textContent = '⏚ PE / N';
+        card.appendChild(pe);
+
+        container.appendChild(card);
+    });
+}
+
+renderPanels();
+</script>
+{% endblock %}

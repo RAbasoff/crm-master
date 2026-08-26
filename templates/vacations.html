@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Vacations') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏖 {{ _('Vacations') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/vacations/new" class="btn btn-sm btn-primary">+ {{ _('New Request') }}</a>
+        <a href="/schedule" class="btn btn-sm" style="background:#eee">📅 {{ _('Schedule') }}</a>
+        <a href="/time-tracking" class="btn btn-sm" style="background:#eee">⏱ {{ _('Time Tracking') }}</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Employee') }}</th><th>{{ _('Type') }}</th><th>{{ _('From') }}</th><th>{{ _('To') }}</th><th>{{ _('Days') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for v in vacations %}
+        <tr>
+            <td>{{ v.user.display_name or v.user.username }}</td>
+            <td>{{ v.vacation_type }}</td>
+            <td>{{ v.date_from.strftime('%d-%m-%Y') }}</td>
+            <td>{{ v.date_to.strftime('%d-%m-%Y') }}</td>
+            <td>{{ v.days_count }}</td>
+            <td><span class="badge badge-{% if v.status == 'approved' %}active{% elif v.status == 'rejected' %}broken{% else %}maintenance{% endif %}">{{ v.status }}</span></td>
+            <td>
+                {% if v.status == 'pending' and current_user.has_role('admin', 'director') %}
+                <form method="POST" action="/vacations/{{ v.id }}/approve" style="display:inline">
+                    <button type="submit" class="btn btn-sm btn-success">✓</button>
+                </form>
+                <form method="POST" action="/vacations/{{ v.id }}/reject" style="display:inline">
+                    <button type="submit" class="btn btn-sm btn-danger">✕</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:#888">{{ _('No vacation requests') }}</td></tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

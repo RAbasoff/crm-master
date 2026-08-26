@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Tool Wear') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔪 {{ _('Tool Wear Tracking') }}</h1>
+    <button class="btn btn-primary" onclick="document.getElementById('addModal').style.display='flex'">+ {{ _('Add Tool') }}</button>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Machine') }}</th>
+                <th>{{ _('Tool') }}</th>
+                <th>{{ _('Cycle') }}</th>
+                <th>{{ _('Wear') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Last Replaced') }}</th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for t in tools %}
+            <tr style="{% if t.wear_percent >= 80 %}background:#fff5f5{% endif %}">
+                <td><b>{{ t.machine_name }}</b></td>
+                <td>{{ t.tool_name }}</td>
+                <td style="color:#888;font-size:13px">{{ t.cycle_days or 14 }} {{ _('days') }}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:120px;height:14px;background:#eee;border-radius:7px;overflow:hidden">
+                            <div style="width:{{ t.wear_percent }}%;height:100%;border-radius:7px;background:linear-gradient(90deg, {% if t.wear_percent < 30 %}#2ecc71,#27ae60{% elif t.wear_percent < 60 %}#2ecc71,#f1c40f{% elif t.wear_percent < 80 %}#f1c40f,#e67e22{% else %}#e67e22,#e74c3c{% endif %})"></div>
+                        </div>
+                        <b style="color:{% if t.wear_percent >= 80 %}#e74c3c{% elif t.wear_percent >= 60 %}#e67e22{% elif t.wear_percent >= 30 %}#f39c12{% else %}#27ae60{% endif %};min-width:42px">{{ t.wear_percent }}%</b>
+                    </div>
+                </td>
+                <td>
+                    {% if t.wear_percent >= 80 %}
+                        <span class="badge badge-broken">⚠️ {{ _('REPLACE') }}</span>
+                    {% elif t.wear_percent >= 60 %}
+                        <span class="badge badge-high">⚡ {{ _('WARNING') }}</span>
+                    {% else %}
+                        <span class="badge badge-active">✅ OK</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.last_replaced.strftime('%d.%m.%Y') if t.last_replaced else '—' }}</td>
+                <td style="white-space:nowrap">
+                    <button class="btn btn-sm btn-ghost" onclick="openEdit({{ t.id }},'{{ t.machine_name }}','{{ t.tool_name }}',{{ t.cycle_days or 14 }},'{{ t.last_replaced.strftime('%Y-%m-%d') if t.last_replaced }}','{{ t.notes or '' }}')">✏️</button>
+                    <form method="POST" action="/tool-wear/reset/{{ t.id }}" style="display:inline" onsubmit="return confirm('{{ _('Reset? Tool replaced?') }}')">
+                        <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">🔄</button>
+                    </form>
+                    {% if current_user.has_role('admin') %}
+                    <form method="POST" action="/tool-wear/delete/{{ t.id }}" style="display:inline" onsubmit="return confirm('{{ _('Delete this tool?') }}')">
+                        <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{% if not tools %}
+<div class="card">
+    <div style="text-align:center;padding:40px;color:#999">
+        <div style="font-size:48px;margin-bottom:12px">🔪</div>
+        <div>{{ _('No tools tracked') }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:16px">{{ _('Edit Tool') }}</h2>
+            <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <form id="editForm" method="POST">
+            <div class="form-group">
+                <label>{{ _('Machine') }}</label>
+                <input type="text" name="machine_name" id="editMachine" required>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Tool') }}</label>
+                <input type="text" name="tool_name" id="editTool">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Cycle') }} ({{ _('days') }})</label>
+                    <input type="number" name="cycle_days" id="editCycle" min="1" max="365">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Last Replaced') }}</label>
+                    <input type="date" name="last_replaced" id="editDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Notes') }}</label>
+                <textarea name="notes" id="editNotes" rows="2"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('editModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD MODAL -->
+<div id="addModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:16px">{{ _('Add Tool') }}</h2>
+            <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <form method="POST" action="/tool-wear/add">
+            <div class="form-group">
+                <label>{{ _('Machine') }}</label>
+                <input type="text" name="machine_name" required placeholder="{{ _('Machine name') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Tool') }}</label>
+                <input type="text" name="tool_name" value="Ножи / Фреза">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Cycle') }} ({{ _('days') }})</label>
+                <input type="number" name="cycle_days" value="14" min="1" max="365">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('addModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Add') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEdit(id, machine, tool, cycle, date, notes) {
+    document.getElementById('editMachine').value = machine;
+    document.getElementById('editTool').value = tool;
+    document.getElementById('editCycle').value = cycle;
+    document.getElementById('editDate').value = date || '';
+    document.getElementById('editNotes').value = notes || '';
+    document.getElementById('editForm').action = '/tool-wear/update/' + id;
+    document.getElementById('editModal').style.display = 'flex';
+}
+document.querySelectorAll('[id$="Modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+</script>
+{% endblock %}

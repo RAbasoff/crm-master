@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ user.first_name or '' }} {{ user.last_name or '' }} — {{ _('User Cabinet') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👤 {{ user.display_name or user.username }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/" class="btn" style="background:#eee">{{ _('Dashboard') }}</a>
+    </div>
+</div>
+
+{% if current_user.has_role('admin') %}
+<!-- Admin: editable form -->
+<form method="POST" action="/users/{{ user.id }}/cabinet-update">
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('Personal Info') }}</h2>
+        <div class="form-group">
+            <label>{{ _('Username') }}</label>
+            <input type="text" value="{{ user.username }}" readonly style="background:#f5f5f5">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('First Name') }}</label>
+                <input type="text" name="first_name" value="{{ user.first_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Last Name') }}</label>
+                <input type="text" name="last_name" value="{{ user.last_name or '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Display Name') }}</label>
+            <input type="text" name="display_name" value="{{ user.display_name or '' }}">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Role') }}</label>
+                <select name="role">
+                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>user</option>
+                    <option value="technician" {% if user.role == 'technician' %}selected{% endif %}>technician</option>
+                    <option value="director" {% if user.role == 'director' %}selected{% endif %}>director</option>
+                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Access Level') }}</label>
+                <select name="access_level">
+                    <option value="full" {% if user.access_level == 'full' %}selected{% endif %}>full</option>
+                    <option value="partial" {% if user.access_level == 'partial' %}selected{% endif %}>partial</option>
+                    <option value="limited" {% if user.access_level == 'limited' %}selected{% endif %}>limited</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" name="is_active" {% if user.is_active_user %}checked{% endif %}> {{ _('Active') }}</label>
+        </div>
+    </div>
+    <div class="card">
+        <h2>{{ _('Work Info') }}</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Hire Date') }}</label>
+                <input type="date" name="hire_date" value="{{ user.hire_date.strftime('%Y-%m-%d') if user.hire_date else '' }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Fire Date') }}</label>
+                <input type="date" name="fire_date" value="{{ user.fire_date.strftime('%Y-%m-%d') if user.fire_date else '' }}">
+            </div>
+        </div>
+        <p style="margin-top:12px;font-size:13px;color:#888"><strong>{{ _('Created') }}:</strong> {{ user.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+        {% if user.person %}
+        <p style="margin-top:8px"><strong>{{ _('Linked person') }}:</strong> <a href="/responsible/{{ user.person.id }}" style="color:#3498db">{{ user.person.naam }}</a></p>
+        {% endif %}
+
+        <!-- Password -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #eee">
+            <h3 style="font-size:14px;margin-bottom:10px">🔒 {{ _('Password') }}</h3>
+            <p style="font-size:13px;color:#888;margin-bottom:8px"><strong>{{ _('Current') }}:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">••••••</code></p>
+            <div class="form-row">
+                <div class="form-group" style="margin-bottom:8px">
+                    <label>{{ _('New Password') }}</label>
+                    <input type="password" name="new_password" placeholder="{{ _('Leave empty to keep current') }}">
+                </div>
+                <div class="form-group" style="margin-bottom:8px">
+                    <label>{{ _('Confirm Password') }}</label>
+                    <input type="password" name="confirm_password" placeholder="{{ _('Repeat new password') }}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div style="display:flex;gap:8px;margin-top:8px">
+    <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+    {% if user.id != current_user.id %}
+    <button type="button" class="btn btn-danger" onclick="if(confirm('{{ _('Delete user') }} {{ user.username }}?')){document.getElementById('deleteForm').submit()}">{{ _('Delete') }}</button>
+    {% endif %}
+</div>
+</form>
+{% if user.id != current_user.id %}
+<form id="deleteForm" method="POST" action="/users/{{ user.id }}/delete"></form>
+{% endif %}
+{% else %}
+<!-- Non-admin: read-only -->
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('Personal Info') }}</h2>
+        <p><strong>{{ _('Username') }}:</strong> <code>{{ user.username }}</code></p>
+        <p><strong>{{ _('Display Name') }}:</strong> {{ user.display_name or '—' }}</p>
+        <p><strong>{{ _('Role') }}:</strong> <span class="badge badge-{{ user.role }}">{{ user.role }}</span></p>
+        <p><strong>{{ _('Status') }}:</strong> {% if user.is_active_user %}<span class="badge badge-active">{{ _('Active') }}</span>{% else %}<span class="badge badge-offline">{{ _('Inactive') }}</span>{% endif %}</p>
+    </div>
+    <div class="card">
+        <h2>{{ _('Work Info') }}</h2>
+        <p><strong>{{ _('Hire Date') }}:</strong> {{ user.hire_date.strftime('%d-%m-%Y') if user.hire_date else '—' }}</p>
+        <p><strong>{{ _('Created') }}:</strong> {{ user.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+    </div>
+</div>
+{% endif %}
+
+{% if user.assigned_machines %}
+<div class="card" style="margin-top:16px">
+    <h2>⚙️ {{ _('Assigned Machines') }}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+        {% for m in user.assigned_machines %}
+        <a href="/machines/{{ m.id }}" class="badge" style="background:#3498db22;color:#3498db;text-decoration:none">{{ m.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if user.allowed_sections %}
+<div class="card" style="margin-top:16px">
+    <h2>🔑 {{ _('Allowed Sections') }}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+        {% for s in user.allowed_sections %}
+        <span class="badge" style="background:#27ae6022;color:#27ae60">{{ s.section_key }}</span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

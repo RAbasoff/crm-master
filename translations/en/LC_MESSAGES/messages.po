@@ -1,0 +1,934 @@
+# English translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-08-10 18:44+0300\n"
+"PO-Revision-Date: 2026-08-10 18:44+0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: English <LL@li.org>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app.py:108
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: app.py:126
+msgid "Work Orders"
+msgstr "Work Orders"
+
+#: app.py:137
+msgid "New Work Order"
+msgstr "New Work Order"
+
+#: app.py:159
+msgid "Work Order Details"
+msgstr "Work Order Details"
+
+#: app.py:164
+msgid "Edit Work Order"
+msgstr "Edit Work Order"
+
+#: app.py:195
+msgid "Responsible persons"
+msgstr "Responsible persons"
+
+#: app.py:199
+msgid "New responsible person"
+msgstr "New responsible person"
+
+#: app.py:211
+msgid "Edit responsible person"
+msgstr "Edit responsible person"
+
+msgid "Responsible person"
+msgstr "Responsible person"
+
+msgid "Responsible person added"
+msgstr "Responsible person added"
+
+msgid "Responsible person updated"
+msgstr "Responsible person updated"
+
+#: app.py:227
+msgid "Workers"
+msgstr "Workers"
+
+#: app.py:231
+msgid "New Worker"
+msgstr "New Worker"
+
+#: app.py:242
+msgid "Edit Worker"
+msgstr "Edit Worker"
+
+#: app.py:259
+msgid "Warehouse"
+msgstr "Warehouse"
+
+#: app.py:269
+msgid "New Item"
+msgstr "New Item"
+
+#: app.py:283
+msgid "Edit Item"
+msgstr "Edit Item"
+
+#: app.py:319
+msgid "Reports"
+msgstr "Reports"
+
+#: app.py:323
+msgid "Period Report"
+msgstr "Period Report"
+
+#: app.py:351
+msgid "Worker Report"
+msgstr "Worker Report"
+
+#: app.py:390
+msgid "QR Scan"
+msgstr "QR Scan"
+
+#: app.py:396
+msgid "QR Generate"
+msgstr "QR Generate"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Total Work Orders"
+msgstr "Total Work Orders"
+
+msgid "Active Work Orders"
+msgstr "Active Work Orders"
+
+msgid "Today"
+msgstr "Today"
+
+msgid "Active Workers"
+msgstr "Active Workers"
+
+msgid "Low Stock"
+msgstr "Low Stock"
+
+msgid "Recent Work Orders"
+msgstr "Recent Work Orders"
+
+msgid "Number"
+msgstr "Number"
+
+msgid "Client"
+msgstr "Responsible person"
+
+msgid "Device"
+msgstr "Device"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "View"
+msgstr "View"
+
+msgid "Edit"
+msgstr "Edit"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Filter"
+msgstr "Filter"
+
+msgid "All"
+msgstr "All"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Phone"
+msgstr "Phone"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Address"
+msgstr "Address"
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "Specialization"
+msgstr "Specialization"
+
+msgid "Hourly Rate"
+msgstr "Hourly Rate"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Category"
+msgstr "Category"
+
+msgid "Unit"
+msgstr "Unit"
+
+msgid "Quantity"
+msgstr "Quantity"
+
+msgid "Minimum"
+msgstr "Minimum"
+
+msgid "Price"
+msgstr "Price"
+
+msgid "Location"
+msgstr "Location"
+
+msgid "Date From"
+msgstr "Date From"
+
+msgid "Date To"
+msgstr "Date To"
+
+msgid "Show Report"
+msgstr "Show Report"
+
+msgid "Total Revenue"
+msgstr "Total Revenue"
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Cancelled"
+msgstr "Cancelled"
+
+msgid "Average Time"
+msgstr "Average Time"
+
+msgid "Worker Statistics"
+msgstr "Worker Statistics"
+
+msgid "Work Orders Count"
+msgstr "Work Orders Count"
+
+msgid "Revenue"
+msgstr "Revenue"
+
+msgid "Scan QR Code"
+msgstr "Scan QR Code"
+
+msgid "Generate QR"
+msgstr "Generate QR"
+
+msgid "Accepted"
+msgstr "Accepted"
+
+msgid "Diagnosis"
+msgstr "Diagnosis"
+
+msgid "In Progress"
+msgstr "In Progress"
+
+msgid "Ready"
+msgstr "Ready"
+
+msgid "Delivered"
+msgstr "Delivered"
+
+msgid "Cancelled"
+msgstr "Cancelled"
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Serial Number"
+msgstr "Serial Number"
+
+msgid "Problem"
+msgstr "Problem"
+
+msgid "Work Done"
+msgstr "Work Done"
+
+msgid "Labor Cost"
+msgstr "Labor Cost"
+
+msgid "Parts Cost"
+msgstr "Parts Cost"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Created"
+msgstr "Created"
+
+msgid "Started"
+msgstr "Started"
+
+msgid "Finished"
+msgstr "Finished"
+
+msgid "Incoming"
+msgstr "Incoming"
+
+msgid "Outgoing"
+msgstr "Outgoing"
+
+msgid "Move Stock"
+msgstr "Move Stock"
+
+msgid "Work Order"
+msgstr "Work Order"
+
+msgid "Comment"
+msgstr "Comment"
+
+msgid "Period"
+msgstr "Period"
+
+msgid "Worker"
+msgstr "Worker"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Inactive"
+msgstr "Inactive"
+
+msgid "Last 30 Days"
+msgstr "Last 30 Days"
+
+msgid "Scanned"
+msgstr "Scanned"
+
+msgid "History"
+msgstr "History"
+
+msgid "or"
+msgstr "or"
+
+msgid "Original"
+msgstr "Original"
+
+msgid "Translate"
+msgstr "Translate"
+
+msgid "Work Order created"
+msgstr "Work Order created"
+
+msgid "Work Order updated"
+msgstr "Work Order updated"
+
+# Factory Sections
+msgid "Factory Sections"
+msgstr "Factory Sections"
+msgid "Sections"
+msgstr "Sections"
+msgid "New Section"
+msgstr "New Section"
+msgid "Edit Section"
+msgstr "Edit Section"
+msgid "Section created"
+msgstr "Section created"
+msgid "Section updated"
+msgstr "Section updated"
+msgid "Section deleted"
+msgstr "Section deleted"
+msgid "Total Sections"
+msgstr "Total Sections"
+msgid "Total Machines"
+msgstr "Total Machines"
+msgid "Section name"
+msgstr "Section name"
+msgid "Section description"
+msgstr "Section description"
+msgid "Position on Floor Plan"
+msgstr "Position on Floor Plan"
+msgid "X Position"
+msgstr "X Position"
+msgid "Y Position"
+msgstr "Y Position"
+msgid "Width"
+msgstr "Width"
+msgid "Height"
+msgstr "Height"
+msgid "Add Section"
+msgstr "Add Section"
+msgid "machines"
+msgstr "machines"
+msgid "Machines in Section"
+msgstr "Machines in Section"
+msgid "Section"
+msgstr "Section"
+msgid "Type"
+msgstr "Type"
+msgid "Delete this section?"
+msgstr "Delete this section?"
+msgid "workshop"
+msgstr "workshop"
+msgid "storage"
+msgstr "storage"
+msgid "office"
+msgstr "office"
+msgid "utility"
+msgstr "utility"
+msgid "loading"
+msgstr "loading"
+msgid "Responsible"
+msgstr "Responsible"
+msgid "Not assigned"
+msgstr "Not assigned"
+
+# Map Editor
+msgid "Map Editor"
+msgstr "Map Editor"
+msgid "View Map"
+msgstr "View Map"
+msgid "Save All"
+msgstr "Save All"
+msgid "Section Properties"
+msgstr "Section Properties"
+msgid "Assign Machine"
+msgstr "Assign Machine"
+msgid "To Section"
+msgstr "To Section"
+msgid "Assign"
+msgstr "Assign"
+msgid "Deselect"
+msgstr "Deselect"
+msgid "New Section"
+msgstr "New Section"
+msgid "Delete this section?"
+msgstr "Delete this section?"
+msgid "Nothing to save"
+msgstr "Nothing to save"
+msgid "All saved!"
+msgstr "All saved!"
+msgid "Drag to move"
+msgstr "Drag to move"
+msgid "Corners to resize"
+msgstr "Corners to resize"
+msgid "Click section to edit"
+msgstr "Click section to edit"
+msgid "No section"
+msgstr "No section"
+msgid "Group on map"
+msgstr "Group on map"
+msgid "Auto-set when section is selected, or set manually"
+msgstr "Auto-set when section is selected, or set manually"
+msgid "Position on Map"
+msgstr "Position on Map"
+
+# Parts Maintenance
+msgid "Parts"
+msgstr "Parts"
+msgid "Add Part"
+msgstr "Add Part"
+msgid "Edit Part"
+msgstr "Edit Part"
+msgid "Part added"
+msgstr "Part added"
+msgid "Part updated"
+msgstr "Part updated"
+msgid "Part deleted"
+msgstr "Part deleted"
+msgid "Part Name"
+msgstr "Part Name"
+msgid "Part Number"
+msgstr "Part Number"
+msgid "Replacement Schedule"
+msgstr "Replacement Schedule"
+msgid "Installed Date"
+msgstr "Installed Date"
+msgid "Replacement Interval (days)"
+msgstr "Replacement Interval (days)"
+msgid "Maintenance Schedule"
+msgstr "Maintenance Schedule"
+msgid "Maintenance Interval (days)"
+msgstr "Maintenance Interval (days)"
+msgid "Next replacement"
+msgstr "Next replacement"
+msgid "Next maintenance"
+msgstr "Next maintenance"
+msgid "Replace now"
+msgstr "Replace now"
+msgid "Maintain now"
+msgstr "Maintain now"
+msgid "Soon"
+msgstr "Soon"
+msgid "No parts added yet"
+msgstr "No parts added yet"
+msgid "Recent logs"
+msgstr "Recent logs"
+msgid "Maintenance log added"
+msgstr "Maintenance log added"
+msgid "Log"
+msgstr "Log"
+msgid "Save Log"
+msgstr "Save Log"
+msgid "What was done..."
+msgstr "What was done..."
+msgid "Back to Machine"
+msgstr "Back to Machine"
+msgid "parts need attention!"
+msgstr "parts need attention!"
+msgid "Total Parts"
+msgstr "Total Parts"
+msgid "Needs Maintenance"
+msgstr "Needs Maintenance"
+msgid "Needs Replacement"
+msgstr "Needs Replacement"
+msgid "replacement"
+msgstr "replacement"
+msgid "maintenance"
+msgstr "maintenance"
+msgid "inspection"
+msgstr "inspection"
+
+# Maintenance Calendar
+msgid "Maintenance Calendar"
+msgstr "Maintenance Calendar"
+msgid "Overdue"
+msgstr "Overdue"
+msgid "Days Overdue"
+msgstr "Days Overdue"
+msgid "Fix"
+msgstr "Fix"
+msgid "Mon"
+msgstr "Mon"
+msgid "Tue"
+msgstr "Tue"
+msgid "Wed"
+msgstr "Wed"
+msgid "Thu"
+msgstr "Thu"
+msgid "Fri"
+msgstr "Fri"
+msgid "Sat"
+msgstr "Sat"
+msgid "Sun"
+msgstr "Sun"
+msgid "Upcoming Events"
+msgstr "Upcoming Events"
+msgid "No events this month"
+msgstr "No events this month"
+msgid "Replacement"
+msgstr "Replacement"
+msgid "Scheduled"
+msgstr "Scheduled"
+
+msgid "Worker added"
+msgstr "Worker added"
+
+msgid "Worker updated"
+msgstr "Worker updated"
+
+msgid "Item added"
+msgstr "Item added"
+
+msgid "Item updated"
+msgstr "Item updated"
+
+msgid "Insufficient stock!"
+msgstr "Insufficient stock!"
+
+msgid "cylinders remaining"
+msgstr "cylinders remaining"
+
+msgid "threshold"
+msgstr "threshold"
+
+msgid "Order new cylinders"
+msgstr "Order new cylinders"
+
+msgid "Showing your sections only"
+msgstr "Showing your sections only"
+
+msgid "Fit"
+msgstr "Fit"
+
+msgid "Linked Responsible Person"
+msgstr "Linked Responsible Person"
+
+msgid "None"
+msgstr "None"
+
+msgid "Link user to a responsible person to show their sections on the floor plan"
+msgstr "Link user to a responsible person to show their sections on the floor plan"
+
+msgid "Login Access"
+msgstr "Login Access"
+
+msgid "Leave empty to keep current"
+msgstr "Leave empty to keep current"
+
+msgid "Login set"
+msgstr "Login set"
+
+msgid "Set password to allow login"
+msgstr "Set password to allow login"
+
+msgid "Floor only"
+msgstr "Floor only"
+
+msgid "see own sections"
+msgstr "see own sections"
+
+msgid "Full map"
+msgstr "Full map"
+
+msgid "see all machines"
+msgstr "see all machines"
+
+msgid "Limited"
+msgstr "Limited"
+
+msgid "floor plan only"
+msgstr "floor plan only"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "can login"
+msgstr "can login"
+
+msgid "Assigned Sections"
+msgstr "Assigned Sections"
+
+msgid "Цеха"
+msgstr "Sections"
+
+msgid "Select sections this person is responsible for"
+msgstr "Select sections this person is responsible for"
+
+msgid "No group"
+msgstr "No group"
+
+msgid "No password"
+msgstr "No password"
+
+msgid "Last login"
+msgstr "Last login"
+
+msgid "Edit password"
+msgstr "Edit password"
+
+msgid "Mechanic"
+msgstr "Mechanic"
+
+msgid "Equipment Repairs"
+msgstr "Equipment Repairs"
+
+msgid "New Repair"
+msgstr "New Repair"
+
+msgid "Edit Repair"
+msgstr "Edit Repair"
+
+msgid "New Repair Record"
+msgstr "New Repair Record"
+
+msgid "All Repairs"
+msgstr "All Repairs"
+
+msgid "Statistics"
+msgstr "Statistics"
+
+msgid "Repair Statistics"
+msgstr "Repair Statistics"
+
+msgid "Total Repairs"
+msgstr "Total Repairs"
+
+msgid "Total Cost"
+msgstr "Total Cost"
+
+msgid "Avg Days to Repair"
+msgstr "Avg Days to Repair"
+
+msgid "By Component Type"
+msgstr "By Component Type"
+
+msgid "By Repair Company"
+msgstr "By Repair Company"
+
+msgid "Recent Repairs"
+msgstr "Recent Repairs"
+
+msgid "Component"
+msgstr "Component"
+
+msgid "Gas"
+msgstr "Gas"
+
+msgid "Fault"
+msgstr "Fault"
+
+msgid "Company"
+msgstr "Company"
+
+msgid "Broken"
+msgstr "Broken"
+
+msgid "In repair"
+msgstr "In repair"
+
+msgid "Repaired"
+msgstr "Repaired"
+
+msgid "Replaced"
+msgstr "Replaced"
+
+msgid "Installed"
+msgstr "Installed"
+
+msgid "All gases"
+msgstr "All gases"
+
+msgid "All statuses"
+msgstr "All statuses"
+
+msgid "No repair records"
+msgstr "No repair records"
+
+msgid "All equipment is working fine!"
+msgstr "All equipment is working fine!"
+
+msgid "Add Repair Record"
+msgstr "Add Repair Record"
+
+msgid "Select component"
+msgstr "Select component"
+
+msgid "What broke"
+msgstr "What broke"
+
+msgid "Describe exactly what failed, symptoms, error codes..."
+msgstr "Describe exactly what failed, symptoms, error codes..."
+
+msgid "Date broken"
+msgstr "Date broken"
+
+msgid "Date sent for repair"
+msgstr "Date sent for repair"
+
+msgid "Repair Company"
+msgstr "Repair Company"
+
+msgid "Company name"
+msgstr "Company name"
+
+msgid "Who performed the repair"
+msgstr "Who performed the repair"
+
+msgid "Repair cost"
+msgstr "Repair cost"
+
+msgid "What was done"
+msgstr "What was done"
+
+msgid "Description of repair work"
+msgstr "Description of repair work"
+
+msgid "Date repaired"
+msgstr "Date repaired"
+
+msgid "Date installed back"
+msgstr "Date installed back"
+
+msgid "Send to repair"
+msgstr "Send to repair"
+
+msgid "Mark repaired"
+msgstr "Mark repaired"
+
+msgid "Mark installed"
+msgstr "Mark installed"
+
+msgid "Repair record created"
+msgstr "Repair record created"
+
+msgid "Repair record updated"
+msgstr "Repair record updated"
+
+msgid "No data"
+msgstr "No data"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Count"
+msgstr "Count"
+
+msgid "Avg Days"
+msgstr "Avg Days"
+
+msgid "Warehouse Movements"
+msgstr "Warehouse Movements"
+
+msgid "Movements"
+msgstr "Movements"
+
+msgid "All items"
+msgstr "All items"
+
+msgid "All types"
+msgstr "All types"
+
+msgid "Records"
+msgstr "Records"
+
+msgid "Order"
+msgstr "Order"
+
+msgid "Comment"
+msgstr "Comment"
+
+msgid "No movements found"
+msgstr "No movements found"
+
+msgid "No stock movements recorded yet"
+msgstr "No stock movements recorded yet"
+
+msgid "Export CSV"
+msgstr "Export CSV"
+
+msgid "Edit Report"
+msgstr "Edit Report"
+
+msgid "Work report updated"
+msgstr "Work report updated"
+
+msgid "from warehouse"
+msgstr "from warehouse"
+
+msgid "Part"
+msgstr "Part"
+
+msgid "Qty"
+msgstr "Qty"
+
+msgid "Print Label"
+msgstr "Print Label"
+
+msgid "Print Labels"
+msgstr "Print Labels"
+
+msgid "Print"
+msgstr "Print"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Select All"
+msgstr "Select All"
+
+msgid "Select machines first"
+msgstr "Select machines first"
+
+# Auth & Users
+msgid "Login"
+msgstr "Login"
+msgid "Logout"
+msgstr "Logout"
+msgid "Username"
+msgstr "Username"
+msgid "Password"
+msgstr "Password"
+msgid "Invalid credentials"
+msgstr "Invalid credentials"
+msgid "Profile"
+msgstr "Profile"
+msgid "Profile updated"
+msgstr "Profile updated"
+msgid "Display Name"
+msgstr "Display Name"
+msgid "New Password"
+msgstr "New Password"
+msgid "Confirm Password"
+msgstr "Confirm Password"
+msgid "Enter new password"
+msgstr "Enter new password"
+msgid "Repeat new password"
+msgstr "Repeat new password"
+msgid "Change Password"
+msgstr "Change Password"
+msgid "Password changed for %(username)s"
+msgstr "Password changed for %(username)s"
+msgid "Passwords do not match"
+msgstr "Passwords do not match"
+msgid "Leave empty to keep current"
+msgstr "Leave empty to keep current"
+msgid "Delete user"
+msgstr "Delete user"
+msgid "Cannot delete yourself"
+msgstr "Cannot delete yourself"
+msgid "User %(username)s deleted"
+msgstr "User %(username)s deleted"
+msgid "Personal Info"
+msgstr "Personal Info"
+msgid "Work Info"
+msgstr "Work Info"
+msgid "First Name"
+msgstr "First Name"
+msgid "Last Name"
+msgstr "Last Name"
+msgid "Current"
+msgstr "Current"
+msgid "Active"
+msgstr "Active"
+msgid "Inactive"
+msgstr "Inactive"
+msgid "Hire Date"
+msgstr "Hire Date"
+msgid "Fire Date"
+msgstr "Fire Date"
+msgid "Linked person"
+msgstr "Linked person"
+msgid "User Cabinet"
+msgstr "User Cabinet"
+msgid "Users"
+msgstr "Users"
+msgid "New User"
+msgstr "New User"
+msgid "Edit User"
+msgstr "Edit User"
+msgid "User created"
+msgstr "User created"
+msgid "User updated"
+msgstr "User updated"
+msgid "Role"
+msgstr "Role"
+msgid "Assigned Machines"
+msgstr "Assigned Machines"
+msgid "Videos"
+msgstr "Videos"
+msgid "Attach videos of the fault (mp4, mov, avi, webm)"
+msgstr "Attach videos of the fault (mp4, mov, avi, webm)"
+msgid "Your browser does not support video playback"
+msgstr "Your browser does not support video playback"

@@ -1,0 +1,47 @@
+__pycache__/
+*.pyc
+*.pyo
+instance/
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.DS_Store
+Thumbs.db
+*.log
+
+# Large files not needed for deployment
+master.zip
+Video/
+videos/
+screenshots/
+PDF files/
+Машины из эксель/
+ПланФабрики/
+фото газовой установки/
+El-kasten/
+foto/
+deploy/
+*.mp4
+*.avi
+*.mov
+*.zip
+*.rar
+static/uploads/*
+
+# Debug/output files (root-level only)
+/debug_*.html
+/contractors_page.png
+/dashboard.png
+/machines_page.png
+/server_error.txt
+/server_output.txt
+/stderr.txt
+/stdout.txt
+/crm.spec
+/screenshot.py
+/check_*.py
+/fix_cylinders.py
+/launcher.py
+/babel.cfg

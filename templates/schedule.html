@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Work Schedule') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📅 {{ _('Work Schedule') }}</h1>
+    <div style="display:flex;gap:8px">
+        {% if current_user.has_role('admin', 'director') %}
+        <a href="/schedule/monthly" class="btn btn-sm" style="background:#e67e22;color:white">📅 {{ _('Monthly Schedule') }}</a>
+        {% endif %}
+        <a href="/time-tracking" class="btn btn-sm btn-primary">⏱ {{ _('Time Tracking') }}</a>
+        <a href="/vacations" class="btn btn-sm" style="background:#9b59b6;color:white">🏖 {{ _('Vacations') }}</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Employee') }}</th><th>{{ _('Role') }}</th><th>{{ _('Hire Date') }}</th><th>{{ _('Schedule') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for u in users %}
+        <tr>
+            <td><strong>{{ u.display_name or u.username }}</strong></td>
+            <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+            <td>{{ u.hire_date.strftime('%d-%m-%Y') if u.hire_date else '—' }}</td>
+            <td>
+                {% set user_schedules = schedules|selectattr('user_id', 'equalto', u.id)|list %}
+                {% if user_schedules %}
+                    {% for s in user_schedules %}
+                    <span class="badge badge-active">{{ s.name }} ({{ s.shift_start }}-{{ s.shift_end }})</span>
+                    {% endfor %}
+                {% else %}
+                    <span style="color:#888">{{ _('Not set') }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.fire_date %}
+                    <span class="badge badge-broken">{{ _('Fired') }} {{ u.fire_date.strftime('%d-%m-%Y') }}</span>
+                {% elif u.is_active_user %}
+                    <span class="badge badge-active">{{ _('Active') }}</span>
+                {% else %}
+                    <span class="badge badge-offline">{{ _('Inactive') }}</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="/schedule/{{ u.id }}" class="btn btn-sm btn-primary">{{ _('Edit Schedule') }}</a>
+                <a href="/time-report/{{ u.id }}" class="btn btn-sm" style="background:#eee">{{ _('Report') }}</a>
+                {% if current_user.has_role('admin') %}
+                <form method="POST" action="/schedule/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete schedule for') }} {{ u.display_name or u.username }}?')">
+                    <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px">🗑️</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Repair Statistics') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Repair Statistics') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/repairs" class="btn btn-sm" style="background:#eee">{{ _('All Repairs') }}</a>
+        <a href="/cylinders" class="btn btn-sm" style="background:#eee">{{ _('Gas Cylinders') }}</a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats">
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number">{{ total }}</div>
+        <div class="label">{{ _('Total Repairs') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="number">€{{ "%.0f"|format(total_cost) }}</div>
+        <div class="label">{{ _('Total Cost') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #3498db">
+        <div class="number">{{ avg_days }}</div>
+        <div class="label">{{ _('Avg Days to Repair') }}</div>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <!-- By Component Type -->
+    <div class="card">
+        <h2>🔧 {{ _('By Component Type') }}</h2>
+        {% if by_component %}
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Type') }}</th><th>{{ _('Count') }}</th><th>{{ _('Cost') }}</th><th>{{ _('Avg Days') }}</th></tr>
+            {% for ctype, data in by_component.items() %}
+            <tr>
+                <td><strong>{{ ctype }}</strong></td>
+                <td>{{ data.count }}</td>
+                <td>€{{ "%.0f"|format(data.cost) }}</td>
+                <td>
+                    {% if data.avg_days > 14 %}<span style="color:#e74c3c;font-weight:bold">{{ data.avg_days }}d</span>
+                    {% elif data.avg_days > 7 %}<span style="color:#f39c12">{{ data.avg_days }}d</span>
+                    {% else %}<span style="color:#27ae60">{{ data.avg_days }}d</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table></div>
+        {% else %}
+        <p style="color:#888">{{ _('No data') }}</p>
+        {% endif %}
+    </div>
+
+    <!-- By Repair Company -->
+    <div class="card">
+        <h2>🏭 {{ _('By Repair Company') }}</h2>
+        {% if by_company %}
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Company') }}</th><th>{{ _('Repairs') }}</th><th>{{ _('Total Cost') }}</th></tr>
+            {% for company, data in by_company.items() %}
+            <tr>
+                <td><strong>{{ company }}</strong></td>
+                <td>{{ data.count }}</td>
+                <td>€{{ "%.0f"|format(data.cost) }}</td>
+            </tr>
+            {% endfor %}
+        </table></div>
+        {% else %}
+        <p style="color:#888">{{ _('No data') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Repairs -->
+{% if recent %}
+<div class="card" style="margin-top:16px">
+    <h2>📋 {{ _('Recent Repairs') }}</h2>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Component') }}</th>
+            <th>{{ _('Gas') }}</th>
+            <th>{{ _('Fault') }}</th>
+            <th>{{ _('Company') }}</th>
+            <th>{{ _('Broken') }}</th>
+            <th>{{ _('Installed') }}</th>
+            <th>{{ _('Days') }}</th>
+            <th>{{ _('Cost') }}</th>
+            <th>{{ _('Status') }}</th>
+        </tr>
+        {% for r in recent %}
+        <tr>
+            <td><strong>{{ r.component.name if r.component else '?' }}</strong><br><small style="color:#888">{{ r.component.component_type if r.component else '' }}</small></td>
+            <td><span class="badge badge-{{ 'active' if r.component and r.component.gas_type=='nitrogen' else 'maintenance' }}">{{ 'N₂' if r.component and r.component.gas_type=='nitrogen' else 'CO₂' }}</span></td>
+            <td style="max-width:180px">{{ r.fault_description[:50] }}{% if r.fault_description|length > 50 %}...{% endif %}</td>
+            <td>{{ r.repair_company or '—' }}</td>
+            <td>{{ r.date_broken.strftime('%d-%m-%Y') }}</td>
+            <td>{{ r.date_installed.strftime('%d-%m-%Y') if r.date_installed else '—' }}</td>
+            <td>
+                {% if r.date_broken and r.date_installed %}
+                    {% set days = (r.date_installed - r.date_broken).days %}
+                    <span style="font-weight:bold;color:{% if days > 14 %}#e74c3c{% elif days > 7 %}#f39c12{% else %}#27ae60{% endif %}">{{ days }}d</span>
+                {% else %}—{% endif %}
+            </td>
+            <td>{% if r.repair_cost %}€{{ "%.0f"|format(r.repair_cost) }}{% else %}—{% endif %}</td>
+            <td>
+                {% if r.status == 'broken' %}<span class="badge badge-broken">🔴</span>
+                {% elif r.status == 'in_repair' %}<span class="badge badge-maintenance">🟡</span>
+                {% elif r.status == 'repaired' %}<span class="badge badge-accepted">🔵</span>
+                {% elif r.status == 'installed' %}<span class="badge badge-active">🟢</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+{% endblock %}

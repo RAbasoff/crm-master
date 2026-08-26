@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.invoice_number }} — {{ _('Invoice') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📄 {{ invoice.invoice_number }}</h1>
+    <div style="display:flex;gap:8px">
+        {% if invoice.status == 'pending' and current_user.has_role('admin', 'director') %}
+        <form method="POST" action="/invoices/{{ invoice.id }}/approve" style="display:inline">
+            <button type="submit" class="btn btn-success">{{ _('Approve for payment') }}</button>
+        </form>
+        <button class="btn btn-danger" onclick="document.getElementById('rejectModal').style.display='flex'">{{ _('Reject') }}</button>
+        {% endif %}
+        {% if invoice.status == 'approved' and current_user.has_role('admin', 'director') %}
+        <form method="POST" action="/invoices/{{ invoice.id }}/pay" style="display:inline">
+            <button type="submit" class="btn btn-success">{{ _('Mark as paid') }}</button>
+        </form>
+        {% endif %}
+        <a href="/invoices/{{ invoice.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        <a href="/invoices" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('Invoice info') }}</h2>
+        <p><strong>{{ _('Number') }}:</strong> {{ invoice.invoice_number }}</p>
+        <p><strong>{{ _('Supplier') }}:</strong> {{ invoice.supplier }}</p>
+        <p><strong>{{ _('Date') }}:</strong> {{ invoice.invoice_date.strftime('%d-%m-%Y') }}</p>
+        <p><strong>{{ _('Due date') }}:</strong> {{ invoice.due_date.strftime('%d-%m-%Y') if invoice.due_date else '—' }}</p>
+        <p><strong>{{ _('Total') }}:</strong> <span style="font-size:20px;font-weight:bold;color:#27ae60">€{{ "%.2f"|format(invoice.total) }}</span></p>
+    </div>
+    <div class="card">
+        <h2>{{ _('Status') }}</h2>
+        <p><span class="badge badge-{% if invoice.status == 'approved' %}active{% elif invoice.status == 'paid' %}closed{% elif invoice.status == 'rejected' %}broken{% elif invoice.status == 'pending' %}high{% else %}ok{% endif %}" style="font-size:16px;padding:8px 16px">{{ invoice.status }}</span></p>
+        {% if invoice.signed_by %}
+        <p><strong>{{ _('Signed by') }}:</strong> {{ invoice.signer.display_name or invoice.signer.username }}</p>
+        <p><strong>{{ _('Signed at') }}:</strong> {{ invoice.signed_at.strftime('%d-%m-%Y %H:%M') }}</p>
+        {% endif %}
+        {% if invoice.rejection_reason %}
+        <p style="color:#e74c3c"><strong>{{ _('Rejection reason') }}:</strong> {{ invoice.rejection_reason }}</p>
+        {% endif %}
+        {% if invoice.notes %}
+        <p><strong>{{ _('Notes') }}:</strong> {{ invoice.notes }}</p>
+        {% endif %}
+        <p style="color:#888;margin-top:12px">{{ _('Created') }}: {{ invoice.created_at.strftime('%d-%m-%Y %H:%M') }} {% if invoice.creator %}({{ invoice.creator.display_name or invoice.creator.username }}){% endif %}</p>
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+    <h2>{{ _('Invoice items') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>#</th><th>{{ _('Description') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Unit Price') }}</th><th>{{ _('Total') }}</th></tr>
+        {% for item in invoice.items %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ item.description }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>€{{ "%.2f"|format(item.unit_price) }}</td>
+            <td>€{{ "%.2f"|format(item.total_price) }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+{% if current_user.has_role('admin') %}
+<form method="POST" action="/invoices/{{ invoice.id }}/delete" style="margin-top:12px" onsubmit="return confirm('{{ _('Delete this invoice?') }}')">
+    <button type="submit" class="btn btn-danger">{{ _('Delete') }}</button>
+</form>
+{% endif %}
+
+<!-- REJECT MODAL -->
+<div id="rejectModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%">
+        <h2 style="margin-bottom:16px;color:#e74c3c">{{ _('Reject Invoice') }}</h2>
+        <form method="POST" action="/invoices/{{ invoice.id }}/reject">
+            <div class="form-group">
+                <label>{{ _('Rejection reason') }} *</label>
+                <textarea name="rejection_reason" rows="4" required placeholder="{{ _('Explain why the invoice is rejected...') }}"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('rejectModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-danger">{{ _('Reject') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

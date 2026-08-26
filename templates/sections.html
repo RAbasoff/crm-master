@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Factory Sections') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏭 {{ _('Factory Sections') }}</h1>
+    {% if current_user.has_role('admin') %}
+    <a href="/sections/new" class="btn btn-primary">+ {{ _('New Section') }}</a>
+    {% endif %}
+</div>
+
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ sections|length }}</div><div class="label">{{ _('Total Sections') }}</div></div>
+    <div class="stat-card"><div class="number">{{ sections|map(attribute='machines')|map('length')|sum }}</div><div class="label">{{ _('Total Machines') }}</div></div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Name') }}</th>
+                <th>{{ _('Type') }}</th>
+                <th>{{ _('Responsible') }}</th>
+                <th>{{ _('Machines') }}</th>
+                <th>{{ _('Active') }}</th>
+                <th>{{ _('Broken') }}</th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for s in sections %}
+            <tr>
+                <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:16px;height:16px;border-radius:4px;background:{{ s.color }};flex-shrink:0"></div>
+                        <strong>{{ s.name }}</strong>
+                    </div>
+                </td>
+                <td><span class="badge badge-{{ s.section_type }}">{{ s.section_type }}</span></td>
+                <td>
+                    {% if s.responsible_user %}<strong>{{ s.responsible_user.display_name or s.responsible_user.username }}</strong>{% endif %}
+                    {% if s.responsible_persons %}{% if s.responsible_user %} | {% endif %}{% for p in s.responsible_persons %}{{ p.naam }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+                    {% if not s.responsible_user and not s.responsible_persons %}—{% endif %}
+                </td>
+                <td>{{ s.machines|length }}</td>
+                <td style="color:#27ae60;font-weight:bold">{{ s.machines|selectattr('status', 'equalto', 'active')|list|length }}</td>
+                <td style="color:#e74c3c;font-weight:bold">{{ s.machines|selectattr('status', 'equalto', 'broken')|list|length }}</td>
+                <td>
+                    <div style="display:flex;gap:4px">
+                        <a href="/floor?section={{ s.id }}" class="btn btn-sm" style="background:#eee;padding:4px 8px">📍</a>
+                        {% if current_user.has_role('admin') %}
+                        <a href="/sections/{{ s.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}

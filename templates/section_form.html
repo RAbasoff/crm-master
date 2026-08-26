@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Section') if section else _('New Section') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Edit Section') + ' ' + section.name if section else _('New Section') }}</h1>
+</div>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Name') }} *</label>
+                <input type="text" name="name" value="{{ section.name if section else '' }}" required placeholder="{{ _('Section name') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Type') }}</label>
+                <select name="section_type">
+                    {% for t in ['workshop', 'storage', 'office', 'utility', 'loading'] %}
+                    <option value="{{ t }}" {% if section and section.section_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>{{ _('Description') }}</label>
+            <textarea name="description" rows="2" placeholder="{{ _('Section description') }}">{{ section.description if section else '' }}</textarea>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Color') }}</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="color" name="color" value="{{ section.color if section else '#3498db' }}" style="width:60px;height:40px;padding:2px;cursor:pointer">
+                    <input type="text" name="color_text" value="{{ section.color if section else '#3498db' }}" placeholder="#3498db" style="flex:1" oninput="this.previousElementSibling.value=this.value">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Responsible person') }} ({{ _('User') }})</label>
+                <select name="responsible_user_id">
+                    <option value="">{{ _('Not assigned') }}</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if section and section.responsible_user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }} ({{ u.role }})</option>
+                    {% endfor %}
+                </select>
+                <small style="color:#888;font-size:12px">{{ _('User gets access to section machines') }}</small>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Responsible persons') }} ({{ _('External') }})</label>
+                <select name="responsible_person_ids" multiple size="4" style="height:auto;min-height:80px">
+                    {% for v in verantwoordelijken %}
+                    <option value="{{ v.id }}" {% if section and v in section.responsible_persons %}selected{% endif %}>{{ v.naam }}{% if v.telefoon %} ({{ v.telefoon }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+                <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
+            </div>
+        </div>
+        
+        <div class="card" style="background:#f8f9fa;margin-bottom:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Position on Floor Plan') }} (%)</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('X Position') }}</label>
+                    <input type="number" name="floor_x" value="{{ section.floor_x if section else 10 }}" min="0" max="100" step="1">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Y Position') }}</label>
+                    <input type="number" name="floor_y" value="{{ section.floor_y if section else 10 }}" min="0" max="100" step="1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Width') }} (%)</label>
+                    <input type="number" name="width" value="{{ section.width if section else 25 }}" min="5" max="100" step="1">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Height') }} (%)</label>
+                    <input type="number" name="height" value="{{ section.height if section else 25 }}" min="5" max="100" step="1">
+                </div>
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/sections" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+    {% if section %}
+    <form method="POST" action="/sections/{{ section.id }}/delete" style="margin-top:12px" onsubmit="return confirm('{{ _('Delete this section?') }}')">
+        <button type="submit" class="btn btn-danger">{{ _('Delete') }}</button>
+    </form>
+    {% endif %}
+</div>
+
+<script>
+// Sync color inputs
+const colorInput = document.querySelector('input[name="color"]');
+const colorText = document.querySelector('input[name="color_text"]');
+colorInput.addEventListener('input', () => colorText.value = colorInput.value);
+colorText.addEventListener('input', () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(colorText.value)) {
+        colorInput.value = colorText.value;
+    }
+});
+</script>
+{% endblock %}

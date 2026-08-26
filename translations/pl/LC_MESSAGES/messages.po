@@ -1,0 +1,928 @@
+# Polish translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-08-10 18:44+0300\n"
+"PO-Revision-Date: 2026-08-10 18:44+0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Polish <LL@li.org>\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app.py:108
+msgid "Dashboard"
+msgstr "Panel główny"
+
+#: app.py:126
+msgid "Work Orders"
+msgstr "Zlecenia pracy"
+
+#: app.py:137
+msgid "New Work Order"
+msgstr "Nowe zlecenie pracy"
+
+#: app.py:159
+msgid "Work Order Details"
+msgstr "Szczegóły zlecenia pracy"
+
+#: app.py:164
+msgid "Edit Work Order"
+msgstr "Edytuj zlecenie pracy"
+
+#: app.py:195
+msgid "Responsible persons"
+msgstr "Osoby odpowiedzialne"
+
+#: app.py:199
+msgid "New responsible person"
+msgstr "Nowa osoba odpowiedzialna"
+
+#: app.py:211
+msgid "Edit responsible person"
+msgstr "Edytuj osobę odpowiedzialną"
+
+msgid "Responsible person"
+msgstr "Osoba odpowiedzialna"
+
+msgid "Responsible person added"
+msgstr "Osoba odpowiedzialna dodana"
+
+msgid "Responsible person updated"
+msgstr "Osoba odpowiedzialna zaktualizowana"
+
+#: app.py:227
+msgid "Workers"
+msgstr "Pracownicy"
+
+#: app.py:231
+msgid "New Worker"
+msgstr "Nowy pracownik"
+
+#: app.py:242
+msgid "Edit Worker"
+msgstr "Edytuj pracownika"
+
+#: app.py:259
+msgid "Warehouse"
+msgstr "Magazyn"
+
+#: app.py:269
+msgid "New Item"
+msgstr "Nowy przedmiot"
+
+#: app.py:283
+msgid "Edit Item"
+msgstr "Edytuj przedmiot"
+
+#: app.py:319
+msgid "Reports"
+msgstr "Raporty"
+
+#: app.py:323
+msgid "Period Report"
+msgstr "Raport okresowy"
+
+#: app.py:351
+msgid "Worker Report"
+msgstr "Raport pracownika"
+
+#: app.py:390
+msgid "QR Scan"
+msgstr "Skanuj QR"
+
+#: app.py:396
+msgid "QR Generate"
+msgstr "Generuj QR"
+
+msgid "Home"
+msgstr "Strona główna"
+
+msgid "Total Work Orders"
+msgstr "Wszystkie zlecenia pracy"
+
+msgid "Active Work Orders"
+msgstr "Aktywne zlecenia pracy"
+
+msgid "Today"
+msgstr "Dzisiaj"
+
+msgid "Active Workers"
+msgstr "Aktywni pracownicy"
+
+msgid "Low Stock"
+msgstr "Niski stan"
+
+msgid "Recent Work Orders"
+msgstr "Ostatnie zlecenia pracy"
+
+msgid "Number"
+msgstr "Numer"
+
+msgid "Client"
+msgstr "Osoba odpowiedzialna"
+
+msgid "Device"
+msgstr "Urządzenie"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Actions"
+msgstr "Akcje"
+
+msgid "View"
+msgstr "Podgląd"
+
+msgid "Edit"
+msgstr "Edytuj"
+
+msgid "Delete"
+msgstr "Usuń"
+
+msgid "Save"
+msgstr "Zapisz"
+
+msgid "Cancel"
+msgstr "Anuluj"
+
+msgid "Back"
+msgstr "Wstecz"
+
+msgid "Search"
+msgstr "Szukaj"
+
+msgid "Filter"
+msgstr "Filtr"
+
+msgid "All"
+msgstr "Wszystko"
+
+msgid "Name"
+msgstr "Nazwa"
+
+msgid "Phone"
+msgstr "Telefon"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "Notes"
+msgstr "Notatki"
+
+msgid "Specialization"
+msgstr "Specjalizacja"
+
+msgid "Hourly Rate"
+msgstr "Stawka godzinowa"
+
+msgid "Active"
+msgstr "Aktywny"
+
+msgid "Category"
+msgstr "Kategoria"
+
+msgid "Unit"
+msgstr "Jednostka"
+
+msgid "Quantity"
+msgstr "Ilość"
+
+msgid "Minimum"
+msgstr "Minimum"
+
+msgid "Price"
+msgstr "Cena"
+
+msgid "Location"
+msgstr "Lokalizacja"
+
+msgid "Date From"
+msgstr "Data od"
+
+msgid "Date To"
+msgstr "Data do"
+
+msgid "Show Report"
+msgstr "Pokaż raport"
+
+msgid "Total Revenue"
+msgstr "Całkowity przychód"
+
+msgid "Completed"
+msgstr "Zakończone"
+
+msgid "Cancelled"
+msgstr "Anulowane"
+
+msgid "Average Time"
+msgstr "Średni czas"
+
+msgid "Worker Statistics"
+msgstr "Statystyki pracowników"
+
+msgid "Work Orders Count"
+msgstr "Liczba zleceń pracy"
+
+msgid "Revenue"
+msgstr "Przychód"
+
+msgid "Scan QR Code"
+msgstr "Skanuj kod QR"
+
+msgid "Generate QR"
+msgstr "Generuj QR"
+
+msgid "Accepted"
+msgstr "Przyjęte"
+
+msgid "Diagnosis"
+msgstr "Diagnoza"
+
+msgid "In Progress"
+msgstr "W toku"
+
+msgid "Ready"
+msgstr "Gotowe"
+
+msgid "Delivered"
+msgstr "Wydane"
+
+msgid "Cancelled"
+msgstr "Anulowane"
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Serial Number"
+msgstr "Numer seryjny"
+
+msgid "Problem"
+msgstr "Problem"
+
+msgid "Work Done"
+msgstr "Wykonana praca"
+
+msgid "Labor Cost"
+msgstr "Koszt robocizny"
+
+msgid "Parts Cost"
+msgstr "Koszt części"
+
+msgid "Total"
+msgstr "Razem"
+
+msgid "Created"
+msgstr "Utworzone"
+
+msgid "Started"
+msgstr "Rozpoczęte"
+
+msgid "Finished"
+msgstr "Zakończone"
+
+msgid "Incoming"
+msgstr "Przyjęcie"
+
+msgid "Outgoing"
+msgstr "Wydanie"
+
+msgid "Move Stock"
+msgstr "Przesunięcie magazynowe"
+
+msgid "Work Order"
+msgstr "Zlecenie pracy"
+
+msgid "Comment"
+msgstr "Komentarz"
+
+msgid "Period"
+msgstr "Okres"
+
+msgid "Worker"
+msgstr "Pracownik"
+
+msgid "Language"
+msgstr "Język"
+
+msgid "Inactive"
+msgstr "Nieaktywny"
+
+msgid "Last 30 Days"
+msgstr "Ostatnie 30 dni"
+
+msgid "Scanned"
+msgstr "Zeskanowano"
+
+msgid "History"
+msgstr "Historia"
+
+msgid "or"
+msgstr "lub"
+
+msgid "Original"
+msgstr "Oryginał"
+
+msgid "Translate"
+msgstr "Tłumacz"
+
+msgid "Work Order created"
+msgstr "Zlecenie pracy utworzone"
+
+msgid "Work Order updated"
+msgstr "Zlecenie pracy zaktualizowane"
+
+# Factory Sections
+msgid "Factory Sections"
+msgstr "Sekcje fabryki"
+msgid "Sections"
+msgstr "Sekcje"
+msgid "New Section"
+msgstr "Nowa sekcja"
+msgid "Edit Section"
+msgstr "Edytuj sekcję"
+msgid "Section created"
+msgstr "Sekcja utworzona"
+msgid "Section updated"
+msgstr "Sekcja zaktualizowana"
+msgid "Section deleted"
+msgstr "Sekcja usunięta"
+msgid "Total Sections"
+msgstr "Wszystkie sekcje"
+msgid "Total Machines"
+msgstr "Wszystkie maszyny"
+msgid "Section name"
+msgstr "Nazwa sekcji"
+msgid "Section description"
+msgstr "Opis sekcji"
+msgid "Position on Floor Plan"
+msgstr "Pozycja na planie"
+msgid "X Position"
+msgstr "Pozycja X"
+msgid "Y Position"
+msgstr "Pozycja Y"
+msgid "Width"
+msgstr "Szerokość"
+msgid "Height"
+msgstr "Wysokość"
+msgid "Add Section"
+msgstr "Dodaj sekcję"
+msgid "machines"
+msgstr "maszyny"
+msgid "Machines in Section"
+msgstr "Maszyny w sekcji"
+msgid "Section"
+msgstr "Sekcja"
+msgid "Type"
+msgstr "Typ"
+msgid "Delete this section?"
+msgstr "Usunąć tę sekcję?"
+msgid "workshop"
+msgstr "warsztat"
+msgid "storage"
+msgstr "magazyn"
+msgid "office"
+msgstr "biuro"
+msgid "utility"
+msgstr "pomocnicze"
+msgid "loading"
+msgstr "załadunek"
+msgid "Responsible"
+msgstr "Odpowiedzialny"
+msgid "Not assigned"
+msgstr "Nieprzypisany"
+
+# Map Editor
+msgid "Map Editor"
+msgstr "Edytor mapy"
+msgid "View Map"
+msgstr "Zobacz mapę"
+msgid "Save All"
+msgstr "Zapisz wszystko"
+msgid "Section Properties"
+msgstr "Właściwości sekcji"
+msgid "Assign Machine"
+msgstr "Przypisz maszynę"
+msgid "To Section"
+msgstr "Do sekcji"
+msgid "Assign"
+msgstr "Przypisz"
+msgid "Deselect"
+msgstr "Odznacz"
+msgid "New Section"
+msgstr "Nowa sekcja"
+msgid "Delete this section?"
+msgstr "Usunąć tę sekcję?"
+msgid "Nothing to save"
+msgstr "Nic do zapisania"
+msgid "All saved!"
+msgstr "Wszystko zapisane!"
+msgid "No section"
+msgstr "Bez sekcji"
+msgid "Group on map"
+msgstr "Grupa na mapie"
+msgid "Auto-set when section is selected, or set manually"
+msgstr "Ustawiane automatycznie po wyborze sekcji lub ręcznie"
+msgid "Position on Map"
+msgstr "Pozycja na mapie"
+
+# Parts Maintenance
+msgid "Parts"
+msgstr "Części"
+msgid "Add Part"
+msgstr "Dodaj część"
+msgid "Edit Part"
+msgstr "Edytuj część"
+msgid "Part added"
+msgstr "Część dodana"
+msgid "Part updated"
+msgstr "Część zaktualizowana"
+msgid "Part deleted"
+msgstr "Część usunięta"
+msgid "Part Name"
+msgstr "Nazwa części"
+msgid "Part Number"
+msgstr "Numer części"
+msgid "Replacement Schedule"
+msgstr "Harmonogram wymiany"
+msgid "Installed Date"
+msgstr "Data montażu"
+msgid "Replacement Interval (days)"
+msgstr "Interwał wymiany (dni)"
+msgid "Maintenance Schedule"
+msgstr "Harmonogram konserwacji"
+msgid "Maintenance Interval (days)"
+msgstr "Interwał konserwacji (dni)"
+msgid "Next replacement"
+msgstr "Następna wymiana"
+msgid "Next maintenance"
+msgstr "Następna konserwacja"
+msgid "Replace now"
+msgstr "Wymień teraz"
+msgid "Maintain now"
+msgstr "Konserwuj teraz"
+msgid "Soon"
+msgstr "Wkrótce"
+msgid "No parts added yet"
+msgstr "Nie dodano jeszcze części"
+msgid "Recent logs"
+msgstr "Ostatnie wpisy"
+msgid "Maintenance log added"
+msgstr "Dziennik konserwacji dodany"
+msgid "Log"
+msgstr "Dziennik"
+msgid "Save Log"
+msgstr "Zapisz dziennik"
+msgid "What was done..."
+msgstr "Co zrobiono..."
+msgid "Back to Machine"
+msgstr "Powrót do maszyny"
+msgid "parts need attention!"
+msgstr "części wymaga uwagi!"
+msgid "Total Parts"
+msgstr "Wszystkie części"
+msgid "Needs Maintenance"
+msgstr "Wymaga konserwacji"
+msgid "Needs Replacement"
+msgstr "Wymaga wymiany"
+msgid "replacement"
+msgstr "wymiana"
+msgid "maintenance"
+msgstr "konserwacja"
+msgid "inspection"
+msgstr "przegląd"
+
+# Maintenance Calendar
+msgid "Maintenance Calendar"
+msgstr "Kalendarz konserwacji"
+msgid "Overdue"
+msgstr "Zaległe"
+msgid "Days Overdue"
+msgstr "Dni zaległości"
+msgid "Fix"
+msgstr "Napraw"
+msgid "Mon"
+msgstr "Pon"
+msgid "Tue"
+msgstr "Wt"
+msgid "Wed"
+msgstr "Śr"
+msgid "Thu"
+msgstr "Czw"
+msgid "Fri"
+msgstr "Pt"
+msgid "Sat"
+msgstr "Sob"
+msgid "Sun"
+msgstr "Ndz"
+msgid "Upcoming Events"
+msgstr "Nadchodzące wydarzenia"
+msgid "No events this month"
+msgstr "Brak wydarzeń w tym miesiącu"
+msgid "Replacement"
+msgstr "Wymiana"
+msgid "Scheduled"
+msgstr "Zaplanowano"
+
+msgid "Worker added"
+msgstr "Pracownik dodany"
+
+msgid "Worker updated"
+msgstr "Pracownik zaktualizowany"
+
+msgid "Item added"
+msgstr "Przedmiot dodany"
+
+msgid "Item updated"
+msgstr "Przedmiot zaktualizowany"
+
+msgid "Insufficient stock!"
+msgstr "Niewystarczający stan magazynowy!"
+
+msgid "cylinders remaining"
+msgstr "butli pozostało"
+
+msgid "threshold"
+msgstr "próg"
+
+msgid "Order new cylinders"
+msgstr "Zamów nowe butle"
+
+msgid "Showing your sections only"
+msgstr "Wyświetlono tylko Twoje sekcje"
+
+msgid "Fit"
+msgstr "Dopasuj"
+
+msgid "Linked Responsible Person"
+msgstr "Powiązana osoba odpowiedzialna"
+
+msgid "None"
+msgstr "Brak"
+
+msgid "Link user to a responsible person to show their sections on the floor plan"
+msgstr "Powiąż użytkownika z osobą odpowiedzialną, aby wyświetlić jej sekcje na mapie"
+
+msgid "Login Access"
+msgstr "Dostęp do logowania"
+
+msgid "Leave empty to keep current"
+msgstr "Pozostaw puste, aby zachować bieżące"
+
+msgid "Login set"
+msgstr "Logowanie ustawione"
+
+msgid "Set password to allow login"
+msgstr "Ustaw hasło, aby umożliwić logowanie"
+
+msgid "Floor only"
+msgstr "Tylko mapa"
+
+msgid "see own sections"
+msgstr "widzieć swoje sekcje"
+
+msgid "Full map"
+msgstr "Pełna mapa"
+
+msgid "see all machines"
+msgstr "widzieć wszystkie maszyny"
+
+msgid "Limited"
+msgstr "Ograniczony"
+
+msgid "floor plan only"
+msgstr "tylko plan hali"
+
+msgid "Active"
+msgstr "Aktywny"
+
+msgid "can login"
+msgstr "może się logować"
+
+msgid "Assigned Sections"
+msgstr "Przypisane sekcje"
+
+msgid "Цеха"
+msgstr "Działy"
+
+msgid "Select sections this person is responsible for"
+msgstr "Wybierz sekcje, za które odpowiedzialna jest ta osoba"
+
+msgid "No group"
+msgstr "Bez grupy"
+
+msgid "No password"
+msgstr "Brak hasła"
+
+msgid "Last login"
+msgstr "Ostatnie logowanie"
+
+msgid "Edit password"
+msgstr "Zmień hasło"
+
+msgid "Mechanic"
+msgstr "Mechanik"
+
+msgid "Equipment Repairs"
+msgstr "Naprawy sprzętu"
+
+msgid "New Repair"
+msgstr "Nowa naprawa"
+
+msgid "Edit Repair"
+msgstr "Edytuj naprawę"
+
+msgid "New Repair Record"
+msgstr "Nowy wpis naprawy"
+
+msgid "All Repairs"
+msgstr "Wszystkie naprawy"
+
+msgid "Statistics"
+msgstr "Statystyki"
+
+msgid "Repair Statistics"
+msgstr "Statystyki napraw"
+
+msgid "Total Repairs"
+msgstr "Łączne naprawy"
+
+msgid "Total Cost"
+msgstr "Łączny koszt"
+
+msgid "Avg Days to Repair"
+msgstr "Śr. dni do naprawy"
+
+msgid "By Component Type"
+msgstr "Według typu komponentu"
+
+msgid "By Repair Company"
+msgstr "Według firmy naprawczej"
+
+msgid "Recent Repairs"
+msgstr "Ostatnie naprawy"
+
+msgid "Component"
+msgstr "Komponent"
+
+msgid "Gas"
+msgstr "Gaz"
+
+msgid "Fault"
+msgstr "Usterka"
+
+msgid "Company"
+msgstr "Firma"
+
+msgid "Broken"
+msgstr "Zepsute"
+
+msgid "In repair"
+msgstr "W naprawie"
+
+msgid "Repaired"
+msgstr "Naprawione"
+
+msgid "Replaced"
+msgstr "Wymienione"
+
+msgid "Installed"
+msgstr "Zainstalowane"
+
+msgid "All gases"
+msgstr "Wszystkie gazy"
+
+msgid "All statuses"
+msgstr "Wszystkie statusy"
+
+msgid "No repair records"
+msgstr "Brak wpisów napraw"
+
+msgid "All equipment is working fine!"
+msgstr "Wszystkie urządzenia działają!"
+
+msgid "Add Repair Record"
+msgstr "Dodaj wpis naprawy"
+
+msgid "Select component"
+msgstr "Wybierz komponent"
+
+msgid "What broke"
+msgstr "Co się zepsuło"
+
+msgid "Describe exactly what failed, symptoms, error codes..."
+msgstr "Opisz dokładnie co się zepsuło, objawy, kody błędów..."
+
+msgid "Date broken"
+msgstr "Data awarii"
+
+msgid "Date sent for repair"
+msgstr "Data wysłania do naprawy"
+
+msgid "Repair Company"
+msgstr "Firma naprawcza"
+
+msgid "Company name"
+msgstr "Nazwa firmy"
+
+msgid "Who performed the repair"
+msgstr "Kto wykonał naprawę"
+
+msgid "Repair cost"
+msgstr "Koszt naprawy"
+
+msgid "What was done"
+msgstr "Co zrobiono"
+
+msgid "Description of repair work"
+msgstr "Opis prac naprawczych"
+
+msgid "Date repaired"
+msgstr "Data naprawy"
+
+msgid "Date installed back"
+msgstr "Data ponownej instalacji"
+
+msgid "Send to repair"
+msgstr "Wyślij do naprawy"
+
+msgid "Mark repaired"
+msgstr "Oznacz jako naprawione"
+
+msgid "Mark installed"
+msgstr "Oznacz jako zainstalowane"
+
+msgid "Repair record created"
+msgstr "Wpis naprawy utworzony"
+
+msgid "Repair record updated"
+msgstr "Wpis naprawy zaktualizowany"
+
+msgid "No data"
+msgstr "Brak danych"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Count"
+msgstr "Liczba"
+
+msgid "Avg Days"
+msgstr "Śr. dni"
+
+msgid "Warehouse Movements"
+msgstr "Ruchy magazynowe"
+
+msgid "Movements"
+msgstr "Ruchy"
+
+msgid "All items"
+msgstr "Wszystkie pozycje"
+
+msgid "All types"
+msgstr "Wszystkie typy"
+
+msgid "Records"
+msgstr "Wpisy"
+
+msgid "Order"
+msgstr "Zamówienie"
+
+msgid "Comment"
+msgstr "Komentarz"
+
+msgid "No movements found"
+msgstr "Nie znaleziono ruchów"
+
+msgid "No stock movements recorded yet"
+msgstr "Nie zarejestrowano jeszcze ruchów magazynowych"
+
+msgid "Export CSV"
+msgstr "Eksport CSV"
+
+msgid "Edit Report"
+msgstr "Edytuj raport"
+
+msgid "Work report updated"
+msgstr "Raport pracy zaktualizowany"
+
+msgid "from warehouse"
+msgstr "z magazynu"
+
+msgid "Part"
+msgstr "Część"
+
+msgid "Qty"
+msgstr "Ilość"
+
+msgid "Print Label"
+msgstr "Drukuj etykietę"
+
+msgid "Print Labels"
+msgstr "Drukuj etykiety"
+
+msgid "Print"
+msgstr "Drukuj"
+
+msgid "Close"
+msgstr "Zamknij"
+
+msgid "Select All"
+msgstr "Zaznacz wszystko"
+
+msgid "Select machines first"
+msgstr "Najpierw wybierz maszyny"
+
+# Auth & Users
+msgid "Login"
+msgstr "Zaloguj się"
+msgid "Logout"
+msgstr "Wyloguj się"
+msgid "Username"
+msgstr "Nazwa użytkownika"
+msgid "Password"
+msgstr "Hasło"
+msgid "Invalid credentials"
+msgstr "Nieprawidłowe dane logowania"
+msgid "Profile"
+msgstr "Profil"
+msgid "Profile updated"
+msgstr "Profil zaktualizowany"
+msgid "Display Name"
+msgstr "Wyświetlana nazwa"
+msgid "New Password"
+msgstr "Nowe hasło"
+msgid "Confirm Password"
+msgstr "Potwierdź hasło"
+msgid "Enter new password"
+msgstr "Wprowadź nowe hasło"
+msgid "Repeat new password"
+msgstr "Powtórz nowe hasło"
+msgid "Change Password"
+msgstr "Zmień hasło"
+msgid "Password changed for %(username)s"
+msgstr "Hasło zmienione dla %(username)s"
+msgid "Passwords do not match"
+msgstr "Hasła nie pasują"
+msgid "Leave empty to keep current"
+msgstr "Pozostaw puste, aby zachować obecne"
+msgid "Delete user"
+msgstr "Usuń użytkownika"
+msgid "Cannot delete yourself"
+msgstr "Nie można usunąć siebie"
+msgid "User %(username)s deleted"
+msgstr "Użytkownik %(username)s usunięty"
+msgid "Personal Info"
+msgstr "Dane osobowe"
+msgid "Work Info"
+msgstr "Informacje o pracy"
+msgid "First Name"
+msgstr "Imię"
+msgid "Last Name"
+msgstr "Nazwisko"
+msgid "Current"
+msgstr "Obecne"
+msgid "Active"
+msgstr "Aktywny"
+msgid "Inactive"
+msgstr "Nieaktywny"
+msgid "Hire Date"
+msgstr "Data zatrudnienia"
+msgid "Fire Date"
+msgstr "Data zwolnienia"
+msgid "Linked person"
+msgstr "Powiązana osoba"
+msgid "User Cabinet"
+msgstr "Kabinet użytkownika"
+msgid "Users"
+msgstr "Użytkownicy"
+msgid "New User"
+msgstr "Nowy użytkownik"
+msgid "Edit User"
+msgstr "Edytuj użytkownika"
+msgid "User created"
+msgstr "Użytkownik utworzony"
+msgid "User updated"
+msgstr "Użytkownik zaktualizowany"
+msgid "Role"
+msgstr "Rola"
+msgid "Assigned Machines"
+msgstr "Przypisane maszyny"
+msgid "Videos"
+msgstr "Filmy"
+msgid "Attach videos of the fault (mp4, mov, avi, webm)"
+msgstr "Załącz filmy usterki (mp4, mov, avi, webm)"
+msgid "Your browser does not support video playback"
+msgstr "Twoja przeglądarka nie obsługuje odtwarzania wideo"

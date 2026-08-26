@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Monthly Schedule') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header" id="noPrint" style="margin-bottom:8px">
+    <h1 style="font-size:16px">📅 {{ _('Monthly Schedule') }}</h1>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <a href="/schedule" class="btn btn-sm" style="background:#eee;padding:4px 8px;font-size:11px">← {{ _('Schedules') }}</a>
+        <a href="/schedule/monthly?year={{ year }}&month={{ month-1 }}{% if filter_user %}&user={{ filter_user }}{% endif %}" class="btn btn-sm" style="background:#eee;padding:4px 8px;font-size:11px">◀</a>
+        <span style="padding:4px 8px;font-weight:700;font-size:13px">{{ ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'][month] }} {{ year }}</span>
+        <a href="/schedule/monthly?year={{ year }}&month={{ month+1 }}{% if filter_user %}&user={{ filter_user }}{% endif %}" class="btn btn-sm" style="background:#eee;padding:4px 8px;font-size:11px">▶</a>
+        <select onchange="location.href='/schedule/monthly?year={{ year }}&month={{ month }}&user='+this.value" style="padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px">
+            <option value="">{{ _('All monteurs') }}</option>
+            {% for u in all_users %}
+            <option value="{{ u.id }}" {% if filter_user == u.id|string %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="window.print()" class="btn btn-sm" style="background:#2c3e50;color:white;padding:4px 8px;font-size:11px">🖨️</button>
+        <button onclick="deleteAllMonthShifts()" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px;font-size:11px">🗑️ {{ _('Delete all') }}</button>
+    </div>
+</div>
+
+<!-- LEGEND -->
+<div style="display:flex;gap:12px;margin-bottom:6px;font-size:10px;flex-wrap:wrap" id="noPrint">
+    <span>✓ {{ _('Work') }}</span>
+    <span style="color:#e74c3c">🎉 {{ _('Holiday') }}</span>
+    <span style="color:#888">{{ _('Click to select') }} → {{ _('assign below') }}</span>
+</div>
+
+<!-- BULK ACTION BAR -->
+<div id="bulkBar" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#2c3e50;color:white;padding:8px 16px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:100;gap:8px;align-items:center;flex-wrap:wrap">
+    <span id="selectedCount" style="font-weight:700;margin-right:6px;font-size:12px"></span>
+    <button onclick="bulkSetShift('full')" style="padding:6px 10px;border-radius:6px;border:none;background:#27ae60;color:white;font-size:11px;font-weight:600;cursor:pointer">✓ {{ _('Full') }}</button>
+    <button onclick="bulkSetShift('morning')" style="padding:6px 10px;border-radius:6px;border:none;background:#3498db;color:white;font-size:11px;font-weight:600;cursor:pointer">🌅</button>
+    <button onclick="bulkSetShift('afternoon')" style="padding:6px 10px;border-radius:6px;border:none;background:#e67e22;color:white;font-size:11px;font-weight:600;cursor:pointer">🌆</button>
+    <button onclick="bulkSetShift('off')" style="padding:6px 10px;border-radius:6px;border:none;background:#e74c3c;color:white;font-size:11px;font-weight:600;cursor:pointer">✗ {{ _('Off') }}</button>
+    <button onclick="bulkSetShift('sick')" style="padding:6px 10px;border-radius:6px;border:none;background:#f39c12;color:white;font-size:11px;font-weight:600;cursor:pointer">🤒</button>
+    <button onclick="bulkRemove()" style="padding:6px 10px;border-radius:6px;border:none;background:#95a5a6;color:white;font-size:11px;font-weight:600;cursor:pointer">↺</button>
+    <button onclick="clearSelection()" style="padding:6px 10px;border-radius:6px;border:none;background:#555;color:white;font-size:11px;cursor:pointer">✕</button>
+</div>
+
+<!-- SCHEDULE TABLE -->
+<div class="card" style="padding:4px;overflow:hidden">
+    <table style="width:100%;table-layout:fixed;border-collapse:collapse" id="scheduleTable">
+        <thead>
+            <tr>
+                <th style="position:sticky;left:0;background:#2c3e50;color:white;z-index:2;width:90px;padding:3px 4px;font-size:10px">{{ _('Worker') }}</th>
+                {% for d in days %}
+                <th style="text-align:center;padding:2px 0;font-size:9px;line-height:1.1;{% if d.is_holiday %}background:#f8d7da;color:#c0392b{% elif d.is_weekend %}background:#e8f4fd;color:#2980b9{% endif %}">
+                    <div style="font-size:7px;color:{% if d.is_holiday %}#c0392b{% elif d.is_weekend %}#2980b9{% else %}#999{% endif %}">{{ ['M','D','W','D','V','Z','Z'][d.weekday] }}</div>
+                    <div style="font-weight:700;font-size:10px">{{ d.day }}</div>
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            {% set sched = user_schedules.get(u.id) %}
+            <tr>
+                <td style="position:sticky;left:0;background:white;z-index:1;padding:3px 4px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #eee">
+                    {{ u.display_name or u.username }}
+                    {% if sched %}<br><span style="color:#27ae60;font-size:8px">{{ sched.shift_start }}-{{ sched.shift_end }}</span>{% endif %}
+                    <span onclick="deleteUserShifts({{ u.id }},'{{ u.display_name or u.username }}')" style="float:right;cursor:pointer;color:#e74c3c;font-size:10px;opacity:0.5" title="{{ _('Delete shifts') }}">🗑️</span>
+                </td>
+                {% for d in days %}
+                {% set key = (u.id, d.date) %}
+                {% set shift = shift_map.get(key) %}
+                {% set is_workday = sched and (d.weekday + 1)|string in sched.work_days.split(',') %}
+                <td class="shift-cell" style="text-align:center;padding:1px;cursor:pointer;{% if d.is_holiday %}background:#fdf0f0{% elif d.is_weekend %}background:#f0f8ff{% elif is_workday %}background:#e8f5e9{% endif %};border-bottom:1px solid #f0f0f0"
+                    onclick="toggleCell(this,{{ u.id }},'{{ d.date.strftime('%Y-%m-%d') }}')"
+                    data-user="{{ u.id }}"
+                    data-date="{{ d.date.strftime('%Y-%m-%d') }}"
+                    data-shift="{{ shift.shift_type if shift else '' }}">
+                    {% if shift %}
+                        {% if shift.shift_type == 'off' %}
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#e74c3c;color:white;font-size:8px;line-height:16px">✗</span>
+                        {% elif shift.shift_type == 'sick' %}
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#f39c12;color:white;font-size:8px;line-height:16px">🤒</span>
+                        {% else %}
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#27ae60;color:white;font-size:8px;line-height:16px">✓</span>
+                        {% endif %}
+                    {% elif is_workday and not d.is_holiday %}
+                    <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#27ae60;color:white;font-size:8px;line-height:16px">✓</span>
+                    {% elif d.is_holiday %}
+                    <span style="font-size:8px;color:#e74c3c">🎉</span>
+                    {% elif d.is_weekend %}
+                    <span style="font-size:8px;color:#ccc">—</span>
+                    {% else %}
+                    <span style="font-size:8px;color:#eee">·</span>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- HOLIDAYS LIST -->
+{% if holidays %}
+<div class="card" style="margin-top:8px;border-left:3px solid #e74c3c;padding:8px 12px" id="noPrint">
+    <details>
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#e74c3c">🇧🇪 {{ _('Belgian Holidays') }} {{ year }} ({{ holidays|length }})</summary>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:3px;margin-top:6px">
+            {% for date, name in holidays.items()|sort(attribute='0') %}
+            <div style="display:flex;gap:6px;align-items:center;padding:3px 6px;background:{% if date.month == month %}#fdf0f0{% else %}#f8f9fa{% endif %};border-radius:4px;font-size:10px">
+                <span style="font-weight:700;min-width:36px;color:#e74c3c;font-size:10px">{{ date.strftime('%d-%m') }}</span>
+                <span>{{ name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+<!-- PRINT INFO (visible only when printing) -->
+<div style="display:none" class="print-only">
+    <p style="font-size:11px;color:#888;margin-top:12px">{{ _('Printed') }}: {{ _('Monthly Schedule') }} — A.B.A.S.O.F.F. ProMaster</p>
+</div>
+
+<style>
+.shift-cell.selected { outline: 3px solid #3498db; outline-offset: -3px; background: #d4e6f1 !important; }
+@media print {
+    #noPrint { display: none !important; }
+    #bulkBar { display: none !important; }
+    .topbar { display: none !important; }
+    .nav-dropdown { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    .print-only { display: block !important; }
+    table th, table td { font-size: 10px !important; padding: 3px 2px !important; }
+    body { padding: 0 !important; margin: 0 !important; }
+    .container { max-width: 100% !important; padding: 8px !important; }
+}
+</style>
+
+<script>
+const selected = new Set();
+
+function toggleCell(cell, userId, dateStr) {
+    const key = userId + '|' + dateStr;
+    if (selected.has(key)) {
+        selected.delete(key);
+        cell.classList.remove('selected');
+    } else {
+        selected.add(key);
+        cell.classList.add('selected');
+    }
+    updateBulkBar();
+}
+
+function updateBulkBar() {
+    const bar = document.getElementById('bulkBar');
+    const count = document.getElementById('selectedCount');
+    if (selected.size > 0) {
+        bar.style.display = 'flex';
+        count.textContent = selected.size + ' {{ _("selected") }}';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function clearSelection() {
+    selected.clear();
+    document.querySelectorAll('.shift-cell.selected').forEach(c => c.classList.remove('selected'));
+    updateBulkBar();
+}
+
+function bulkSetShift(type) {
+    const entries = Array.from(selected).map(k => {
+        const [uid, date] = k.split('|');
+        return {user_id: parseInt(uid), date: date, action: 'add', shift_type: type};
+    });
+    let done = 0;
+    entries.forEach(e => {
+        fetch('/schedule/monthly/shift', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(e)
+        }).then(r => r.json()).then(d => {
+            done++;
+            if (done === entries.length) location.reload();
+        });
+    });
+}
+
+function bulkRemove() {
+    const entries = Array.from(selected).map(k => {
+        const [uid, date] = k.split('|');
+        return {user_id: parseInt(uid), date: date, action: 'remove'};
+    });
+    let done = 0;
+    entries.forEach(e => {
+        fetch('/schedule/monthly/shift', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(e)
+        }).then(r => r.json()).then(d => {
+            done++;
+            if (done === entries.length) location.reload();
+        });
+    });
+}
+
+function deleteUserShifts(userId, name) {
+    if (!confirm('{{ _("Delete all shifts for") }} ' + name + ' {{ _("this month?") }}')) return;
+    fetch('/schedule/monthly/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userId, year: {{ year }}, month: {{ month }}})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+    });
+}
+
+function deleteAllMonthShifts() {
+    if (!confirm('{{ _("Delete ALL shifts for ALL monteurs this month?") }}')) return;
+    let done = 0;
+    const users = [{% for u in all_users %}{{ u.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+    if (users.length === 0) return;
+    users.forEach(uid => {
+        fetch('/schedule/monthly/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: uid, year: {{ year }}, month: {{ month }}})
+        }).then(r => r.json()).then(d => {
+            done++;
+            if (done === users.length) location.reload();
+        });
+    });
+}
+</script>
+{% endblock %}

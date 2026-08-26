@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Archive') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Monthly Archive') }}</h1>
+    {% if current_user.has_role('admin') %}
+    <form method="POST" action="/archive/create" onsubmit="return confirm('{{ _('Archive previous month data?') }}')">
+        <button type="submit" class="btn btn-primary">📦 {{ _('Archive Previous Month') }}</button>
+    </form>
+    {% endif %}
+</div>
+
+{% if months %}
+{% for month, items in months.items() %}
+<div class="card" style="margin-bottom:16px">
+    <h2 style="margin-bottom:14px;font-size:16px">📅 {{ month }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        {% for a in items %}
+        <a href="/archive/{{ a.archive_month }}/{{ a.section }}" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f8f9fc;border-radius:10px;text-decoration:none;color:#333;border:1px solid #e8ecf1;transition:all 0.15s" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='#f8f9fc'">
+            <span style="font-size:20px">
+                {% if a.section == 'faults' %}⚠️{% elif a.section == 'orders' %}📋{% elif a.section == 'work_reports' %}📝{% elif a.section == 'time_entries' %}⏱{% else %}📄{% endif %}
+            </span>
+            <div>
+                <div style="font-weight:600;font-size:13px">
+                    {% if a.section == 'faults' %}{{ _('Faults') }}{% elif a.section == 'orders' %}{{ _('Orders') }}{% elif a.section == 'work_reports' %}{{ _('Work Reports') }}{% elif a.section == 'time_entries' %}{{ _('Time Entries') }}{% else %}{{ a.section }}{% endif %}
+                </div>
+                <div style="font-size:11px;color:#888">{{ a.data_json|length }} {{ _('records') }}</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:40px;color:#999">
+        <div style="font-size:48px;margin-bottom:12px">📦</div>
+        <div>{{ _('No archives yet') }}</div>
+        <div style="font-size:13px;margin-top:8px">{{ _('Click "Archive Previous Month" to create first archive') }}</div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Machines Report') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Machines Report') }}</h1>
+    <a href="/machines" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <form method="POST" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin:0;flex:1;min-width:200px">
+            <label>{{ _('Machines') }}</label>
+            <select name="machine_ids" multiple style="min-height:100px">
+                {% for m in all_machines %}
+                <option value="{{ m.id }}" {% if m.id|string in selected_machines %}selected{% endif %}>{{ m.name }}</option>
+                {% endfor %}
+            </select>
+            <small style="color:#888">{{ _('Hold Ctrl to select multiple') }}</small>
+        </div>
+        <div class="form-group" style="margin:0">
+            <label>{{ _('Date From') }}</label>
+            <input type="date" name="date_from" value="{{ date_from }}">
+        </div>
+        <div class="form-group" style="margin:0">
+            <label>{{ _('Date To') }}</label>
+            <input type="date" name="date_to" value="{{ date_to }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Show Report') }}</button>
+    </form>
+</div>
+
+{% if report_data %}
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Location') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Faults') }}</th>
+            <th>{{ _('Open') }}</th>
+            <th>{{ _('Resolved') }}</th>
+            <th>{{ _('Maintenance') }}</th>
+            <th>{{ _('Cost') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for r in report_data %}
+        <tr>
+            <td><a href="/machines/{{ r.machine.id }}">{{ r.machine.name }}</a></td>
+            <td>{{ r.machine.machine_type or '—' }}</td>
+            <td>{{ r.machine.installation_location or '—' }}</td>
+            <td><span class="badge badge-{{ r.machine.status }}">{{ r.machine.status }}</span></td>
+            <td>{{ r.faults_total }}</td>
+            <td style="{% if r.faults_open > 0 %}color:#e74c3c;font-weight:bold{% endif %}">{{ r.faults_open }}</td>
+            <td>{{ r.faults_resolved }}</td>
+            <td>{{ r.maintenance_total }}</td>
+            <td>€{{ "%.0f"|format(r.maintenance_cost) }}</td>
+            <td><a href="/machines/{{ r.machine.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a></td>
+        </tr>
+        {% endfor %}
+        <tr style="background:#f8f9fa;font-weight:bold">
+            <td colspan="4">{{ _('Total') }}</td>
+            <td>{{ report_data|sum(attribute='faults_total') }}</td>
+            <td>{{ report_data|sum(attribute='faults_open') }}</td>
+            <td>{{ report_data|sum(attribute='faults_resolved') }}</td>
+            <td>{{ report_data|sum(attribute='maintenance_total') }}</td>
+            <td>€{{ "%.0f"|format(report_data|sum(attribute='maintenance_cost')) }}</td>
+            <td></td>
+        </tr>
+    </table></div>
+</div>
+
+<!-- Summary stats -->
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ report_data|length }}</div><div class="label">{{ _('Machines') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ report_data|sum(attribute='faults_open') }}</div><div class="label">{{ _('Open Faults') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ report_data|sum(attribute='faults_resolved') }}</div><div class="label">{{ _('Resolved') }}</div></div>
+    <div class="stat-card"><div class="number">€{{ "%.0f"|format(report_data|sum(attribute='maintenance_cost')) }}</div><div class="label">{{ _('Total Cost') }}</div></div>
+</div>
+{% endif %}
+{% endblock %}

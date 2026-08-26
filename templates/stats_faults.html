@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Fault Statistics') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Fault Statistics') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/stats/faults" class="btn btn-sm btn-primary">{{ _('Faults') }}</a>
+        <a href="/stats/parts" class="btn btn-sm" style="background:#eee">{{ _('Parts') }}</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ total }}</div><div class="label">{{ _('Total') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ open_count }}</div><div class="label">{{ _('Open') }}</div></div>
+    <div class="stat-card"><div class="number">{{ in_progress }}</div><div class="label">{{ _('In Progress') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ resolved }}</div><div class="label">{{ _('Resolved') }}</div></div>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('By Machine') }}</h2>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Machine') }}</th><th>{{ _('Faults') }}</th></tr>
+            {% for name, count in by_machine %}
+            <tr><td>{{ name }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+        </table></div>
+    </div>
+    <div class="card">
+        <h2>{{ _('By Priority') }}</h2>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Priority') }}</th><th>{{ _('Count') }}</th></tr>
+            {% for priority, count in by_priority %}
+            <tr><td><span class="badge badge-{{ priority }}">{{ priority }}</span></td><td>{{ count }}</td></tr>
+            {% endfor %}
+        </table></div>
+    </div>
+</div>
+{% endblock %}

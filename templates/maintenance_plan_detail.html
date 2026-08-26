@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.title }} — {{ _('Maintenance Plan') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ plan.title }}</h1>
+    <div style="display:flex;gap:8px">
+        {% if current_user.has_role('admin', 'technician') %}
+        <a href="/maintenance-plans/{{ plan.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        {% endif %}
+        <a href="/maintenance-plans" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('General info') }}</h2>
+        <p><strong>{{ _('Machine') }}:</strong> <a href="/machines/{{ plan.machine_id }}">{{ plan.machine.name }}</a></p>
+        <p><strong>{{ _('Type') }}:</strong> <span class="badge badge-{{ plan.maintenance_type }}">{{ plan.maintenance_type }}</span></p>
+        <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ plan.status }}">{{ plan.status }}</span></p>
+        <p><strong>{{ _('Cost') }}:</strong> €{{ "%.2f"|format(plan.cost) }}</p>
+        {% if plan.description %}
+        <p><strong>{{ _('Description') }}:</strong><br>{{ plan.description }}</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>{{ _('Dates') }}</h2>
+        <p><strong>{{ _('Planned Start') }}:</strong> {{ plan.planned_start.strftime('%d-%m-%Y') }}</p>
+        {% if plan.planned_end %}<p><strong>{{ _('Planned End') }}:</strong> {{ plan.planned_end.strftime('%d-%m-%Y') }}</p>{% endif %}
+        {% if plan.actual_start %}<p><strong>{{ _('Actual Start') }}:</strong> {{ plan.actual_start.strftime('%d-%m-%Y') }}</p>{% endif %}
+        {% if plan.actual_end %}<p><strong>{{ _('Actual End') }}:</strong> {{ plan.actual_end.strftime('%d-%m-%Y') }}</p>{% endif %}
+        {% if plan.next_maintenance %}<p><strong>{{ _('Next Maintenance') }}:</strong> {{ plan.next_maintenance.strftime('%d-%m-%Y') }}</p>{% endif %}
+        <p><strong>{{ _('Created') }}:</strong> {{ plan.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+    </div>
+
+    <div class="card">
+        <h2>{{ _('Executor') }}</h2>
+        {% if plan.is_external %}
+            <p><strong>🏢 {{ _('External company') }}</strong></p>
+            <p><strong>{{ _('Company') }}:</strong> {{ plan.company_name or '—' }}</p>
+            <p><strong>{{ _('Contact') }}:</strong> {{ plan.company_contact or '—' }}</p>
+            <p><strong>{{ _('Person') }}:</strong> {{ plan.company_person or '—' }}</p>
+            {% if plan.offer_file %}
+            <p><strong>{{ _('Offer') }}:</strong> <a href="/static/uploads/{{ plan.offer_file }}" target="_blank">📎 {{ plan.offer_file }}</a></p>
+            {% endif %}
+        {% else %}
+            <p>🔧 {{ _('Internal') }}</p>
+            <p><strong>{{ _('Worker') }}:</strong> {{ plan.worker.naam if plan.worker else '—' }}{% if plan.worker %} ({{ plan.worker.specialisatie }}){% endif %}</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>{{ _('Parts & Report') }}</h2>
+        {% if plan.parts_used and plan.parts_used != '[]' %}
+        <p><strong>{{ _('Parts Used') }}:</strong></p>
+        <pre style="background:#f8f9fa;padding:8px;border-radius:8px;font-size:12px;overflow-x:auto">{{ plan.parts_used }}</pre>
+        {% endif %}
+        {% if plan.report %}
+        <p><strong>{{ _('Work report') }}:</strong></p>
+        <div style="background:#f8f9fa;padding:12px;border-radius:8px;font-size:14px;white-space:pre-wrap">{{ plan.report }}</div>
+        {% endif %}
+        {% if plan.work_act_file %}
+        <p><strong>{{ _('Work Act') }}:</strong> <a href="/static/uploads/{{ plan.work_act_file }}" target="_blank">📎 {{ plan.work_act_file }}</a></p>
+        {% endif %}
+        {% if plan.notes %}
+        <p><strong>{{ _('Notes') }}:</strong> {{ plan.notes }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ _('QR Scan') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ _('Scan QR Code') }}</h1></div>
+<div class="card">
+    <h2>{{ _('Scan QR Code') }}</h2>
+    <div id="reader" style="width:100%;max-width:100%;margin:0 auto"></div>
+    <div id="result" style="margin-top:12px;display:none">
+        <div class="alert alert-success" id="result-text"></div>
+        <div id="result-actions" style="margin-top:10px"></div>
+    </div>
+</div>
+<div class="card">
+    <h2>{{ _('Search') }}</h2>
+    <form onsubmit="manualSearch(event)" style="display:flex;gap:8px">
+        <input type="text" id="manual-code" placeholder="{{ _('Serial Number') }} {{ _('or') }} {{ _('Phone') }}..." style="flex:1;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:16px">
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Search') }}</button>
+    </form>
+</div>
+<div class="card" id="history-card" style="display:none">
+    <h2>{{ _('History') }}</h2>
+    <div id="history"></div>
+</div>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+const hist=[];
+function onScanSuccess(txt){
+    document.getElementById('result').style.display='block';
+    document.getElementById('result-text').textContent='{{ _("Scanned") }}: '+txt;
+    csrfFetch('/api/qr/lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:txt})})
+    .then(r=>r.json()).then(d=>{
+        const a=document.getElementById('result-actions');a.innerHTML='';
+        if(d.found){
+            if(d.type==='opdracht'||d.type==='serienummer'){
+                a.innerHTML=`<p><strong>${esc(d.apparaat)} ${esc(d.model||'')}</strong> — ${esc(d.klant)}</p><p>{{ _("Status") }}: ${esc(d.status)}</p>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><a href="/orders/${parseInt(d.id)}" class="btn btn-primary btn-sm">{{ _("View") }}</a><a href="/orders/${parseInt(d.id)}/edit" class="btn btn-success btn-sm">{{ _("Edit") }}</a></div>`;
+            }else if(d.type==='klant'){
+                let h=`<p><strong>${esc(d.klant)}</strong> (${esc(d.telefoon)})</p>`;
+                if(d.orders){h+='<ul>'+d.orders.map(o=>`<li><a href="/orders/${parseInt(o.id)}">${esc(o.nummer)}</a> — ${esc(o.apparaat)}</li>`).join('')+'</ul>';}
+                h+=`<a href="/orders/new?klant=${encodeURIComponent(d.klant)}" class="btn btn-primary btn-sm" style="margin-top:8px">{{ _("New Order") }}</a>`;
+                a.innerHTML=h;
+            }
+        }else{
+            let p;try{p=JSON.parse(txt)}catch(e){p=null}
+            if(p&&(p.apparaat||p.model)){
+                a.innerHTML=`<a href="/orders/new?apparaat=${encodeURIComponent(p.apparaat||'')}&model=${encodeURIComponent(p.model||'')}&sn=${encodeURIComponent(p.serienummer||'')}" class="btn btn-primary btn-sm">{{ _("New Order") }}</a>`;
+            }else{
+                a.innerHTML=`<a href="/orders/new?sn=${encodeURIComponent(txt)}" class="btn btn-primary btn-sm">{{ _("New Order") }}</a>`;
+            }
+        }
+        hist.unshift({code:txt,time:new Date().toLocaleTimeString()});updateHist();
+    });
+}
+function manualSearch(e){e.preventDefault();const v=document.getElementById('manual-code').value.trim();if(v)onScanSuccess(v);}
+function updateHist(){if(!hist.length)return;document.getElementById('history-card').style.display='block';document.getElementById('history').innerHTML=hist.map(h=>`<p style="font-size:13px">${esc(h.time)}: <code>${esc(h.code)}</code></p>`).join('');}
+const scanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:{width:250,height:250},aspectRatio:1,showTorchButtonIfSupported:true});
+scanner.render(onScanSuccess,()=>{});
+</script>
+<style>#reader{border:2px solid #3498db;border-radius:12px;overflow:hidden}#reader__scan_region{min-height:250px}</style>
+{% endblock %}

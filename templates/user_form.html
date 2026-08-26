@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit User') if user else _('New User') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit User') + ': ' + user.username if user else _('New User') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Username') }} *</label><input type="text" name="username" value="{{ user.username if user else '' }}" required {{ 'readonly' if user else '' }}></div>
+            <div class="form-group"><label>{{ _('Password') }} {{ '' if user else '*' }}</label><input type="password" name="password" {{ 'required' if not user else '' }} placeholder="{{ _('Leave empty to keep current') if user else '' }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('First Name') }}</label><input type="text" name="first_name" value="{{ user.first_name if user else '' }}"></div>
+            <div class="form-group"><label>{{ _('Last Name') }}</label><input type="text" name="last_name" value="{{ user.last_name if user else '' }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" value="{{ user.display_name if user else '' }}"></div>
+            <div class="form-group">
+                <label>{{ _('Role') }}</label>
+                <select name="role" id="roleSelect" onchange="onRoleChange()">
+                    {% for r, label in [('admin', _('Admin')), ('moderator', _('Moderator')), ('director', _('Director')), ('technician', _('Technician')), ('user', _('User'))] %}
+                    <option value="{{ r }}" {% if user and user.role==r %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <small style="color:#888;font-size:11px">
+                    {{ _('Admin') }}: {{ _('full access') }} |
+                    {{ _('Moderator') }}: {{ _('full access, no system changes') }} |
+                    {{ _('Others') }}: {{ _('controlled by permissions') }}
+                </small>
+            </div>
+        </div>
+
+        <!-- PERMISSIONS -->
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px" id="permissionsBlock">
+            <h3 style="font-size:14px;margin-bottom:12px">🔑 {{ _('Permissions') }}</h3>
+            <div class="form-group">
+                <select name="access_level" id="accessLevel" onchange="toggleSections()">
+                    <option value="full" {% if not user or user.access_level == 'full' %}selected{% endif %}>{{ _('Full access') }}</option>
+                    <option value="partial" {% if user and user.access_level == 'partial' %}selected{% endif %}>{{ _('Partial access') }}</option>
+                    <option value="limited" {% if user and user.access_level == 'limited' %}selected{% endif %}>{{ _('Limited access') }}</option>
+                </select>
+            </div>
+            <div id="sectionsBlock" style="display:{% if user and user.access_level == 'partial' %}block{% else %}none{% endif %}">
+                <label style="font-weight:600;font-size:13px;margin-bottom:8px;display:block">{{ _('Allowed sections') }}</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;padding:12px;background:white;border-radius:8px">
+                    {% set labels = {
+                        'machines': _('Machines'), 'warehouse': _('Warehouse'), 'orders': _('Work Orders'),
+                        'clients': _('Responsible persons'), 'workers': _('Workers'), 'faults': _('Faults'),
+                        'messages': _('Messages'), 'reports': _('Reports'), 'schedule': _('Schedule'),
+                        'time_tracking': _('Time Tracking'), 'vacations': _('Vacations'),
+                        'cylinders': _('Gas Cylinders'), 'maintenance': _('Maintenance'),
+                        'purchase_requests': _('Purchase Requests'), 'users': _('Users'),
+                        'sections': _('Sections'), 'floor': _('Floor Plan'),
+                        'invoices': _('Invoices'), 'contractors': _('Contractors'),
+                        'two': _('TWO'), 'audit_log': _('Audit Log')
+                    } %}
+                    {% for key in section_keys %}
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+                        <input type="checkbox" name="allowed_sections" value="{{ key }}"
+                            {% if user and user.allowed_sections|selectattr('section_key','equalto',key)|list|length > 0 %}checked{% endif %}>
+                        {{ labels.get(key, key) }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Hire Date') }}</label>
+                <input type="date" name="hire_date" value="{{ user.hire_date.strftime('%Y-%m-%d') if user and user.hire_date else '' }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Fire Date') }}</label>
+                <input type="date" name="fire_date" value="{{ user.fire_date.strftime('%Y-%m-%d') if user and user.fire_date else '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Linked Responsible Person') }}</label>
+            <select name="person_id">
+                <option value="">— {{ _('None') }} —</option>
+                {% for v in verantwoordelijken %}
+                <option value="{{ v.id }}" {% if user and user.person_id == v.id %}selected{% endif %}>{{ v.naam }}{% if v.company %} ({{ v.company }}){% endif %}</option>
+                {% endfor %}
+            </select>
+            <small style="color:#888;font-size:11px">{{ _('Link user to a responsible person to show their sections on the floor plan') }}</small>
+        </div>
+        {% if user %}
+        <div class="form-group">
+            <label><input type="checkbox" name="is_active" {% if user.is_active_user %}checked{% endif %}> {{ _('Active') }}</label>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <label>{{ _('Assigned Machines') }}</label>
+            <div style="padding:12px;background:#f8f9fa;border-radius:8px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:8px;cursor:pointer">
+                    <input type="checkbox" id="selectAllMachines" onchange="toggleAllMachines(this)">
+                    {{ _('Select all') }}
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+                    {% for m in machines %}
+                    <label style="display:flex;align-items:center;gap:8px;font-size:14px" class="machine-check">
+                        <input type="checkbox" name="machines" value="{{ m.id }}" {% if user and m in user.assigned_machines %}checked{% endif %} onchange="updateSelectAll()">
+                        {{ m.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+        <a href="/users" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+    </form>
+</div>
+
+<script>
+function toggleSections() {
+    const level = document.getElementById('accessLevel').value;
+    document.getElementById('sectionsBlock').style.display = level === 'partial' ? 'block' : 'none';
+}
+function onRoleChange() {
+    const role = document.getElementById('roleSelect').value;
+    if (role === 'admin' || role === 'moderator') {
+        document.getElementById('accessLevel').value = 'full';
+        document.getElementById('sectionsBlock').style.display = 'none';
+    }
+}
+function toggleAllMachines(master) {
+    document.querySelectorAll('.machine-check input[type="checkbox"]').forEach(cb => { cb.checked = master.checked; });
+}
+function updateSelectAll() {
+    const all = document.querySelectorAll('.machine-check input[type="checkbox"]');
+    const checked = document.querySelectorAll('.machine-check input[type="checkbox"]:checked');
+    document.getElementById('selectAllMachines').checked = all.length === checked.length;
+}
+</script>
+{% endblock %}

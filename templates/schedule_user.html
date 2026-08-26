@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Schedule') }} — {{ user.display_name or user.username }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📅 {{ _('Schedule') }} — {{ user.display_name or user.username }}</h1>
+    <a href="/schedule" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #eee">
+        <div>
+            <span class="badge badge-{{ user.role }}">{{ user.role }}</span>
+            {% if user.hire_date %}
+            <span style="font-size:13px;color:#888;margin-left:8px">{{ _('Hired') }}: {{ user.hire_date.strftime('%d-%m-%Y') }}</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <h2>{{ _('Add Schedule') }}</h2>
+    <form method="POST" style="margin-bottom:24px">
+        <div class="form-group">
+            <label>{{ _('Shift Name') }}</label>
+            <input type="text" name="name" required placeholder="Morning Shift, Night Shift...">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Work Days') }}</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <label style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:#3498db;color:white;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">
+                    <input type="checkbox" id="selectAllDays" onchange="toggleAllDays(this)" style="width:18px;height:18px;cursor:pointer;accent-color:white"> {{ _('All') }}
+                </label>
+                {% for d, name in [(1,'Mon'),(2,'Tue'),(3,'Wed'),(4,'Thu'),(5,'Fri'),(6,'Sat'),(7,'Sun')] %}
+                <label class="day-check" style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:#f8f9fa;border-radius:6px;font-size:13px;cursor:pointer;border:2px solid transparent;transition:0.2s" onclick="updateDayStyle(this)">
+                    <input type="checkbox" name="work_days" value="{{ d }}" {% if d < 6 %}checked{% endif %} onchange="updateSelectAll()" style="width:18px;height:18px;cursor:pointer;accent-color:#3498db"> {{ name }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Shift Start') }}</label><input type="time" name="shift_start" value="08:00" required></div>
+            <div class="form-group"><label>{{ _('Shift End') }}</label><input type="time" name="shift_end" value="17:00" required></div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Break') }} ({{ _('minutes') }})</label>
+            <input type="number" name="break_minutes" value="60" min="0" max="120">
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Add Schedule') }}</button>
+    </form>
+    
+    <h2>{{ _('Current Schedules') }}</h2>
+    {% if schedules %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Start') }}</th><th>{{ _('End') }}</th><th>{{ _('Break') }}</th><th>{{ _('Days') }}</th></tr>
+        {% for s in schedules %}
+        <tr>
+            <td>{{ s.name }}</td>
+            <td>{{ s.shift_start }}</td>
+            <td>{{ s.shift_end }}</td>
+            <td>{{ s.break_minutes }} min</td>
+            <td>
+                {% for d in s.work_days.split(',') %}
+                {% if d == '1' %}Mon{% elif d == '2' %}Tue{% elif d == '3' %}Wed{% elif d == '4' %}Thu{% elif d == '5' %}Fri{% elif d == '6' %}Sat{% elif d == '7' %}Sun{% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No schedules set') }}</p>
+    {% endif %}
+</div>
+
+<script>
+function toggleAllDays(master) {
+    document.querySelectorAll('.day-check input[type=checkbox]').forEach(cb => {
+        cb.checked = master.checked;
+    });
+    document.querySelectorAll('.day-check').forEach(el => updateDayStyle(el));
+}
+
+function updateSelectAll() {
+    const all = document.querySelectorAll('.day-check input[type=checkbox]');
+    const checked = document.querySelectorAll('.day-check input[type=checkbox]:checked');
+    document.getElementById('selectAllDays').checked = all.length === checked.length;
+    document.querySelectorAll('.day-check').forEach(el => updateDayStyle(el));
+}
+
+function updateDayStyle(label) {
+    const cb = label.querySelector('input');
+    label.style.borderColor = cb.checked ? '#3498db' : 'transparent';
+    label.style.background = cb.checked ? '#e8f4fd' : '#f8f9fa';
+}
+
+// Init styles on load
+document.querySelectorAll('.day-check').forEach(el => updateDayStyle(el));
+updateSelectAll();
+</script>
+{% endblock %}

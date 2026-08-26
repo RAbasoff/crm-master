@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}{{ _('User Groups') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👥 {{ _('User Groups') }}</h1>
+    <button class="btn btn-primary" onclick="document.getElementById('newUserModal').style.display='flex'">+ {{ _('New User') }}</button>
+</div>
+
+<!-- ROLE DESCRIPTIONS -->
+<div class="card" style="background:#f8f9fa;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+        <div style="padding:8px;background:#e74c3c22;border-radius:8px"><strong>Admin</strong><br><small>{{ _('Full access, system settings') }}</small></div>
+        <div style="padding:8px;background:#9b59b622;border-radius:8px"><strong>Moderator</strong><br><small>{{ _('Full access, no system changes') }}</small></div>
+        <div style="padding:8px;background:#3498db22;border-radius:8px"><strong>Director</strong><br><small>{{ _('Set by admin/moderator') }}</small></div>
+        <div style="padding:8px;background:#f39c1222;border-radius:8px"><strong>Technician</strong><br><small>{{ _('Set by admin/moderator') }}</small></div>
+        <div style="padding:8px;background:#27ae6022;border-radius:8px"><strong>User</strong><br><small>{{ _('Set by admin/moderator') }}</small></div>
+    </div>
+</div>
+
+<!-- USERS TABLE -->
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Username') }}</th>
+            <th>{{ _('Password') }}</th>
+            <th>{{ _('Role') }}</th>
+            <th>{{ _('Access') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th></th>
+        </tr>
+        {% for u in users %}
+        <tr>
+            <td><strong>{{ u.first_name or '' }} {{ u.last_name or '' }}</strong>{% if u.display_name %}<br><small style="color:#888">{{ u.display_name }}</small>{% endif %}</td>
+            <td><code>{{ u.username }}</code></td>
+            <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">••••••</code></td>
+            <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+            <td><span class="badge badge-{% if u.access_level == 'full' %}active{% elif u.access_level == 'partial' %}high{% else %}broken{% endif %}">{{ u.access_level }}</span></td>
+            <td>{% if u.is_active_user %}<span class="badge badge-active">{{ _('Active') }}</span>{% else %}<span class="badge badge-offline">{{ _('Inactive') }}</span>{% endif %}</td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <button class="btn btn-sm btn-primary" style="padding:4px 8px" onclick="editUser({{ u.id }})">✏️</button>
+                    <a href="/users/{{ u.id }}" class="btn btn-sm" style="background:#eee;padding:4px 8px">👤</a>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+<!-- NEW USER MODAL -->
+<div id="newUserModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:600px;width:95%;max-height:90vh;overflow:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0">{{ _('New User') }}</h2>
+            <button onclick="document.getElementById('newUserModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <form method="POST" action="/users/new">
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Username') }} *</label><input type="text" name="username" required></div>
+                <div class="form-group"><label>{{ _('Password') }} *</label><input type="password" name="password" required></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('First Name') }}</label><input type="text" name="first_name"></div>
+                <div class="form-group"><label>{{ _('Last Name') }}</label><input type="text" name="last_name"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name"></div>
+                <div class="form-group">
+                    <label>{{ _('Role') }}</label>
+                    <select name="role">
+                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('moderator', 'Moderator'), ('admin', 'Admin')] %}
+                        <option value="{{ r }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Access Level') }}</label>
+                <select name="access_level">
+                    <option value="full">{{ _('Full access') }}</option>
+                    <option value="partial">{{ _('Partial access') }}</option>
+                    <option value="limited">{{ _('Limited access') }}</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('newUserModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Create') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div id="editUserModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:600px;width:95%;max-height:90vh;overflow:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0">{{ _('Edit User') }}</h2>
+            <button onclick="document.getElementById('editUserModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <form id="editUserForm" method="POST">
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Username') }}</label><input type="text" name="username" id="edit_username" readonly style="background:#f0f0f0"></div>
+                <div class="form-group"><label>{{ _('Password') }} ({{ _('leave empty to keep') }})</label><input type="password" name="password" id="edit_password"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('First Name') }}</label><input type="text" name="first_name" id="edit_first_name"></div>
+                <div class="form-group"><label>{{ _('Last Name') }}</label><input type="text" name="last_name" id="edit_last_name"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" id="edit_display_name"></div>
+                <div class="form-group">
+                    <label>{{ _('Role') }}</label>
+                    <select name="role" id="edit_role">
+                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('moderator', 'Moderator'), ('admin', 'Admin')] %}
+                        <option value="{{ r }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Access Level') }}</label>
+                <select name="access_level" id="edit_access_level">
+                    <option value="full">{{ _('Full access') }}</option>
+                    <option value="partial">{{ _('Partial access') }}</option>
+                    <option value="limited">{{ _('Limited access') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" name="is_active" id="edit_is_active"> {{ _('Active') }}</label>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('editUserModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// User data for editing
+const users = {
+    {% for u in users %}
+    {{ u.id }}: {
+        username: '{{ u.username }}',
+        first_name: '{{ u.first_name or "" }}',
+        last_name: '{{ u.last_name or "" }}',
+        display_name: '{{ u.display_name or "" }}',
+        role: '{{ u.role }}',
+        access_level: '{{ u.access_level }}',
+        is_active: {{ 'true' if u.is_active_user else 'false' }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+function editUser(id) {
+    const u = users[id];
+    if (!u) return;
+    document.getElementById('edit_username').value = u.username;
+    document.getElementById('edit_first_name').value = u.first_name;
+    document.getElementById('edit_last_name').value = u.last_name;
+    document.getElementById('edit_display_name').value = u.display_name;
+    document.getElementById('edit_role').value = u.role;
+    document.getElementById('edit_access_level').value = u.access_level;
+    document.getElementById('edit_is_active').checked = u.is_active;
+    document.getElementById('edit_password').value = '';
+    document.getElementById('editUserForm').action = '/users/' + id + '/edit';
+    document.getElementById('editUserModal').style.display = 'flex';
+}
+
+// Close modals on outside click
+document.querySelectorAll('[id$="Modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+</script>
+{% endblock %}

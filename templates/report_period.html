@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Period Report') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ _('Period Report') }}</h1></div>
+<div class="card">
+    <form method="POST" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin:0;flex:1;min-width:130px"><label>{{ _('Date From') }}</label><input type="date" name="date_from" value="{{ date_from }}"></div>
+        <div class="form-group" style="margin:0;flex:1;min-width:130px"><label>{{ _('Date To') }}</label><input type="date" name="date_to" value="{{ date_to }}"></div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Show Report') }}</button>
+    </form>
+</div>
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ total_orders }}</div><div class="label">{{ _('Work Orders') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ completed }}</div><div class="label">{{ _('Completed') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ cancelled }}</div><div class="label">{{ _('Cancelled') }}</div></div>
+    <div class="stat-card"><div class="number">€{{ "%.0f"|format(total_revenue) }}</div><div class="label">{{ _('Revenue') }}</div></div>
+</div>
+{% if worker_stats %}
+<div class="card">
+    <h2>{{ _('Worker Statistics') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Worker') }}</th><th>{{ _('Work Orders Count') }}</th><th>{{ _('Completed') }}</th><th>{{ _('Revenue') }}</th></tr>
+        {% for id, ws in worker_stats.items() %}
+        <tr>
+            <td><a href="/reports/worker/{{ id }}?date_from={{ date_from }}&date_to={{ date_to }}">{{ ws.naam }}</a></td>
+            <td>{{ ws.orders }}</td><td>{{ ws.voltooid }}</td><td>€{{ "%.0f"|format(ws.omzet) }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+<div class="card">
+    <h2>{{ _('Work Orders') }} ({{ orders|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Number') }}</th><th>{{ _('Responsible person') }}</th><th>{{ _('Device') }}</th><th>{{ _('Status') }}</th><th>{{ _('Total') }}</th><th>{{ _('Date') }}</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td><a href="/orders/{{ o.id }}">{{ o.nummer }}</a></td>
+            <td>{{ o.verantwoordelijke.naam }}</td><td>{{ o.apparaat }}</td>
+            <td><span class="badge badge-{{ o.status.replace(' ','-') }}">{{ o.status }}</span></td>
+            <td>€{{ "%.0f"|format(o.totaal) }}</td><td>{{ o.aangemaakt.strftime('%d-%m') }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

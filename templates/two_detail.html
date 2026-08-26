@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}{{ two.number }} — TWO — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ two.number }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/two/{{ two.id }}/print" class="btn btn-sm" style="background:#2c3e50;color:white" target="_blank">🖨️ {{ _('Print') }}</a>
+        {% if two.status != 'completed' %}
+        <a href="/two/{{ two.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        {% endif %}
+        <a href="/two" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('General info') }}</h2>
+        <p><strong>{{ _('Number') }}:</strong> {{ two.number }}</p>
+        <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{% if two.status == 'completed' %}closed{% elif two.status == 'in_progress' %}in_progress{% elif two.status == 'cancelled' %}geannuleerd{% else %}open{% endif %}">{{ two.status }}</span></p>
+        {% if two.fault %}
+        <p><strong>{{ _('Fault') }}:</strong> <a href="/faults/{{ two.fault_id }}">#{{ two.fault_id }} {{ two.fault.title }}</a></p>
+        {% endif %}
+        {% if two.machine %}
+        <p><strong>{{ _('Machine') }}:</strong> <a href="/machines/{{ two.machine_id }}">{{ two.machine.name }}</a></p>
+        {% else %}
+        <p><strong>{{ _('Machine') }}:</strong> <span style="color:#888">{{ _('Without machine') }}</span></p>
+        {% endif %}
+        {% if two.section %}
+        <p><strong>{{ _('Section') }}:</strong> {{ two.section.name }}</p>
+        {% endif %}
+        <p><strong>{{ _('Created') }}:</strong> {{ two.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+    </div>
+
+    <div class="card">
+        <h2>👷 {{ _('Workers') }}</h2>
+        {% if two.workers %}
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+            {% for w in two.workers %}
+            <div style="background:#f0f7ff;padding:8px 12px;border-radius:8px">
+                <strong>{{ w.naam }}</strong>
+                {% if w.specialisatie %}<br><small style="color:#888">{{ w.specialisatie }}</small>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:#888">{{ _('No workers assigned') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+    <h2>📝 {{ _('Description') }}</h2>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;white-space:pre-wrap">{{ two.description }}</div>
+    {% if two.additional_work %}
+    <h3 style="margin-top:12px;font-size:14px">{{ _('Additional work') }}</h3>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;white-space:pre-wrap">{{ two.additional_work }}</div>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top:16px">
+    <h2>📅 {{ _('Schedule') }}</h2>
+    <div class="detail-grid">
+        <div>
+            <p><strong>{{ _('Planned') }}:</strong> {{ two.planned_date.strftime('%d-%m-%Y') if two.planned_date else '—' }}</p>
+            <p><strong>{{ _('Started') }}:</strong> {{ two.started_at.strftime('%d-%m-%Y %H:%M') if two.started_at else '—' }}</p>
+            <p><strong>{{ _('Completed') }}:</strong> {{ two.completed_at.strftime('%d-%m-%Y %H:%M') if two.completed_at else '—' }}</p>
+        </div>
+        <div>
+            <p><strong>{{ _('Time spent') }}:</strong> {{ two.time_spent_hours }} {{ _('hours') }}</p>
+            {% if two.planned_date and two.completed_at %}
+                {% set planned = two.planned_date %}
+                {% set actual = two.completed_at.date() %}
+                {% set diff = (actual - planned).days %}
+                <p><strong>{{ _('Delay') }}:</strong>
+                    {% if diff > 0 %}<span style="color:#e74c3c">+{{ diff }} {{ _('days') }}</span>
+                    {% elif diff == 0 %}<span style="color:#27ae60">{{ _('On time') }}</span>
+                    {% else %}<span style="color:#27ae60">{{ diff }} {{ _('days early') }}</span>{% endif %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if two.result %}
+<div class="card" style="margin-top:16px">
+    <h2>✅ {{ _('Result') }}</h2>
+    <div style="background:#f0fff0;padding:12px;border-radius:8px;white-space:pre-wrap">{{ two.result }}</div>
+    {% if two.parts_used %}
+    <h3 style="margin-top:12px;font-size:14px">{{ _('Parts used') }}</h3>
+    <pre style="background:#f8f9fa;padding:8px;border-radius:8px;font-size:12px">{{ two.parts_used }}</pre>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if two.photos %}
+<div class="card" style="margin-top:16px">
+    <h2>📷 {{ _('Photos') }}</h2>
+    <div class="photo-grid">
+        {% for p in two.photos %}
+        <img src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="window.open(this.src)">
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if two.notes %}
+<div class="card" style="margin-top:16px">
+    <h2>📝 {{ _('Notes') }}</h2>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;white-space:pre-wrap">{{ two.notes }}</div>
+</div>
+{% endif %}
+
+<!-- CHECKLIST -->
+<div class="card" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="margin:0">✅ {{ _('Checklist') }} ({{ two.checklist_items|length }})</h2>
+        {% if two.status != 'completed' %}
+        <form method="POST" action="/two/{{ two.id }}/checklist/add" style="display:flex;gap:8px">
+            <input type="text" name="text" placeholder="{{ _('New item...') }}" required style="padding:8px 12px;border:1px solid #dde1e8;border-radius:8px;font-size:13px;min-width:200px">
+            <button type="submit" class="btn btn-sm btn-primary">+ {{ _('Add') }}</button>
+        </form>
+        {% endif %}
+    </div>
+    
+    {% if two.checklist_items %}
+    <div style="display:flex;flex-direction:column;gap:6px">
+        {% for item in two.checklist_items %}
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:{% if item.is_done %}#f0fff0{% else %}#f8f9fc{% endif %};border-radius:8px;border:1px solid {% if item.is_done %}#d4edda{% else %}#e8ecf1{% endif %}">
+            <input type="checkbox" {% if item.is_done %}checked{% endif %} onchange="toggleChecklist({{ item.id }}, this)" style="width:20px;height:20px;cursor:pointer;accent-color:#27ae60">
+            <div style="flex:1;min-width:0">
+                <div style="font-size:14px;{% if item.is_done %}text-decoration:line-through;color:#888{% else %}color:#333{% endif %}">{{ item.text }}</div>
+                {% if item.is_done and item.done_at %}
+                <div style="font-size:11px;color:#27ae60;margin-top:2px">
+                    ✓ {{ item.done_at.strftime('%d.%m.%Y %H:%M') }}
+                    {% if item.done_user %} · {{ item.done_user.display_name or item.done_user.username }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% if two.status != 'completed' %}
+            <form method="POST" action="/two/checklist/{{ item.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                <button type="submit" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px">✕</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:20px;color:#999;font-size:13px">{{ _('No checklist items') }}</div>
+    {% endif %}
+</div>
+
+<!-- SIGNATURES -->
+<div class="card" style="margin-top:16px">
+    <h2>✍️ {{ _('Signatures') }}</h2>
+    
+    {% if two.signatures %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+        {% for sig in two.signatures %}
+        <div style="border:1px solid #e8ecf1;border-radius:10px;padding:12px;text-align:center">
+            <img src="{{ sig.signature_data }}" style="max-height:80px;margin-bottom:8px">
+            <div style="font-weight:600;font-size:13px">{{ sig.signer_name }}</div>
+            <div style="font-size:11px;color:#888">{{ sig.signed_at.strftime('%d.%m.%Y %H:%M') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if two.status != 'completed' %}
+    <div style="border:2px dashed #dde1e8;border-radius:12px;padding:16px">
+        <h3 style="font-size:14px;margin-bottom:12px">{{ _('Add Signature') }}</h3>
+        <form method="POST" action="/two/{{ two.id }}/signature" id="signatureForm">
+            <input type="hidden" name="signature_data" id="signatureData">
+            <div class="form-group">
+                <label>{{ _('Signer Name') }}</label>
+                <input type="text" name="signer_name" required placeholder="{{ _('Name of person accepting work') }}">
+            </div>
+            <div style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:600;color:#444;display:block;margin-bottom:6px">{{ _('Sign below') }}</label>
+                <canvas id="signatureCanvas" width="400" height="150" style="width:100%;height:150px;border:1px solid #dde1e8;border-radius:8px;background:white;touch-action:none"></canvas>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="clearSignature()">{{ _('Clear') }}</button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success" id="signBtn" disabled>✍️ {{ _('Sign & Complete') }}</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Checklist toggle
+function toggleChecklist(itemId, checkbox) {
+    fetch('/two/checklist/' + itemId + '/toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    }).then(r => r.json()).then(d => {
+        if (d.ok) {
+            const row = checkbox.parentElement;
+            const textEl = row.querySelector('div > div:first-child');
+            const timeEl = row.querySelector('div > div:last-child');
+            if (d.is_done) {
+                row.style.background = '#f0fff0';
+                row.style.borderColor = '#d4edda';
+                textEl.style.textDecoration = 'line-through';
+                textEl.style.color = '#888';
+                if (timeEl) timeEl.innerHTML = '✓ ' + d.done_at;
+            } else {
+                row.style.background = '#f8f9fc';
+                row.style.borderColor = '#e8ecf1';
+                textEl.style.textDecoration = 'none';
+                textEl.style.color = '#333';
+                if (timeEl) timeEl.innerHTML = '';
+            }
+        }
+    });
+}
+
+// Signature pad
+const canvas = document.getElementById('signatureCanvas');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+let hasSignature = false;
+
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDraw);
+canvas.addEventListener('mouseleave', stopDraw);
+canvas.addEventListener('touchstart', startDraw, {passive: false});
+canvas.addEventListener('touchmove', draw, {passive: false});
+canvas.addEventListener('touchend', stopDraw);
+
+function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    hasSignature = true;
+    document.getElementById('signBtn').disabled = false;
+}
+
+function stopDraw() {
+    drawing = false;
+}
+
+function clearSignature() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasSignature = false;
+    document.getElementById('signBtn').disabled = true;
+}
+
+document.getElementById('signatureForm').addEventListener('submit', function(e) {
+    if (!hasSignature) {
+        e.preventDefault();
+        return;
+    }
+    document.getElementById('signatureData').value = canvas.toDataURL('image/png');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Machine') if machine else _('New Machine') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit Machine') + ': ' + machine.name if machine else _('New Machine') }}</h1>
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="name" value="{{ machine.name if machine else '' }}" required></div>
+            <div class="form-group"><label>{{ _('Machine Type') }}</label><input type="text" name="machine_type" value="{{ machine.machine_type if machine else '' }}" placeholder="CNC, Lathe, Press..."></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Manufacturer') }}</label><input type="text" name="manufacturer" value="{{ machine.manufacturer if machine else '' }}"></div>
+            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial_number" value="{{ machine.serial_number if machine else '' }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Year of Manufacture') }}</label><input type="number" name="year_of_manufacture" value="{{ machine.year_of_manufacture if machine else '' }}" min="1900" max="2030"></div>
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    {% for s in ['active', 'maintenance', 'broken', 'offline'] %}
+                    <option value="{{ s }}" {% if machine and machine.status==s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="card" style="background:#f8f9fa;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Map Icon') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Size') }}: <span id="sizeVal">{{ machine.marker_size if machine else 45 }}</span>px</label>
+                    <input type="range" name="marker_size" id="markerSize" min="25" max="80" step="5" value="{{ machine.marker_size if machine else 45 }}" oninput="document.getElementById('sizeVal').textContent=this.value;updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Shape') }}</label>
+                    <select name="marker_shape" id="markerShape" onchange="updatePreview()">
+                        {% for shape, label in [('circle', '●'), ('square', '■'), ('hexagon', '⬡'), ('diamond', '◆')] %}
+                        <option value="{{ shape }}" {% if machine and machine.marker_shape == shape %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top:8px">
+                <label style="font-size:13px;color:#888">{{ _('Preview') }}:</label>
+                <div id="iconPreview" style="margin-top:8px;display:flex;align-items:center;gap:12px"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Section') }} ({{ _('Group on map') }})</label>
+            <select name="section_id" id="sectionSelect" onchange="onSectionChange()">
+                <option value="">{{ _('Not assigned') }}</option>
+                {% for s in sections %}
+                <option value="{{ s.id }}" data-x="{{ s.floor_x }}" data-y="{{ s.floor_y }}" data-w="{{ s.width }}" data-h="{{ s.height }}" {% if machine and machine.section_id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.section_type }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group"><label>{{ _('Installation Location') }}</label><input type="text" name="installation_location" value="{{ machine.installation_location if machine else '' }}" placeholder="Building A, Floor 2, Zone 3..."></div>
+
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Responsible persons') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Responsible person') }} ({{ _('from list') }})</label>
+                    <select name="responsible_person_id">
+                        <option value="">{{ _('Not assigned') }}</option>
+                        {% for v in verantwoordelijken %}
+                        <option value="{{ v.id }}" {% if machine and machine.responsible_person_id == v.id %}selected{% endif %}>{{ v.naam }}{% if v.telefoon %} ({{ v.telefoon }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Responsible user') }} ({{ _('system') }})</label>
+                    <select name="responsible_user_id">
+                        <option value="">{{ _('Not assigned') }}</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if machine and machine.responsible_user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }} ({{ u.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('User group') }}</label>
+                <div style="max-height:80px;overflow-y:auto;padding:8px;background:white;border-radius:8px">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;margin-bottom:4px;cursor:pointer">
+                        <input type="checkbox" id="selectAllUsers" onchange="toggleAllUsers(this)">
+                        {{ _('Select all') }}
+                    </label>
+                    {% for u in users %}
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px" class="user-check">
+                        <input type="checkbox" name="assigned_users" value="{{ u.id }}"
+                            {% if machine and u in machine.assigned_users %}checked{% endif %}>
+                        {{ u.display_name or u.username }} <span style="color:#888;font-size:10px">({{ u.role }})</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top:12px">
+                <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+                    <input type="checkbox" id="isExternal" onchange="toggleExternal()" {% if machine and machine.contractor_id %}checked{% endif %}>
+                    {{ _('External contractor') }}
+                </label>
+            </div>
+            <div id="externalBlock" style="display:{% if machine and machine.contractor_id %}block{% else %}none{% endif %}">
+                <div class="form-group">
+                    <label>{{ _('Contractor') }}</label>
+                    <select name="contractor_id">
+                        <option value="">{{ _('Not assigned') }}</option>
+                        {% for c in contractors %}
+                        <option value="{{ c.id }}" {% if machine and machine.contractor_id == c.id %}selected{% endif %}>{{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-group"><label>{{ _('Description') }}</label><textarea name="description" rows="3">{{ machine.description if machine else '' }}</textarea></div>
+        <div class="form-group">
+            <label>{{ _('Photo') }}</label>
+            <input type="file" name="photo" accept="image/*">
+            {% if machine and machine.photo %}
+            <div style="margin-top:8px"><img src="/static/uploads/{{ machine.photo }}" style="max-height:100px;border-radius:8px"></div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="background:#f0f4f8;margin-bottom:16px">
+            <h3 style="font-size:14px;margin-bottom:8px">{{ _('Position on Map') }}</h3>
+            <p style="font-size:12px;color:#888;margin-bottom:10px">{{ _('Auto-set when section is selected, or set manually') }}</p>
+            <div class="form-row">
+                <div class="form-group"><label>X (%)</label><input type="number" name="floor_x" id="floorX" value="{{ machine.floor_x if machine else 50 }}" min="2" max="98" step="1"></div>
+                <div class="form-group"><label>Y (%)</label><input type="number" name="floor_y" id="floorY" value="{{ machine.floor_y if machine else 50 }}" min="2" max="98" step="1"></div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+        <a href="/machines{% if machine %}/{{ machine.id }}{% endif %}" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+    </form>
+</div>
+
+<script>
+function onSectionChange() {
+    const sel = document.getElementById('sectionSelect');
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt.value) return;
+    const x = parseFloat(opt.dataset.x);
+    const y = parseFloat(opt.dataset.y);
+    const w = parseFloat(opt.dataset.w);
+    const h = parseFloat(opt.dataset.h);
+    if (!isNaN(x)) document.getElementById('floorX').value = Math.round(x + w / 2);
+    if (!isNaN(y)) document.getElementById('floorY').value = Math.round(y + h / 2);
+}
+
+function toggleAllUsers(master) {
+    document.querySelectorAll('.user-check input[type="checkbox"]').forEach(cb => { cb.checked = master.checked; });
+}
+
+function toggleExternal() {
+    document.getElementById('externalBlock').style.display = document.getElementById('isExternal').checked ? 'block' : 'none';
+}
+
+function updatePreview() {
+    const size = parseInt(document.getElementById('markerSize').value);
+    const shape = document.getElementById('markerShape').value;
+    const preview = document.getElementById('iconPreview');
+    let borderRadius;
+    switch(shape) {
+        case 'circle': borderRadius = '50%'; break;
+        case 'square': borderRadius = '6px'; break;
+        case 'hexagon': borderRadius = '30% 70% 70% 30% / 30% 30% 70% 70%'; break;
+        case 'diamond': borderRadius = '4px'; break;
+        default: borderRadius = '50%';
+    }
+    const rotate = shape === 'diamond' ? 'transform:rotate(45deg)' : '';
+    preview.innerHTML = `<div style="width:${size}px;height:${size}px;background:white;border:3px solid #3498db;border-radius:${borderRadius};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.45)}px;box-shadow:0 2px 8px rgba(0,0,0,0.2);${rotate}">⚙️</div>
+        <span style="font-size:12px;color:#888">${size}px × ${size}px</span>`;
+}
+updatePreview();
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit invoice') if invoice else _('New invoice') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit invoice') + ' ' + invoice.invoice_number if invoice else _('New invoice') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Invoice number') }} *</label>
+                <input type="text" name="invoice_number" value="{{ invoice.invoice_number if invoice else '' }}" required>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Supplier') }} *</label>
+                <input type="text" name="supplier" value="{{ invoice.supplier if invoice else '' }}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Invoice date') }} *</label>
+                <input type="date" name="invoice_date" value="{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice else '' }}" required>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Due date') }}</label>
+                <input type="date" name="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') if invoice and invoice.due_date else '' }}">
+            </div>
+        </div>
+
+        <div class="card" style="background:#f8f9fa;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Invoice items') }}</h3>
+            <div id="itemsContainer">
+                {% if invoice and invoice.items %}
+                    {% for item in invoice.items %}
+                    <div class="item-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+                        <input type="text" name="item_desc[]" value="{{ item.description }}" placeholder="{{ _('Description') }}" style="flex:2" required>
+                        <input type="number" name="item_qty[]" value="{{ item.quantity }}" step="0.1" min="0.1" placeholder="{{ _('Qty') }}" style="width:80px">
+                        <input type="number" name="item_price[]" value="{{ item.unit_price }}" step="0.01" min="0" placeholder="{{ _('Price') }}" style="width:100px">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="item-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+                        <input type="text" name="item_desc[]" placeholder="{{ _('Description') }}" style="flex:2" required>
+                        <input type="number" name="item_qty[]" value="1" step="0.1" min="0.1" placeholder="{{ _('Qty') }}" style="width:80px">
+                        <input type="number" name="item_price[]" step="0.01" min="0" placeholder="{{ _('Price') }}" style="width:100px">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>
+                    </div>
+                {% endif %}
+            </div>
+            <button type="button" class="btn btn-sm" style="background:#eee;margin-top:8px" onclick="addItem()">+ {{ _('Add item') }}</button>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Total') }} (€)</label>
+                <input type="number" name="total" value="{{ invoice.total if invoice else '0' }}" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Notes') }}</label>
+                <textarea name="notes" rows="2">{{ invoice.notes if invoice else '' }}</textarea>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/invoices" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addItem() {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center';
+    row.innerHTML = `<input type="text" name="item_desc[]" placeholder="{{ _('Description') }}" style="flex:2" required>
+        <input type="number" name="item_qty[]" value="1" step="0.1" min="0.1" placeholder="{{ _('Qty') }}" style="width:80px">
+        <input type="number" name="item_price[]" step="0.01" min="0" placeholder="{{ _('Price') }}" style="width:100px">
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>`;
+    document.getElementById('itemsContainer').appendChild(row);
+}
+</script>
+{% endblock %}

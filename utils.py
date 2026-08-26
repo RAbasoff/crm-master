@@ -1,0 +1,277 @@
+from functools import wraps
+from flask import flash, redirect, url_for, request
+from flask_login import current_user
+from flask_babel import gettext as _
+from datetime import datetime, timedelta
+from models import db, Notification, AuditLog, GroupPermission, Verantwoordelijke
+import os
+from werkzeug.utils import secure_filename
+
+SECTION_KEYS = [
+    'machines', 'warehouse', 'orders', 'clients', 'workers', 'faults',
+    'messages', 'reports', 'schedule', 'time_tracking', 'vacations',
+    'cylinders', 'maintenance', 'purchase_requests', 'users', 'sections', 'floor',
+    'invoices', 'contractors', 'two', 'audit_log', 'quality'
+]
+
+# Role hierarchy: admin > moderator > director > technician > user
+# admin: full access, can modify program settings
+# moderator: full access, cannot modify program settings (users, sections)
+# director/technician/user: access controlled by allowed_sections and group permissions
+
+def role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('login'))
+            if current_user.role not in roles:
+                flash(_('Access denied'), 'error')
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_user_group_permissions(user):
+    """Get permissions from user's group (via person_id link)"""
+    if not user.person_id:
+        return {}
+    person = Verantwoordelijke.query.get(user.person_id)
+    if not person or not person.group_id:
+        return {}
+    perms = GroupPermission.query.filter_by(group_id=person.group_id).all()
+    return {p.section_key: p for p in perms}
+
+def user_has_section_access(section_key, action='view'):
+    # Admin always has full access
+    if current_user.role == 'admin':
+        return True
+    # Moderator has full access except system settings
+    if current_user.role == 'moderator':
+        if section_key in ('users', 'audit_log'):
+            return False
+        return True
+    # Check group permissions first
+    group_perms = get_user_group_permissions(current_user)
+    if section_key in group_perms:
+        perm = group_perms[section_key]
+        if action == 'view': return perm.can_view
+        if action == 'create': return perm.can_create
+        if action == 'edit': return perm.can_edit
+        if action == 'delete': return perm.can_delete
+        return perm.can_view
+    # Fallback to access_level
+    if current_user.access_level == 'full':
+        return True
+    if current_user.access_level == 'limited':
+        return False
+    return any(s.section_key == section_key for s in current_user.allowed_sections)
+
+def section_access_required(section_key, action='view'):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('login'))
+            if not user_has_section_access(section_key, action):
+                flash(_('Access denied'), 'error')
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def create_notification(user_id, title, message, ntype='info', link=None):
+    n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
+    db.session.add(n)
+    db.session.commit()
+
+def log_audit(action, entity_type=None, entity_id=None, details=None):
+    try:
+        log = AuditLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            action=action, entity_type=entity_type, entity_id=entity_id,
+            details=details, ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+def genereer_nummer():
+    from models import Opdracht
+    vandaag = datetime.utcnow()
+    prefix = vandaag.strftime('%Y%m%d')
+    laatste = Opdracht.query.filter(Opdracht.nummer.like(f'WO-{prefix}-%')).order_by(Opdracht.id.desc()).first()
+    if laatste:
+        num = int(laatste.nummer.split('-')[2]) + 1
+    else:
+        num = 1
+    return f'WO-{prefix}-{num:04d}'
+
+def date_plus_days(d, days):
+    if d and days:
+        return d + timedelta(days=days)
+    return None
+
+def save_uploaded_file(file, prefix=''):
+    if file and file.filename:
+        filename = secure_filename(f"{prefix}{file.filename}")
+        from flask import current_app
+        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+        return filename
+    return None
+
+def translate_text(text, target_lang):
+    if not text or target_lang == 'auto':
+        return text
+    try:
+        from deep_translator import GoogleTranslator
+        translator = GoogleTranslator(source='auto', target=target_lang)
+        return translator.translate(text)
+    except Exception:
+        return text
+
+def run_migrations():
+    import sqlite3
+    from flask import current_app
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+    if not os.path.exists(db_path):
+        return
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    migrations = [
+        ("section_responsible", "CREATE TABLE IF NOT EXISTS section_responsible (section_id INTEGER REFERENCES factory_section(id), person_id INTEGER REFERENCES client(id), PRIMARY KEY (section_id, person_id))"),
+        ("gas_cylinder.received_at", "ALTER TABLE gas_cylinder ADD COLUMN received_at DATETIME"),
+        ("machine_part.responsible_user_id", "ALTER TABLE machine_part ADD COLUMN responsible_user_id INTEGER REFERENCES user(id)"),
+        ("user.access_level", "ALTER TABLE user ADD COLUMN access_level VARCHAR(20) DEFAULT 'full'"),
+        ("user.person_id", "ALTER TABLE user ADD COLUMN person_id INTEGER REFERENCES client(id)"),
+        ("user_section_access", "CREATE TABLE IF NOT EXISTS user_section_access (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id) NOT NULL, section_key VARCHAR(50) NOT NULL)"),
+        ("warehouse_group", "CREATE TABLE IF NOT EXISTS warehouse_group (id INTEGER PRIMARY KEY, name VARCHAR(200) NOT NULL, manufacturer VARCHAR(200), description TEXT, created_at DATETIME)"),
+        ("warehouse_item.group_id", "ALTER TABLE warehouse_item ADD COLUMN group_id INTEGER REFERENCES warehouse_group(id)"),
+        ("responsible_group", "CREATE TABLE IF NOT EXISTS responsible_group (id INTEGER PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT, created_at DATETIME)"),
+        ("client.group_id", "ALTER TABLE client ADD COLUMN group_id INTEGER REFERENCES responsible_group(id)"),
+        ("client.monteur_id", "ALTER TABLE client ADD COLUMN monteur_id INTEGER REFERENCES worker(id)"),
+        ("worker.user_id", "ALTER TABLE worker ADD COLUMN user_id INTEGER REFERENCES user(id)"),
+        ("worker.group_id", "ALTER TABLE worker ADD COLUMN group_id INTEGER REFERENCES responsible_group(id)"),
+        ("machine.marker_size", "ALTER TABLE machine ADD COLUMN marker_size INTEGER DEFAULT 45"),
+        ("machine.marker_shape", "ALTER TABLE machine ADD COLUMN marker_shape VARCHAR(20) DEFAULT 'circle'"),
+        ("machine.contractor_id", "ALTER TABLE machine ADD COLUMN contractor_id INTEGER REFERENCES contractor(id)"),
+        ("contractor", """CREATE TABLE IF NOT EXISTS contractor (
+            id INTEGER PRIMARY KEY, company_name VARCHAR(200) NOT NULL, contact_person VARCHAR(200),
+            contact_position VARCHAR(100), phone VARCHAR(50), phone2 VARCHAR(50), email VARCHAR(100),
+            website VARCHAR(200), address VARCHAR(300), postcode VARCHAR(20), city VARCHAR(100),
+            country VARCHAR(100) DEFAULT 'Nederland', kvk_number VARCHAR(50), btw_number VARCHAR(50),
+            iban VARCHAR(50), service_type VARCHAR(200), contract_number VARCHAR(100),
+            contract_start DATE, contract_end DATE, notes TEXT, is_active BOOLEAN DEFAULT 1, created_at DATETIME
+        )"""),
+        ("contractor_employee", "CREATE TABLE IF NOT EXISTS contractor_employee (id INTEGER PRIMARY KEY, contractor_id INTEGER REFERENCES contractor(id) NOT NULL, name VARCHAR(200) NOT NULL, position VARCHAR(100), phone VARCHAR(50), email VARCHAR(100), notes TEXT)"),
+        ("audit_log", "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id), action VARCHAR(50) NOT NULL, entity_type VARCHAR(50), entity_id INTEGER, details TEXT, ip_address VARCHAR(50), created_at DATETIME)"),
+        ("responsible_group.access_level", "ALTER TABLE responsible_group ADD COLUMN access_level VARCHAR(20) DEFAULT 'user'"),
+        ("group_permission", """CREATE TABLE IF NOT EXISTS group_permission (
+            id INTEGER PRIMARY KEY, 
+            group_id INTEGER NOT NULL REFERENCES responsible_group(id), 
+            section_key VARCHAR(50) NOT NULL,
+            can_view BOOLEAN DEFAULT 0,
+            can_create BOOLEAN DEFAULT 0,
+            can_edit BOOLEAN DEFAULT 0,
+            can_delete BOOLEAN DEFAULT 0,
+            UNIQUE(group_id, section_key)
+        )"""),
+        ("warehouse_item.description", "ALTER TABLE warehouse_item ADD COLUMN description TEXT"),
+        ("client.password_hash", "ALTER TABLE client ADD COLUMN password_hash VARCHAR(200)"),
+        ("client.access_level", "ALTER TABLE client ADD COLUMN access_level VARCHAR(20) DEFAULT 'floor'"),
+        ("client.is_active", "ALTER TABLE client ADD COLUMN is_active BOOLEAN DEFAULT 1"),
+        ("client.last_login", "ALTER TABLE client ADD COLUMN last_login DATETIME"),
+        ("gas_system_component.installed_at", "ALTER TABLE gas_system_component ADD COLUMN installed_at DATETIME"),
+        ("equipment_repair", """CREATE TABLE IF NOT EXISTS equipment_repair (
+            id INTEGER PRIMARY KEY,
+            component_id INTEGER NOT NULL REFERENCES gas_system_component(id),
+            fault_description TEXT NOT NULL,
+            date_broken DATETIME NOT NULL,
+            repair_company VARCHAR(200),
+            repair_description TEXT,
+            repair_cost FLOAT DEFAULT 0,
+            date_sent DATETIME,
+            date_repaired DATETIME,
+            date_installed DATETIME,
+            status VARCHAR(20) DEFAULT 'broken',
+            notes TEXT,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME
+        )"""),
+        ("warehouse_item.supplier_part_number", "ALTER TABLE warehouse_item ADD COLUMN supplier_part_number VARCHAR(100)"),
+        ("fault_report.contractor_id", "ALTER TABLE fault_report ADD COLUMN contractor_id INTEGER REFERENCES contractor(id)"),
+        ("weekend_shift", "CREATE TABLE IF NOT EXISTS weekend_shift (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id) NOT NULL, date DATE NOT NULL, shift_type VARCHAR(20) DEFAULT 'full', notes TEXT, created_by INTEGER REFERENCES user(id), created_at DATETIME)"),
+        ("fault_status_history", "CREATE TABLE IF NOT EXISTS fault_status_history (id INTEGER PRIMARY KEY, fault_id INTEGER REFERENCES fault_report(id) NOT NULL, old_status VARCHAR(20), new_status VARCHAR(20) NOT NULL, reason TEXT, changed_by INTEGER REFERENCES user(id), changed_at DATETIME)"),
+        ("tool_wear.cycle_days", "ALTER TABLE tool_wear ADD COLUMN cycle_days INTEGER DEFAULT 14"),
+        ("monthly_archive", """CREATE TABLE IF NOT EXISTS monthly_archive (
+            id INTEGER PRIMARY KEY,
+            archive_month VARCHAR(7) NOT NULL,
+            section VARCHAR(50) NOT NULL,
+            data_json TEXT NOT NULL,
+            created_at DATETIME,
+            created_by INTEGER REFERENCES user(id)
+        )"""),
+        ("two_checklist_item", """CREATE TABLE IF NOT EXISTS two_checklist_item (
+            id INTEGER PRIMARY KEY,
+            two_id INTEGER NOT NULL REFERENCES technical_work_order(id),
+            text VARCHAR(500) NOT NULL,
+            is_done BOOLEAN DEFAULT 0,
+            done_at DATETIME,
+            done_by INTEGER REFERENCES user(id),
+            sort_order INTEGER DEFAULT 0
+        )"""),
+        ("two_signature", """CREATE TABLE IF NOT EXISTS two_signature (
+            id INTEGER PRIMARY KEY,
+            two_id INTEGER NOT NULL REFERENCES technical_work_order(id),
+            signer_name VARCHAR(200) NOT NULL,
+            signature_data TEXT NOT NULL,
+            signed_at DATETIME
+        )"""),
+    ]
+
+    # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
+    try:
+        cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='cylinder_log'")
+        row = cur.fetchone()
+        if row and 'NOT NULL' in (row[0] or '') and 'cylinder_id' in (row[0] or ''):
+            cur.execute("ALTER TABLE cylinder_log RENAME TO cylinder_log_old")
+            cur.execute("""CREATE TABLE cylinder_log (
+                id INTEGER PRIMARY KEY,
+                cylinder_id INTEGER REFERENCES gas_cylinder(id),
+                action VARCHAR(30) NOT NULL,
+                old_cylinder_number VARCHAR(50),
+                new_cylinder_number VARCHAR(50),
+                performed_by INTEGER REFERENCES user(id),
+                date DATETIME,
+                notes TEXT
+            )""")
+            cur.execute("INSERT INTO cylinder_log SELECT * FROM cylinder_log_old")
+            cur.execute("DROP TABLE cylinder_log_old")
+            conn.commit()
+            print("Migration: fixed cylinder_log.cylinder_id to nullable")
+    except Exception as e:
+        pass
+
+    for col_name, sql in migrations:
+        try:
+            if 'CREATE TABLE' in sql:
+                table_name = sql.split('IF NOT EXISTS ')[1].split(' ')[0]
+                cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                if not cur.fetchone():
+                    cur.execute(sql)
+                    print(f"Migration: created {table_name}")
+            elif 'ALTER TABLE' in sql:
+                table = sql.split('ALTER TABLE ')[1].split(' ADD COLUMN')[0]
+                col = sql.split('ADD COLUMN ')[1].split(' ')[0]
+                cur.execute(f"PRAGMA table_info({table})")
+                cols = [c[1] for c in cur.fetchall()]
+                if col not in cols:
+                    cur.execute(sql)
+                    print(f"Migration: added {col} to {table}")
+        except Exception as e:
+            pass
+
+    conn.commit()
+    conn.close()

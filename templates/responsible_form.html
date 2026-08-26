@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit responsible person') if verantwoordelijke else _('New responsible person') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👤 {{ _('Edit responsible person') + ': ' + verantwoordelijke.naam if verantwoordelijke else _('New responsible person') }}</h1>
+</div>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('First name') }} *</label>
+                <input type="text" name="first_name" value="{{ verantwoordelijke.naam.split(' ')[0] if verantwoordelijke and verantwoordelijke.naam else '' }}" required placeholder="{{ _('First name') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Last name') }}</label>
+                <input type="text" name="last_name" value="{{ verantwoordelijke.naam.split(' ', 1)[1] if verantwoordelijke and verantwoordelijke.naam and ' ' in verantwoordelijke.naam else '' }}" placeholder="{{ _('Last name') }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Phone') }}</label>
+                <input type="text" name="telefoon" value="{{ verantwoordelijke.telefoon if verantwoordelijke else '' }}" placeholder="+31 6 ...">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Email') }}</label>
+                <input type="email" name="email" value="{{ verantwoordelijke.email if verantwoordelijke else '' }}" placeholder="name@company.com">
+            </div>
+        </div>
+
+        <!-- LOGIN SECTION -->
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">🔐 {{ _('Login Access') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Password') }}</label>
+                    <input type="password" name="password" placeholder="{{ _('Leave empty to keep current') if verantwoordelijke else '' }}" autocomplete="new-password">
+                    <small style="color:#888;font-size:11px">
+                        {% if verantwoordelijke and verantwoordelijke.password_hash %}
+                        ✓ {{ _('Login set') }}: {{ verantwoordelijke.email or verantwoordelijke.naam }}
+                        {% else %}
+                        {{ _('Set password to allow login') }}
+                        {% endif %}
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Access Level') }}</label>
+                    <select name="access_level">
+                        <option value="floor" {% if not verantwoordelijke or verantwoordelijke.access_level == 'floor' %}selected{% endif %}>{{ _('Floor only') }} — {{ _('see own sections') }}</option>
+                        <option value="full" {% if verantwoordelijke and verantwoordelijke.access_level == 'full' %}selected{% endif %}>{{ _('Full map') }} — {{ _('see all machines') }}</option>
+                        <option value="limited" {% if verantwoordelijke and verantwoordelijke.access_level == 'limited' %}selected{% endif %}>{{ _('Limited') }} — {{ _('floor plan only') }}</option>
+                    </select>
+                </div>
+            </div>
+            {% if verantwoordelijke %}
+            <div class="form-group">
+                <label><input type="checkbox" name="is_active" {% if verantwoordelijke.is_active %}checked{% endif %}> {{ _('Active') }} ({{ _('can login') }})</label>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- SECTIONS -->
+        <div class="form-group">
+            <label>{{ _('Assigned Sections') }} ({{ _('Цеха') }})</label>
+            <div style="padding:12px;background:#f8f9fa;border-radius:8px">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+                    {% for s in sections %}
+                    <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+                        <input type="checkbox" name="sections" value="{{ s.id }}"
+                            {% if verantwoordelijke and s in verantwoordelijke.resp_sections %}checked{% endif %}>
+                        <span style="display:inline-block;width:12px;height:12px;background:{{ s.color }};border-radius:3px"></span>
+                        {{ s.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <small style="color:#888;font-size:11px">{{ _('Select sections this person is responsible for') }}</small>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Group') }}</label>
+            <select name="group_id">
+                <option value="">{{ _('No group') }}</option>
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if verantwoordelijke and verantwoordelijke.group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notities" rows="3" placeholder="{{ _('Additional notes...') }}">{{ verantwoordelijke.notities if verantwoordelijke else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/responsible" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

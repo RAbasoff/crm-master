@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Fault Reports') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚠️ {{ _('Fault Reports') }}</h1>
+    <a href="/faults/new" class="btn btn-warning">+ {{ _('New Fault Report') }}</a>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats" style="margin-bottom:16px">
+    <div class="stat-card" style="border-left:4px solid #3498db">
+        <div class="number">{{ faults|selectattr('status', 'equalto', 'open')|list|length }}</div>
+        <div class="label">{{ _('Open') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="number">{{ faults|selectattr('status', 'equalto', 'accepted')|list|length + faults|selectattr('status', 'equalto', 'in_progress')|list|length }}</div>
+        <div class="label">{{ _('In Progress') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #27ae60">
+        <div class="number">{{ faults|selectattr('status', 'equalto', 'resolved')|list|length }}</div>
+        <div class="label">{{ _('Resolved') }}</div>
+    </div>
+</div>
+
+{% if faults %}
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>#</th><th>{{ _('Title') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Technician') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for f in faults if f.status not in ['resolved', 'closed'] %}
+        <tr>
+            <td><a href="/faults/{{ f.id }}">{{ f.id }}</a></td>
+            <td><strong>{{ f.title }}</strong></td>
+            <td>{{ f.machine.name }}</td>
+            <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
+            <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
+            <td>{% if f.assigned_technicians %}{% for t in f.assigned_technicians %}{{ t.display_name or t.username }}{% if t.worker_profile and t.worker_profile.specialisatie %} <small style="color:#888">({{ t.worker_profile.specialisatie }})</small>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% elif f.technician %}{{ f.technician.display_name or f.technician.username }}{% if f.technician.worker_profile and f.technician.worker_profile.specialisatie %} <small style="color:#888">({{ f.technician.worker_profile.specialisatie }})</small>{% endif %}{% else %}—{% endif %}</td>
+            <td>{{ f.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><a href="/faults/{{ f.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a></td>
+        </tr>
+        {% endfor %}
+        {% for f in faults if f.status in ['resolved', 'closed'] %}
+        <tr style="background:#f0f5f1">
+            <td><a href="/faults/{{ f.id }}" style="color:#8fad9a">{{ f.id }}</a></td>
+            <td><span style="color:#7a9a82">{{ f.title }}</span></td>
+            <td style="color:#8fad9a">{{ f.machine.name }}</td>
+            <td><span class="badge" style="background:#d5e8d4;color:#8fad9a">{{ f.priority }}</span></td>
+            <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ f.status }}</span></td>
+            <td style="color:#8fad9a">{% if f.assigned_technicians %}{% for t in f.assigned_technicians %}{{ t.display_name or t.username }}{% if not loop.last %}, {% endif %}{% endfor %}{% elif f.technician %}{{ f.technician.display_name or f.technician.username }}{% else %}—{% endif %}</td>
+            <td style="color:#8fad9a">{{ f.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><a href="/faults/{{ f.id }}" class="btn btn-sm" style="background:#d5e8d4;color:#6a9b6a">{{ _('View') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:60px 20px;color:#999">
+        <div style="font-size:64px;margin-bottom:20px">✅</div>
+        <h3 style="margin-bottom:10px;color:#666">{{ _('No Fault Reports') }}</h3>
+        <p>{{ _('Everything is running smoothly!') }}</p>
+        <a href="/faults/new" class="btn btn-warning" style="margin-top:20px">{{ _('Report a Fault') }}</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

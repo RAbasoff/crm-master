@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Worker') if worker else _('New Worker') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit Worker') + ': ' + worker.naam if worker else _('New Worker') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="naam" value="{{ worker.naam if worker else '' }}" required></div>
+            <div class="form-group"><label>{{ _('Phone') }}</label><input type="text" name="telefoon" value="{{ worker.telefoon if worker else '' }}" placeholder="+31 6 ..."></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Specialization') }}</label><input type="text" name="specialisatie" value="{{ worker.specialisatie if worker else '' }}" placeholder="Electronics, mechanics..."></div>
+            <div class="form-group"><label>{{ _('Hourly Rate') }} (€/h)</label><input type="number" name="tarief_per_uur" value="{{ worker.tarief_per_uur if worker else 0 }}" step="5"></div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('User group') }}</label>
+            <select name="user_id">
+                <option value="">{{ _('Not linked') }}</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if worker and worker.user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }} ({{ u.role }})</option>
+                {% endfor %}
+            </select>
+            <small style="color:#888;font-size:12px">{{ _('Assign worker to a system user') }}</small>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Responsible group') }}</label>
+            <select name="group_id">
+                <option value="">{{ _('No group') }}</option>
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if worker and worker.group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+                {% endfor %}
+            </select>
+            <small style="color:#888;font-size:12px">{{ _('Assign worker to a responsible group') }}</small>
+        </div>
+        {% if worker %}
+        <div class="form-group"><label><input type="checkbox" name="actief" {% if worker.actief %}checked{% endif %}> {{ _('Active') }}</label></div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+        <a href="/workers" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+    </form>
+</div>
+{% endblock %}

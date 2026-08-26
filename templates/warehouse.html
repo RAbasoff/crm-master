@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Warehouse') }} — CRM Werkplaats{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Warehouse') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/warehouse/movements" class="btn btn-sm" style="background:#2c3e50;color:white">📋 {{ _('Movements') }}</a>
+        <a href="/warehouse/report" class="btn btn-sm" style="background:#3498db;color:white">🔍 {{ _('Search & Reports') }}</a>
+        <a href="/warehouse/groups" class="btn btn-sm" style="background:#2c3e50;color:white">📦 {{ _('Groups') }}</a>
+        <a href="/warehouse/labels" class="btn btn-sm" style="background:#8e44ad;color:white" target="_blank">🏷️ {{ _('Print all labels') }}</a>
+        {% if current_user.has_role('admin') %}
+        <a href="/warehouse/duplicates" class="btn btn-sm" style="background:#e67e22;color:white">🔍 {{ _('Duplicates') }}</a>
+        {% endif %}
+        <a href="/warehouse/new" class="btn btn-primary">+ {{ _('New Item') }}</a>
+    </div>
+</div>
+{% if low_stock %}
+<div class="card" style="border-left:4px solid #e74c3c">
+    <h2>{{ _('Low Stock') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Minimum') }}</th><th></th></tr>
+        {% for i in low_stock %}
+        <tr><td>{{ i.naam }}</td><td style="color:#e74c3c;font-weight:bold">{{ i.hoeveelheid }} {{ i.eenheid }}</td><td>{{ i.minimum }}</td>
+            <td><a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a></td></tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+<div class="filters">
+    <select onchange="location.href='/warehouse?categorie='+this.value">
+        <option value="">{{ _('All') }} {{ _('Category') }}</option>
+        {% for c in categories %}
+        <option value="{{ c }}" {% if category_filter==c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+    </select>
+    <select onchange="location.href='/warehouse?group='+this.value">
+        <option value="">{{ _('All') }} {{ _('Groups') }}</option>
+        {% for g in groups %}
+        <option value="{{ g.id }}" {% if group_filter==g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Group') }}</th><th>{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
+        {% for i in items %}
+        <tr>
+            <td>{{ i.naam }}</td>
+            <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
+            <td>{{ i.categorie or '—' }}</td>
+            <td>{% if i.group %}<a href="/warehouse?group={{ i.group.id }}" style="color:#3498db">{{ i.group.name }}</a>{% else %}—{% endif %}</td>
+            <td>{% if i.locatie %}📍 {{ i.locatie }}{% else %}—{% endif %}</td>
+            <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ i.hoeveelheid }}</td>
+            <td>{{ i.eenheid }}</td>
+            <td>€{{ "%.2f"|format(i.prijs) }}</td>
+            <td style="white-space:nowrap">
+                <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                <button class="btn btn-sm btn-success" onclick="document.getElementById('mv-{{ i.id }}').style.display='table-row'">+</button>
+                <a href="/api/warehouse/qr/{{ i.id }}" class="btn btn-sm" style="background:#2c3e50;color:white;padding:4px 6px" title="QR" target="_blank">QR</a>
+                <a href="/api/warehouse/barcode/{{ i.id }}" class="btn btn-sm" style="background:#7f8c8d;color:white;padding:4px 6px" title="Barcode" target="_blank">|||</a>
+                <a href="/warehouse/labels?ids={{ i.id }}" class="btn btn-sm" style="background:#8e44ad;color:white;padding:4px 6px" title="Print label" target="_blank">🏷️</a>
+            </td>
+        </tr>
+        <tr id="mv-{{ i.id }}" style="display:none; background:#f8f9fa">
+            <td colspan="6" style="padding:10px">
+                <form method="POST" action="/warehouse/{{ i.id }}/move" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+                    <select name="type" style="padding:8px;border:1px solid #ddd;border-radius:8px"><option value="inkomend">{{ _('Incoming') }}</option><option value="uitgaand">{{ _('Outgoing') }}</option></select>
+                    <input type="number" name="hoeveelheid" step="0.1" min="0.1" placeholder="{{ _('Quantity') }}" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:8px">
+                    <input type="text" name="opmerking" placeholder="{{ _('Comment') }}" style="padding:8px;border:1px solid #ddd;border-radius:8px;flex:1;min-width:100px">
+                    <button type="submit" class="btn btn-sm btn-primary">OK</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

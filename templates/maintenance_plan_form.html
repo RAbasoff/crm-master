@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit plan') if plan else _('New plan') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit plan') + ': ' + plan.title if plan else _('New maintenance plan') }}</h1>
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Machine') }} *</label>
+                <select name="machine_id" required>
+                    <option value="">{{ _('Select machine') }}</option>
+                    {% for m in machines %}
+                    <option value="{{ m.id }}" {% if plan and plan.machine_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.serial_number %} ({{ m.serial_number }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Maintenance Type') }}</label>
+                <select name="maintenance_type">
+                    {% for t in ['preventive', 'corrective', 'inspection', 'overhaul'] %}
+                    <option value="{{ t }}" {% if plan and plan.maintenance_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Title') }} *</label>
+            <input type="text" name="title" value="{{ plan.title if plan else '' }}" required placeholder="{{ _('Plan title') }}">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Description') }}</label>
+            <textarea name="description" rows="3" placeholder="{{ _('Describe planned works...') }}">{{ plan.description if plan else '' }}</textarea>
+        </div>
+
+        {% if plan %}
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    {% for s in ['planned', 'in_progress', 'completed', 'cancelled'] %}
+                    <option value="{{ s }}" {% if plan.status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Cost') }} (€)</label>
+                <input type="number" name="cost" value="{{ plan.cost }}" step="0.01" min="0">
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card" style="background:#f8f9fa;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Dates') }}</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Planned Start') }} *</label>
+                    <input type="date" name="planned_start" value="{{ plan.planned_start.strftime('%Y-%m-%d') if plan else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Planned End') }}</label>
+                    <input type="date" name="planned_end" value="{{ plan.planned_end.strftime('%Y-%m-%d') if plan and plan.planned_end else '' }}">
+                </div>
+            </div>
+            {% if plan %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Actual Start') }}</label>
+                    <input type="date" name="actual_start" value="{{ plan.actual_start.strftime('%Y-%m-%d') if plan and plan.actual_start else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Actual End') }}</label>
+                    <input type="date" name="actual_end" value="{{ plan.actual_end.strftime('%Y-%m-%d') if plan and plan.actual_end else '' }}">
+                </div>
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label>{{ _('Next Maintenance') }}</label>
+                <input type="date" name="next_maintenance" value="{{ plan.next_maintenance.strftime('%Y-%m-%d') if plan and plan.next_maintenance else '' }}">
+            </div>
+        </div>
+
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">{{ _('Executor') }}</h3>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" name="is_external" id="isExternal" onchange="toggleExternal()" {% if plan and plan.is_external %}checked{% endif %}>
+                    {{ _('External company') }}
+                </label>
+            </div>
+
+            <div id="externalFields" style="display:{% if plan and plan.is_external %}block{% else %}none{% endif %}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ _('Company name') }}</label>
+                        <input type="text" name="company_name" value="{{ plan.company_name if plan else '' }}" placeholder="{{ _('Company name') }}">
+                    </div>
+                    <div class="form-group">
+                        <label>{{ _('Company contact') }}</label>
+                        <input type="text" name="company_contact" value="{{ plan.company_contact if plan else '' }}" placeholder="{{ _('Phone / Email') }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Responsible person at company') }}</label>
+                    <input type="text" name="company_person" value="{{ plan.company_person if plan else '' }}" placeholder="{{ _('Contact person name') }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Offer / Quote file') }}</label>
+                    <input type="file" name="offer_file" accept=".pdf,.doc,.docx,.jpg,.png">
+                    {% if plan and plan.offer_file %}
+                    <small style="color:#27ae60">📎 {{ plan.offer_file }}</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div id="internalFields" style="display:{% if plan and plan.is_external %}none{% else %}block{% endif %}">
+                <div class="form-group">
+                    <label>{{ _('Worker / Technician') }}</label>
+                    <select name="worker_id">
+                        <option value="">{{ _('Select worker') }}</option>
+                        {% for w in workers %}
+                        <option value="{{ w.id }}" {% if plan and plan.worker_id == w.id %}selected{% endif %}>{{ w.naam }} ({{ w.specialisatie }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Parts Used') }}</label>
+            <textarea name="parts_used" rows="2" placeholder='[{"name": "Bearing 608ZZ", "quantity": 2, "cost": 12}]'>{{ plan.parts_used if plan else '' }}</textarea>
+        </div>
+
+        {% if plan %}
+        <div class="form-group">
+            <label>{{ _('Work report') }}</label>
+            <textarea name="report" rows="4" placeholder="{{ _('Describe completed work...') }}">{{ plan.report if plan else '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Work Act file') }} ({{ _('Act of completed works') }})</label>
+            <input type="file" name="work_act_file" accept=".pdf,.doc,.docx,.jpg,.png">
+            {% if plan.work_act_file %}
+            <small style="color:#27ae60">📎 {{ plan.work_act_file }}</small>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2">{{ plan.notes if plan else '' }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/maintenance-plans" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+    {% if plan %}
+    <form method="POST" action="/maintenance-plans/{{ plan.id }}/delete" style="margin-top:12px" onsubmit="return confirm('{{ _('Delete this plan?') }}')">
+        <button type="submit" class="btn btn-danger">{{ _('Delete') }}</button>
+    </form>
+    {% endif %}
+</div>
+
+<script>
+function toggleExternal() {
+    const ext = document.getElementById('isExternal').checked;
+    document.getElementById('externalFields').style.display = ext ? 'block' : 'none';
+    document.getElementById('internalFields').style.display = ext ? 'none' : 'block';
+}
+</script>
+{% endblock %}

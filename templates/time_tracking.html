@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Time Tracking') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⏱ {{ _('Time Tracking') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/schedule" class="btn btn-sm" style="background:#9b59b6;color:white">📅 {{ _('Schedule') }}</a>
+        <a href="/vacations" class="btn btn-sm" style="background:#f39c12;color:white">🏖 {{ _('Vacations') }}</a>
+    </div>
+</div>
+
+<!-- CLOCK IN/OUT -->
+<div class="card" style="text-align:center;padding:24px">
+    <div style="font-size:48px;margin-bottom:8px" id="currentTime">--:--</div>
+    <div style="font-size:14px;color:#888;margin-bottom:16px" id="currentDate"></div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <form method="POST" action="/time-tracking/clock-in" style="display:inline">
+            <button type="submit" class="btn btn-success" style="min-width:150px">🟢 {{ _('Clock In') }}</button>
+        </form>
+        <form method="POST" action="/time-tracking/clock-out" style="display:inline">
+            <button type="submit" class="btn btn-danger" style="min-width:150px">🔴 {{ _('Clock Out') }}</button>
+        </form>
+    </div>
+</div>
+
+<!-- TODAY'S STATUS -->
+{% set today_entry = entries|selectattr('date', 'equalto', today)|first %}
+{% if today_entry %}
+<div class="card">
+    <h2>{{ _('Today') }}</h2>
+    <div class="stats">
+        <div class="stat-card"><div class="number" style="font-size:20px">{{ today_entry.clock_in.strftime('%H:%M') if today_entry.clock_in else '—' }}</div><div class="label">{{ _('Clock In') }}</div></div>
+        <div class="stat-card"><div class="number" style="font-size:20px">{{ today_entry.clock_out.strftime('%H:%M') if today_entry.clock_out else '—' }}</div><div class="label">{{ _('Clock Out') }}</div></div>
+        <div class="stat-card ok"><div class="number" style="font-size:20px">{{ today_entry.hours_worked }}</div><div class="label">{{ _('Hours') }}</div></div>
+        <div class="stat-card {% if today_entry.overtime_hours > 0 %}warn{% endif %}"><div class="number" style="font-size:20px">{{ today_entry.overtime_hours }}</div><div class="label">{{ _('Overtime') }}</div></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- MONTH ENTRIES -->
+<div class="card">
+    <h2>{{ _('This Month') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Employee') }}</th><th>{{ _('In') }}</th><th>{{ _('Out') }}</th><th>{{ _('Hours') }}</th><th>{{ _('Overtime') }}</th><th>{{ _('Status') }}</th></tr>
+        {% for e in entries %}
+        <tr>
+            <td>{{ e.date.strftime('%d-%m (%a)') }}</td>
+            <td>{{ e.user.display_name or e.user.username }}</td>
+            <td>{{ e.clock_in.strftime('%H:%M') if e.clock_in else '—' }}</td>
+            <td>{{ e.clock_out.strftime('%H:%M') if e.clock_out else '—' }}</td>
+            <td>{{ e.hours_worked }}</td>
+            <td style="{% if e.overtime_hours > 0 %}color:#e74c3c;font-weight:bold{% endif %}">{{ e.overtime_hours }}</td>
+            <td><span class="badge badge-{% if e.status == 'present' %}active{% elif e.status == 'sick' %}broken{% elif e.status == 'vacation' %}maintenance{% else %}offline{% endif %}">{{ e.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:#888">{{ _('No entries') }}</td></tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+{% if current_user.has_role('admin', 'director') %}
+<!-- MANUAL ENTRY -->
+<div class="card">
+    <h2>{{ _('Manual Entry') }}</h2>
+    <form method="POST" action="/time-tracking/manual">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Employee') }}</label>
+                <select name="user_id" required>
+                    {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Date') }}</label>
+                <input type="date" name="date" value="{{ today.strftime('%Y-%m-%d') }}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status" onchange="toggleTimeFields(this.value)">
+                    <option value="present">{{ _('Present') }}</option>
+                    <option value="absent">{{ _('Absent') }}</option>
+                    <option value="sick">{{ _('Sick') }}</option>
+                    <option value="vacation">{{ _('Vacation') }}</option>
+                    <option value="holiday">{{ _('Holiday') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Notes') }}</label>
+                <input type="text" name="notes">
+            </div>
+        </div>
+        <div id="timeFields" class="form-row">
+            <div class="form-group"><label>{{ _('Clock In') }}</label><input type="time" name="clock_in" value="08:00"></div>
+            <div class="form-group"><label>{{ _('Clock Out') }}</label><input type="time" name="clock_out" value="17:00"></div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Break') }} ({{ _('minutes') }})</label>
+            <input type="number" name="break_minutes" value="60" min="0">
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+    </form>
+</div>
+{% endif %}
+
+<script>
+function updateClock() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+    document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'});
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+function toggleTimeFields(status) {
+    document.getElementById('timeFields').style.display = status === 'present' ? 'grid' : 'none';
+}
+</script>
+{% endblock %}

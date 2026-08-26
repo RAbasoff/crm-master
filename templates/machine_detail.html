@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}{{ machine.name }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚙️ {{ machine.name }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% if current_user.has_role('admin') %}
+        <a href="/machines/{{ machine.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+        {% endif %}
+        <a href="/machines/{{ machine.id }}/parts" class="btn btn-sm" style="background:#8e44ad;color:white">⚙️ {{ _('Parts') }}</a>
+        {% if current_user.has_role('admin', 'technician') %}
+        <a href="/machines/{{ machine.id }}/add-maintenance" class="btn btn-sm btn-success">🔧 {{ _('Add Maintenance') }}</a>
+        <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="document.getElementById('uploadDoc').style.display='block'">📄 {{ _('Upload Document') }}</button>
+        {% endif %}
+        <a href="/faults/new?machine={{ machine.id }}" class="btn btn-sm btn-warning">⚠️ {{ _('Report Fault') }}</a>
+        <a href="/purchase-requests/new?machine={{ machine.id }}" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Request Part') }}</a>
+        <a href="/machines" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<!-- MACHINE INFO -->
+<div class="card">
+    <div class="detail-grid">
+        <div>
+            {% if machine.photo %}
+            <img src="/static/uploads/{{ machine.photo }}" style="width:100%;max-height:300px;object-fit:cover;border-radius:12px;margin-bottom:16px">
+            {% endif %}
+            <h2>{{ _('General Info') }}</h2>
+            <p><strong>{{ _('Name') }}:</strong> {{ machine.name }}</p>
+            <p><strong>{{ _('Machine Type') }}:</strong> {{ machine.machine_type or '—' }}</p>
+            <p><strong>{{ _('Manufacturer') }}:</strong> {{ machine.manufacturer or '—' }}</p>
+            <p><strong>{{ _('Serial Number') }}:</strong> {{ machine.serial_number or '—' }}</p>
+            <p><strong>{{ _('Year of Manufacture') }}:</strong> {{ machine.year_of_manufacture or '—' }}</p>
+            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ machine.status }}">{{ machine.status }}</span></p>
+        </div>
+        <div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+                <div style="flex:1">
+                    <h2>{{ _('Location & Responsibility') }}</h2>
+                    <p><strong>{{ _('Installation Location') }}:</strong> {{ machine.installation_location or '—' }}</p>
+                    <p><strong>{{ _('Floor Position') }}:</strong> X={{ machine.floor_x }}% Y={{ machine.floor_y }}%</p>
+                    <p><strong>{{ _('Responsible person') }}:</strong>
+                        {% if machine.responsible_person %}
+                            <a href="/responsible/{{ machine.responsible_person.id }}" style="color:#3498db;font-weight:bold">👤 {{ machine.responsible_person.naam }}</a>
+                            {% if machine.responsible_person.telefoon %}<br><small style="color:#888">📞 {{ machine.responsible_person.telefoon }}</small>{% endif %}
+                        {% else %}
+                            <span style="color:#888">—</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>{{ _('Contractor') }}:</strong>
+                        {% if machine.contractor_rel %}
+                            <a href="/contractors/{{ machine.contractor_rel.id }}" style="color:#3498db;font-weight:bold">🏢 {{ machine.contractor_rel.company_name }}</a>
+                            {% if machine.contractor_rel.phone %}<br><small style="color:#888">📞 {{ machine.contractor_rel.phone }}</small>{% endif %}
+                        {% else %}
+                            <span style="color:#888">—</span>
+                        {% endif %}
+                    </p>
+                    <p><a href="/floor?highlight={{ machine.id }}" style="color:#3498db">{{ _('View on floor plan') }}</a></p>
+                </div>
+                <!-- QR Code -->
+                <div style="text-align:center;flex-shrink:0;padding:8px;background:#fff;border:1px solid #e0e0e0;border-radius:10px">
+                    <img src="/api/machines/{{ machine.id }}/qr" alt="QR" style="width:120px;height:120px;display:block;margin-bottom:6px">
+                    <a href="/machines/{{ machine.id }}/qr-label" target="_blank" style="font-size:11px;color:#3498db;text-decoration:none">🖨 {{ _('Print Label') }}</a>
+                </div>
+            </div>
+
+            <h2 style="margin-top:16px">{{ _('Description') }}</h2>
+            <p>{{ machine.description or '—' }}</p>
+
+            <h2 style="margin-top:16px">{{ _('Assigned Users') }}</h2>
+            {% if machine.responsible_user %}
+            <p style="margin-bottom:8px"><strong>{{ _('Responsible user') }}:</strong> <a href="/users/{{ machine.responsible_user.id }}/edit" style="color:#3498db;font-weight:bold">{{ machine.responsible_user.display_name or machine.responsible_user.username }}</a> <span class="badge badge-{{ machine.responsible_user.role }}">{{ machine.responsible_user.role }}</span></p>
+            {% endif %}
+            {% if machine.assigned_users %}
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                {% for u in machine.assigned_users %}
+                <a href="/users/{{ u.id }}/edit" class="badge badge-{{ u.role }}" style="text-decoration:none">{{ u.display_name or u.username }}</a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>—</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- DOCUMENTS -->
+<div class="card">
+    <h2>📄 {{ _('Documents') }}</h2>
+    {% if machine.documents %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Type') }}</th><th>{{ _('Title') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for doc in machine.documents %}
+        <tr>
+            <td>{% if doc.doc_type == 'manual' %}📘{% elif doc.doc_type == 'schematic' %}🔌{% elif doc.doc_type == 'parts_list' %}📋{% else %}📄{% endif %} {{ doc.doc_type }}</td>
+            <td>{{ doc.title }}</td>
+            <td>{{ doc.uploaded_at.strftime('%d-%m-%Y') }}</td>
+            <td><a href="/static/uploads/{{ doc.filename }}" target="_blank" class="btn btn-sm btn-primary">{{ _('Download') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No documents uploaded') }}</p>
+    {% endif %}
+    
+    <!-- Upload form -->
+    <div id="uploadDoc" style="display:none;margin-top:16px;padding:16px;background:#f8f9fa;border-radius:8px">
+        <form method="POST" action="/machines/{{ machine.id }}/upload-document" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Document Type') }}</label>
+                    <select name="doc_type">
+                        <option value="manual">{{ _('Manual') }}</option>
+                        <option value="schematic">{{ _('Electrical Schematic') }}</option>
+                        <option value="parts_list">{{ _('Parts List') }}</option>
+                        <option value="other">{{ _('Other') }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Title') }}</label>
+                    <input type="text" name="title" placeholder="{{ _('Document title') }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('File') }} (PDF, PNG, JPG)</label>
+                <input type="file" name="document" accept=".pdf,.png,.jpg,.jpeg" required>
+            </div>
+            <button type="submit" class="btn btn-sm btn-success">{{ _('Upload') }}</button>
+            <button type="button" class="btn btn-sm" style="background:#eee" onclick="document.getElementById('uploadDoc').style.display='none'">{{ _('Cancel') }}</button>
+        </form>
+    </div>
+</div>
+
+<!-- SPARE PARTS -->
+<div class="card">
+    <h2>📦 {{ _('Spare Parts') }}</h2>
+    {% if machine.spare_parts %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Part') }}</th><th>{{ _('Category') }}</th><th>{{ _('On Stock') }}</th><th>{{ _('Needed') }}</th></tr>
+        {% for sp in machine.spare_parts %}
+        <tr>
+            <td>{{ sp.warehouse_item.naam }}</td>
+            <td>{{ sp.warehouse_item.categorie or '—' }}</td>
+            <td style="{% if sp.warehouse_item.hoeveelheid <= sp.warehouse_item.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ sp.warehouse_item.hoeveelheid }} {{ sp.warehouse_item.eenheid }}</td>
+            <td>{{ sp.quantity_needed }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No spare parts assigned') }}</p>
+    {% endif %}
+</div>
+
+<!-- FAULTS -->
+<div class="card">
+    <h2>⚠️ {{ _('Fault History') }} ({{ faults|length }})</h2>
+    {% if faults %}
+    <div class="table-wrap"><table>
+        <tr><th>#</th><th>{{ _('Title') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Technician') }}</th><th>{{ _('Date') }}</th></tr>
+        {% for f in faults %}
+        <tr>
+            <td><a href="/faults/{{ f.id }}">{{ f.id }}</a></td>
+            <td>{{ f.title }}</td>
+            <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
+            <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
+            <td>{% if f.technician %}{{ f.technician.display_name or f.technician.username }}{% else %}—{% endif %}</td>
+            <td>{{ f.created_at.strftime('%d-%m-%Y') }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No faults recorded') }}</p>
+    {% endif %}
+</div>
+
+<!-- MAINTENANCE -->
+<div class="card">
+    <h2>🔧 {{ _('Maintenance History') }} ({{ maintenance|length }})</h2>
+    {% if maintenance %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Type') }}</th><th>{{ _('Description') }}</th><th>{{ _('Performed By') }}</th><th>{{ _('Cost') }}</th><th>{{ _('Next') }}</th></tr>
+        {% for m in maintenance %}
+        <tr>
+            <td>{{ m.date_performed.strftime('%d-%m-%Y') }}</td>
+            <td><span class="badge badge-{{ m.maintenance_type }}">{{ m.maintenance_type }}</span></td>
+            <td>{{ m.description[:80] }}{% if m.description|length > 80 %}...{% endif %}</td>
+            <td>{{ m.performer.display_name or m.performer.username if m.performer else '—' }}</td>
+            <td>€{{ "%.0f"|format(m.cost) }}</td>
+            <td>{{ m.next_maintenance.strftime('%d-%m-%Y') if m.next_maintenance else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No maintenance records') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

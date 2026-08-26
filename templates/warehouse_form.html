@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Item') if item else _('New Item') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit Item') + ': ' + item.naam if item else _('New Item') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="naam" value="{{ item.naam if item else '' }}" required></div>
+            <div class="form-group"><label>{{ _('Category') }}</label><input type="text" name="categorie" value="{{ item.categorie if item else '' }}" placeholder="Parts, consumables..."></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Supplier Part Number</label><input type="text" name="supplier_part_number" value="{{ item.supplier_part_number if item and item.supplier_part_number else '' }}" placeholder="e.g. 6ES7214-1AG40-0XB0"></div>
+            <div class="form-group"><label>{{ _('Group') }} ({{ _('by manufacturer') }})</label>
+                <select name="group_id">
+                    <option value="">{{ _('No group') }}</option>
+                    {% for g in groups %}
+                    <option value="{{ g.id }}" {% if item and item.group_id == g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Description') }}</label>
+            <textarea name="description" rows="3" placeholder="{{ _('Item description...') }}">{{ item.description if item else '' }}</textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Unit') }}</label><input type="text" name="eenheid" value="{{ item.eenheid if item else 'st' }}" placeholder="st, m, kg..."></div>
+            <div class="form-group"><label>{{ _('Quantity') }}</label><input type="number" name="hoeveelheid" value="{{ item.hoeveelheid if item else 0 }}" step="0.1"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Minimum') }}</label><input type="number" name="minimum" value="{{ item.minimum if item else 0 }}" step="1"></div>
+            <div class="form-group"><label>{{ _('Price') }} (€)</label><input type="number" name="prijs" value="{{ item.prijs if item else 0 }}" step="0.01"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Location') }}</label><input type="text" name="locatie" value="{{ item.locatie if item else '' }}" placeholder="Shelf 1, rack 3..."></div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/warehouse" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+            {% if item and current_user.has_role('admin') %}
+            <form method="POST" action="/warehouse/{{ item.id }}/delete" style="margin-left:auto" onsubmit="return confirm('{{ _('Delete this item?') }}')">
+                <button type="submit" class="btn btn-danger">🗑️ {{ _('Delete') }}</button>
+            </form>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

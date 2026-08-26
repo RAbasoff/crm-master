@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Duplicates') }} — {{ _('Warehouse') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔍 {{ _('Duplicate Items') }}</h1>
+    <a href="/warehouse" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+{% if not dupe_groups and not spn_groups %}
+<div class="card">
+    <div style="text-align:center;padding:40px;color:#27ae60">
+        <div style="font-size:48px;margin-bottom:12px">✅</div>
+        <h3 style="color:#555">{{ _('No duplicates found') }}</h3>
+        <p style="color:#888">{{ _('All items have unique names and supplier part numbers.') }}</p>
+    </div>
+</div>
+{% endif %}
+
+{% if dupe_groups %}
+<div class="card" style="border-left:4px solid #e67e22">
+    <h2 style="margin-bottom:12px">⚠️ {{ _('Duplicate by Name') }} ({{ dupe_groups|length }})</h2>
+    <p style="color:#888;font-size:13px;margin-bottom:16px">{{ _('Items with identical names (case-insensitive). Consider merging or deleting duplicates.') }}</p>
+    {% for g in dupe_groups %}
+    <div style="background:#fff8f0;border:1px solid #f0d9c0;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:14px;color:#333">{{ g.name }}</strong>
+            <span class="badge" style="background:#e67e2222;color:#e67e22">{{ g.count }} {{ _('items') }}</span>
+        </div>
+        <div class="table-wrap"><table style="margin:0">
+            <tr><th>ID</th><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Qty') }}</th><th>{{ _('Location') }}</th><th>{{ _('Price') }}</th><th></th></tr>
+            {% for item in g.item_list %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.naam }}</td>
+                <td style="font-size:11px;color:#888">{{ item.supplier_part_number or '—' }}</td>
+                <td>{{ item.hoeveelheid }} {{ item.eenheid }}</td>
+                <td>{{ item.locatie or '—' }}</td>
+                <td>€{{ "%.2f"|format(item.prijs) }}</td>
+                <td style="white-space:nowrap">
+                    <a href="/warehouse/{{ item.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                    {% if current_user.has_role('admin') %}
+                    <form method="POST" action="/warehouse/{{ item.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ item.naam }} (ID {{ item.id }})?')">
+                        <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px">🗑️</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if spn_groups %}
+<div class="card" style="border-left:4px solid #e74c3c;margin-top:16px">
+    <h2 style="margin-bottom:12px">🔴 {{ _('Duplicate by Supplier Part Number') }} ({{ spn_groups|length }})</h2>
+    <p style="color:#888;font-size:13px;margin-bottom:16px">{{ _('Items with identical supplier part numbers. These are likely true duplicates.') }}</p>
+    {% for g in spn_groups %}
+    <div style="background:#fdf0f0;border:1px solid #f0c0c0;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:14px;color:#333">SPN: {{ g.spn }}</strong>
+            <span class="badge" style="background:#e74c3c22;color:#e74c3c">{{ g.count }} {{ _('items') }}</span>
+        </div>
+        <div class="table-wrap"><table style="margin:0">
+            <tr><th>ID</th><th>{{ _('Name') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Location') }}</th><th>{{ _('Price') }}</th><th></th></tr>
+            {% for item in g.item_list %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.naam }}</td>
+                <td>{{ item.hoeveelheid }} {{ item.eenheid }}</td>
+                <td>{{ item.locatie or '—' }}</td>
+                <td>€{{ "%.2f"|format(item.prijs) }}</td>
+                <td style="white-space:nowrap">
+                    <a href="/warehouse/{{ item.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                    {% if current_user.has_role('admin') %}
+                    <form method="POST" action="/warehouse/{{ item.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ item.naam }} (ID {{ item.id }})?')">
+                        <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px">🗑️</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

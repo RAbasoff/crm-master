@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Archive') }} {{ month }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>
+        {% if section == 'faults' %}⚠️{% elif section == 'orders' %}📋{% elif section == 'work_reports' %}📝{% elif section == 'time_entries' %}⏱{% else %}📄{% endif %}
+        {{ month }} — 
+        {% if section == 'faults' %}{{ _('Faults') }}{% elif section == 'orders' %}{{ _('Orders') }}{% elif section == 'work_reports' %}{{ _('Work Reports') }}{% elif section == 'time_entries' %}{{ _('Time Entries') }}{% else %}{{ section }}{% endif %}
+    </h1>
+    <a href="/archive" class="btn btn-ghost">← {{ _('Back to Archive') }}</a>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            {% if section == 'faults' %}
+            <tr><th>ID</th><th>{{ _('Title') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Date') }}</th></tr>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td><strong>{{ item.title }}</strong></td>
+                <td>{{ item.machine }}</td>
+                <td><span class="badge badge-{{ item.priority }}">{{ item.priority }}</span></td>
+                <td><span class="badge badge-{{ item.status }}">{{ item.status }}</span></td>
+                <td>{{ item.created_at }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% elif section == 'orders' %}
+            <tr><th>{{ _('Number') }}</th><th>{{ _('Client') }}</th><th>{{ _('Status') }}</th><th>{{ _('Total') }}</th><th>{{ _('Date') }}</th></tr>
+            {% for item in data %}
+            <tr>
+                <td><strong>{{ item.nummer }}</strong></td>
+                <td>{{ item.client }}</td>
+                <td><span class="badge badge-{{ item.status.replace(' ','-') }}">{{ item.status }}</span></td>
+                <td>€{{ "%.0f"|format(item.total) }}</td>
+                <td>{{ item.created_at }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% elif section == 'work_reports' %}
+            <tr><th>ID</th><th>{{ _('Fault') }}</th><th>{{ _('Hours') }}</th><th>{{ _('Description') }}</th><th>{{ _('Date') }}</th></tr>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{% if item.fault_id %}#{{ item.fault_id }}{% else %}—{% endif %}</td>
+                <td><strong>{{ item.hours }}h</strong></td>
+                <td>{{ item.description[:80] }}{% if item.description|length > 80 %}...{% endif %}</td>
+                <td>{{ item.created_at }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% elif section == 'time_entries' %}
+            <tr><th>ID</th><th>{{ _('User') }}</th><th>{{ _('Date') }}</th><th>{{ _('Hours') }}</th><th>{{ _('Notes') }}</th></tr>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.user_id }}</td>
+                <td>{{ item.date }}</td>
+                <td><strong>{{ item.hours }}h</strong></td>
+                <td>{{ item.notes }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% else %}
+            <tr><th>{{ _('Data') }}</th></tr>
+            {% for item in data %}
+            <tr><td>{{ item }}</td></tr>
+            {% endfor %}
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<div style="margin-top:12px;font-size:13px;color:#888">
+    {{ _('Total records') }}: {{ data|length }}
+</div>
+{% endblock %}

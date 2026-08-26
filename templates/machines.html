@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Machines') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚙️ {{ _('Machines') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/tool-wear" class="btn btn-sm" style="background:#e67e22;color:white">🔪 {{ _('Tool Wear') }}</a>
+        {% if current_user.has_role('admin', 'director') %}
+        <a href="/machines/report" class="btn btn-sm" style="background:#9b59b6;color:white">📊 {{ _('Report') }}</a>
+        {% endif %}
+        <button id="btnPrintLabels" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="printSelectedLabels()">🖨 {{ _('Print Labels') }} (<span id="selectedCount">0</span>)</button>
+        <button id="btnSelectAll" class="btn btn-sm" style="background:#eee" onclick="toggleSelectAll()">{{ _('Select All') }}</button>
+        {% if current_user.has_role('admin', 'director') %}
+        <a href="/machines/new" class="btn btn-sm btn-primary">+ {{ _('New Machine') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Machine Stats -->
+<div class="stats" style="margin-bottom:16px">
+    <div class="stat-card" style="border-left:4px solid #27ae60">
+        <div class="number">{{ machines|selectattr('status', 'equalto', 'active')|list|length }}</div>
+        <div class="label">{{ _('Active') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="number">{{ machines|selectattr('status', 'equalto', 'maintenance')|list|length }}</div>
+        <div class="label">{{ _('Maintenance') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number">{{ machines|selectattr('status', 'equalto', 'broken')|list|length }}</div>
+        <div class="label">{{ _('Broken') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #95a5a6">
+        <div class="number">{{ machines|length }}</div>
+        <div class="label">{{ _('Total') }}</div>
+    </div>
+</div>
+
+{% if machines %}
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th style="width:36px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+            <th></th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Serial Number') }}</th>
+            <th>{{ _('Location') }}</th>
+            <th>{{ _('Responsible') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Faults') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for m in machines %}
+        <tr>
+            <td><input type="checkbox" class="machine-check" value="{{ m.id }}" onchange="updateSelection()"></td>
+            <td>{% if m.photo %}<img src="/static/uploads/{{ m.photo }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{% else %}<div style="width:40px;height:40px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center">⚙️</div>{% endif %}</td>
+            <td><a href="/machines/{{ m.id }}" style="font-weight:600">{{ m.name }}</a></td>
+            <td>{{ m.machine_type or '—' }}</td>
+            <td>{{ m.serial_number or '—' }}</td>
+            <td>{{ m.installation_location or '—' }}</td>
+            <td>
+                {% if m.responsible_person %}{{ m.responsible_person.naam }}{% endif %}
+                {% if m.responsible_person and m.responsible_user %} | {% endif %}
+                {% if m.responsible_user %}{{ m.responsible_user.display_name or m.responsible_user.username }}{% endif %}
+                {% if not m.responsible_person and not m.responsible_user %}—{% endif %}
+            </td>
+            <td><span class="badge badge-{{ m.status }}">{{ m.status }}</span></td>
+            <td>
+                {% if m.fault_reports|length > 0 %}
+                <span style="color:#e74c3c;font-weight:bold">{{ m.fault_reports|length }}</span>
+                {% else %}
+                <span style="color:#27ae60">0</span>
+                {% endif %}
+            </td>
+            <td style="white-space:nowrap">
+                <a href="/machines/{{ m.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a>
+                {% if current_user.has_role('admin') %}
+                <a href="/machines/{{ m.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:60px 20px;color:#999">
+        <div style="font-size:64px;margin-bottom:20px">⚙️</div>
+        <h3 style="margin-bottom:10px;color:#666">{{ _('No Machines') }}</h3>
+        <p>{{ _('Add your first machine to get started') }}</p>
+        {% if current_user.has_role('admin') %}
+        <a href="/machines/new" class="btn btn-primary" style="margin-top:20px">{{ _('Add Machine') }}</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function toggleAll(src) {
+    document.querySelectorAll('.machine-check').forEach(cb => { cb.checked = src.checked; });
+    updateSelection();
+}
+function toggleSelectAll() {
+    const all = document.querySelectorAll('.machine-check');
+    const anyUnchecked = [...all].some(cb => !cb.checked);
+    all.forEach(cb => { cb.checked = anyUnchecked; });
+    document.getElementById('checkAll').checked = anyUnchecked;
+    updateSelection();
+}
+function updateSelection() {
+    const checked = document.querySelectorAll('.machine-check:checked');
+    const count = checked.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('btnPrintLabels').style.display = count > 0 ? '' : 'none';
+    document.getElementById('checkAll').checked = count === document.querySelectorAll('.machine-check').length;
+}
+function printSelectedLabels() {
+    const ids = [...document.querySelectorAll('.machine-check:checked')].map(cb => cb.value);
+    if (ids.length === 0) return;
+    window.open('/machines/qr-labels?ids=' + ids.join(','), '_blank');
+}
+</script>
+{% endblock %}

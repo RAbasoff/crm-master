@@ -1,0 +1,326 @@
+# Translations template for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-08-10 18:44+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: app.py:108
+msgid "Dashboard"
+msgstr ""
+
+#: app.py:126
+msgid "Orders"
+msgstr ""
+
+#: app.py:137
+msgid "New Order"
+msgstr ""
+
+#: app.py:159
+msgid "Order Details"
+msgstr ""
+
+#: app.py:164
+msgid "Edit Order"
+msgstr ""
+
+#: app.py:195
+msgid "Clients"
+msgstr ""
+
+#: app.py:199
+msgid "New Client"
+msgstr ""
+
+#: app.py:211
+msgid "Edit Client"
+msgstr ""
+
+#: app.py:227
+msgid "Workers"
+msgstr ""
+
+#: app.py:231
+msgid "New Worker"
+msgstr ""
+
+#: app.py:242
+msgid "Edit Worker"
+msgstr ""
+
+#: app.py:259
+msgid "Warehouse"
+msgstr ""
+
+#: app.py:269
+msgid "New Item"
+msgstr ""
+
+#: app.py:283
+msgid "Edit Item"
+msgstr ""
+
+#: app.py:319
+msgid "Reports"
+msgstr ""
+
+#: app.py:323
+msgid "Period Report"
+msgstr ""
+
+#: app.py:351
+msgid "Worker Report"
+msgstr ""
+
+#: app.py:390
+msgid "QR Scan"
+msgstr ""
+
+#: app.py:396
+msgid "QR Generate"
+msgstr ""
+
+# Template strings
+msgid "Home"
+msgstr ""
+
+msgid "Total Orders"
+msgstr ""
+
+msgid "Active Orders"
+msgstr ""
+
+msgid "Today"
+msgstr ""
+
+msgid "Clients"
+msgstr ""
+
+msgid "Active Workers"
+msgstr ""
+
+msgid "Low Stock"
+msgstr ""
+
+msgid "Recent Orders"
+msgstr ""
+
+msgid "Number"
+msgstr ""
+
+msgid "Client"
+msgstr ""
+
+msgid "Device"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "Filter"
+msgstr ""
+
+msgid "All"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Phone"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+msgid "Notes"
+msgstr ""
+
+msgid "Specialization"
+msgstr ""
+
+msgid "Hourly Rate"
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Category"
+msgstr ""
+
+msgid "Unit"
+msgstr ""
+
+msgid "Quantity"
+msgstr ""
+
+msgid "Minimum"
+msgstr ""
+
+msgid "Price"
+msgstr ""
+
+msgid "Location"
+msgstr ""
+
+msgid "Date From"
+msgstr ""
+
+msgid "Date To"
+msgstr ""
+
+msgid "Show Report"
+msgstr ""
+
+msgid "Total Revenue"
+msgstr ""
+
+msgid "Completed"
+msgstr ""
+
+msgid "Cancelled"
+msgstr ""
+
+msgid "Average Time"
+msgstr ""
+
+msgid "Worker Statistics"
+msgstr ""
+
+msgid "Orders Count"
+msgstr ""
+
+msgid "Revenue"
+msgstr ""
+
+msgid "Scan QR Code"
+msgstr ""
+
+msgid "Generate QR"
+msgstr ""
+
+msgid "Accepted"
+msgstr ""
+
+msgid "Diagnosis"
+msgstr ""
+
+msgid "In Progress"
+msgstr ""
+
+msgid "Ready"
+msgstr ""
+
+msgid "Delivered"
+msgstr ""
+
+msgid "Cancelled"
+msgstr ""
+
+msgid "Device"
+msgstr ""
+
+msgid "Model"
+msgstr ""
+
+msgid "Serial Number"
+msgstr ""
+
+msgid "Problem"
+msgstr ""
+
+msgid "Diagnosis"
+msgstr ""
+
+msgid "Work Done"
+msgstr ""
+
+msgid "Labor Cost"
+msgstr ""
+
+msgid "Parts Cost"
+msgstr ""
+
+msgid "Total"
+msgstr ""
+
+msgid "Created"
+msgstr ""
+
+msgid "Started"
+msgstr ""
+
+msgid "Finished"
+msgstr ""
+
+msgid "Delivered"
+msgstr ""
+
+msgid "Incoming"
+msgstr ""
+
+msgid "Outgoing"
+msgstr ""
+
+msgid "Move Stock"
+msgstr ""
+
+msgid "Quantity"
+msgstr ""
+
+msgid "Order"
+msgstr ""
+
+msgid "Comment"
+msgstr ""
+
+msgid "Period"
+msgstr ""
+
+msgid "Worker"
+msgstr ""
+
+msgid "Language"
+msgstr ""

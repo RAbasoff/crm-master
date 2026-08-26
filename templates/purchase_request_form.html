@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}{{ _('New Purchase Request') }} — CRM{% endblock %}
+{% block content %}
+<h1>🛒 {{ _('New Purchase Request') }}</h1>
+<div class="card">
+    <form method="POST" id="purchaseForm">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Machine') }} *</label>
+                <select name="machine_id" id="machineSelect" required onchange="fillMachineInfo()">
+                    <option value="">{{ _('Select Machine') }}</option>
+                    {% for m in machines %}
+                    <option value="{{ m.id }}" data-serial="{{ m.serial_number or '' }}" {% if request.args.get('machine')|int == m.id %}selected{% endif %}>{{ m.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Serial Number') }}</label>
+                <input type="text" name="machine_serial" id="machineSerial" value="" readonly style="background:#f5f5f5">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Fault Report') }}</label>
+                <select name="fault_id" id="faultSelect" onchange="fillFaultInfo()">
+                    <option value="">{{ _('Select or leave empty') }}</option>
+                    {% for f in faults %}
+                    <option value="{{ f.id }}" data-number="{{ f.id }}" data-desc="{{ f.title }}">{{ f.id }} — {{ f.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Fault Number') }}</label>
+                <input type="text" name="fault_number" id="faultNumber" readonly style="background:#f5f5f5">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>{{ _('Fault Description') }}</label>
+            <textarea name="fault_description" id="faultDesc" rows="2" readonly style="background:#f5f5f5"></textarea>
+        </div>
+        
+        <!-- PART SELECTION -->
+        <div style="background:#f0f7ff;border:2px solid #3498db;border-radius:12px;padding:16px;margin-bottom:16px">
+            <h3 style="margin-bottom:12px;color:#1a1a2e">{{ _('Select Part') }}</h3>
+            
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                <input type="text" id="partSearch" placeholder="{{ _('Search part by name...') }}" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;min-width:200px" oninput="searchParts(this.value)">
+                <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="scanPartQR()">📷 {{ _('Scan QR') }}</button>
+            </div>
+            
+            <div id="partResults" style="display:none;max-height:200px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;margin-bottom:12px"></div>
+            
+            <div id="selectedPart" style="display:none;background:white;padding:12px;border-radius:8px;border-left:3px solid #27ae60">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <strong id="selectedPartName"></strong>
+                        <span id="selectedPartAvail" style="font-size:12px;margin-left:8px"></span>
+                    </div>
+                    <button type="button" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:18px" onclick="clearPart()">✕</button>
+                </div>
+                <input type="hidden" name="part_name" id="partName">
+                <input type="hidden" name="part_catalog" id="partCatalog">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Part Name') }} *</label>
+                <input type="text" name="part_name_manual" id="partNameManual" placeholder="{{ _('Enter manually if not in warehouse') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Catalog Number') }}</label>
+                <input type="text" name="part_catalog_manual" id="partCatalogManual">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Quantity') }} *</label>
+                <input type="number" name="quantity" value="1" min="0.1" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Unit') }}</label>
+                <select name="unit">
+                    {% for u in ['st', 'm', 'kg', 'l', 'set'] %}
+                    <option value="{{ u }}">{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Urgency') }}</label>
+                <select name="urgency">
+                    {% for u in ['low', 'normal', 'high', 'critical'] %}
+                    <option value="{{ u }}">{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Reason') }}</label>
+                <input type="text" name="reason" placeholder="{{ _('Why is this part needed?') }}">
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-warning">{{ _('Submit Request') }}</button>
+        <a href="/purchase-requests" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+    </form>
+</div>
+
+<!-- QR Scanner Modal -->
+<div id="qrModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:90vh;overflow:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+            <h2>{{ _('Scan Part QR') }}</h2>
+            <button onclick="closeQRModal()" style="background:none;border:none;font-size:24px;cursor:pointer">✕</button>
+        </div>
+        <div id="qr-reader" style="width:100%"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+function fillMachineInfo() {
+    const sel = document.getElementById('machineSelect');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('machineSerial').value = opt.dataset.serial || '';
+}
+
+function fillFaultInfo() {
+    const sel = document.getElementById('faultSelect');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('faultNumber').value = opt.dataset.number || '';
+    document.getElementById('faultDesc').value = opt.dataset.desc || '';
+}
+
+let searchTimeout;
+function searchParts(q) {
+    clearTimeout(searchTimeout);
+    if (!q || q.length < 2) {
+        document.getElementById('partResults').style.display = 'none';
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        fetch(`/api/warehouse/search?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(items => {
+                const container = document.getElementById('partResults');
+                if (items.length === 0) {
+                    container.innerHTML = '<div style="padding:12px;color:#888;text-align:center">{{ _("No parts found") }}</div>';
+                } else {
+                    container.innerHTML = items.map(i => `
+                        <div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="selectPart(${i.id}, '${i.name}', '${i.category}', ${i.quantity}, '${i.unit}', ${i.available})">
+                            <div>
+                                <strong>${i.name}</strong>
+                                <span style="font-size:12px;color:#888;margin-left:8px">${i.category}</span>
+                            </div>
+                            <div style="text-align:right">
+                                <span style="font-weight:600;${i.available ? 'color:#27ae60' : 'color:#e74c3c'}">${i.quantity} ${i.unit}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                container.style.display = 'block';
+            });
+    }, 300);
+}
+
+function selectPart(id, name, category, qty, unit, available) {
+    document.getElementById('selectedPart').style.display = 'block';
+    document.getElementById('selectedPartName').textContent = `${name} (${category})`;
+    document.getElementById('selectedPartAvail').innerHTML = available 
+        ? `<span style="color:#27ae60">✓ ${qty} ${unit} {{ _('available') }}</span>`
+        : `<span style="color:#e74c3c">✗ {{ _('out of stock') }}</span>`;
+    document.getElementById('partName').value = name;
+    document.getElementById('partCatalog').value = category;
+    document.getElementById('partNameManual').value = name;
+    document.getElementById('partCatalogManual').value = category;
+    document.getElementById('partResults').style.display = 'none';
+    document.getElementById('partSearch').value = name;
+}
+
+function clearPart() {
+    document.getElementById('selectedPart').style.display = 'none';
+    document.getElementById('partName').value = '';
+    document.getElementById('partCatalog').value = '';
+    document.getElementById('partNameManual').value = '';
+    document.getElementById('partCatalogManual').value = '';
+    document.getElementById('partSearch').value = '';
+}
+
+let qrScanner = null;
+function scanPartQR() {
+    document.getElementById('qrModal').style.display = 'flex';
+    qrScanner = new Html5Qrcode("qr-reader");
+    qrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: {width: 250, height: 250} },
+        (decodedText) => {
+            closeQRModal();
+            fetch('/api/warehouse/scan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({code: decodedText})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.found) {
+                    selectPart(data.id, data.name, data.category, data.quantity, data.unit, data.available);
+                } else {
+                    alert('{{ _("Part not found") }}: ' + decodedText);
+                }
+            });
+        },
+        () => {}
+    ).catch(err => {
+        console.error(err);
+        alert('{{ _("Camera not available") }}');
+        closeQRModal();
+    });
+}
+
+function closeQRModal() {
+    document.getElementById('qrModal').style.display = 'none';
+    if (qrScanner) {
+        qrScanner.stop().catch(() => {});
+    }
+}
+
+// Sync manual fields
+document.getElementById('partNameManual').addEventListener('input', function() {
+    document.getElementById('partName').value = this.value;
+});
+document.getElementById('partCatalogManual').addEventListener('input', function() {
+    document.getElementById('partCatalog').value = this.value;
+});
+
+// Auto-fill from URL params
+const params = new URLSearchParams(window.location.search);
+if (params.get('fault_id')) {
+    document.getElementById('faultSelect').value = params.get('fault_id');
+    fillFaultInfo();
+}
+if (params.get('machine')) {
+    document.getElementById('machineSelect').value = params.get('machine');
+    fillMachineInfo();
+}
+</script>
+{% endblock %}

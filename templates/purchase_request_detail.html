@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Purchase Request') }} #{{ pr.id }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🛒 {{ _('Purchase Request') }} #{{ pr.id }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% if pr.status == 'pending' and current_user.has_role('admin', 'director') %}
+        <form method="POST" action="/purchase-requests/{{ pr.id }}/approve" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-success">{{ _('Approve') }}</button>
+        </form>
+        <form method="POST" action="/purchase-requests/{{ pr.id }}/reject" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-danger">{{ _('Reject') }}</button>
+        </form>
+        {% endif %}
+        <a href="/purchase-requests" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="detail-grid">
+        <div>
+            <h2>{{ _('Machine Info') }}</h2>
+            <p><strong>{{ _('Machine') }}:</strong> <a href="/floor?highlight={{ pr.machine_id }}">{{ pr.machine.name }}</a></p>
+            <p><strong>{{ _('Serial Number') }}:</strong> {{ pr.machine_serial or '—' }}</p>
+            <p><strong>{{ _('Machine Type') }}:</strong> {{ pr.machine.machine_type or '—' }}</p>
+            
+            <h2 style="margin-top:16px">{{ _('Fault Info') }}</h2>
+            <p><strong>{{ _('Fault Number') }}:</strong> {% if pr.fault_id %}<a href="/faults/{{ pr.fault_id }}">#{{ pr.fault_id }}</a>{% else %}{{ pr.fault_number or '—' }}{% endif %}</p>
+            <p><strong>{{ _('Fault Description') }}:</strong> {{ pr.fault_description or '—' }}</p>
+        </div>
+        <div>
+            <h2>{{ _('Part Info') }}</h2>
+            <p><strong>{{ _('Part Name') }}:</strong> {{ pr.part_name }}</p>
+            <p><strong>{{ _('Catalog Number') }}:</strong> {{ pr.part_catalog or '—' }}</p>
+            <p><strong>{{ _('Quantity') }}:</strong> {{ pr.quantity }} {{ pr.unit }}</p>
+            <p><strong>{{ _('Urgency') }}:</strong> <span class="badge badge-{{ pr.urgency }}">{{ pr.urgency }}</span></p>
+            <p><strong>{{ _('Reason') }}:</strong> {{ pr.reason or '—' }}</p>
+            
+            <h2 style="margin-top:16px">{{ _('Status') }}</h2>
+            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ pr.status }}">{{ pr.status }}</span></p>
+            <p><strong>{{ _('Requester') }}:</strong> {{ pr.requester.display_name or pr.requester.username }}</p>
+            <p><strong>{{ _('Created') }}:</strong> {{ pr.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% if pr.reviewer %}
+            <p><strong>{{ _('Reviewed by') }}:</strong> {{ pr.reviewer.display_name or pr.reviewer.username }}</p>
+            <p><strong>{{ _('Reviewed') }}:</strong> {{ pr.reviewed_at.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

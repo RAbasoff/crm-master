@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Work Order') }} {{ order.nummer }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Work Order') }} {{ order.nummer }}</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <a href="/orders/{{ order.id }}/edit" class="btn btn-primary btn-sm">{{ _('Edit') }}</a>
+        <a href="/qr/generate/{{ order.id }}" class="btn btn-sm" style="background:#f39c12;color:white" target="_blank">QR</a>
+        <a href="/orders" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+<div class="card">
+    <div class="detail-grid">
+        <div>
+            <h2>{{ _('Responsible person') }}</h2>
+            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ order.status.replace(' ','-') }}">{{ order.status }}</span></p>
+            <p><strong>{{ _('Name') }}:</strong> <span class="translatable" data-field="klant_naam">{{ order.verantwoordelijke.naam }}</span></p>
+            <p><strong>{{ _('Phone') }}:</strong> <a href="tel:{{ order.verantwoordelijke.telefoon }}">{{ order.verantwoordelijke.telefoon or '—' }}</a></p>
+            <p><strong>{{ _('Worker') }}:</strong> {{ order.monteur.naam if order.monteur else '—' }}</p>
+            <p><strong>{{ _('Created') }}:</strong> {{ order.aangemaakt.strftime('%d-%m-%Y %H:%M') }}</p>
+            {% if order.gestart %}<p><strong>{{ _('Started') }}:</strong> {{ order.gestart.strftime('%d-%m-%Y %H:%M') }}</p>{% endif %}
+            {% if order.gereed %}<p><strong>{{ _('Finished') }}:</strong> {{ order.gereed.strftime('%d-%m-%Y %H:%M') }}</p>{% endif %}
+            {% if order.afgeleverd %}<p><strong>{{ _('Delivered') }}:</strong> {{ order.afgeleverd.strftime('%d-%m-%Y %H:%M') }}</p>{% endif %}
+        </div>
+        <div>
+            <h2>{{ _('Device') }}</h2>
+            <p><strong>{{ _('Device') }}:</strong> <span class="translatable" data-field="apparaat">{{ order.apparaat }}</span></p>
+            <p><strong>{{ _('Model') }}:</strong> {{ order.model or '—' }}</p>
+            <p><strong>{{ _('Serial Number') }}:</strong> {{ order.serienummer or '—' }}</p>
+            <h2 style="margin-top:12px">{{ _('Labor Cost') }}</h2>
+            <p><strong>{{ _('Labor Cost') }}:</strong> €{{ "%.0f"|format(order.arbeidskosten) }}</p>
+            <p><strong>{{ _('Parts Cost') }}:</strong> €{{ "%.0f"|format(order.onderdelenkosten) }}</p>
+            <p style="font-size:18px;color:#27ae60;font-weight:bold;margin-top:8px">{{ _('Total') }}: €{{ "%.0f"|format(order.totaal) }}</p>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <h2>{{ _('Problem') }} <button class="btn btn-sm" style="background:#3498db;color:white;margin-left:10px" onclick="translateField(this, 'probleem')">{{ _('Translate') }}</button></h2>
+    <p class="translatable" data-field="probleem" data-original="{{ order.probleem }}">{{ order.probleem }}</p>
+    {% if order.diagnose %}<h2 style="margin-top:12px">{{ _('Diagnosis') }} <button class="btn btn-sm" style="background:#3498db;color:white;margin-left:10px" onclick="translateField(this, 'diagnose')">{{ _('Translate') }}</button></h2><p class="translatable" data-field="diagnose" data-original="{{ order.diagnose }}">{{ order.diagnose }}</p>{% endif %}
+    {% if order.uitgevoerd %}<h2 style="margin-top:12px">{{ _('Work Done') }} <button class="btn btn-sm" style="background:#3498db;color:white;margin-left:10px" onclick="translateField(this, 'uitgevoerd')">{{ _('Translate') }}</button></h2><p class="translatable" data-field="uitgevoerd" data-original="{{ order.uitgevoerd }}">{{ order.uitgevoerd }}</p>{% endif %}
+</div>
+<div class="card" style="text-align:center">
+    <h2>QR-code</h2>
+    <img src="/qr/generate/{{ order.id }}" alt="QR" style="max-width:180px;border:1px solid #eee;border-radius:8px;padding:8px">
+    <p style="margin-top:8px;color:#888;font-size:12px">{{ _('Scan QR Code') }}</p>
+</div>
+<script>
+function translateField(btn, field) {
+    const el = document.querySelector(`.translatable[data-field="${field}"]`);
+    const original = el.getAttribute('data-original') || el.textContent;
+    
+    if (el.getAttribute('data-translated') === 'true') {
+        el.textContent = original;
+        el.setAttribute('data-translated', 'false');
+        btn.textContent = '{{ _("Translate") }}';
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '...';
+    
+    fetch('/api/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: original, target: '{{ g.lang }}'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        el.textContent = data.translated;
+        el.setAttribute('data-translated', 'true');
+        btn.textContent = '{{ _("Original") }}';
+        btn.disabled = false;
+    })
+    .catch(() => {
+        btn.textContent = '{{ _("Translate") }}';
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

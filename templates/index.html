@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Dashboard') }} — ProMaster{% endblock %}
+{% block content %}
+
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden">
+    <div style="position:absolute;top:-20px;right:-20px;width:160px;height:160px;background:rgba(91,156,246,0.1);border-radius:50%"></div>
+    <div style="position:absolute;bottom:-30px;right:60px;width:100px;height:100px;background:rgba(91,156,246,0.06);border-radius:50%"></div>
+    <div style="position:relative;z-index:1">
+        <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px">{{ _('Welcome back') }}</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">{{ current_user.display_name or current_user.username }}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.5)">{{ now.strftime('%A, %d %B %Y') if now else '' }}</div>
+    </div>
+</div>
+
+<!-- Main Stats -->
+<div class="stats">
+    <div class="stat-card" style="border-left:4px solid #5b9cf6">
+        <div class="stat-accent" style="background:#5b9cf6"></div>
+        <div class="stat-icon">📋</div>
+        <div class="number">{{ stats.opdrachten_actief }}</div>
+        <div class="label">{{ _('Active Work Orders') }}</div>
+    </div>
+    <div class="stat-card {% if stats.faults_active > 0 %}warn{% else %}ok{% endif %}" style="border-left:4px solid {% if stats.faults_active > 0 %}#e74c3c{% else %}#27ae60{% endif %}">
+        <div class="stat-accent" style="background:{% if stats.faults_active > 0 %}#e74c3c{% else %}#27ae60{% endif %}"></div>
+        <div class="stat-icon">{% if stats.faults_active > 0 %}⚠️{% else %}✅{% endif %}</div>
+        <div class="number">{{ stats.faults_active }}</div>
+        <div class="label">{{ _('Active Faults') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="stat-accent" style="background:#f39c12"></div>
+        <div class="stat-icon">📅</div>
+        <div class="number">{{ stats.opdrachten_vandaag }}</div>
+        <div class="label">{{ _('Today') }}</div>
+    </div>
+    <div class="stat-card {% if stats.voorraad_laag > 0 %}warn{% endif %}" style="border-left:4px solid {% if stats.voorraad_laag > 0 %}#e74c3c{% else %}#27ae60{% endif %}">
+        <div class="stat-accent" style="background:{% if stats.voorraad_laag > 0 %}#e74c3c{% else %}#27ae60{% endif %}"></div>
+        <div class="stat-icon">📦</div>
+        <div class="number">{{ stats.voorraad_laag }}</div>
+        <div class="label">{{ _('Low Stock') }}</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+    <a href="/faults/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">⚠️</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('New Fault') }}</span>
+    </a>
+    <a href="/orders/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">📋</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('New Order') }}</span>
+    </a>
+    <a href="/floor" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">🏭</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('Floor Plan') }}</span>
+    </a>
+    <a href="/messages/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">💬</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('New Message') }}</span>
+    </a>
+    <a href="/machines" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">⚙️</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('Machines') }}</span>
+    </a>
+    <a href="/warehouse" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">📦</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('Warehouse') }}</span>
+    </a>
+</div>
+
+<!-- Two column layout -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    
+    <!-- Recent Faults -->
+    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}1{% else %}1 / -1{% endif %}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h2 style="margin:0;font-size:15px">⚠️ {{ _('Recent Faults') }}</h2>
+            <a href="/faults" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">{{ _('View all') }} →</a>
+        </div>
+        {% if recent_faults %}
+        <div style="display:flex;flex-direction:column;gap:8px">
+            {% for f in recent_faults[:5] %}
+            <a href="/faults/{{ f.id }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:{% if f.priority == 'critical' %}#e74c3c18{% elif f.priority == 'high' %}#f39c1218{% elif f.priority == 'normal' %}#5b9cf618{% else %}#27ae6018{% endif %}">
+                    {% if f.priority == 'critical' %}🔴{% elif f.priority == 'high' %}🟠{% elif f.priority == 'normal' %}🔵{% else %}🟢{% endif %}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.title }}</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">{{ f.machine.name }} · {{ f.created_at.strftime('%d-%m %H:%M') }}</div>
+                </div>
+                <span class="badge badge-{{ f.status }}" style="flex-shrink:0">{{ f.status }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:30px 16px;color:#999">
+            <div style="font-size:36px;margin-bottom:8px">✅</div>
+            <div style="font-size:13px">{{ _('No active faults') }}</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Work Orders -->
+    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}2{% else %}1 / -1{% endif %}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h2 style="margin:0;font-size:15px">📋 {{ _('Recent Orders') }}</h2>
+            <a href="/orders" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">{{ _('View all') }} →</a>
+        </div>
+        {% if recent_orders %}
+        <div style="display:flex;flex-direction:column;gap:8px">
+            {% for o in recent_orders[:5] %}
+            <a href="/orders/{{ o.id }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;background:#5b9cf618;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#5b9cf6;flex-shrink:0">
+                    {{ o.nummer[-3:] if o.nummer else '#' }}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.apparaat }} {{ o.model }}</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">{{ o.verantwoordelijke.naam }} · €{{ "%.0f"|format(o.totaal) }}</div>
+                </div>
+                <span class="badge badge-{{ o.status.replace(' ','-') }}" style="flex-shrink:0">{{ o.status }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:30px 16px;color:#999">
+            <div style="font-size:36px;margin-bottom:8px">📋</div>
+            <div style="font-size:13px">{{ _('No work orders yet') }}</div>
+            <a href="/orders/new" class="btn btn-primary btn-sm" style="margin-top:12px">{{ _('Create First Order') }}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Users Management (Admin only) -->
+{% if current_user.has_role('admin') %}
+<div class="card" style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="document.getElementById('usersTable').style.display=document.getElementById('usersTable').style.display==='none'?'block':'none';document.getElementById('usersArrow').textContent=document.getElementById('usersTable').style.display==='none'?'▶':'▼'">
+        <h2 style="margin:0;font-size:15px">👥 {{ _('Users') }} <span style="font-weight:400;color:#888">({{ users|length }})</span></h2>
+        <div style="display:flex;align-items:center;gap:8px">
+            <a href="/users/new" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">+ {{ _('New User') }}</a>
+            <span id="usersArrow" style="font-size:11px;color:#888;transition:0.2s">▶</span>
+        </div>
+    </div>
+    <div id="usersTable" class="table-wrap" style="display:none;margin-top:14px"><table>
+        <tr><th>ID</th><th>{{ _('Username') }}</th><th>{{ _('Name') }}</th><th>{{ _('Role') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for u in users %}
+        <tr style="cursor:pointer" onclick="window.location='/users/{{ u.id }}'">
+            <td style="color:#888">{{ u.id }}</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">{{ u.username }}</code></td>
+            <td><a href="/users/{{ u.id }}" style="color:#5b9cf6;text-decoration:none;font-weight:600">{{ u.display_name or u.first_name or '—' }}</a></td>
+            <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+            <td>{% if u.is_active_user %}<span class="badge badge-active">{{ _('Active') }}</span>{% else %}<span class="badge badge-offline">{{ _('Inactive') }}</span>{% endif %}</td>
+            <td><a href="/users/{{ u.id }}/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">{{ _('Edit') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- Low Stock Alert -->
+{% if low_stock %}
+<div class="card" style="border-left:4px solid #e74c3c;margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="margin:0;font-size:15px;color:#e74c3c">📦 {{ _('Low Stock Alert') }}</h2>
+        <a href="/warehouse" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">{{ _('Warehouse') }} →</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+        {% for i in low_stock[:5] %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:#fef2f2">
+            <div>
+                <div style="font-weight:600;font-size:13px">{{ i.naam }}</div>
+                <div style="font-size:11px;color:#888">{{ _('Min') }}: {{ i.minimum }} {{ i.eenheid }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-weight:700;color:#e74c3c;font-size:14px">{{ i.hoeveelheid }} {{ i.eenheid }}</span>
+                <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Order') }}</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- System Info Footer -->
+<div class="card" style="background:linear-gradient(135deg,#f8f9fc,#f0f2f5);border:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#27ae60;box-shadow:0 0 8px rgba(39,174,96,0.4)"></div>
+            <div>
+                <div style="font-size:12px;color:#888">{{ _('System Status') }}</div>
+                <div style="font-weight:700;font-size:14px;color:#27ae60">{{ _('All Systems Operational') }}</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:24px">
+            <div style="text-align:center">
+                <div style="font-size:22px;font-weight:800;color:#1a1a2e">{{ stats.verantwoordelijken }}</div>
+                <div style="font-size:11px;color:#888">{{ _('Clients') }}</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:22px;font-weight:800;color:#1a1a2e">{{ stats.monteurs }}</div>
+                <div style="font-size:11px;color:#888">{{ _('Workers') }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+}
+</style>
+{% endblock %}

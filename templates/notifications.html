@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Notifications') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔔 {{ _('Notifications') }}</h1>
+    <button class="btn btn-sm" style="background:#eee" onclick="markAllRead()">{{ _('Mark all read') }}</button>
+</div>
+<div class="card">
+    {% for n in notifications %}
+    <div class="notif-item {% if not n.is_read %}unread{% endif %}" data-id="{{ n.id }}" data-link="{{ n.link or '' }}" onclick="handleNotifClick(this)" style="padding:12px;border-bottom:1px solid #f0f0f0;cursor:pointer">
+        <div class="notif-title" style="font-weight:600;font-size:14px">{{ n.title }}</div>
+        <div class="notif-msg" style="font-size:13px;color:#666;margin-top:4px">{{ n.message }}</div>
+        <div class="notif-time" style="font-size:11px;color:#999;margin-top:4px">{{ n.created_at.strftime('%d-%m-%Y %H:%M') }}</div>
+    </div>
+    {% else %}
+    <p style="color:#888;text-align:center;padding:20px">{{ _('No notifications') }}</p>
+    {% endfor %}
+</div>
+
+<script>
+function handleNotifClick(el) {
+    const id = el.dataset.id;
+    const link = el.dataset.link;
+    csrfFetch(`/notifications/${id}/read`, {method: 'POST'}).then(() => {
+        if (link) window.location.href = link;
+    });
+}
+
+function markAllRead() {
+    csrfFetch('/notifications/read-all', {method: 'POST'}).then(() => {
+        document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+    });
+}
+</script>
+{% endblock %}

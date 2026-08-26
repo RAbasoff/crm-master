@@ -1,0 +1,1686 @@
+# Russian translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-08-10 18:44+0300\n"
+"PO-Revision-Date: 2026-08-10 18:44+0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Russian <LL@li.org>\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app.py:108
+msgid "Dashboard"
+msgstr "Панель управления"
+
+#: app.py:126
+msgid "Work Orders"
+msgstr "Рабочие ордера"
+
+#: app.py:137
+msgid "New Work Order"
+msgstr "Новый рабочий ордер"
+
+#: app.py:159
+msgid "Work Order Details"
+msgstr "Детали рабочего ордера"
+
+#: app.py:164
+msgid "Edit Work Order"
+msgstr "Редактировать рабочий ордер"
+
+#: app.py:195
+msgid "Responsible persons"
+msgstr "Ответственные"
+
+#: app.py:199
+msgid "New responsible person"
+msgstr "Новое ответственное лицо"
+
+#: app.py:211
+msgid "Edit responsible person"
+msgstr "Редактировать ответственное лицо"
+
+msgid "Responsible person"
+msgstr "Ответственное лицо"
+
+msgid "Responsible person added"
+msgstr "Ответственное лицо добавлено"
+
+msgid "Responsible person updated"
+msgstr "Ответственное лицо обновлено"
+
+#: app.py:227
+msgid "Workers"
+msgstr "Техническая Служба"
+
+msgid "Permissions"
+msgstr "Права доступа"
+
+msgid "Access Permissions"
+msgstr "Права доступа"
+
+#: app.py:231
+msgid "New Worker"
+msgstr "Новый сотрудник"
+
+#: app.py:242
+msgid "Edit Worker"
+msgstr "Редактировать сотрудника"
+
+#: app.py:259
+msgid "Warehouse"
+msgstr "Склад"
+
+#: app.py:269
+msgid "New Item"
+msgstr "Новый товар"
+
+#: app.py:283
+msgid "Edit Item"
+msgstr "Редактировать товар"
+
+#: app.py:319
+msgid "Reports"
+msgstr "Отчёты"
+
+#: app.py:323
+msgid "Period Report"
+msgstr "Отчёт за период"
+
+#: app.py:351
+msgid "Worker Report"
+msgstr "Отчёт по мастеру"
+
+#: app.py:390
+msgid "QR Scan"
+msgstr "Сканировать QR"
+
+#: app.py:396
+msgid "QR Generate"
+msgstr "Создать QR"
+
+msgid "Home"
+msgstr "Главная"
+
+msgid "Total Work Orders"
+msgstr "Всего рабочих ордеров"
+
+msgid "Active Work Orders"
+msgstr "Активные рабочие ордера"
+
+msgid "Today"
+msgstr "Сегодня"
+
+msgid "Clients"
+msgstr "Клиенты"
+
+msgid "Active Workers"
+msgstr "Активные мастера"
+
+msgid "Low Stock"
+msgstr "Мало на складе"
+
+msgid "Recent Work Orders"
+msgstr "Последние рабочие ордера"
+
+msgid "Number"
+msgstr "Номер"
+
+msgid "Client"
+msgstr "Ответственное лицо"
+
+msgid "Device"
+msgstr "Устройство"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Actions"
+msgstr "Действия"
+
+msgid "View"
+msgstr "Просмотр"
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Save"
+msgstr "Сохранить"
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Back"
+msgstr "Назад"
+
+msgid "Search"
+msgstr "Поиск"
+
+msgid "Filter"
+msgstr "Фильтр"
+
+msgid "All"
+msgstr "Все"
+
+msgid "Name"
+msgstr "Имя"
+
+msgid "Phone"
+msgstr "Телефон"
+
+msgid "Email"
+msgstr "Электронная почта"
+
+msgid "Address"
+msgstr "Адрес"
+
+msgid "Notes"
+msgstr "Заметки"
+
+msgid "Specialization"
+msgstr "Специализация"
+
+msgid "Hourly Rate"
+msgstr "Почасовая ставка"
+
+msgid "Active"
+msgstr "Активный"
+
+msgid "Category"
+msgstr "Категория"
+
+msgid "Unit"
+msgstr "Единица"
+
+msgid "Quantity"
+msgstr "Количество"
+
+msgid "Minimum"
+msgstr "Минимум"
+
+msgid "Price"
+msgstr "Цена"
+
+msgid "Location"
+msgstr "Местоположение"
+
+msgid "Date From"
+msgstr "Дата с"
+
+msgid "Date To"
+msgstr "Дата по"
+
+msgid "Show Report"
+msgstr "Показать отчёт"
+
+msgid "Total Revenue"
+msgstr "Общая выручка"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "Cancelled"
+msgstr "Отменено"
+
+msgid "Average Time"
+msgstr "Среднее время"
+
+msgid "Worker Statistics"
+msgstr "Статистика мастеров"
+
+msgid "Work Orders Count"
+msgstr "Количество рабочих ордеров"
+
+msgid "Revenue"
+msgstr "Выручка"
+
+msgid "Scan QR Code"
+msgstr "Сканировать QR-код"
+
+msgid "Generate QR"
+msgstr "Создать QR"
+
+msgid "Accepted"
+msgstr "Принят"
+
+msgid "Diagnosis"
+msgstr "Диагностика"
+
+msgid "In Progress"
+msgstr "В работе"
+
+msgid "Ready"
+msgstr "Готов"
+
+msgid "Delivered"
+msgstr "Выдан"
+
+msgid "Cancelled"
+msgstr "Отменён"
+
+msgid "Device"
+msgstr "Устройство"
+
+msgid "Model"
+msgstr "Модель"
+
+msgid "Serial Number"
+msgstr "Серийный номер"
+
+msgid "Problem"
+msgstr "Проблема"
+
+msgid "Work Done"
+msgstr "Выполненная работа"
+
+msgid "Labor Cost"
+msgstr "Стоимость работы"
+
+msgid "Parts Cost"
+msgstr "Стоимость деталей"
+
+msgid "Total"
+msgstr "Итого"
+
+msgid "Created"
+msgstr "Создан"
+
+msgid "Started"
+msgstr "Начат"
+
+msgid "Finished"
+msgstr "Завершён"
+
+msgid "Incoming"
+msgstr "Приход"
+
+msgid "Outgoing"
+msgstr "Расход"
+
+msgid "Move Stock"
+msgstr "Движение склада"
+
+msgid "Work Order"
+msgstr "Рабочий ордер"
+
+msgid "Comment"
+msgstr "Комментарий"
+
+msgid "Period"
+msgstr "Период"
+
+msgid "Worker"
+msgstr "Мастер"
+
+msgid "Language"
+msgstr "Язык"
+
+msgid "Inactive"
+msgstr "Неактивный"
+
+msgid "Last 30 Days"
+msgstr "Последние 30 дней"
+
+msgid "Scanned"
+msgstr "Отсканировано"
+
+msgid "History"
+msgstr "История"
+
+msgid "or"
+msgstr "или"
+
+msgid "Original"
+msgstr "Оригинал"
+
+msgid "Translate"
+msgstr "Перевести"
+
+# Auth & Users
+msgid "Login"
+msgstr "Войти"
+msgid "Logout"
+msgstr "Выйти"
+msgid "Username"
+msgstr "Имя пользователя"
+msgid "Password"
+msgstr "Пароль"
+msgid "Invalid credentials"
+msgstr "Неверные учетные данные"
+msgid "Profile"
+msgstr "Профиль"
+msgid "Profile updated"
+msgstr "Профиль обновлён"
+msgid "Display Name"
+msgstr "Отображаемое имя"
+msgid "New Password"
+msgstr "Новый пароль"
+msgid "Confirm Password"
+msgstr "Подтверждение пароля"
+msgid "Enter new password"
+msgstr "Введите новый пароль"
+msgid "Repeat new password"
+msgstr "Повторите новый пароль"
+msgid "Change Password"
+msgstr "Изменить пароль"
+msgid "Password changed for %(username)s"
+msgstr "Пароль изменён для %(username)s"
+msgid "Passwords do not match"
+msgstr "Пароли не совпадают"
+msgid "Delete user"
+msgstr "Удалить пользователя"
+msgid "Cannot delete yourself"
+msgstr "Нельзя удалить самого себя"
+msgid "User %(username)s deleted"
+msgstr "Пользователь %(username)s удалён"
+msgid "Leave empty to keep current"
+msgstr "Оставьте пустым, чтобы не менять"
+msgid "Users"
+msgstr "Пользователи"
+msgid "New User"
+msgstr "Новый пользователь"
+msgid "Edit User"
+msgstr "Редактировать пользователя"
+msgid "User created"
+msgstr "Пользователь создан"
+msgid "User updated"
+msgstr "Пользователь обновлён"
+msgid "Role"
+msgstr "Роль"
+msgid "Assigned Machines"
+msgstr "Назначенные станки"
+
+# Machines & Floor
+msgid "Floor Plan"
+msgstr "Карта цеха"
+msgid "Machines"
+msgstr "Станки"
+msgid "New Machine"
+msgstr "Новый станок"
+msgid "Edit Machine"
+msgstr "Редактировать станок"
+msgid "Machine created"
+msgstr "Станок создан"
+msgid "Machine updated"
+msgstr "Станок обновлён"
+msgid "Machine Type"
+msgstr "Тип станка"
+msgid "Floor Position X"
+msgstr "Позиция X"
+msgid "Floor Position Y"
+msgstr "Позиция Y"
+msgid "Select Machine"
+msgstr "Выберите станок"
+msgid "View on floor plan"
+msgstr "Смотреть на карте"
+msgid "Floor"
+msgstr "Карта"
+msgid "Machine"
+msgstr "Станок"
+msgid "Maintenance"
+msgstr "Обслуживание"
+msgid "Broken"
+msgstr "Сломан"
+msgid "Offline"
+msgstr "Отключён"
+
+# Faults
+msgid "Faults"
+msgstr "Заявки"
+msgid "Fault Reports"
+msgstr "Заявки о неисправностях"
+msgid "New Fault Report"
+msgstr "Новая заявка"
+msgid "Fault"
+msgstr "Заявка"
+msgid "Fault created"
+msgstr "Заявка создана"
+msgid "Fault accepted"
+msgstr "Заявка принята"
+msgid "Fault resolved"
+msgstr "Заявка решена"
+msgid "Report Fault"
+msgstr "Сообщить о неисправности"
+msgid "Brief description of the fault"
+msgstr "Краткое описание неисправности"
+msgid "Detailed description of the fault, symptoms, when it occurs..."
+msgstr "Подробное описание неисправности, симптомы, когда возникает..."
+msgid "Photos"
+msgstr "Фотографии"
+msgid "Attach photos of the fault if possible"
+msgstr "Прикрепите фото неисправности, если возможно"
+msgid "Videos"
+msgstr "Видео"
+msgid "Attach videos of the fault (mp4, mov, avi, webm)"
+msgstr "Прикрепите видео неисправности (mp4, mov, avi, webm)"
+msgid "Your browser does not support video playback"
+msgstr "Ваш браузер не поддерживает воспроизведение видео"
+msgid "Submit Report"
+msgstr "Отправить заявку"
+msgid "Accept"
+msgstr "Принять"
+msgid "Resolve"
+msgstr "Решить"
+msgid "Create Work Report"
+msgstr "Создать отчёт о работе"
+msgid "View Fault"
+msgstr "Смотреть заявку"
+msgid "Reporter"
+msgstr "Заявитель"
+msgid "Technician"
+msgstr "Техник"
+msgid "Accepted"
+msgstr "Принята"
+msgid "Resolved"
+msgstr "Решена"
+msgid "Details"
+msgstr "Детали"
+msgid "Brief description of the fault"
+msgstr "Краткое описание неисправности"
+msgid "Fault Statistics"
+msgstr "Статистика неисправностей"
+msgid "By Machine"
+msgstr "По станкам"
+msgid "By Priority"
+msgstr "По приоритету"
+msgid "Open"
+msgstr "Открыто"
+msgid "Low"
+msgstr "Низкий"
+msgid "Normal"
+msgstr "Обычный"
+msgid "High"
+msgstr "Высокий"
+msgid "Critical"
+msgstr "Критический"
+msgid "New fault report"
+msgstr "Новая заявка о неисправности"
+msgid "accepted your fault report"
+msgstr "принял вашу заявку"
+msgid "Your fault report has been resolved"
+msgstr "Ваша заявка решена"
+
+# Work Reports
+msgid "Work Report"
+msgstr "Отчёт о работе"
+msgid "Work Description"
+msgstr "Описание работы"
+msgid "Describe the work performed..."
+msgstr "Опишите выполненную работу..."
+msgid "Time Spent"
+msgstr "Затраченное время"
+msgid "hours"
+msgstr "часов"
+msgid "Parts Used"
+msgstr "Использованные запчасти"
+msgid "Select Part"
+msgstr "Выберите запчасть"
+msgid "Qty"
+msgstr "Кол-во"
+msgid "Add Part"
+msgstr "Добавить запчасть"
+msgid "Upload photos of installed parts"
+msgstr "Загрузите фото установленных запчастей"
+msgid "installed parts"
+msgstr "установленные запчасти"
+msgid "Work report created"
+msgstr "Отчёт о работе создан"
+
+# Messages
+msgid "Messages"
+msgstr "Сообщения"
+msgid "New Message"
+msgstr "Новое сообщение"
+msgid "Message"
+msgstr "Сообщение"
+msgid "Message sent"
+msgstr "Сообщение отправлено"
+msgid "Send Message"
+msgstr "Отправить сообщение"
+msgid "To"
+msgstr "Кому"
+msgid "From"
+msgstr "От"
+msgid "Received"
+msgstr "Входящие"
+msgid "Sent"
+msgstr "Отправленные"
+msgid "No messages"
+msgstr "Нет сообщений"
+msgid "No subject"
+msgstr "Без темы"
+msgid "Select Recipient"
+msgstr "Выберите получателя"
+msgid "Message subject"
+msgstr "Тема сообщения"
+msgid "Type your message..."
+msgstr "Введите сообщение..."
+msgid "Reply"
+msgstr "Ответить"
+msgid "Linked to fault"
+msgstr "Привязано к заявке"
+msgid "New message"
+msgstr "Новое сообщение"
+
+# Notifications
+msgid "Notifications"
+msgstr "Уведомления"
+msgid "Mark all read"
+msgstr "Отметить все прочитанными"
+msgid "No notifications"
+msgstr "Нет уведомлений"
+msgid "New fault report"
+msgstr "Новая заявка о неисправности"
+msgid "Fault accepted"
+msgstr "Заявка принята"
+msgid "Fault resolved"
+msgstr "Заявка решена"
+
+# Stats
+msgid "Statistics"
+msgstr "Статистика"
+msgid "Parts Statistics"
+msgstr "Статистика запчастей"
+msgid "Parts"
+msgstr "Запчасти"
+msgid "Recent Usage"
+msgstr "Последнее использование"
+msgid "Item"
+msgstr "Товар"
+
+# Access
+msgid "Access denied"
+msgstr "Доступ запрещён"
+
+# Machine Details
+msgid "General Info"
+msgstr "Основная информация"
+msgid "Manufacturer"
+msgstr "Производитель"
+msgid "Year of Manufacture"
+msgstr "Год выпуска"
+msgid "Installation Location"
+msgstr "Место установки"
+msgid "Responsible Person"
+msgstr "Ответственное лицо"
+msgid "Location & Responsibility"
+msgstr "Расположение и ответственность"
+msgid "Floor Position"
+msgstr "Позиция на карте"
+msgid "Assigned Users"
+msgstr "Назначенные пользователи"
+msgid "Not assigned"
+msgstr "Не назначен"
+msgid "Documents"
+msgstr "Документы"
+msgid "Document Type"
+msgstr "Тип документа"
+msgid "Document title"
+msgstr "Название документа"
+msgid "Download"
+msgstr "Скачать"
+msgid "No documents uploaded"
+msgstr "Документы не загружены"
+msgid "Manual"
+msgstr "Руководство"
+msgid "Electrical Schematic"
+msgstr "Электрическая схема"
+msgid "Parts List"
+msgstr "Список запчастей"
+msgid "Other"
+msgstr "Другое"
+msgid "Spare Parts"
+msgstr "Запчасти"
+msgid "No spare parts assigned"
+msgstr "Запчасти не назначены"
+msgid "On Stock"
+msgstr "На складе"
+msgid "Needed"
+msgstr "Требуется"
+msgid "Fault History"
+msgstr "История неисправностей"
+msgid "No faults recorded"
+msgstr "Неисправности не записаны"
+msgid "Maintenance History"
+msgstr "История обслуживания"
+msgid "No maintenance records"
+msgstr "Записей обслуживания нет"
+msgid "Add Maintenance"
+msgstr "Добавить обслуживание"
+msgid "Upload Document"
+msgstr "Загрузить документ"
+msgid "Request Part"
+msgstr "Запросить деталь"
+msgid "View on floor plan"
+msgstr "Смотреть на карте"
+msgid "Maintenance Type"
+msgstr "Тип обслуживания"
+msgid "preventive"
+msgstr "профилактическое"
+msgid "corrective"
+msgstr "корректирующее"
+msgid "inspection"
+msgstr "осмотр"
+msgid "overhaul"
+msgstr "капитальный ремонт"
+msgid "Date Performed"
+msgstr "Дата выполнения"
+msgid "Describe the maintenance work performed..."
+msgstr "Опишите выполненную работу по обслуживанию..."
+msgid "Next Maintenance"
+msgstr "Следующее обслуживание"
+msgid "Maintenance record added"
+msgstr "Запись обслуживания добавлена"
+msgid "Machines Report"
+msgstr "Отчёт по станкам"
+msgid "Report"
+msgstr "Отчёт"
+msgid "Open Faults"
+msgstr "Открытые неисправности"
+msgid "Total Cost"
+msgstr "Общая стоимость"
+msgid "Hold Ctrl to select multiple"
+msgstr "Удерживайте Ctrl для множественного выбора"
+msgid "No file selected"
+msgstr "Файл не выбран"
+msgid "Document uploaded"
+msgstr "Документ загружен"
+msgid "Upload"
+msgstr "Загрузить"
+
+# Purchase Requests
+msgid "Purchase Requests"
+msgstr "Заявки на закупку"
+msgid "New Request"
+msgstr "Новая заявка"
+msgid "New Purchase Request"
+msgstr "Новая заявка на закупку"
+msgid "Purchase Request"
+msgstr "Заявка на закупку"
+msgid "Purchase request created"
+msgstr "Заявка на закупку создана"
+msgid "Purchase request approved"
+msgstr "Заявка на закупку одобрена"
+msgid "Purchase request rejected"
+msgstr "Заявка на закупку отклонена"
+msgid "New purchase request"
+msgstr "Новая заявка на закупку"
+msgid "Select Part"
+msgstr "Выбор детали"
+msgid "Search part by name..."
+msgstr "Поиск детали по названию..."
+msgid "Scan QR"
+msgstr "Сканировать QR"
+msgid "Scan Part QR"
+msgstr "Сканировать QR детали"
+msgid "No parts found"
+msgstr "Детали не найдены"
+msgid "Part not found"
+msgstr "Деталь не найдена"
+msgid "Camera not available"
+msgstr "Камера недоступна"
+msgid "available"
+msgstr "в наличии"
+msgid "out of stock"
+msgstr "нет в наличии"
+msgid "No requests"
+msgstr "Нет заявок"
+msgid "Machine Info"
+msgstr "Информация о станке"
+msgid "Part Info"
+msgstr "Информация о детали"
+msgid "Fault Info"
+msgstr "Информация о неисправности"
+msgid "Reviewed by"
+msgstr "Рассмотрел"
+msgid "Reviewed"
+msgstr "Рассмотрено"
+msgid "Approve"
+msgstr "Одобрить"
+msgid "Reject"
+msgstr "Отклонить"
+msgid "Urgency"
+msgstr "Срочность"
+msgid "Reason"
+msgstr "Причина"
+msgid "Why is this part needed?"
+msgstr "Зачем нужна эта деталь?"
+msgid "Select or leave empty"
+msgstr "Выберите или оставьте пустым"
+msgid "Enter manually if not in warehouse"
+msgstr "Введите вручную, если нет на складе"
+msgid "Catalog Number"
+msgstr "Каталожный номер"
+msgid "Submit Request"
+msgstr "Отправить заявку"
+msgid "pending"
+msgstr "ожидание"
+msgid "approved"
+msgstr "одобрено"
+msgid "ordered"
+msgstr "заказано"
+msgid "received"
+msgstr "получено"
+msgid "rejected"
+msgstr "отклонено"
+
+# Assignment
+msgid "Assign to technician"
+msgstr "Назначить техника"
+msgid "Select technician"
+msgstr "Выберите техника"
+msgid "Assign"
+msgstr "Назначить"
+msgid "Fault assigned to you"
+msgstr "Вам назначена заявка"
+msgid "Admin assigned fault to you"
+msgstr "Администратор назначил вам заявку"
+msgid "Fault assigned"
+msgstr "Заявка назначена"
+msgid "Your fault assigned to technician"
+msgstr "Ваша заявка назначена технику"
+msgid "Fault assigned to"
+msgstr "Заявка назначена"
+msgid "Selected user is not a technician"
+msgstr "Выбранный пользователь не является техником"
+
+msgid "Work Order created"
+msgstr "Рабочий ордер создан"
+
+msgid "Work Order updated"
+msgstr "Рабочий ордер обновлён"
+
+# Navigation groups
+msgid "Menu"
+msgstr "Меню"
+msgid "Production"
+msgstr "Производство"
+msgid "Communication"
+msgstr "Связь"
+msgid "Business"
+msgstr "Бизнес"
+msgid "Analytics"
+msgstr "Аналитика"
+msgid "System"
+msgstr "Система"
+msgid "More"
+msgstr "Ещё"
+
+# Schedule & Time Tracking
+msgid "Staff"
+msgstr "Персонал"
+msgid "Schedule"
+msgstr "График"
+msgid "Time Tracking"
+msgstr "Учёт времени"
+msgid "Vacations"
+msgstr "Отпуска"
+msgid "Work Schedule"
+msgstr "График работы"
+msgid "Edit Schedule"
+msgstr "Изменить график"
+msgid "Shift Name"
+msgstr "Название смены"
+msgid "Shift Start"
+msgstr "Начало смены"
+msgid "Shift End"
+msgstr "Конец смены"
+msgid "Break"
+msgstr "Перерыв"
+msgid "Work Days"
+msgstr "Рабочие дни"
+msgid "Add Schedule"
+msgstr "Добавить график"
+msgid "Current Schedules"
+msgstr "Текущие графики"
+msgid "No schedules set"
+msgstr "График не установлен"
+msgid "Not set"
+msgstr "Не задано"
+msgid "Clock In"
+msgstr "Приход"
+msgid "Clock Out"
+msgstr "Уход"
+msgid "Hours"
+msgstr "Часы"
+msgid "Overtime"
+msgstr "Переработка"
+msgid "Days Present"
+msgstr "Дней присутствия"
+msgid "Days Absent"
+msgstr "Дней отсутствия"
+msgid "Total Hours"
+msgstr "Всего часов"
+msgid "Daily Hours"
+msgstr "Часы по дням"
+msgid "Daily Details"
+msgstr "Детали по дням"
+msgid "Present"
+msgstr "Присутствует"
+msgid "Absent"
+msgstr "Отсутствует"
+msgid "Sick"
+msgstr "Больничный"
+msgid "Holiday"
+msgstr "Праздник"
+msgid "Manual Entry"
+msgstr "Ручной ввод"
+msgid "Time entry saved"
+msgstr "Запись времени сохранена"
+msgid "Clocked in at"
+msgstr "Отметился в"
+msgid "Clocked out at"
+msgstr "Ушёл в"
+msgid "Already clocked in today"
+msgstr "Уже отмечен сегодня"
+msgid "Already clocked out today"
+msgstr "Уже ушёл сегодня"
+msgid "Not clocked in today"
+msgstr "Не отмечен сегодня"
+msgid "Hours worked"
+msgstr "Отработано часов"
+msgid "Time Report"
+msgstr "Отчёт по времени"
+msgid "Month"
+msgstr "Месяц"
+msgid "New Vacation Request"
+msgstr "Новая заявка на отпуск"
+msgid "Vacation request submitted"
+msgstr "Заявка на отпуск отправлена"
+msgid "Vacation approved"
+msgstr "Отпуск одобрен"
+msgid "Vacation rejected"
+msgstr "Отпуск отклонён"
+msgid "New vacation request"
+msgstr "Новая заявка на отпуск"
+msgid "No vacation requests"
+msgstr "Нет заявок на отпуск"
+msgid "No entries"
+msgstr "Нет записей"
+msgid "Hire Date"
+msgstr "Дата приёма"
+msgid "Fire Date"
+msgstr "Дата увольнения"
+msgid "Hired"
+msgstr "Принят"
+msgid "Fired"
+msgstr "Уволен"
+msgid "minutes"
+msgstr "минут"
+msgid "Employee"
+msgstr "Сотрудник"
+msgid "Period"
+msgstr "Период"
+
+# Factory Sections
+msgid "Factory Sections"
+msgstr "Отделы фабрики"
+msgid "Sections"
+msgstr "Отделы"
+msgid "New Section"
+msgstr "Новый отдел"
+msgid "Edit Section"
+msgstr "Редактировать отдел"
+msgid "Section created"
+msgstr "Отдел создан"
+msgid "Section updated"
+msgstr "Отдел обновлён"
+msgid "Section deleted"
+msgstr "Отдел удалён"
+msgid "Total Sections"
+msgstr "Всего отделов"
+msgid "Total Machines"
+msgstr "Всего станков"
+msgid "Section name"
+msgstr "Название отдела"
+msgid "Section description"
+msgstr "Описание отдела"
+msgid "Position on Floor Plan"
+msgstr "Позиция на плане"
+msgid "X Position"
+msgstr "Позиция X"
+msgid "Y Position"
+msgstr "Позиция Y"
+msgid "Width"
+msgstr "Ширина"
+msgid "Height"
+msgstr "Высота"
+msgid "Add Section"
+msgstr "Добавить отдел"
+msgid "machines"
+msgstr "станков"
+msgid "Machines in Section"
+msgstr "Станки в отделе"
+msgid "Section"
+msgstr "Отдел"
+msgid "Type"
+msgstr "Тип"
+msgid "Delete this section?"
+msgstr "Удалить этот отдел?"
+msgid "workshop"
+msgstr "цех"
+msgid "storage"
+msgstr "склад"
+msgid "office"
+msgstr "офис"
+msgid "utility"
+msgstr "служебное"
+msgid "loading"
+msgstr "загрузка"
+msgid "Responsible"
+msgstr "Ответственный"
+msgid "Not assigned"
+msgstr "Не назначен"
+
+# Map Editor
+msgid "Map Editor"
+msgstr "Редактор карты"
+msgid "View Map"
+msgstr "Смотреть карту"
+msgid "Save All"
+msgstr "Сохранить всё"
+msgid "Section Properties"
+msgstr "Свойства отдела"
+msgid "Assign Machine"
+msgstr "Назначить станок"
+msgid "To Section"
+msgstr "В отдел"
+msgid "Assign"
+msgstr "Назначить"
+msgid "Deselect"
+msgstr "Снять выделение"
+msgid "New Section"
+msgstr "Новый отдел"
+msgid "Delete this section?"
+msgstr "Удалить этот отдел?"
+msgid "Nothing to save"
+msgstr "Нечего сохранять"
+msgid "All saved!"
+msgstr "Всё сохранено!"
+msgid "Drag to move"
+msgstr "Перетащите для перемещения"
+msgid "Corners to resize"
+msgstr "Углы для изменения размера"
+msgid "Click section to edit"
+msgstr "Нажмите на секцию для редактирования"
+msgid "No section"
+msgstr "Без отдела"
+msgid "Group on map"
+msgstr "Группа на карте"
+msgid "Auto-set when section is selected, or set manually"
+msgstr "Устанавливается автоматически при выборе секции, или вручную"
+msgid "Position on Map"
+msgstr "Позиция на карте"
+
+# Parts Maintenance
+msgid "Parts"
+msgstr "Запчасти"
+msgid "Add Part"
+msgstr "Добавить запчасть"
+msgid "Edit Part"
+msgstr "Редактировать запчасть"
+msgid "Part added"
+msgstr "Запчасть добавлена"
+msgid "Part updated"
+msgstr "Запчасть обновлена"
+msgid "Part deleted"
+msgstr "Запчасть удалена"
+msgid "Part Name"
+msgstr "Название запчасти"
+msgid "Part Number"
+msgstr "Артикул"
+msgid "Replacement Schedule"
+msgstr "График замены"
+msgid "Installed Date"
+msgstr "Дата установки"
+msgid "Replacement Interval (days)"
+msgstr "Интервал замены (дни)"
+msgid "Maintenance Schedule"
+msgstr "График обслуживания"
+msgid "Maintenance Interval (days)"
+msgstr "Интервал обслуживания (дни)"
+msgid "Next replacement"
+msgstr "Следующая замена"
+msgid "Next maintenance"
+msgstr "Следующее обслуживание"
+msgid "Replace now"
+msgstr "Заменить сейчас"
+msgid "Maintain now"
+msgstr "Обслужить сейчас"
+msgid "Soon"
+msgstr "Скоро"
+msgid "No parts added yet"
+msgstr "Запчасти ещё не добавлены"
+msgid "Recent logs"
+msgstr "Последние записи"
+msgid "Maintenance log added"
+msgstr "Запись обслуживания добавлена"
+msgid "Log"
+msgstr "Запись"
+msgid "Save Log"
+msgstr "Сохранить запись"
+msgid "What was done..."
+msgstr "Что было сделано..."
+msgid "Back to Machine"
+msgstr "Назад к станку"
+msgid "parts need attention!"
+msgstr "запчастей требуют внимания!"
+msgid "Total Parts"
+msgstr "Всего запчастей"
+msgid "Needs Maintenance"
+msgstr "Требует обслуживания"
+msgid "Needs Replacement"
+msgstr "Требует замены"
+msgid "replacement"
+msgstr "замена"
+msgid "maintenance"
+msgstr "обслуживание"
+msgid "inspection"
+msgstr "осмотр"
+
+# Maintenance Calendar
+msgid "Maintenance Calendar"
+msgstr "Календарь ТО"
+msgid "Overdue"
+msgstr "Просрочено"
+msgid "Days Overdue"
+msgstr "Дней просрочено"
+msgid "Fix"
+msgstr "Исправить"
+msgid "Mon"
+msgstr "Пн"
+msgid "Tue"
+msgstr "Вт"
+msgid "Wed"
+msgstr "Ср"
+msgid "Thu"
+msgstr "Чт"
+msgid "Fri"
+msgstr "Пт"
+msgid "Sat"
+msgstr "Сб"
+msgid "Sun"
+msgstr "Вс"
+msgid "Upcoming Events"
+msgstr "Ближайшие события"
+msgid "No events this month"
+msgstr "Нет событий в этом месяце"
+msgid "Replacement"
+msgstr "Замена"
+msgid "Scheduled"
+msgstr "Запланировано"
+
+msgid "Maintenance Plans"
+msgstr "Планы ТО"
+
+msgid "Maintenance plan created"
+msgstr "План ТО создан"
+
+msgid "Maintenance plan updated"
+msgstr "План ТО обновлён"
+
+msgid "Maintenance plan deleted"
+msgstr "План ТО удалён"
+
+msgid "New plan"
+msgstr "Новый план"
+
+msgid "New maintenance plan"
+msgstr "Новый план ТО"
+
+msgid "Edit plan"
+msgstr "Редактировать план"
+
+msgid "Total plans"
+msgstr "Всего планов"
+
+msgid "Planned"
+msgstr "Запланировано"
+
+msgid "In progress"
+msgstr "В работе"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "General info"
+msgstr "Общая информация"
+
+msgid "Planned Start"
+msgstr "Плановое начало"
+
+msgid "Planned End"
+msgstr "Плановое окончание"
+
+msgid "Actual Start"
+msgstr "Фактическое начало"
+
+msgid "Actual End"
+msgstr "Фактическое окончание"
+
+msgid "Next Maintenance"
+msgstr "Следующее ТО"
+
+msgid "Executor"
+msgstr "Исполнитель"
+
+msgid "External company"
+msgstr "Сторонняя организация"
+
+msgid "Company name"
+msgstr "Название организации"
+
+msgid "Company contact"
+msgstr "Контакт организации"
+
+msgid "Responsible person at company"
+msgstr "Ответственное лицо организации"
+
+msgid "Offer / Quote file"
+msgstr "Файл офферты"
+
+msgid "Offer"
+msgstr "Офферта"
+
+msgid "Worker / Technician"
+msgstr "Мастер / Техник"
+
+msgid "Internal"
+msgstr "Внутренний"
+
+msgid "Work report"
+msgstr "Отчёт о работе"
+
+msgid "Work Act file"
+msgstr "Файл акта работ"
+
+msgid "Act of completed works"
+msgstr "Акт выполненных работ"
+
+msgid "Work Act"
+msgstr "Акт работ"
+
+msgid "Select machine"
+msgstr "Выберите станок"
+
+msgid "Select worker"
+msgstr "Выберите мастера"
+
+msgid "Plan title"
+msgstr "Название плана"
+
+msgid "Describe planned works..."
+msgstr "Опишите планируемые работы..."
+
+msgid "Describe completed work..."
+msgstr "Опишите выполненную работу..."
+
+msgid "Delete this plan?"
+msgstr "Удалить этот план?"
+
+msgid "Gas Cylinders"
+msgstr "Баллоны с газом"
+
+msgid "Installed Cylinders"
+msgstr "Установленные баллоны"
+
+msgid "Nitrogen"
+msgstr "Азот"
+
+msgid "Carbon dioxide"
+msgstr "Углекислый газ"
+
+msgid "Full"
+msgstr "Полный"
+
+msgid "In use"
+msgstr "В работе"
+
+msgid "Empty"
+msgstr "Пустой"
+
+msgid "Replace Cylinder"
+msgstr "Замена баллона"
+
+msgid "New cylinder number"
+msgstr "Номер нового баллона"
+
+msgid "Replace"
+msgstr "Заменить"
+
+msgid "Install new"
+msgstr "Установить новый"
+
+msgid "Order Cylinders"
+msgstr "Заказать баллоны"
+
+msgid "Order cylinders"
+msgstr "Заказать баллоны"
+
+msgid "Cylinder order created"
+msgstr "Заказ на баллоны создан"
+
+msgid "Gas type"
+msgstr "Тип газа"
+
+msgid "Quantity"
+msgstr "Количество"
+
+msgid "Supplier"
+msgstr "Поставщик"
+
+msgid "Reason"
+msgstr "Причина"
+
+msgid "Create order"
+msgstr "Создать заказ"
+
+msgid "Orders"
+msgstr "Заказы"
+
+msgid "History"
+msgstr "История"
+
+msgid "No orders"
+msgstr "Нет заказов"
+
+msgid "No history"
+msgstr "Нет истории"
+
+msgid "All Cylinders"
+msgstr "Все баллоны"
+
+msgid "Number"
+msgstr "Номер"
+
+msgid "Installed"
+msgstr "Установлен"
+
+msgid "Enter cylinder number"
+msgstr "Введите номер баллона"
+
+msgid "Order status updated"
+msgstr "Статус заказа обновлён"
+
+msgid "Low stock"
+msgstr "Низкий остаток"
+
+msgid "cylinders remaining"
+msgstr "баллонов осталось"
+
+msgid "threshold"
+msgstr "порог"
+
+msgid "Order now"
+msgstr "Заказать сейчас"
+
+msgid "Select new cylinder"
+msgstr "Выберите новый баллон"
+
+msgid "Select from available"
+msgstr "Выберите из доступных"
+
+msgid "Or enter new number"
+msgstr "Или введите новый номер"
+
+msgid "Deliver Cylinders"
+msgstr "Поступление баллонов"
+
+msgid "Confirm delivery"
+msgstr "Подтвердить поступление"
+
+msgid "one per line or comma-separated"
+msgstr "по одному на строку или через запятую"
+
+msgid "Leave empty to auto-generate"
+msgstr "Оставьте пустым для автогенерации"
+
+msgid "cylinders"
+msgstr "баллонов"
+
+msgid "Select a cylinder or enter a number"
+msgstr "Выберите баллон или введите номер"
+
+msgid "Received"
+msgstr "Поступление"
+
+msgid "Responsible for replacement"
+msgstr "Ответственный за замену"
+
+msgid "Performed by"
+msgstr "Кто выполнял"
+
+msgid "Current user"
+msgstr "Текущий пользователь"
+
+msgid "Days left"
+msgstr "Дней до замены"
+
+msgid "overdue"
+msgstr "просрочено"
+
+msgid "days"
+msgstr "дн."
+
+msgid "Worker added"
+msgstr "Мастер добавлен"
+
+msgid "Worker updated"
+msgstr "Мастер обновлён"
+
+msgid "Item added"
+msgstr "Товар добавлен"
+
+msgid "Item updated"
+msgstr "Товар обновлён"
+
+msgid "Insufficient stock!"
+msgstr "Недостаточно на складе!"
+
+msgid "cylinders remaining"
+msgstr "баллонов осталось"
+
+msgid "threshold"
+msgstr "порог"
+
+msgid "Order new cylinders"
+msgstr "Заказать новые баллоны"
+
+msgid "Showing your sections only"
+msgstr "Показаны только ваши участки"
+
+msgid "Fit"
+msgstr "Вписать"
+
+msgid "Linked Responsible Person"
+msgstr "Привязать ответственное лицо"
+
+msgid "None"
+msgstr "Не выбрано"
+
+msgid "Link user to a responsible person to show their sections on the floor plan"
+msgstr "Привяжите пользователя к ответственному лицу, чтобы показать его участки на карте"
+
+msgid "Login Access"
+msgstr "Доступ для входа"
+
+msgid "Leave empty to keep current"
+msgstr "Оставьте пустым, чтобы сохранить текущий"
+
+msgid "Login set"
+msgstr "Вход настроен"
+
+msgid "Set password to allow login"
+msgstr "Установите пароль для входа в систему"
+
+msgid "Floor only"
+msgstr "Только карта"
+
+msgid "see own sections"
+msgstr "видеть свои участки"
+
+msgid "Full map"
+msgstr "Полная карта"
+
+msgid "see all machines"
+msgstr "видеть все машины"
+
+msgid "Limited"
+msgstr "Ограниченный"
+
+msgid "floor plan only"
+msgstr "только план цеха"
+
+msgid "Active"
+msgstr "Активен"
+
+msgid "can login"
+msgstr "может входить"
+
+msgid "Assigned Sections"
+msgstr "Назначенные участки"
+
+msgid "Цеха"
+msgstr "Цеха"
+
+msgid "Select sections this person is responsible for"
+msgstr "Выберите участки, за которые отвечает это лицо"
+
+msgid "No group"
+msgstr "Без группы"
+
+msgid "No password"
+msgstr "Пароль не задан"
+
+msgid "Last login"
+msgstr "Последний вход"
+
+msgid "Edit password"
+msgstr "Изменить пароль"
+
+msgid "Mechanic"
+msgstr "Механик"
+
+msgid "Equipment Repairs"
+msgstr "Ремонт оборудования"
+
+msgid "New Repair"
+msgstr "Новый ремонт"
+
+msgid "Edit Repair"
+msgstr "Редактировать ремонт"
+
+msgid "New Repair Record"
+msgstr "Новая запись о ремонте"
+
+msgid "All Repairs"
+msgstr "Все ремонты"
+
+msgid "Statistics"
+msgstr "Статистика"
+
+msgid "Repair Statistics"
+msgstr "Статистика ремонтов"
+
+msgid "Total Repairs"
+msgstr "Всего ремонтов"
+
+msgid "Total Cost"
+msgstr "Общая стоимость"
+
+msgid "Avg Days to Repair"
+msgstr "Среднее дней на ремонт"
+
+msgid "By Component Type"
+msgstr "По типу компонента"
+
+msgid "By Repair Company"
+msgstr "По компании"
+
+msgid "Recent Repairs"
+msgstr "Последние ремонты"
+
+msgid "Component"
+msgstr "Компонент"
+
+msgid "Gas"
+msgstr "Газ"
+
+msgid "Fault"
+msgstr "Неисправность"
+
+msgid "Company"
+msgstr "Компания"
+
+msgid "Broken"
+msgstr "Сломано"
+
+msgid "In repair"
+msgstr "В ремонте"
+
+msgid "Repaired"
+msgstr "Отремонтировано"
+
+msgid "Replaced"
+msgstr "Заменено"
+
+msgid "Installed"
+msgstr "Установлено"
+
+msgid "All gases"
+msgstr "Все газы"
+
+msgid "All statuses"
+msgstr "Все статусы"
+
+msgid "No repair records"
+msgstr "Нет записей о ремонте"
+
+msgid "All equipment is working fine!"
+msgstr "Всё оборудование работает!"
+
+msgid "Add Repair Record"
+msgstr "Добавить запись о ремонте"
+
+msgid "Select component"
+msgstr "Выберите компонент"
+
+msgid "What broke"
+msgstr "Что сломалось"
+
+msgid "Describe exactly what failed, symptoms, error codes..."
+msgstr "Опишите точно что вышло из строя, симптомы, коды ошибок..."
+
+msgid "Date broken"
+msgstr "Дата поломки"
+
+msgid "Date sent for repair"
+msgstr "Дата отправки в ремонт"
+
+msgid "Repair Company"
+msgstr "Компания по ремонту"
+
+msgid "Company name"
+msgstr "Название компании"
+
+msgid "Who performed the repair"
+msgstr "Кто выполнял ремонт"
+
+msgid "Repair cost"
+msgstr "Стоимость ремонта"
+
+msgid "What was done"
+msgstr "Что было сделано"
+
+msgid "Description of repair work"
+msgstr "Описание ремонтных работ"
+
+msgid "Date repaired"
+msgstr "Дата ремонта"
+
+msgid "Date installed back"
+msgstr "Дата установки обратно"
+
+msgid "Send to repair"
+msgstr "Отправить в ремонт"
+
+msgid "Mark repaired"
+msgstr "Отметить как отремонтированное"
+
+msgid "Mark installed"
+msgstr "Отметить как установленное"
+
+msgid "Repair record created"
+msgstr "Запись о ремонте создана"
+
+msgid "Repair record updated"
+msgstr "Запись о ремонте обновлена"
+
+msgid "No data"
+msgstr "Нет данных"
+
+msgid "Type"
+msgstr "Тип"
+
+msgid "Count"
+msgstr "Количество"
+
+msgid "Avg Days"
+msgstr "Среднее дней"
+
+msgid "Warehouse Movements"
+msgstr "Движения на складе"
+
+msgid "Movements"
+msgstr "Движения"
+
+msgid "All items"
+msgstr "Все позиции"
+
+msgid "All types"
+msgstr "Все типы"
+
+msgid "Records"
+msgstr "Записей"
+
+msgid "Order"
+msgstr "Заказ"
+
+msgid "Comment"
+msgstr "Комментарий"
+
+msgid "No movements found"
+msgstr "Движения не найдены"
+
+msgid "No stock movements recorded yet"
+msgstr "Движения по складу ещё не записаны"
+
+msgid "Export CSV"
+msgstr "Экспорт CSV"
+
+msgid "Edit Report"
+msgstr "Редактировать отчёт"
+
+msgid "Work report updated"
+msgstr "Отчёт о работах обновлён"
+
+msgid "from warehouse"
+msgstr "со склада"
+
+msgid "Part"
+msgstr "Запчасть"
+
+msgid "Qty"
+msgstr "Кол-во"
+
+msgid "Print Label"
+msgstr "Печать этикетки"
+
+msgid "Print Labels"
+msgstr "Печать этикеток"
+
+msgid "Print"
+msgstr "Печать"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Select All"
+msgstr "Выбрать все"
+
+msgid "Select machines first"
+msgstr "Сначала выберите станки"

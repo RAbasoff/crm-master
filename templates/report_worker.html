@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Worker') }}: {{ worker.naam }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ worker.naam }}</h1></div>
+<div class="card">
+    <form method="GET" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin:0;flex:1;min-width:130px"><label>{{ _('Date From') }}</label><input type="date" name="date_from" value="{{ date_from }}"></div>
+        <div class="form-group" style="margin:0;flex:1;min-width:130px"><label>{{ _('Date To') }}</label><input type="date" name="date_to" value="{{ date_to }}"></div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Show Report') }}</button>
+    </form>
+</div>
+<div class="stats">
+    <div class="stat-card"><div class="number" style="font-size:16px">{{ worker.specialisatie or '—' }}</div><div class="label">{{ _('Specialization') }}</div></div>
+    <div class="stat-card"><div class="number">{{ orders|length }}</div><div class="label">{{ _('Work Orders') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ completed }}</div><div class="label">{{ _('Completed') }}</div></div>
+    <div class="stat-card"><div class="number">€{{ "%.0f"|format(total_revenue) }}</div><div class="label">{{ _('Revenue') }}</div></div>
+    <div class="stat-card"><div class="number">{{ avg_time }}h</div><div class="label">{{ _('Average Time') }}</div></div>
+</div>
+<div class="card">
+    <h2>{{ _('Work Orders') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Number') }}</th><th>{{ _('Responsible person') }}</th><th>{{ _('Device') }}</th><th>{{ _('Status') }}</th><th>€</th><th>{{ _('Finished') }}</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td><a href="/orders/{{ o.id }}">{{ o.nummer }}</a></td>
+            <td>{{ o.verantwoordelijke.naam }}</td><td>{{ o.apparaat }}</td>
+            <td><span class="badge badge-{{ o.status.replace(' ','-') }}">{{ o.status }}</span></td>
+            <td>€{{ "%.0f"|format(o.totaal) }}</td>
+            <td>{{ o.gereed.strftime('%d-%m') if o.gereed else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

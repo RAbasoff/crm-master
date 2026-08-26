@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Work Orders') }} — CRM Werkplaats{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Work Orders') }}</h1>
+    <a href="/orders/new" class="btn btn-primary">+ {{ _('New Work Order') }}</a>
+</div>
+<div class="filters">
+    <select onchange="location.href='/orders?status='+this.value">
+        <option value="">{{ _('All') }}</option>
+        {% for s in ['aangenomen','diagnose','in behandeling','gereed','afgeleverd','geannuleerd'] %}
+        <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <select onchange="location.href='/orders?worker='+this.value">
+        <option value="">{{ _('All') }} {{ _('Workers') }}</option>
+        {% for w in workers %}
+        <option value="{{ w.id }}" {% if worker_filter==w.id|string %}selected{% endif %}>{{ w.naam }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Number') }}</th><th>{{ _('Responsible person') }}</th><th>{{ _('Device') }}</th><th>{{ _('Worker') }}</th><th>{{ _('Status') }}</th><th>{{ _('Total') }}</th><th>{{ _('Date') }}</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td><a href="/orders/{{ o.id }}">{{ o.nummer }}</a></td>
+            <td>{{ o.verantwoordelijke.naam }}</td>
+            <td>{{ o.apparaat }} {{ o.model }}</td>
+            <td>{{ o.monteur.naam if o.monteur else '—' }}</td>
+            <td><span class="badge badge-{{ o.status.replace(' ','-') }}">{{ o.status }}</span></td>
+            <td>€{{ "%.0f"|format(o.totaal) }}</td>
+            <td>{{ o.aangemaakt.strftime('%d-%m') }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

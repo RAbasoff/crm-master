@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ contractor.company_name }} — {{ _('Contractor') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏢 {{ contractor.company_name }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/contractors/{{ contractor.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        <a href="/contractors" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+<div class="detail-grid">
+    <div class="card">
+        <h2>🏢 {{ _('Company') }}</h2>
+        {% if contractor.service_type %}<p><strong>{{ _('Service') }}:</strong> {{ contractor.service_type }}</p>{% endif %}
+        <p><strong>{{ _('Address') }}:</strong> {{ contractor.address or '—' }}</p>
+        {% if contractor.postcode or contractor.city %}<p>{{ contractor.postcode }} {{ contractor.city }}</p>{% endif %}
+        <p><strong>{{ _('Country') }}:</strong> {{ contractor.country }}</p>
+        {% if contractor.kvk_number %}<p><strong>{{ _('KVK') }}:</strong> {{ contractor.kvk_number }}</p>{% endif %}
+        {% if contractor.btw_number %}<p><strong>{{ _('VAT') }}:</strong> {{ contractor.btw_number }}</p>{% endif %}
+        {% if contractor.iban %}<p><strong>{{ _('IBAN') }}:</strong> {{ contractor.iban }}</p>{% endif %}
+    </div>
+    <div class="card">
+        <h2>👤 {{ _('Contact') }}</h2>
+        <p><strong>{{ _('Name') }}:</strong> {{ contractor.contact_person or '—' }}</p>
+        {% if contractor.contact_position %}<p><strong>{{ _('Position') }}:</strong> {{ contractor.contact_position }}</p>{% endif %}
+        <p><strong>{{ _('Phone') }}:</strong> {% if contractor.phone %}<a href="tel:{{ contractor.phone }}">{{ contractor.phone }}</a>{% else %}—{% endif %}</p>
+        {% if contractor.phone2 %}<p><strong>{{ _('Phone') }} 2:</strong> <a href="tel:{{ contractor.phone2 }}">{{ contractor.phone2 }}</a></p>{% endif %}
+        <p><strong>{{ _('Email') }}:</strong> {% if contractor.email %}<a href="mailto:{{ contractor.email }}">{{ contractor.email }}</a>{% else %}—{% endif %}</p>
+        {% if contractor.website %}<p><strong>{{ _('Website') }}:</strong> <a href="https://{{ contractor.website }}" target="_blank">{{ contractor.website }}</a></p>{% endif %}
+    </div>
+</div>
+{% if contractor.contract_number or contractor.contract_start %}
+<div class="card" style="margin-top:16px">
+    <h2>📄 {{ _('Contract') }}</h2>
+    <div class="detail-grid">
+        <div>
+            {% if contractor.contract_number %}<p><strong>{{ _('Number') }}:</strong> {{ contractor.contract_number }}</p>{% endif %}
+            {% if contractor.contract_start %}<p><strong>{{ _('Start') }}:</strong> {{ contractor.contract_start.strftime('%d-%m-%Y') }}</p>{% endif %}
+            {% if contractor.contract_end %}<p><strong>{{ _('End') }}:</strong> {{ contractor.contract_end.strftime('%d-%m-%Y') }}</p>{% endif %}
+        </div>
+        <div>
+            {% if contractor.contract_end %}
+                {% set days = (contractor.contract_end - today).days %}
+                <p><strong>{{ _('Status') }}:</strong>
+                    {% if days < 0 %}<span style="color:#e74c3c;font-weight:bold">{{ _('Expired') }}</span>
+                    {% elif days < 30 %}<span style="color:#f39c12;font-weight:bold">{{ days }} {{ _('days left') }}</span>
+                    {% else %}<span style="color:#27ae60">{{ days }} {{ _('days left') }}</span>{% endif %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+<!-- EMPLOYEES -->
+<div class="card" style="margin-top:16px">
+    <h2>👥 {{ _('Employees') }} ({{ contractor.employees|length }})</h2>
+    {% if contractor.employees %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Position') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Email') }}</th><th></th></tr>
+        {% for e in contractor.employees %}
+        <tr>
+            <td>{{ e.name }}</td>
+            <td>{{ e.position or '—' }}</td>
+            <td>{% if e.phone %}<a href="tel:{{ e.phone }}">{{ e.phone }}</a>{% else %}—{% endif %}</td>
+            <td>{% if e.email %}<a href="mailto:{{ e.email }}">{{ e.email }}</a>{% else %}—{% endif %}</td>
+            <td>
+                <form method="POST" action="/contractors/employee/{{ e.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                    <button type="submit" class="btn btn-sm btn-danger">✕</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% endif %}
+    <form method="POST" action="/contractors/{{ contractor.id }}/add-employee" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <input type="text" name="name" placeholder="{{ _('Name') }}" required style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        <input type="text" name="position" placeholder="{{ _('Position') }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        <input type="text" name="phone" placeholder="{{ _('Phone') }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        <input type="email" name="email" placeholder="{{ _('Email') }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        <button type="submit" class="btn btn-sm btn-success">+ {{ _('Add') }}</button>
+    </form>
+</div>
+<!-- MACHINES -->
+<div class="card" style="margin-top:16px">
+    <h2>⚙️ {{ _('Machines') }} ({{ contractor.machines|length }})</h2>
+    {% if contractor.machines %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Status') }}</th></tr>
+        {% for m in contractor.machines %}
+        <tr>
+            <td><a href="/machines/{{ m.id }}">{{ m.name }}</a></td>
+            <td>{{ m.machine_type or '—' }}</td>
+            <td>{{ m.serial_number or '—' }}</td>
+            <td><span class="badge badge-{{ m.status }}">{{ m.status }}</span></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No machines linked') }}</p>
+    {% endif %}
+</div>
+{% if contractor.notes %}
+<div class="card" style="margin-top:16px"><h2>📝 {{ _('Notes') }}</h2><div style="background:#f8f9fa;padding:12px;border-radius:8px;white-space:pre-wrap">{{ contractor.notes }}</div></div>
+{% endif %}
+{% endblock %}

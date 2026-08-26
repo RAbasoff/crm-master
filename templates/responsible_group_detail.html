@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }} — {{ _('Group') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👥 {{ group.name }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/responsible/groups/{{ group.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        <a href="/responsible/groups" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+{% if group.description %}
+<div class="card">
+    <p>{{ group.description }}</p>
+</div>
+{% endif %}
+
+<!-- MEMBERS -->
+<div class="card" style="margin-top:16px">
+    <h2>👤 {{ _('Members') }} ({{ group.members|length }})</h2>
+    {% if group.members %}
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Position') }}</th>
+            <th>{{ _('Company') }}</th>
+            <th>{{ _('Phone') }}</th>
+            <th>{{ _('Email') }}</th>
+            <th>{{ _('Linked worker') }}</th>
+            <th></th>
+        </tr>
+        {% for m in group.members %}
+        <tr>
+            <td><a href="/responsible/{{ m.id }}" style="color:#3498db;font-weight:bold">{{ m.naam }}</a></td>
+            <td>{{ m.position or '—' }}</td>
+            <td>{{ m.company or '—' }}</td>
+            <td>{% if m.telefoon %}<a href="tel:{{ m.telefoon }}">{{ m.telefoon }}</a>{% else %}—{% endif %}</td>
+            <td>{% if m.email %}<a href="mailto:{{ m.email }}">{{ m.email }}</a>{% else %}—{% endif %}</td>
+            <td>{% if m.monteur %}🔧 {{ m.monteur.naam }}{% else %}—{% endif %}</td>
+            <td><a href="/responsible/{{ m.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No members in this group') }}</p>
+    {% endif %}
+</div>
+
+<!-- WORKERS -->
+{% if group.workers %}
+<div class="card" style="margin-top:16px">
+    <h2>🔧 {{ _('Workers') }} ({{ group.workers|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Status') }}</th><th></th></tr>
+        {% for w in group.workers %}
+        <tr>
+            <td>{{ w.naam }}</td>
+            <td>{{ w.specialisatie or '—' }}</td>
+            <td>{{ w.telefoon or '—' }}</td>
+            <td>{% if w.actief %}<span class="badge badge-active">{{ _('Active') }}</span>{% else %}<span class="badge badge-offline">{{ _('Inactive') }}</span>{% endif %}</td>
+            <td><a href="/workers/{{ w.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">→</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+{% endblock %}

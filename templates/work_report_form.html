@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Work Report') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Work Report') }} — {{ _('Fault') }} #{{ fault.id }}</h1>
+<div class="card">
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px">
+        <p><strong>{{ _('Machine') }}:</strong> {{ fault.machine.name }}</p>
+        <p><strong>{{ _('Fault') }}:</strong> {{ fault.title }}</p>
+    </div>
+    <form method="POST" enctype="multipart/form-data" id="workReportForm">
+        <div class="form-group">
+            <label>{{ _('Work Description') }} *</label>
+            <textarea name="work_description" rows="5" required placeholder="{{ _('Describe the work performed...') }}">{% if report %}{{ report.work_description }}{% endif %}</textarea>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Time Spent') }} ({{ _('hours') }})</label>
+            <input type="number" name="time_spent_hours" step="0.5" min="0" value="{{ report.time_spent_hours if report else '0' }}">
+        </div>
+
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">📦 {{ _('Parts Used') }} ({{ _('from warehouse') }})</h3>
+            <div id="parts-container">
+                {% if report and report.parts_used %}
+                    {% set parts = report.parts_used|tojson if report.parts_used is string else report.parts_used %}
+                    {% if parts is string %}
+                        {% set parts_list = parts|tojson %}
+                    {% else %}
+                        {% set parts_list = parts %}
+                    {% endif %}
+                {% else %}
+                    {% set parts_list = [] %}
+                {% endif %}
+                <div class="part-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+                    <select class="part-select" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px">
+                        <option value="">{{ _('Select Part') }}</option>
+                        {% for item in warehouse_items %}
+                        <option value="{{ item.id }}" data-unit="{{ item.eenheid }}" data-stock="{{ item.hoeveelheid }}">{{ item.naam }} ({{ item.hoeveelheid }} {{ item.eenheid }})</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" class="part-qty" placeholder="{{ _('Qty') }}" style="width:80px;padding:10px;border:1px solid #ddd;border-radius:8px" min="0.1" step="0.1">
+                    <span class="part-unit" style="font-size:12px;color:#888;min-width:30px"></span>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removePartRow(this)">✕</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm" style="background:#eee;margin-top:8px" onclick="addPartRow()">+ {{ _('Add Part') }}</button>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Photos') }} ({{ _('installed parts') }})</label>
+            <input type="file" name="photos" multiple accept="image/*" style="padding:10px">
+            <small style="color:#888">{{ _('Upload photos of installed parts') }}</small>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-success">{{ _('Submit Report') }}</button>
+            <a href="/faults/{{ fault.id }}" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addPartRow(selectedId, qty) {
+    const container = document.getElementById('parts-container');
+    const template = container.querySelector('.part-row');
+    const row = template.cloneNode(true);
+    if (selectedId) {
+        row.querySelector('.part-select').value = selectedId;
+    } else {
+        row.querySelector('.part-select').value = '';
+    }
+    row.querySelector('.part-qty').value = qty || '';
+    row.querySelector('.part-unit').textContent = '';
+    container.appendChild(row);
+    updateUnitLabels();
+}
+
+function removePartRow(btn) {
+    const container = document.getElementById('parts-container');
+    if (container.querySelectorAll('.part-row').length > 1) {
+        btn.closest('.part-row').remove();
+    } else {
+        btn.closest('.part-row').querySelector('.part-select').value = '';
+        btn.closest('.part-row').querySelector('.part-qty').value = '';
+    }
+}
+
+function updateUnitLabels() {
+    document.querySelectorAll('.part-row').forEach(row => {
+        const select = row.querySelector('.part-select');
+        const unitSpan = row.querySelector('.part-unit');
+        const opt = select.options[select.selectedIndex];
+        if (opt && opt.value) {
+            unitSpan.textContent = opt.dataset.unit || '';
+        } else {
+            unitSpan.textContent = '';
+        }
+    });
+}
+
+document.querySelectorAll('.part-select').forEach(sel => {
+    sel.addEventListener('change', updateUnitLabels);
+});
+
+// Build parts_used JSON on submit
+document.getElementById('workReportForm').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('.part-row');
+    const parts = [];
+    rows.forEach(row => {
+        const select = row.querySelector('.part-select');
+        const qty = row.querySelector('.part-qty').value;
+        const partId = select.value;
+        if (partId && qty && parseFloat(qty) > 0) {
+            const opt = select.options[select.selectedIndex];
+            parts.push({
+                part_id: parseInt(partId),
+                quantity: parseFloat(qty),
+                name: opt.text.split('(')[0].trim()
+            });
+        }
+    });
+
+    let hidden = document.querySelector('input[name="parts_used"]');
+    if (!hidden) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'parts_used';
+        this.appendChild(hidden);
+    }
+    hidden.value = JSON.stringify(parts);
+});
+
+// Pre-fill parts if editing
+{% if report and report.parts_used %}
+try {
+    const existingParts = {{ report.parts_used|tojson }};
+    if (Array.isArray(existingParts) && existingParts.length > 0) {
+        const container = document.getElementById('parts-container');
+        const firstRow = container.querySelector('.part-row');
+        firstRow.querySelector('.part-select').value = existingParts[0].part_id;
+        firstRow.querySelector('.part-qty').value = existingParts[0].quantity;
+        for (let i = 1; i < existingParts.length; i++) {
+            addPartRow(existingParts[i].part_id, existingParts[i].quantity);
+        }
+        updateUnitLabels();
+    }
+} catch(e) {}
+{% endif %}
+</script>
+{% endblock %}

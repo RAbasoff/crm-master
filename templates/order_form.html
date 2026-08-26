@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Work Order') if order else _('New Work Order') }} — CRM{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+    <h1>{{ _('Edit Work Order') + ' ' + order.nummer if order else _('New Work Order') }}</h1>
+    {% if not order %}
+    <a href="/qr/scan" class="btn" style="background:#f39c12; color:white">📷 {{ _('QR Scan') }}</a>
+    {% endif %}
+</div>
+<div class="card">
+    <form method="POST" id="order-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Responsible person') }}</label>
+                <select name="klant_id" id="klant_id" required>
+                    <option value="">{{ _('Responsible person') }}</option>
+                    {% for c in verantwoordelijken %}
+                    <option value="{{ c.id }}" {% if order and order.responsible_id==c.id %}selected{% endif %}>{{ c.naam }} ({{ c.telefoon }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Worker') }}</label>
+                <select name="monteur_id">
+                    <option value="">{{ _('Worker') }}</option>
+                    {% for w in workers %}
+                    <option value="{{ w.id }}" {% if order and order.monteur_id==w.id %}selected{% endif %}>{{ w.naam }} ({{ w.specialisatie }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Device') }}</label>
+                <div style="display:flex; gap:8px">
+                    <input type="text" name="apparaat" id="apparaat" value="{{ order.apparaat if order else '' }}" required placeholder="Smartphone, laptop..." style="flex:1">
+                    <button type="button" class="btn btn-sm" style="background:#f39c12; color:white" onclick="scanForField('apparaat')">📷</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Model') }}</label>
+                <input type="text" name="model" id="model" value="{{ order.model if order else '' }}" placeholder="iPhone 12, ASUS X515...">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Serial Number') }}</label>
+            <div style="display:flex; gap:8px">
+                <input type="text" name="serienummer" id="serienummer" value="{{ order.serienummer if order else '' }}" style="flex:1">
+                <button type="button" class="btn btn-sm" style="background:#f39c12; color:white" onclick="scanForField('serienummer')">📷</button>
+            </div>
+        </div>
+        <div class="form-group"><label>{{ _('Problem') }}</label><textarea name="probleem" id="probleem" rows="3" required>{{ order.probleem if order else '' }}</textarea></div>
+        {% if order %}
+        <div class="form-group"><label>{{ _('Diagnosis') }}</label><textarea name="diagnose" rows="2">{{ order.diagnose or '' }}</textarea></div>
+        <div class="form-group"><label>{{ _('Work Done') }}</label><textarea name="uitgevoerd" rows="2">{{ order.uitgevoerd or '' }}</textarea></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    {% for s in ['aangenomen','diagnose','in behandeling','gereed','afgeleverd','geannuleerd'] %}
+                    <option value="{{ s }}" {% if order.status==s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Labor Cost') }} (€)</label><input type="number" name="arbeidskosten" value="{{ order.arbeidskosten }}" step="10"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Parts Cost') }} (€)</label><input type="number" name="onderdelenkosten" value="{{ order.onderdelenkosten }}" step="10"></div>
+        {% else %}
+        <div class="form-group"><label>{{ _('Labor Cost') }} (€)</label><input type="number" name="arbeidskosten" value="0" step="10"></div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+        <a href="/orders" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+    </form>
+</div>
+
+<!-- QR Scanner Modal -->
+<div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center">
+    <div style="background:white; border-radius:12px; padding:20px; max-width:500px; width:90%; max-height:90vh; overflow:auto">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+            <h2>{{ _('Scan QR Code') }}</h2>
+            <button onclick="closeQrModal()" style="background:none; border:none; font-size:24px; cursor:pointer">✕</button>
+        </div>
+        <div id="qr-reader" style="width:100%"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('apparaat')) document.getElementById('apparaat').value = params.get('apparaat');
+    if (params.get('model')) document.getElementById('model').value = params.get('model');
+    if (params.get('sn')) document.getElementById('serienummer').value = params.get('sn');
+    if (params.get('probleem')) document.getElementById('probleem').value = params.get('probleem');
+    if (params.get('klant')) {
+        const klantNaam = params.get('klant');
+        const sel = document.getElementById('klant_id');
+        for (let opt of sel.options) {
+            if (opt.text.toLowerCase().includes(klantNaam.toLowerCase())) {
+                sel.value = opt.value;
+                break;
+            }
+        }
+    }
+    
+    let currentScanner = null;
+    let currentTarget = null;
+    
+    function scanForField(target) {
+        currentTarget = target;
+        document.getElementById('qr-modal').style.display = 'flex';
+        
+        if (currentScanner) {
+            currentScanner.clear();
+        }
+        
+        currentScanner = new Html5Qrcode("qr-reader");
+        currentScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: {width: 250, height: 250} },
+            (decodedText) => {
+                document.getElementById(target).value = decodedText;
+                closeQrModal();
+                
+                try {
+                    const data = JSON.parse(decodedText);
+                    if (data.apparaat) document.getElementById('apparaat').value = data.apparaat;
+                    if (data.model) document.getElementById('model').value = data.model;
+                    if (data.serienummer) document.getElementById('serienummer').value = data.serienummer;
+                    if (data.klant) {
+                        const sel = document.getElementById('klant_id');
+                        for (let opt of sel.options) {
+                            if (opt.text.toLowerCase().includes(data.klant.toLowerCase())) {
+                                sel.value = opt.value;
+                                break;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            },
+            (errorMessage) => {}
+        ).catch(err => {
+            console.error('Camera error:', err);
+            alert('Camera not available');
+            closeQrModal();
+        });
+    }
+    
+    function closeQrModal() {
+        document.getElementById('qr-modal').style.display = 'none';
+        if (currentScanner) {
+            currentScanner.stop().catch(() => {});
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{% if cabinet %}{{ _('Edit Cabinet') }}{% else %}{{ _('New Cabinet') }}{% endif %} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚡ {% if cabinet %}{{ _('Edit Cabinet') }}{% else %}{{ _('New Cabinet') }}{% endif %}</h1>
+    <a href="/electricity" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Name') }} *</label>
+                <input type="text" name="name" value="{{ cabinet.name if cabinet else '' }}" required placeholder="{{ _('e.g. Hoofdverdeler A') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Location') }}</label>
+                <input type="text" name="location" value="{{ cabinet.location if cabinet else '' }}" placeholder="{{ _('e.g. Machinehal, Zuidwand') }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Type') }}</label>
+                <select name="cabinet_type">
+                    <option value="distribution" {% if cabinet and cabinet.cabinet_type == 'distribution' %}selected{% endif %}>{{ _('Distribution') }}</option>
+                    <option value="main" {% if cabinet and cabinet.cabinet_type == 'main' %}selected{% endif %}>{{ _('Main') }}</option>
+                    <option value="sub" {% if cabinet and cabinet.cabinet_type == 'sub' %}selected{% endif %}>{{ _('Sub-panel') }}</option>
+                    <option value="motor" {% if cabinet and cabinet.cabinet_type == 'motor' %}selected{% endif %}>{{ _('Motor Control') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Voltage') }}</label>
+                <select name="voltage">
+                    <option value="400V/230V" {% if cabinet and cabinet.voltage == '400V/230V' %}selected{% endif %}>400V/230V</option>
+                    <option value="230V" {% if cabinet and cabinet.voltage == '230V' %}selected{% endif %}>230V</option>
+                    <option value="400V" {% if cabinet and cabinet.voltage == '400V' %}selected{% endif %}>400V</option>
+                    <option value="24V DC" {% if cabinet and cabinet.voltage == '24V DC' %}selected{% endif %}>24V DC</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Main Fuse (A)') }}</label>
+                <input type="number" name="main_fuse_amps" value="{{ cabinet.main_fuse_amps if cabinet and cabinet.main_fuse_amps else '' }}" placeholder="e.g. 63, 125, 250">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Manufacturer') }}</label>
+                <input type="text" name="manufacturer" value="{{ cabinet.manufacturer if cabinet else '' }}" placeholder="e.g. ABB, Schneider, Hager">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Serial Number') }}</label>
+                <input type="text" name="serial_number" value="{{ cabinet.serial_number if cabinet else '' }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Photo') }}</label>
+                <input type="file" name="photo" accept="image/*">
+                {% if cabinet and cabinet.photo %}
+                <div style="margin-top:8px"><img src="/static/uploads/{{ cabinet.photo }}" style="width:80px;height:80px;object-fit:cover;border-radius:8px"></div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Schematic X position') }}</label>
+                <input type="number" name="schematic_x" value="{{ cabinet.schematic_x if cabinet else 0 }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Schematic Y position') }}</label>
+                <input type="number" name="schematic_y" value="{{ cabinet.schematic_y if cabinet else 0 }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Description') }}</label>
+            <textarea name="description" rows="3" placeholder="{{ _('Notes about this cabinet...') }}">{{ cabinet.description if cabinet else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{% if cabinet %}{{ _('Save') }}{% else %}{{ _('Create') }}{% endif %}</button>
+            <a href="/electricity" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

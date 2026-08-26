@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Contractors') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏢 {{ _('Contractors') }}</h1>
+    <a href="/contractors/new" class="btn btn-primary">+ {{ _('New contractor') }}</a>
+</div>
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Company') }}</th><th>{{ _('Contact') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Service') }}</th><th>{{ _('Machines') }}</th><th>{{ _('Contract') }}</th><th></th></tr>
+        {% for c in contractors %}
+        <tr>
+            <td><a href="/contractors/{{ c.id }}" style="color:#3498db;font-weight:bold">{{ c.company_name }}</a></td>
+            <td>{{ c.contact_person or '—' }}</td>
+            <td>{% if c.phone %}<a href="tel:{{ c.phone }}">{{ c.phone }}</a>{% else %}—{% endif %}</td>
+            <td>{{ c.service_type or '—' }}</td>
+            <td>{{ c.machines|length }}</td>
+            <td>{% if c.contract_end %}{{ c.contract_end.strftime('%d-%m-%Y') }}{% else %}—{% endif %}</td>
+            <td><a href="/contractors/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

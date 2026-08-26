@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{% if breaker %}{{ _('Edit Breaker') }}{% else %}{{ _('New Breaker') }}{% endif %} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔌 {% if breaker %}{{ _('Edit Breaker') }}{% else %}{{ _('New Breaker') }}{% endif %} — {{ cabinet.name }}</h1>
+    <a href="/electricity/cabinet/{{ cabinet.id }}" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Label') }} *</label>
+                <input type="text" name="label" value="{{ breaker.label if breaker else '' }}" required placeholder="e.g. Q1, F1, A1">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Description') }}</label>
+                <input type="text" name="description" value="{{ breaker.description if breaker else '' }}" placeholder="{{ _('e.g. Verlichting hal, Krachtgroep CNC') }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Type') }}</label>
+                <select name="breaker_type">
+                    <option value="MCB" {% if breaker and breaker.breaker_type == 'MCB' %}selected{% endif %}>MCB (Miniature Circuit Breaker)</option>
+                    <option value="MCCB" {% if breaker and breaker.breaker_type == 'MCCB' %}selected{% endif %}>MCCB (Molded Case)</option>
+                    <option value="RCD" {% if breaker and breaker.breaker_type == 'RCD' %}selected{% endif %}>RCD (Aardlekschakelaar)</option>
+                    <option value="RCBO" {% if breaker and breaker.breaker_type == 'RCBO' %}selected{% endif %}>RCBO (MCB + RCD)</option>
+                    <option value="Fuse" {% if breaker and breaker.breaker_type == 'Fuse' %}selected{% endif %}>{{ _('Fuse') }}</option>
+                    <option value="Switch" {% if breaker and breaker.breaker_type == 'Switch' %}selected{% endif %}>{{ _('Switch') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Amperage (A)') }}</label>
+                <select name="amperage">
+                    <option value="">{{ _('— Select —') }}</option>
+                    {% for amp in [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 400] %}
+                    <option value="{{ amp }}" {% if breaker and breaker.amperage == amp %}selected{% endif %}>{{ amp }}A</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Poles') }}</label>
+                <select name="poles">
+                    <option value="1" {% if breaker and breaker.poles == 1 %}selected{% endif %}>1P</option>
+                    <option value="2" {% if breaker and breaker.poles == 2 %}selected{% endif %}>2P</option>
+                    <option value="3" {% if breaker and breaker.poles == 3 %}selected{% endif %}>3P</option>
+                    <option value="4" {% if breaker and breaker.poles == 4 %}selected{% endif %}>4P</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Curve Type') }}</label>
+                <select name="curve_type">
+                    <option value="B" {% if breaker and breaker.curve_type == 'B' %}selected{% endif %}>B</option>
+                    <option value="C" {% if breaker and breaker.curve_type == 'C' %}selected{% endif %}>C</option>
+                    <option value="D" {% if breaker and breaker.curve_type == 'D' %}selected{% endif %}>D</option>
+                    <option value="K" {% if breaker and breaker.curve_type == 'K' %}selected{% endif %}>K</option>
+                    <option value="Z" {% if breaker and breaker.curve_type == 'Z' %}selected{% endif %}>Z</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Phase') }}</label>
+                <select name="phase">
+                    <option value="">{{ _('— None —') }}</option>
+                    <option value="L1" {% if breaker and breaker.phase == 'L1' %}selected{% endif %}>L1</option>
+                    <option value="L2" {% if breaker and breaker.phase == 'L2' %}selected{% endif %}>L2</option>
+                    <option value="L3" {% if breaker and breaker.phase == 'L3' %}selected{% endif %}>L3</option>
+                    <option value="L1-L2-L3" {% if breaker and breaker.phase == 'L1-L2-L3' %}selected{% endif %}>L1-L2-L3 (3-phase)</option>
+                    <option value="N" {% if breaker and breaker.phase == 'N' %}selected{% endif %}>N (Neutral)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    <option value="on" {% if not breaker or breaker.status == 'on' %}selected{% endif %}>ON</option>
+                    <option value="off" {% if breaker and breaker.status == 'off' %}selected{% endif %}>OFF</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Row') }}</label>
+                <input type="number" name="row" value="{{ breaker.row if breaker else 1 }}" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Position in Row') }}</label>
+                <input type="number" name="position" value="{{ breaker.position if breaker else 1 }}" min="1" max="30">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Connected To') }}</label>
+            <input type="text" name="connected_to" value="{{ breaker.connected_to if breaker else '' }}" placeholder="{{ _('e.g. CNC Machine, Lighting, Socket group A') }}">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2">{{ breaker.notes if breaker else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{% if breaker %}{{ _('Save') }}{% else %}{{ _('Create') }}{% endif %}</button>
+            <a href="/electricity/cabinet/{{ cabinet.id }}" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

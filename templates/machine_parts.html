@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Parts') }}: {{ machine.name }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>⚙️ {{ machine.name }} — {{ _('Parts') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/machines/{{ machine.id }}/parts/new" class="btn btn-primary btn-sm">+ {{ _('Add Part') }}</a>
+        <a href="/machines/{{ machine.id }}" class="btn btn-sm" style="background:#eee">{{ _('Back to Machine') }}</a>
+    </div>
+</div>
+
+{% set needs_attention = [] %}
+{% for p in parts %}
+    {% if p.next_replacement and p.next_replacement <= today %}{% if needs_attention.append(1) %}{% endif %}{% endif %}
+    {% if p.next_maintenance and p.next_maintenance <= today %}{% if needs_attention.append(1) %}{% endif %}{% endif %}
+{% endfor %}
+
+{% if needs_attention|length > 0 %}
+<div class="alert alert-error">
+    ⚠️ {{ needs_attention|length }} {{ _('parts need attention!') }}
+</div>
+{% endif %}
+
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ parts|length }}</div><div class="label">{{ _('Total Parts') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ parts|selectattr('status','equalto','ok')|list|length }}</div><div class="label">{{ _('OK') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ parts|selectattr('status','equalto','needs_maintenance')|list|length }}</div><div class="label">{{ _('Needs Maintenance') }}</div></div>
+    <div class="stat-card" style="{% if parts|selectattr('status','equalto','needs_replacement')|list|length > 0 %}border-left:4px solid #e74c3c{% endif %}">
+        <div class="number">{{ parts|selectattr('status','equalto','needs_replacement')|list|length }}</div>
+        <div class="label">{{ _('Needs Replacement') }}</div>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Part') }}</th>
+                <th>{{ _('Category') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Responsible') }}</th>
+                <th>{{ _('Next Replacement') }}</th>
+                <th>{{ _('Days left') }}</th>
+                <th>{{ _('Next Maintenance') }}</th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for p in parts %}
+            <tr>
+                <td>
+                    <div><strong>{{ p.name }}</strong></div>
+                    {% if p.part_number %}<div style="font-size:11px;color:#888">#{{ p.part_number }}</div>{% endif %}
+                </td>
+                <td><span class="badge badge-{{ p.category }}">{{ p.category }}</span></td>
+                <td>
+                    {% if p.next_replacement and p.next_replacement <= today %}
+                        <span class="badge badge-critical">{{ _('Replace now') }}</span>
+                    {% elif p.next_maintenance and p.next_maintenance <= today %}
+                        <span class="badge badge-high">{{ _('Maintain now') }}</span>
+                    {% elif p.next_replacement and (p.next_replacement - today).days <= 7 %}
+                        <span class="badge badge-warning">{{ _('Soon') }}</span>
+                    {% else %}
+                        <span class="badge badge-ok">{{ p.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.responsible_user.display_name if p.responsible_user else '—' }}</td>
+                <td style="{% if p.next_replacement and p.next_replacement <= today %}color:#e74c3c;font-weight:bold{% endif %}">
+                    {{ p.next_replacement.strftime('%d-%m-%Y') if p.next_replacement else '—' }}
+                </td>
+                <td>
+                    {% if p.next_replacement %}
+                        {% set days_left = (p.next_replacement - today).days %}
+                        {% if days_left < 0 %}
+                            <span class="badge badge-critical">+{{ -days_left }} {{ _('overdue') }}</span>
+                        {% elif days_left == 0 %}
+                            <span class="badge badge-critical">{{ _('Today') }}</span>
+                        {% elif days_left <= 7 %}
+                            <span class="badge badge-warning">{{ days_left }} {{ _('days') }}</span>
+                        {% elif days_left <= 30 %}
+                            <span class="badge badge-high">{{ days_left }} {{ _('days') }}</span>
+                        {% else %}
+                            <span class="badge badge-ok">{{ days_left }} {{ _('days') }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span style="color:#ccc">—</span>
+                    {% endif %}
+                </td>
+                <td style="{% if p.next_maintenance and p.next_maintenance <= today %}color:#f39c12;font-weight:bold{% endif %}">
+                    {{ p.next_maintenance.strftime('%d-%m-%Y') if p.next_maintenance else '—' }}
+                </td>
+                <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                        <button onclick="showLogModal({{ p.id }}, '{{ p.name }}')" class="btn btn-sm" style="background:#27ae60;color:white;padding:4px 8px">+ {{ _('Log') }}</button>
+                        <a href="/machines/{{ machine.id }}/parts/{{ p.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+                    </div>
+                </td>
+            </tr>
+            {% if p.logs|length > 0 %}
+            <tr>
+                <td colspan="8" style="padding:0">
+                    <details style="padding:8px 12px;background:#f8f9fa">
+                        <summary style="cursor:pointer;font-size:12px;color:#888">{{ _('Recent logs') }} ({{ p.logs|length }})</summary>
+                        <table style="margin-top:8px">
+                            <tr><th>{{ _('Date') }}</th><th>{{ _('Action') }}</th><th>{{ _('Description') }}</th><th>{{ _('Cost') }}</th></tr>
+                            {% for l in p.logs[:5] %}
+                            <tr>
+                                <td>{{ l.date.strftime('%d-%m-%Y %H:%M') }}</td>
+                                <td><span class="badge badge-{{ l.action }}">{{ l.action }}</span></td>
+                                <td>{{ l.description or '—' }}</td>
+                                <td>{% if l.cost %}€{{ "%.0f"|format(l.cost) }}{% else %}—{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </details>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{% if not parts %}
+<div class="card" style="text-align:center;padding:40px;color:#888">
+    <p style="font-size:48px;margin-bottom:12px">⚙️</p>
+    <p>{{ _('No parts added yet') }}</p>
+    <a href="/machines/{{ machine.id }}/parts/new" class="btn btn-primary" style="margin-top:12px">+ {{ _('Add Part') }}</a>
+</div>
+{% endif %}
+
+<!-- Log Modal -->
+<div id="logModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:90vh;overflow:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="logModalTitle" style="margin:0"></h2>
+            <button onclick="closeLogModal()" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <form id="logForm" method="POST">
+            <div class="form-group">
+                <label>{{ _('Action') }} *</label>
+                <select name="action" required>
+                    <option value="maintenance">{{ _('Maintenance') }}</option>
+                    <option value="replacement">{{ _('Replacement') }}</option>
+                    <option value="inspection">{{ _('Inspection') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Description') }}</label>
+                <textarea name="description" rows="2" placeholder="{{ _('What was done...') }}"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Cost') }} (€)</label>
+                    <input type="number" name="cost" value="0" step="10">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Performed by') }}</label>
+                    <select name="performed_by">
+                        <option value="">{{ _('Current user') }}</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Notes') }}</label>
+                <input type="text" name="notes">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">{{ _('Save Log') }}</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function showLogModal(partId, partName) {
+    document.getElementById('logModalTitle').textContent = '{{ _("Log") }}: ' + partName;
+    document.getElementById('logForm').action = '/machines/{{ machine.id }}/parts/' + partId + '/log';
+    document.getElementById('logModal').style.display = 'flex';
+}
+function closeLogModal() {
+    document.getElementById('logModal').style.display = 'none';
+}
+document.getElementById('logModal').addEventListener('click', function(e) {
+    if (e.target === this) closeLogModal();
+});
+</script>
+{% endblock %}

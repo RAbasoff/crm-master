@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Work Report') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📋 {{ _('Work Report') }}</h1>
+    <div style="display:flex;gap:8px">
+        <span style="font-size:13px;color:#888">{{ logs|length }} {{ _('records') }}</span>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:140px">{{ _('Date') }}</th>
+                    <th style="width:120px">{{ _('User') }}</th>
+                    <th style="width:100px">{{ _('Action') }}</th>
+                    <th style="width:120px">{{ _('Object') }}</th>
+                    <th>{{ _('Details') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in logs %}
+                <tr>
+                    <td style="white-space:nowrap;font-size:12px">
+                        <b>{{ l.created_at.strftime('%d.%m.%Y') }}</b>
+                        <span style="color:#888;margin-left:4px">{{ l.created_at.strftime('%H:%M') }}</span>
+                    </td>
+                    <td>
+                        {% if l.user %}
+                            <span style="font-weight:500">{{ l.user.display_name }}</span>
+                        {% else %}
+                            <span style="color:#aaa">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if l.action == 'create' %}
+                            <span class="badge badge-active">➕ {{ _('Created') }}</span>
+                        {% elif l.action == 'approve' %}
+                            <span class="badge badge-ok">✅ {{ _('Approved') }}</span>
+                        {% elif l.action == 'reject' %}
+                            <span class="badge badge-broken">❌ {{ _('Rejected') }}</span>
+                        {% elif l.action == 'accept' %}
+                            <span class="badge badge-ok">👍 {{ _('Accepted') }}</span>
+                        {% elif l.action == 'assign' %}
+                            <span class="badge badge-high">👤 {{ _('Assigned') }}</span>
+                        {% elif l.action == 'resolve' %}
+                            <span class="badge badge-active">✔️ {{ _('Resolved') }}</span>
+                        {% elif l.action == 'status_change' %}
+                            <span class="badge badge-high">🔄 {{ _('Changed') }}</span>
+                        {% elif l.action == 'replace' %}
+                            <span class="badge badge-purple">🔀 {{ _('Replaced') }}</span>
+                        {% elif l.action == 'update' %}
+                            <span class="badge badge-high">✏️ {{ _('Updated') }}</span>
+                        {% elif l.action == 'delete' %}
+                            <span class="badge badge-broken">🗑 {{ _('Deleted') }}</span>
+                        {% elif l.action == 'close' %}
+                            <span class="badge badge-ok">🔒 {{ _('Closed') }}</span>
+                        {% elif l.action == 'reopen' %}
+                            <span class="badge badge-high">🔓 {{ _('Reopened') }}</span>
+                        {% else %}
+                            <span class="badge">{{ l.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if l.entity_type == 'purchase_request' %}
+                            🛒 {{ _('Request') }}
+                        {% elif l.entity_type == 'cylinder' %}
+                            🔴 {{ _('Cylinder') }}
+                        {% elif l.entity_type == 'fault' %}
+                            ⚠️ {{ _('Fault') }}
+                        {% elif l.entity_type == 'work_report' %}
+                            📝 {{ _('Work Report') }}
+                        {% elif l.entity_type == 'two' %}
+                            🔧 {{ _('TWO') }}
+                        {% elif l.entity_type == 'warehouse_item' %}
+                            📦 {{ _('Warehouse') }}
+                        {% elif l.entity_type == 'contractor' %}
+                            🏢 {{ _('Contractor') }}
+                        {% else %}
+                            {{ l.entity_type or '—' }}
+                        {% endif %}
+                        {% if l.entity_id %}<span style="color:#888;font-size:11px">#{{ l.entity_id }}</span>{% endif %}
+                    </td>
+                    <td style="font-size:13px">{{ l.details or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if not logs %}
+<div class="card" style="text-align:center;padding:40px;color:#888">
+    <p style="font-size:48px;margin-bottom:10px">📋</p>
+    <p>{{ _('No records yet') }}</p>
+</div>
+{% endif %}
+{% endblock %}
