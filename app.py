@@ -4041,7 +4041,8 @@ def warehouse_barcode(item_id):
     import barcode
     from barcode.writer import ImageWriter
     item = VoorraadItem.query.get_or_404(item_id)
-    code_str = f"W{item.id:05d}"
+    # Use supplier part number if available, otherwise internal code
+    code_str = item.supplier_part_number if item.supplier_part_number else f"W{item.id:05d}"
     code128 = barcode.get('code128', code_str, writer=ImageWriter())
     buf = io.BytesIO()
     code128.write(buf, options={'module_width': 0.3, 'module_height': 8, 'font_size': 8, 'text_distance': 2, 'quiet_zone': 2})
@@ -4191,7 +4192,13 @@ def warehouse_scan():
                 })
     except (json.JSONDecodeError, AttributeError):
         pass
-    item = VoorraadItem.query.filter(VoorraadItem.naam.ilike(f'%{code}%')).first()
+    # Search by supplier part number (barcode), then by name
+    item = VoorraadItem.query.filter(
+        db.or_(
+            VoorraadItem.supplier_part_number == code,
+            VoorraadItem.naam.ilike(f'%{code}%')
+        )
+    ).first()
     if item:
         return jsonify({
             'found': True, 'id': item.id, 'name': item.naam,
