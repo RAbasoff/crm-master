@@ -2,16 +2,53 @@
 {% block title %}{{ _('Edit Item') if item else _('New Item') }} — CRM{% endblock %}
 {% block content %}
 <h1>{{ _('Edit Item') + ': ' + item.naam if item else _('New Item') }}</h1>
+
+<!-- SCANNER PANEL -->
+<div class="card" style="background:#f0f7ff;border:2px solid #3498db;margin-bottom:16px;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;font-size:14px">📷 {{ _('Scan product') }}</h3>
+        <div style="display:flex;gap:6px">
+            <button type="button" class="btn btn-sm" style="background:#3498db;color:white" onclick="toggleScanMode('barcode')">||| {{ _('Barcode') }}</button>
+            <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="toggleScanMode('ocr')">🔤 {{ _('Scan text') }}</button>
+        </div>
+    </div>
+    
+    <!-- Barcode scanner -->
+    <div id="barcodeScanBlock" style="display:none">
+        <div id="formScanner" style="width:100%;max-width:400px;margin:0 auto"></div>
+        <div id="formScanResult" style="margin-top:10px;padding:8px 12px;border-radius:8px;display:none;font-size:13px"></div>
+    </div>
+    
+    <!-- OCR scanner -->
+    <div id="ocrScanBlock" style="display:none">
+        <div style="text-align:center">
+            <video id="ocrVideo" autoplay playsinline style="width:100%;max-width:400px;border-radius:12px;border:2px solid #27ae60"></video>
+            <canvas id="ocrCanvas" style="display:none"></canvas>
+            <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
+                <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="captureOCR()">📸 {{ _('Capture & Read') }}</button>
+                <button type="button" class="btn btn-sm" style="background:#eee" onclick="stopOCR()">{{ _('Stop') }}</button>
+            </div>
+            <div id="ocrResult" style="margin-top:10px;padding:8px 12px;border-radius:8px;display:none;font-size:13px"></div>
+            <div id="ocrProgress" style="margin-top:8px;display:none">
+                <div style="background:#eee;border-radius:8px;height:6px;overflow:hidden">
+                    <div id="ocrProgressBar" style="background:#27ae60;height:100%;width:0%;transition:width 0.3s"></div>
+                </div>
+                <small style="color:#888" id="ocrStatus">{{ _('Recognizing text...') }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <form method="POST">
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="naam" value="{{ item.naam if item else '' }}" required></div>
-            <div class="form-group"><label>{{ _('Category') }}</label><input type="text" name="categorie" value="{{ item.categorie if item else '' }}" placeholder="Parts, consumables..."></div>
+            <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="naam" id="fieldNaam" value="{{ item.naam if item else '' }}" required></div>
+            <div class="form-group"><label>{{ _('Category') }}</label><input type="text" name="categorie" id="fieldCategorie" value="{{ item.categorie if item else '' }}" placeholder="Parts, consumables..."></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>Supplier Part Number</label><input type="text" name="supplier_part_number" value="{{ item.supplier_part_number if item and item.supplier_part_number else '' }}" placeholder="e.g. 6ES7214-1AG40-0XB0"></div>
+            <div class="form-group"><label>Supplier Part Number</label><input type="text" name="supplier_part_number" id="fieldSPN" value="{{ item.supplier_part_number if item and item.supplier_part_number else '' }}" placeholder="e.g. 6ES7214-1AG40-0XB0"></div>
             <div class="form-group"><label>{{ _('Group') }} ({{ _('by manufacturer') }})</label>
-                <select name="group_id">
+                <select name="group_id" id="fieldGroup">
                     <option value="">{{ _('No group') }}</option>
                     {% for g in groups %}
                     <option value="{{ g.id }}" {% if item and item.group_id == g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
@@ -21,7 +58,7 @@
         </div>
         <div class="form-group">
             <label>{{ _('Description') }}</label>
-            <textarea name="description" rows="3" placeholder="{{ _('Item description...') }}">{{ item.description if item else '' }}</textarea>
+            <textarea name="description" id="fieldDesc" rows="3" placeholder="{{ _('Item description...') }}">{{ item.description if item else '' }}</textarea>
         </div>
         <div class="form-row">
             <div class="form-group"><label>{{ _('Unit') }}</label><input type="text" name="eenheid" value="{{ item.eenheid if item else 'st' }}" placeholder="st, m, kg..."></div>
@@ -43,4 +80,176 @@
         </div>
     </form>
 </div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+let formScanner = null;
+let ocrStream = null;
+
+// === BARCODE SCANNER ===
+function toggleScanMode(mode) {
+    if (mode === 'barcode') {
+        const block = document.getElementById('barcodeScanBlock');
+        if (block.style.display === 'none') {
+            block.style.display = 'block';
+            document.getElementById('ocrScanBlock').style.display = 'none';
+            stopOCR();
+            startFormScanner();
+        } else {
+            block.style.display = 'none';
+            if (formScanner) { formScanner.stop(); formScanner = null; }
+        }
+    } else if (mode === 'ocr') {
+        const block = document.getElementById('ocrScanBlock');
+        if (block.style.display === 'none') {
+            block.style.display = 'block';
+            document.getElementById('barcodeScanBlock').style.display = 'none';
+            if (formScanner) { formScanner.stop(); formScanner = null; }
+            startOCR();
+        } else {
+            block.style.display = 'none';
+            stopOCR();
+        }
+    }
+}
+
+function startFormScanner() {
+    if (formScanner) return;
+    setTimeout(function() {
+        formScanner = new Html5Qrcode("formScanner");
+        formScanner.start(
+            { facingMode: "environment" },
+            {
+                fps: 10,
+                qrbox: function(vw, vh) { let s = Math.floor(Math.min(vw, vh) * 0.9); return { width: Math.max(s, 300), height: Math.floor(s * 0.5) }; },
+                aspectRatio: 1.5,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.ITF
+                ]
+            },
+            function(text) {
+                document.getElementById('formScanResult').style.display = 'block';
+                document.getElementById('formScanResult').style.background = '#fff3cd';
+                document.getElementById('formScanResult').textContent = 'Searching: ' + text + '...';
+                
+                // Fill SPN field with scanned code
+                document.getElementById('fieldSPN').value = text;
+                
+                // Search existing item by barcode
+                csrfFetch('/api/warehouse/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code: text})
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.found) {
+                        document.getElementById('formScanResult').style.background = '#f0fff0';
+                        document.getElementById('formScanResult').innerHTML = '✓ <strong>' + d.name + '</strong> — {{ _("Item exists") }}. <a href="/warehouse/' + d.id + '/edit">{{ _("Edit") }}</a>';
+                        // Auto-fill fields
+                        document.getElementById('fieldNaam').value = d.name;
+                        if (d.category) document.getElementById('fieldCategorie').value = d.category;
+                    } else {
+                        document.getElementById('formScanResult').style.background = '#e8f5e9';
+                        document.getElementById('formScanResult').textContent = '✓ SPN: ' + text + ' — {{ _("Fill in name and save") }}';
+                    }
+                });
+                
+                if (formScanner) { formScanner.stop(); formScanner = null; }
+            },
+            function() {}
+        ).catch(function(err) {
+            document.getElementById('formScanResult').style.display = 'block';
+            document.getElementById('formScanResult').style.background = '#fdf0f0';
+            document.getElementById('formScanResult').textContent = 'Camera error: ' + err;
+        });
+    }, 300);
+}
+
+// === OCR SCANNER ===
+async function startOCR() {
+    try {
+        ocrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } });
+        document.getElementById('ocrVideo').srcObject = ocrStream;
+    } catch(err) {
+        document.getElementById('ocrResult').style.display = 'block';
+        document.getElementById('ocrResult').style.background = '#fdf0f0';
+        document.getElementById('ocrResult').textContent = 'Camera error: ' + err.message;
+    }
+}
+
+function stopOCR() {
+    if (ocrStream) {
+        ocrStream.getTracks().forEach(function(t) { t.stop(); });
+        ocrStream = null;
+    }
+    document.getElementById('ocrVideo').srcObject = null;
+}
+
+async function captureOCR() {
+    const video = document.getElementById('ocrVideo');
+    const canvas = document.getElementById('ocrCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    document.getElementById('ocrProgress').style.display = 'block';
+    document.getElementById('ocrProgressBar').style.width = '10%';
+    document.getElementById('ocrStatus').textContent = '{{ _("Recognizing text...") }}';
+    
+    try {
+        const result = await Tesseract.recognize(canvas, 'eng+rus+deu', {
+            logger: function(m) {
+                if (m.progress) {
+                    document.getElementById('ocrProgressBar').style.width = Math.round(m.progress * 100) + '%';
+                }
+            }
+        });
+        
+        document.getElementById('ocrProgressBar').style.width = '100%';
+        const text = result.data.text.trim();
+        
+        if (text) {
+            document.getElementById('ocrResult').style.display = 'block';
+            document.getElementById('ocrResult').style.background = '#e8f5e9';
+            document.getElementById('ocrResult').innerHTML = '<strong>{{ _("Recognized") }}:</strong><br><pre style="white-space:pre-wrap;font-size:12px;background:white;padding:8px;border-radius:6px;margin-top:6px;max-height:150px;overflow-y:auto">' + text + '</pre>' +
+                '<div style="margin-top:8px;display:flex;gap:6px">' +
+                '<button type="button" class="btn btn-sm" style="background:#3498db;color:white" onclick="useOCRText(\'name\')">{{ _("Use as Name") }}</button>' +
+                '<button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="useOCRText(\'desc\')">{{ _("Use as Description") }}</button>' +
+                '<button type="button" class="btn btn-sm" style="background:#e67e22;color:white" onclick="useOCRText(\'spn\')">{{ _("Use as SPN") }}</button>' +
+                '</div>';
+            window._ocrText = text;
+        } else {
+            document.getElementById('ocrResult').style.display = 'block';
+            document.getElementById('ocrResult').style.background = '#fff5f0';
+            document.getElementById('ocrResult').textContent = '{{ _("No text recognized. Try again.") }}';
+        }
+    } catch(err) {
+        document.getElementById('ocrResult').style.display = 'block';
+        document.getElementById('ocrResult').style.background = '#fdf0f0';
+        document.getElementById('ocrResult').textContent = 'OCR error: ' + err.message;
+    }
+    
+    document.getElementById('ocrProgress').style.display = 'none';
+}
+
+function useOCRText(field) {
+    const text = window._ocrText || '';
+    // Extract first line for name, full text for description
+    const firstLine = text.split('\n').find(function(l) { return l.trim().length > 2; }) || text.substring(0, 80);
+    
+    if (field === 'name') {
+        document.getElementById('fieldNaam').value = firstLine.trim();
+    } else if (field === 'desc') {
+        document.getElementById('fieldDesc').value = text;
+    } else if (field === 'spn') {
+        // Try to extract model/number pattern
+        const match = text.match(/[A-Z0-9][\w\-]{3,}/i);
+        document.getElementById('fieldSPN').value = match ? match[0] : firstLine.trim();
+    }
+}
+</script>
 {% endblock %}
