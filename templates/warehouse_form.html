@@ -82,7 +82,7 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script>
 let formScanner = null;
 let ocrStream = null;
@@ -201,13 +201,17 @@ async function captureOCR() {
     document.getElementById('ocrStatus').textContent = '{{ _("Recognizing text...") }}';
     
     try {
-        const result = await Tesseract.recognize(canvas, 'eng+rus+deu', {
+        const worker = await Tesseract.createWorker('eng+rus', 1, {
             logger: function(m) {
                 if (m.progress) {
                     document.getElementById('ocrProgressBar').style.width = Math.round(m.progress * 100) + '%';
+                    document.getElementById('ocrStatus').textContent = m.status || '{{ _("Processing...") }}';
                 }
             }
         });
+        
+        const result = await worker.recognize(canvas);
+        await worker.terminate();
         
         document.getElementById('ocrProgressBar').style.width = '100%';
         const text = result.data.text.trim();
