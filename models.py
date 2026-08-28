@@ -272,6 +272,7 @@ class Verantwoordelijke(db.Model):
     position = db.Column(db.String(100))
     telefoon = db.Column(db.String(50))
     telefoon2 = db.Column(db.String(50))
+    internal_phone = db.Column(db.String(50))
     email = db.Column(db.String(100))
     website = db.Column(db.String(200))
     adres = db.Column(db.String(300))
@@ -651,6 +652,7 @@ class TechnicalWorkOrder(db.Model):
     photos = db.relationship('TWOPhoto', backref='two', lazy=True, cascade='all, delete-orphan')
     checklist_items = db.relationship('TWOChecklistItem', backref='two', lazy=True, order_by='TWOChecklistItem.sort_order', cascade='all, delete-orphan')
     signatures = db.relationship('TWOSignature', backref='two', lazy=True, cascade='all, delete-orphan')
+    assignments = db.relationship('TWOAssignment', backref='two', lazy=True, order_by='TWOAssignment.sort_order', cascade='all, delete-orphan')
 
 class TWOPhoto(db.Model):
     __tablename__ = 'two_photo'
@@ -664,12 +666,28 @@ class TWOChecklistItem(db.Model):
     __tablename__ = 'two_checklist_item'
     id = db.Column(db.Integer, primary_key=True)
     two_id = db.Column(db.Integer, db.ForeignKey('technical_work_order.id'), nullable=False)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('two_assignment.id'))
     text = db.Column(db.String(500), nullable=False)
     is_done = db.Column(db.Boolean, default=False)
     done_at = db.Column(db.DateTime)
     done_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     sort_order = db.Column(db.Integer, default=0)
     done_user = db.relationship('User', foreign_keys=[done_by])
+
+class TWOAssignment(db.Model):
+    __tablename__ = 'two_assignment'
+    id = db.Column(db.Integer, primary_key=True)
+    two_id = db.Column(db.Integer, db.ForeignKey('technical_work_order.id'), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'))
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
+    description = db.Column(db.Text)
+    sort_order = db.Column(db.Integer, default=0)
+    section = db.relationship('FactorySection', backref='two_assignments')
+    machine = db.relationship('Machine', backref='two_assignments')
+    checklist_items = db.relationship('TWOChecklistItem', backref='assignment',
+        lazy=True, order_by='TWOChecklistItem.sort_order',
+        primaryjoin='TWOChecklistItem.assignment_id == TWOAssignment.id',
+        cascade='all, delete-orphan')
 
 class TWOSignature(db.Model):
     __tablename__ = 'two_signature'

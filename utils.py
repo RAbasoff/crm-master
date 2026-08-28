@@ -229,6 +229,16 @@ def run_migrations():
             signature_data TEXT NOT NULL,
             signed_at DATETIME
         )"""),
+        ("client.internal_phone", "ALTER TABLE client ADD COLUMN internal_phone VARCHAR(50)"),
+        ("two_assignment", """CREATE TABLE IF NOT EXISTS two_assignment (
+            id INTEGER PRIMARY KEY,
+            two_id INTEGER NOT NULL REFERENCES technical_work_order(id),
+            section_id INTEGER REFERENCES factory_section(id),
+            machine_id INTEGER REFERENCES machine(id),
+            description TEXT,
+            sort_order INTEGER DEFAULT 0
+        )"""),
+        ("two_checklist_item.assignment_id", "ALTER TABLE two_checklist_item ADD COLUMN assignment_id INTEGER REFERENCES two_assignment(id)"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

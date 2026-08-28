@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Phone Directory') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📞 {{ _('Phone Directory') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/responsible" class="btn btn-sm" style="background:#eee">{{ _('Responsible persons') }}</a>
+    </div>
+</div>
+
+<!-- SEARCH -->
+<div class="card" style="padding:12px 16px;margin-bottom:16px">
+    <input type="text" id="phoneSearch" placeholder="{{ _('Search by name, phone, email...') }}" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:15px" oninput="filterDir(this.value)">
+</div>
+
+<!-- RESPONSIBLE PERSONS -->
+{% if persons %}
+<div class="card" style="padding:0;margin-bottom:16px">
+    <div style="padding:14px 18px;background:#f0f7ff;border-bottom:1px solid #e8ecf1">
+        <h2 style="margin:0;font-size:15px">👤 {{ _('Responsible Persons') }} ({{ persons|length }})</h2>
+    </div>
+    <div class="table-wrap"><table id="personsTable">
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Position') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Internal') }}</th><th>{{ _('Email') }}</th><th>{{ _('Group') }}</th></tr>
+        {% for p in persons %}
+        <tr class="dir-row">
+            <td><strong>{{ p.naam }}</strong></td>
+            <td>{{ p.position or '—' }}</td>
+            <td>{% if p.telefoon %}<a href="tel:{{ p.telefoon }}" style="color:#3498db">{{ p.telefoon }}</a>{% else %}—{% endif %}</td>
+            <td>{% if p.internal_phone %}<span style="color:#e67e22;font-weight:700;font-size:15px">{{ p.internal_phone }}</span>{% else %}—{% endif %}</td>
+            <td>{% if p.email %}<a href="mailto:{{ p.email }}" style="color:#3498db">{{ p.email }}</a>{% else %}—{% endif %}</td>
+            <td>{{ p.resp_group.name if p.resp_group else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- WORKERS -->
+{% if workers %}
+<div class="card" style="padding:0;margin-bottom:16px">
+    <div style="padding:14px 18px;background:#f0fff0;border-bottom:1px solid #e8ecf1">
+        <h2 style="margin:0;font-size:15px">🔧 {{ _('Workers') }} ({{ workers|length }})</h2>
+    </div>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('Phone') }}</th></tr>
+        {% for w in workers %}
+        <tr class="dir-row">
+            <td><strong>{{ w.naam }}</strong></td>
+            <td>{{ w.specialisatie or '—' }}</td>
+            <td>{% if w.telefoon %}<a href="tel:{{ w.telefoon }}" style="color:#3498db">{{ w.telefoon }}</a>{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- SYSTEM USERS -->
+{% if users %}
+<div class="card" style="padding:0;margin-bottom:16px">
+    <div style="padding:14px 18px;background:#fff5f0;border-bottom:1px solid #e8ecf1">
+        <h2 style="margin:0;font-size:15px">💻 {{ _('System Users') }} ({{ users|length }})</h2>
+    </div>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Username') }}</th><th>{{ _('Role') }}</th></tr>
+        {% for u in users %}
+        <tr class="dir-row">
+            <td><strong>{{ u.display_name or u.username }}</strong></td>
+            <td>{{ u.username }}</td>
+            <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<script>
+function filterDir(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.dir-row').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

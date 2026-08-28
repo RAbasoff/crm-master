@@ -27,7 +27,7 @@
     <h2 style="margin-bottom:12px;text-align:center;font-size:14px">📊 {{ _('Cylinder Status') }}</h2>
     
     <!-- N2 Cylinders with images -->
-    <h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N₂ {{ _('Nitrogen') }} ({{ count_n2 }})</h3>
+    <h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N₂ {{ _('Nitrogen') }} ({{ count_n2 }}/{{ count_n2_all }})</h3>
     <div style="display:flex;gap:10px;margin-bottom:6px;justify-content:center">
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_full }}</b> {{ _('Full') }}</span>
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_in_use }}</b> {{ _('In use') }}</span>
@@ -50,7 +50,7 @@
     </div>
 
     <!-- CO2 Cylinders with images -->
-    <h3 style="color:#e67e22;margin-bottom:6px;font-size:13px;text-align:center">CO₂ {{ _('Carbon dioxide') }} ({{ count_co2 }})</h3>
+    <h3 style="color:#e67e22;margin-bottom:6px;font-size:13px;text-align:center">CO₂ {{ _('Carbon dioxide') }} ({{ count_co2 }}/{{ count_co2_all }})</h3>
     <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_full }}</b> {{ _('Full') }}</span>
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_in_use }}</b> {{ _('In use') }}</span>
@@ -481,7 +481,8 @@ const statsData = {
         empty: {{ stats.n2_empty }},
         leak: {{ stats.n2_leak }},
         faulty: {{ stats.n2_faulty }},
-        total: {{ count_n2 }}
+        total: {{ count_n2 }},
+        total_all: {{ count_n2_all }}
     },
     co2: {
         full: {{ stats.co2_full }},
@@ -489,7 +490,8 @@ const statsData = {
         empty: {{ stats.co2_empty }},
         leak: {{ stats.co2_leak }},
         faulty: {{ stats.co2_faulty }},
-        total: {{ count_co2 }}
+        total: {{ count_co2 }},
+        total_all: {{ count_co2_all }}
     }
 };
 
@@ -505,6 +507,7 @@ function showStats(gas) {
         (d.leak > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#9b59b6;color:white;border-radius:8px"><span>${T.leak}:</span><b>${d.leak}</b></div>` : '') +
         (d.faulty > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#566573;color:white;border-radius:8px"><span>${T.faulty}:</span><b>${d.faulty}</b></div>` : '') +
         `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#eee;border-radius:8px;font-weight:600"><span>${T.total}:</span><b>${d.total}</b></div>` +
+        (d.total_all !== d.total ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#ddd;border-radius:8px;font-size:12px"><span>{{ _('All (incl. empty/faulty)') }}:</span><b>${d.total_all}</b></div>` : '') +
         `</div>`;
     document.getElementById('statsModal').style.display = 'flex';
 }

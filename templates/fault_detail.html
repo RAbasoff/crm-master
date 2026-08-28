@@ -277,7 +277,7 @@
 <script>
 function changeFaultStatus(newStatus) {
     if (!newStatus) return;
-    fetch('/faults/{{ fault.id }}/status', {
+    csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: newStatus})
@@ -301,7 +301,7 @@ function submitClose() {
         alert('{{ _("Work report must be filled before closing. Please create a work report first.") }}');
         return;
     }
-    fetch('/faults/{{ fault.id }}/close', {
+    csrfFetch('/faults/{{ fault.id }}/close', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -330,7 +330,7 @@ function closeReopenModal() {
 function submitReopen() {
     const reason = document.getElementById('reopenReason').value;
     if (!reason.trim()) { alert('{{ _("Please enter the reason for reopening") }}'); return; }
-    fetch('/faults/{{ fault.id }}/reopen', {
+    csrfFetch('/faults/{{ fault.id }}/reopen', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({reason: reason, reopen_date: document.getElementById('reopenDate').value})

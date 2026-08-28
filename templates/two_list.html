@@ -18,7 +18,7 @@
         <tr>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Status') }}</th>
-            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Sections') }} / {{ _('Machines') }}</th>
             <th>{{ _('Workers') }}</th>
             <th>{{ _('Planned') }}</th>
             <th>{{ _('Fault') }}</th>
@@ -28,7 +28,16 @@
         <tr>
             <td><a href="/two/{{ o.id }}" style="color:#3498db;font-weight:bold">{{ o.number }}</a></td>
             <td><span class="badge badge-{% if o.status == 'completed' %}closed{% elif o.status == 'in_progress' %}in_progress{% elif o.status == 'cancelled' %}geannuleerd{% else %}open{% endif %}">{{ o.status }}</span></td>
-            <td>{% if o.machine %}<a href="/machines/{{ o.machine_id }}">{{ o.machine.name }}</a>{% else %}—{% endif %}</td>
+            <td style="font-size:12px">
+                {% if o.assignments %}
+                    {% for a in o.assignments %}
+                        {% if a.section %}<span style="display:inline-block;padding:2px 6px;background:#e3f2fd;border-radius:4px;margin:1px;font-size:11px">🏗️ {{ a.section.name }}</span>{% endif %}
+                        {% if a.machine %}<span style="display:inline-block;padding:2px 6px;background:#e8f5e9;border-radius:4px;margin:1px;font-size:11px">⚙️ {{ a.machine.name }}</span>{% endif %}
+                    {% endfor %}
+                {% elif o.machine %}<a href="/machines/{{ o.machine_id }}">{{ o.machine.name }}</a>
+                {% elif o.section %}{{ o.section.name }}
+                {% else %}—{% endif %}
+            </td>
             <td>{% for w in o.workers %}{{ w.naam }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
             <td>{{ o.planned_date.strftime('%d-%m-%Y') if o.planned_date else '—' }}</td>
             <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">#{{ o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>

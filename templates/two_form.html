@@ -3,7 +3,7 @@
 {% block content %}
 <h1>🔧 {{ _('Edit TWO') + ' ' + two.number if two else _('New Technical Work Order') }}</h1>
 <div class="card">
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" id="twoForm">
         <!-- FAULT SOURCE -->
         <div class="card" style="background:#fff5f5;margin-bottom:16px;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">⚠️ {{ _('Source fault report') }} ({{ _('optional') }})</h3>
@@ -19,41 +19,99 @@
             </div>
         </div>
 
-        <!-- WORK DETAILS -->
-        <div class="card" style="background:#f0f7ff;margin-bottom:16px;padding:16px">
-            <h3 style="font-size:14px;margin-bottom:12px">🏭 {{ _('Work details') }}</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>{{ _('Machine') }} ({{ _('optional') }})</label>
-                    <select name="machine_id" id="machineSelect">
-                        <option value="">{{ _('Without machine') }}</option>
-                        {% for m in machines %}
-                        <option value="{{ m.id }}" {% if two and two.machine_id == m.id %}selected{% endif %}>{{ m.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>{{ _('Section') }} ({{ _('optional') }})</label>
-                    <select name="section_id" id="sectionSelect">
-                        <option value="">{{ _('Without section') }}</option>
-                        {% for s in sections %}
-                        <option value="{{ s.id }}" {% if two and two.section_id == s.id %}selected{% endif %}>{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+        <!-- SECTIONS (DEPARTMENTS) -->
+        <div class="card" style="background:#f0f7ff;margin-bottom:16px;padding:16px" id="sectionsBlock">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="font-size:14px;margin:0">🏗️ {{ _('Departments / Sections') }}</h3>
+                <button type="button" class="btn btn-sm" style="background:#3498db;color:white" onclick="addSection()">+ {{ _('Add Department') }}</button>
             </div>
+            <p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Select departments where work will be performed. Each department has its own work list.') }}</p>
+            <div id="sectionsList">
+                {% if two and two.assignments %}
+                    {% for a in two.assignments if a.section_id and not a.machine_id %}
+                    <div class="assignment-block" data-type="section" data-id="{{ a.id }}" style="background:white;border:1px solid #dce6f0;border-radius:10px;padding:14px;margin-bottom:10px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                            <select name="section_ids" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                                <option value="">{{ _('Select Department') }}</option>
+                                {% for s in sections %}
+                                <option value="{{ s.id }}" {% if a.section_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" onclick="this.closest('.assignment-block').remove()" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;margin-left:8px">✕</button>
+                        </div>
+                        <textarea name="section_descriptions" rows="2" placeholder="{{ _('Description of work for this department...') }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:8px">{{ a.description or '' }}</textarea>
+                        <div class="checklist-block">
+                            <label style="font-size:12px;color:#888;font-weight:600">{{ _('Work list') }}:</label>
+                            <div class="checklist-items">
+                                {% for item in a.checklist_items %}
+                                <div class="checklist-item" style="display:flex;gap:6px;align-items:center;margin-top:4px">
+                                    <input type="text" name="section_work_{{ loop.parent.loop.index0 }}" value="{{ item.text }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                                    <button type="button" onclick="this.closest('.checklist-item').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer">✕</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" class="btn btn-sm" style="background:#eee;margin-top:4px;font-size:11px" onclick="addChecklistItem(this, 'section')">+ {{ _('Add work item') }}</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- MACHINES -->
+        <div class="card" style="background:#f0fff0;margin-bottom:16px;padding:16px" id="machinesBlock">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="font-size:14px;margin:0">⚙️ {{ _('Machines') }}</h3>
+                <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="addMachine()">+ {{ _('Add Machine') }}</button>
+            </div>
+            <p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Select machines for maintenance. Each machine has its own work list.') }}</p>
+            <div id="machinesList">
+                {% if two and two.assignments %}
+                    {% for a in two.assignments if a.machine_id %}
+                    <div class="assignment-block" data-type="machine" data-id="{{ a.id }}" style="background:white;border:1px solid #d5e8d4;border-radius:10px;padding:14px;margin-bottom:10px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                            <select name="machine_ids" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                                <option value="">{{ _('Select Machine') }}</option>
+                                {% for m in machines %}
+                                <option value="{{ m.id }}" {% if a.machine_id == m.id %}selected{% endif %}>{{ m.name }} ({{ m.machine_type or '?' }})</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" onclick="this.closest('.assignment-block').remove()" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;margin-left:8px">✕</button>
+                        </div>
+                        <textarea name="machine_descriptions" rows="2" placeholder="{{ _('Description of work for this machine...') }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:8px">{{ a.description or '' }}</textarea>
+                        <div class="checklist-block">
+                            <label style="font-size:12px;color:#888;font-weight:600">{{ _('Work list') }}:</label>
+                            <div class="checklist-items">
+                                {% for item in a.checklist_items %}
+                                <div class="checklist-item" style="display:flex;gap:6px;align-items:center;margin-top:4px">
+                                    <input type="text" name="machine_work_{{ loop.parent.loop.index0 }}" value="{{ item.text }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                                    <button type="button" onclick="this.closest('.checklist-item').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer">✕</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" class="btn btn-sm" style="background:#eee;margin-top:4px;font-size:11px" onclick="addChecklistItem(this, 'machine')">+ {{ _('Add work item') }}</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- GENERAL DESCRIPTION -->
+        <div class="card" style="background:#f8f9fa;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">📝 {{ _('General description') }}</h3>
             <div class="form-group">
                 <label>{{ _('Description') }} *</label>
-                <textarea name="description" id="descField" rows="4" required placeholder="{{ _('Describe the work to be done...') }}">{{ two.description if two else '' }}</textarea>
+                <textarea name="description" id="descField" rows="4" required placeholder="{{ _('General description of the work order...') }}">{{ two.description if two else '' }}</textarea>
             </div>
             <div class="form-group">
                 <label>{{ _('Additional work') }}</label>
-                <textarea name="additional_work" rows="3" placeholder="{{ _('Additional work beyond the fault report...') }}">{{ two.additional_work if two else '' }}</textarea>
+                <textarea name="additional_work" rows="3" placeholder="{{ _('Additional work beyond the scope...') }}">{{ two.additional_work if two else '' }}</textarea>
             </div>
         </div>
 
         <!-- WORKERS -->
-        <div class="card" style="background:#f0fff0;margin-bottom:16px;padding:16px">
+        <div class="card" style="background:#fffff0;margin-bottom:16px;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">👷 {{ _('Workers') }} ({{ _('select one or more') }})</h3>
             <div class="form-group">
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;padding:12px;background:white;border-radius:8px">
@@ -108,7 +166,7 @@
             </div>
         </div>
 
-        <!-- RESULTS — always visible -->
+        <!-- RESULTS -->
         <div class="card" style="background:#fffff0;margin-bottom:16px;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">📝 {{ _('Results') }}</h3>
             <div class="form-group">
@@ -147,20 +205,104 @@
 </div>
 
 <script>
+let sectionIdx = {{ two.assignments|selectattr('section_id')|list|length if two and two.assignments else 0 }};
+let machineIdx = {{ two.assignments|selectattr('machine_id')|list|length if two and two.assignments else 0 }};
+
+function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+
+const sectionOptions = `{% for s in sections %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}`;
+const machineOptions = `{% for m in machines %}<option value="{{ m.id }}">{{ m.name }} ({{ m.machine_type or '?' }})</option>{% endfor %}`;
+
+function addSection() {
+    const idx = sectionIdx++;
+    const html = `
+    <div class="assignment-block" data-type="section" style="background:white;border:1px solid #dce6f0;border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <select name="section_ids" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                <option value="">{{ _('Select Department') }}</option>
+                ${sectionOptions}
+            </select>
+            <button type="button" onclick="this.closest('.assignment-block').remove()" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;margin-left:8px">✕</button>
+        </div>
+        <textarea name="section_descriptions" rows="2" placeholder="{{ _('Description of work for this department...') }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:8px"></textarea>
+        <div class="checklist-block">
+            <label style="font-size:12px;color:#888;font-weight:600">{{ _('Work list') }}:</label>
+            <div class="checklist-items"></div>
+            <button type="button" class="btn btn-sm" style="background:#eee;margin-top:4px;font-size:11px" onclick="addChecklistItem(this, 'section')">+ {{ _('Add work item') }}</button>
+        </div>
+    </div>`;
+    document.getElementById('sectionsList').insertAdjacentHTML('beforeend', html);
+}
+
+function addMachine() {
+    const idx = machineIdx++;
+    const html = `
+    <div class="assignment-block" data-type="machine" style="background:white;border:1px solid #d5e8d4;border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <select name="machine_ids" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                <option value="">{{ _('Select Machine') }}</option>
+                ${machineOptions}
+            </select>
+            <button type="button" onclick="this.closest('.assignment-block').remove()" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;margin-left:8px">✕</button>
+        </div>
+        <textarea name="machine_descriptions" rows="2" placeholder="{{ _('Description of work for this machine...') }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:8px"></textarea>
+        <div class="checklist-block">
+            <label style="font-size:12px;color:#888;font-weight:600">{{ _('Work list') }}:</label>
+            <div class="checklist-items"></div>
+            <button type="button" class="btn btn-sm" style="background:#eee;margin-top:4px;font-size:11px" onclick="addChecklistItem(this, 'machine')">+ {{ _('Add work item') }}</button>
+        </div>
+    </div>`;
+    document.getElementById('machinesList').insertAdjacentHTML('beforeend', html);
+}
+
+function addChecklistItem(btn, type) {
+    const container = btn.previousElementSibling;
+    const block = btn.closest('.assignment-block');
+    const name = type + '_work_' + (block.dataset.type === 'section'
+        ? [...document.querySelectorAll('#sectionsList .assignment-block')].indexOf(block)
+        : [...document.querySelectorAll('#machinesList .assignment-block')].indexOf(block));
+    const html = `
+    <div class="checklist-item" style="display:flex;gap:6px;align-items:center;margin-top:4px">
+        <input type="text" name="${name}" placeholder="{{ _('Work item...') }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+        <button type="button" onclick="this.closest('.checklist-item').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer">✕</button>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
 function onFaultChange() {
     const faultId = document.getElementById('faultSelect').value;
     if (!faultId) return;
     fetch(`/api/two/from-fault/${faultId}`)
         .then(r => r.json())
         .then(d => {
-            if (d.machine_id) document.getElementById('machineSelect').value = d.machine_id;
-            if (d.section_id) document.getElementById('sectionSelect').value = d.section_id;
             const desc = document.getElementById('descField');
             if (!desc.value) desc.value = `[${d.priority.toUpperCase()}] ${d.title}\n${d.description}`;
+            // Auto-add machine if not already added
+            if (d.machine_id) {
+                const existing = document.querySelectorAll('#machinesList select[name="machine_ids"]');
+                let found = false;
+                existing.forEach(sel => { if (sel.value == d.machine_id) found = true; });
+                if (!found) {
+                    addMachine();
+                    const lastSel = document.querySelector('#machinesList .assignment-block:last-child select[name="machine_ids"]');
+                    if (lastSel) lastSel.value = d.machine_id;
+                }
+            }
+            // Auto-add section
+            if (d.section_id) {
+                const existing = document.querySelectorAll('#sectionsList select[name="section_ids"]');
+                let found = false;
+                existing.forEach(sel => { if (sel.value == d.section_id) found = true; });
+                if (!found) {
+                    addSection();
+                    const lastSel = document.querySelector('#sectionsList .assignment-block:last-child select[name="section_ids"]');
+                    if (lastSel) lastSel.value = d.section_id;
+                }
+            }
         });
 }
 
-// Add onchange to worker checkboxes
+// Worker availability check
 document.querySelectorAll('.worker-check input[type=checkbox]').forEach(cb => {
     cb.addEventListener('change', checkAvailability);
 });
@@ -175,7 +317,6 @@ function checkAvailability() {
     const workerIds = Array.from(checked).map(cb => cb.value);
     let warnings = [];
     let allAlternatives = [];
-    let allNextDates = [];
     let pending = workerIds.length;
 
     workerIds.forEach(wid => {
@@ -188,43 +329,25 @@ function checkAvailability() {
                     if (d.reason === 'off') reason = '{{ _("has day off") }}';
                     else if (d.reason === 'sick') reason = '{{ _("is sick") }}';
                     else if (d.reason === 'holiday') reason = `{{ _("holiday") }}: ${d.holiday}`;
-                    else if (d.reason === 'not_work_day') reason = `{{ _("not a working day") }} (${d.work_days || ''})`;
-                    else if (d.reason === 'weekend') reason = '{{ _("weekend") }}';
+                    else if (d.reason === 'not_work_day') reason = `{{ _("not a working day") }}`;
                     warnings.push(`⚠️ <b>${name}</b> — ${reason}`);
                     if (d.alternatives) allAlternatives = allAlternatives.concat(d.alternatives);
-                    if (d.next_dates) allNextDates = allNextDates.concat(d.next_dates);
                 }
                 pending--;
                 if (pending === 0) {
                     const box = document.getElementById('availabilityWarning');
                     if (warnings.length > 0) {
                         let html = warnings.join('<br>');
-                        
-                        // Show alternative workers
                         const uniqueAlts = [...new Map(allAlternatives.map(a => [a.id, a])).values()]
                             .filter(a => !workerIds.includes(String(a.id)));
                         if (uniqueAlts.length > 0) {
                             html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d9a0">';
                             html += '<b style="color:#27ae60">👤 {{ _("Available workers") }}:</b><br>';
                             uniqueAlts.forEach(a => {
-                                html += `<span style="display:inline-block;margin:3px;padding:4px 10px;background:white;border:1px solid #d4edda;border-radius:6px;font-size:12px;cursor:pointer" onclick="selectAlternativeWorker(${a.id})">${a.name} <span style="color:#888">(${a.specialty})</span></span>`;
+                                html += `<span style="display:inline-block;margin:3px;padding:4px 10px;background:white;border:1px solid #d4edda;border-radius:6px;font-size:12px;cursor:pointer" onclick="selectAltWorker(${a.id})">${esc(a.name)} <span style="color:#888">(${esc(a.specialty)})</span></span>`;
                             });
                             html += '</div>';
                         }
-                        
-                        // Show next available dates
-                        const uniqueDates = [...new Set(allNextDates)].sort().slice(0, 5);
-                        if (uniqueDates.length > 0) {
-                            html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d9a0">';
-                            html += '<b style="color:#5b9cf6">📅 {{ _("Next available dates") }}:</b><br>';
-                            uniqueDates.forEach(d => {
-                                const parts = d.split('-');
-                                const label = `${parts[2]}.${parts[1]}.${parts[0]}`;
-                                html += `<span style="display:inline-block;margin:3px;padding:4px 10px;background:white;border:1px solid #b8daff;border-radius:6px;font-size:12px;cursor:pointer" onclick="document.getElementById('plannedDate').value='${d}';checkAvailability()">${label}</span>`;
-                            });
-                            html += '</div>';
-                        }
-                        
                         document.getElementById('warningText').innerHTML = html;
                         document.getElementById('warningTitle').textContent = warnings.length > 1 ? '{{ _("Workers unavailable") }}' : '{{ _("Worker unavailable") }}';
                         box.style.display = 'block';
@@ -236,10 +359,8 @@ function checkAvailability() {
     });
 }
 
-function selectAlternativeWorker(userId) {
-    // Uncheck all current workers
+function selectAltWorker(userId) {
     document.querySelectorAll('.worker-check input[type=checkbox]').forEach(cb => { cb.checked = false; });
-    // Check the alternative
     const cb = document.querySelector(`.worker-check input[value="${userId}"]`);
     if (cb) cb.checked = true;
     checkAvailability();

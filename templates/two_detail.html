@@ -110,7 +110,106 @@
 </div>
 {% endif %}
 
-<!-- CHECKLIST -->
+<!-- ASSIGNMENTS: SECTIONS & MACHINES -->
+{% set section_assignments = two.assignments|selectattr('section_id')|rejectattr('machine_id')|list %}
+{% set machine_assignments = two.assignments|selectattr('machine_id')|list %}
+
+{% if section_assignments %}
+<div class="card" style="margin-top:16px">
+    <h2>🏗️ {{ _('Departments') }} ({{ section_assignments|length }})</h2>
+    {% for a in section_assignments %}
+    <div style="background:#f0f7ff;border:1px solid #dce6f0;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 style="margin:0;font-size:15px;color:#3498db">{{ a.section.name if a.section else '?' }}</h3>
+            <span class="badge badge-open">{{ a.checklist_items|selectattr('is_done')|list|length }}/{{ a.checklist_items|length }}</span>
+        </div>
+        {% if a.description %}
+        <p style="font-size:13px;color:#666;margin-bottom:10px">{{ a.description }}</p>
+        {% endif %}
+        {% if a.checklist_items %}
+        <div style="display:flex;flex-direction:column;gap:4px">
+            {% for item in a.checklist_items %}
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:{% if item.is_done %}#e8f5e9{% else %}white{% endif %};border-radius:6px;border:1px solid {% if item.is_done %}#c8e6c9{% else %}#eee{% endif %}">
+                <input type="checkbox" {% if item.is_done %}checked{% endif %} onchange="toggleChecklist({{ item.id }}, this)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60">
+                <span style="flex:1;font-size:13px;{% if item.is_done %}text-decoration:line-through;color:#888{% endif %}">{{ item.text }}</span>
+                {% if item.is_done and item.done_at %}<small style="color:#27ae60">{{ item.done_at.strftime('%d.%m %H:%M') }}</small>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if machine_assignments %}
+<div class="card" style="margin-top:16px">
+    <h2>⚙️ {{ _('Machines') }} ({{ machine_assignments|length }})</h2>
+    {% for a in machine_assignments %}
+    <div style="background:#f0fff0;border:1px solid #d5e8d4;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 style="margin:0;font-size:15px;color:#27ae60">
+                {% if a.machine %}<a href="/machines/{{ a.machine_id }}" style="color:#27ae60;text-decoration:none">{{ a.machine.name }}</a>{% else %}?{% endif %}
+            </h3>
+            <span class="badge badge-active">{{ a.checklist_items|selectattr('is_done')|list|length }}/{{ a.checklist_items|length }}</span>
+        </div>
+        {% if a.description %}
+        <p style="font-size:13px;color:#666;margin-bottom:10px">{{ a.description }}</p>
+        {% endif %}
+        {% if a.checklist_items %}
+        <div style="display:flex;flex-direction:column;gap:4px">
+            {% for item in a.checklist_items %}
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:{% if item.is_done %}#e8f5e9{% else %}white{% endif %};border-radius:6px;border:1px solid {% if item.is_done %}#c8e6c9{% else %}#eee{% endif %}">
+                <input type="checkbox" {% if item.is_done %}checked{% endif %} onchange="toggleChecklist({{ item.id }}, this)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60">
+                <span style="flex:1;font-size:13px;{% if item.is_done %}text-decoration:line-through;color:#888{% endif %}">{{ item.text }}</span>
+                {% if item.is_done and item.done_at %}<small style="color:#27ae60">{{ item.done_at.strftime('%d.%m %H:%M') }}</small>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- GENERAL CHECKLIST (items without assignment) -->
+{% set general_items = two.checklist_items|selectattr('assignment_id', 'none')|list %}
+{% if general_items %}
+<div class="card" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="margin:0">✅ {{ _('General Checklist') }} ({{ general_items|length }})</h2>
+        {% if two.status != 'completed' %}
+        <form method="POST" action="/two/{{ two.id }}/checklist/add" style="display:flex;gap:8px">
+            <input type="text" name="text" placeholder="{{ _('New item...') }}" required style="padding:8px 12px;border:1px solid #dde1e8;border-radius:8px;font-size:13px;min-width:200px">
+            <button type="submit" class="btn btn-sm btn-primary">+ {{ _('Add') }}</button>
+        </form>
+        {% endif %}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+        {% for item in general_items %}
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:{% if item.is_done %}#f0fff0{% else %}#f8f9fc{% endif %};border-radius:8px;border:1px solid {% if item.is_done %}#d4edda{% else %}#e8ecf1{% endif %}">
+            <input type="checkbox" {% if item.is_done %}checked{% endif %} onchange="toggleChecklist({{ item.id }}, this)" style="width:20px;height:20px;cursor:pointer;accent-color:#27ae60">
+            <div style="flex:1;min-width:0">
+                <div style="font-size:14px;{% if item.is_done %}text-decoration:line-through;color:#888{% else %}color:#333{% endif %}">{{ item.text }}</div>
+                {% if item.is_done and item.done_at %}
+                <div style="font-size:11px;color:#27ae60;margin-top:2px">
+                    ✓ {{ item.done_at.strftime('%d.%m.%Y %H:%M') }}
+                    {% if item.done_user %} · {{ item.done_user.display_name or item.done_user.username }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% if two.status != 'completed' %}
+            <form method="POST" action="/two/checklist/{{ item.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                <button type="submit" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px">✕</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if not section_assignments and not machine_assignments and not general_items %}
 <div class="card" style="margin-top:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h2 style="margin:0">✅ {{ _('Checklist') }} ({{ two.checklist_items|length }})</h2>
@@ -121,7 +220,6 @@
         </form>
         {% endif %}
     </div>
-    
     {% if two.checklist_items %}
     <div style="display:flex;flex-direction:column;gap:6px">
         {% for item in two.checklist_items %}
@@ -148,6 +246,7 @@
     <div style="text-align:center;padding:20px;color:#999;font-size:13px">{{ _('No checklist items') }}</div>
     {% endif %}
 </div>
+{% endif %}
 
 <!-- SIGNATURES -->
 <div class="card" style="margin-top:16px">

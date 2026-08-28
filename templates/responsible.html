@@ -4,6 +4,7 @@
 <div class="page-header">
     <h1>{{ _('Responsible persons') }}</h1>
     <div style="display:flex;gap:8px">
+        <a href="/responsible/phonebook" class="btn btn-sm" style="background:#27ae60;color:white">📞 {{ _('Phone Directory') }}</a>
         <a href="/responsible/groups" class="btn btn-sm btn-ghost">👥 {{ _('Groups') }}</a>
         <button class="btn btn-primary" onclick="document.getElementById('addPersonModal').style.display='flex'">+ {{ _('Add Person') }}</button>
     </div>
@@ -29,6 +30,7 @@
             <div style="font-size:12px;color:#888;margin-top:2px">
                 {% if c.position %}{{ c.position }} · {% endif %}
                 {% if c.telefoon %}📞 {{ c.telefoon }}{% endif %}
+                {% if c.internal_phone %} · ☎️ {{ c.internal_phone }}{% endif %}
                 {% if c.email %} · ✉️ {{ c.email }}{% endif %}
             </div>
         </div>
@@ -101,6 +103,10 @@
             <div style="flex:1;min-width:120px">
                 <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Phone') }}</label>
                 <input type="text" name="telefoon" value="{{ c.telefoon or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
+            </div>
+            <div style="flex:1;min-width:100px">
+                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Internal') }}</label>
+                <input type="text" name="internal_phone" value="{{ c.internal_phone or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
             </div>
             <div style="flex:1;min-width:140px">
                 <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Email') }}</label>

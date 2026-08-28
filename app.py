@@ -24,7 +24,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     GasSystemComponent, EquipmentRepair, fault_technicians, user_machine, section_responsible,
                     GroupPermission, ResponsibleAuth, ElectricalCabinet, CircuitBreaker, WeekendShift,
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
-                    TWOChecklistItem, TWOSignature)
+                    TWOChecklistItem, TWOSignature, TWOAssignment)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations)
@@ -1498,12 +1498,15 @@ def cylinders_dashboard():
     # Available (full) cylinders for replacement dropdown
     available_n2 = GasCylinder.query.filter_by(gas_type='nitrogen', status='full').order_by(GasCylinder.cylinder_number).all()
     available_co2 = GasCylinder.query.filter_by(gas_type='co2', status='full').order_by(GasCylinder.cylinder_number).all()
-    # Counts by gas type
-    count_n2 = len([c for c in cylinders if c.gas_type == 'nitrogen'])
-    count_co2 = len([c for c in cylinders if c.gas_type == 'co2'])
+    # Counts by gas type — usable only (full + in_use)
+    count_n2 = stats['n2_full'] + stats['n2_in_use']
+    count_co2 = stats['co2_full'] + stats['co2_in_use']
+    # Total including all statuses (for reference)
+    count_n2_all = len([c for c in cylinders if c.gas_type == 'nitrogen'])
+    count_co2_all = len([c for c in cylinders if c.gas_type == 'co2'])
     # Low stock warnings
-    n2_total = stats['n2_full'] + stats['n2_in_use']
-    co2_total = stats['co2_full'] + stats['co2_in_use']
+    n2_total = count_n2
+    co2_total = count_co2
     warnings = []
     if n2_total <= 3:
         warnings.append({'gas': 'N₂', 'remaining': n2_total, 'threshold': 3, 'type': 'nitrogen'})
@@ -1552,6 +1555,7 @@ def cylinders_dashboard():
         orders=orders, recent_logs=recent_logs,
         available_n2=available_n2, available_co2=available_co2,
         count_n2=count_n2, count_co2=count_co2,
+        count_n2_all=count_n2_all, count_co2_all=count_co2_all,
         warnings=warnings,
         n2_components=n2_components, co2_components=co2_components,
         n2_json=n2_json, co2_json=co2_json)
@@ -1729,7 +1733,7 @@ def cylinder_order_status(order_id):
             # Create cylinder records from entered numbers
             numbers_raw = request.form.get('cylinder_numbers', '').strip()
             if numbers_raw:
-                numbers = [n.strip() for n in numbers_raw.replace(',', '\n').split('\n') if n.strip()]
+                numbers = list(set(n.strip() for n in numbers_raw.replace(',', '\n').split('\n') if n.strip()))
             else:
                 # Auto-generate numbers if not provided
                 numbers = [f"{o.gas_type.upper()}-{datetime.utcnow().strftime('%Y%m%d')}-{i+1:03d}" for i in range(o.quantity)]
@@ -1973,6 +1977,54 @@ def two_new():
             if w:
                 two.workers.append(w)
         db.session.add(two)
+        db.session.flush()
+
+        # Process section assignments
+        section_ids = request.form.getlist('section_ids')
+        section_descs = request.form.getlist('section_descriptions')
+        for i, sid in enumerate(section_ids):
+            if not sid:
+                continue
+            assignment = TWOAssignment(
+                two_id=two.id,
+                section_id=int(sid),
+                description=section_descs[i] if i < len(section_descs) else '',
+                sort_order=i
+            )
+            db.session.add(assignment)
+            db.session.flush()
+            # Add checklist items for this section
+            work_items = request.form.getlist(f'section_work_{i}')
+            for j, text in enumerate(work_items):
+                if text.strip():
+                    db.session.add(TWOChecklistItem(
+                        two_id=two.id, assignment_id=assignment.id,
+                        text=text.strip(), sort_order=j
+                    ))
+
+        # Process machine assignments
+        machine_ids = request.form.getlist('machine_ids')
+        machine_descs = request.form.getlist('machine_descriptions')
+        for i, mid in enumerate(machine_ids):
+            if not mid:
+                continue
+            assignment = TWOAssignment(
+                two_id=two.id,
+                machine_id=int(mid),
+                description=machine_descs[i] if i < len(machine_descs) else '',
+                sort_order=i
+            )
+            db.session.add(assignment)
+            db.session.flush()
+            # Add checklist items for this machine
+            work_items = request.form.getlist(f'machine_work_{i}')
+            for j, text in enumerate(work_items):
+                if text.strip():
+                    db.session.add(TWOChecklistItem(
+                        two_id=two.id, assignment_id=assignment.id,
+                        text=text.strip(), sort_order=j
+                    ))
+
         db.session.commit()
         # Handle photos
         if 'photos' in request.files:
@@ -2231,6 +2283,52 @@ def two_edit(two_id):
             w = Monteur.query.get(int(wid))
             if w:
                 two.workers.append(w)
+        # Update assignments — delete old, create new
+        for a in two.assignments:
+            db.session.delete(a)
+        db.session.flush()
+        # Process section assignments
+        section_ids = request.form.getlist('section_ids')
+        section_descs = request.form.getlist('section_descriptions')
+        for i, sid in enumerate(section_ids):
+            if not sid:
+                continue
+            assignment = TWOAssignment(
+                two_id=two.id,
+                section_id=int(sid),
+                description=section_descs[i] if i < len(section_descs) else '',
+                sort_order=i
+            )
+            db.session.add(assignment)
+            db.session.flush()
+            work_items = request.form.getlist(f'section_work_{i}')
+            for j, text in enumerate(work_items):
+                if text.strip():
+                    db.session.add(TWOChecklistItem(
+                        two_id=two.id, assignment_id=assignment.id,
+                        text=text.strip(), sort_order=j
+                    ))
+        # Process machine assignments
+        machine_ids = request.form.getlist('machine_ids')
+        machine_descs = request.form.getlist('machine_descriptions')
+        for i, mid in enumerate(machine_ids):
+            if not mid:
+                continue
+            assignment = TWOAssignment(
+                two_id=two.id,
+                machine_id=int(mid),
+                description=machine_descs[i] if i < len(machine_descs) else '',
+                sort_order=i
+            )
+            db.session.add(assignment)
+            db.session.flush()
+            work_items = request.form.getlist(f'machine_work_{i}')
+            for j, text in enumerate(work_items):
+                if text.strip():
+                    db.session.add(TWOChecklistItem(
+                        two_id=two.id, assignment_id=assignment.id,
+                        text=text.strip(), sort_order=j
+                    ))
         # Handle photos
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
@@ -2980,6 +3078,17 @@ def responsible_list():
         groups=groups, group_filter=int(group_id) if group_id else None,
         all_sections=all_sections, all_machines=all_machines)
 
+@app.route('/responsible/phonebook')
+@login_required
+def phone_directory():
+    persons = Verantwoordelijke.query.filter(
+        db.or_(Verantwoordelijke.telefoon != '', Verantwoordelijke.internal_phone != '', Verantwoordelijke.email != '')
+    ).filter(Verantwoordelijke.is_active == True).order_by(Verantwoordelijke.naam).all()
+    workers = Monteur.query.filter(Monteur.actief == True).order_by(Monteur.naam).all()
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
+    groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
+    return render_template('phone_directory.html', persons=persons, workers=workers, users=users, groups=groups)
+
 @app.route('/responsible/groups')
 @login_required
 @role_required('admin', 'director')
@@ -3105,6 +3214,7 @@ def responsible_new():
         c = Verantwoordelijke(
             naam=full_name,
             telefoon=request.form.get('telefoon', ''),
+            internal_phone=request.form.get('internal_phone', ''),
             email=request.form.get('email', ''),
             group_id=int(request.form['group_id']) if request.form.get('group_id') else None,
             access_level=request.form.get('access_level', 'floor'),
@@ -3184,6 +3294,7 @@ def responsible_quick_edit(resp_id):
     c.naam = request.form.get('naam', c.naam).strip()
     c.position = request.form.get('position', '').strip()
     c.telefoon = request.form.get('telefoon', '').strip()
+    c.internal_phone = request.form.get('internal_phone', '').strip()
     c.email = request.form.get('email', '').strip()
     db.session.commit()
     flash(_('Responsible person updated'), 'success')
@@ -3259,6 +3370,7 @@ def responsible_edit(resp_id):
         last_name = request.form.get('last_name', '').strip()
         c.naam = f"{first_name} {last_name}".strip()
         c.telefoon = request.form.get('telefoon', '')
+        c.internal_phone = request.form.get('internal_phone', '')
         c.email = request.form.get('email', '')
         c.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
         c.access_level = request.form.get('access_level', c.access_level or 'floor')
