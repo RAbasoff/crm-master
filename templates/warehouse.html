@@ -181,34 +181,33 @@ function startWhScan() {
             },
             function(text) {
                 document.getElementById('whScanResult').style.display = 'block';
-                let itemId = null;
-                try { const d = JSON.parse(text); if (d.type === 'warehouse_item' && d.id) itemId = d.id; } catch(e) {}
-                if (!itemId) { const m = text.match(/^W(\d+)$/); if (m) itemId = parseInt(m[1]); }
-                if (itemId) {
-                    const rows = document.querySelectorAll('table tr');
-                    let found = false;
-                    rows.forEach(function(row) {
-                        if (row.querySelector('a[href*="/warehouse/' + itemId + '/edit"]')) {
-                            row.style.background = '#fff3cd';
-                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            setTimeout(function() { row.style.background = ''; }, 3000);
-                            found = true;
-                        }
-                    });
-                    document.getElementById('whScanResult').style.background = found ? '#f0fff0' : '#fff5f0';
-                    document.getElementById('whScanResult').textContent = found ? 'Found: ' + text : 'Not in view: ' + text;
-                } else {
-                    csrfFetch('/api/warehouse/scan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: text}) })
-                    .then(function(r) { return r.json(); }).then(function(d) {
-                        if (d.found) {
-                            document.getElementById('whScanResult').style.background = '#f0fff0';
-                            document.getElementById('whScanResult').innerHTML = '<strong>' + d.name + '</strong> — Qty: ' + d.quantity + ' — <a href="/warehouse/' + d.id + '/edit">Open</a>';
-                        } else {
-                            document.getElementById('whScanResult').style.background = '#fff5f0';
-                            document.getElementById('whScanResult').textContent = 'Not found: ' + text;
-                        }
-                    });
-                }
+                document.getElementById('whScanResult').style.background = '#fff3cd';
+                document.getElementById('whScanResult').textContent = 'Searching: ' + text + '...';
+                
+                // Always search via API (works for SPN, name, QR data)
+                csrfFetch('/api/warehouse/scan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: text}) })
+                .then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.found) {
+                        document.getElementById('whScanResult').style.background = '#f0fff0';
+                        document.getElementById('whScanResult').innerHTML = '<strong>' + d.name + '</strong> — Qty: ' + d.quantity + ' ' + (d.unit || '') + ' — <a href="/warehouse/' + d.id + '/edit">Open</a>';
+                        // Highlight row if visible
+                        const rows = document.querySelectorAll('table tr');
+                        rows.forEach(function(row) {
+                            if (row.querySelector('a[href*="/warehouse/' + d.id + '/edit"]')) {
+                                row.style.background = '#fff3cd';
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                setTimeout(function() { row.style.background = ''; }, 3000);
+                            }
+                        });
+                    } else {
+                        document.getElementById('whScanResult').style.background = '#fff5f0';
+                        document.getElementById('whScanResult').textContent = 'Not found: ' + text;
+                    }
+                }).catch(function(err) {
+                    document.getElementById('whScanResult').style.background = '#fdf0f0';
+                    document.getElementById('whScanResult').textContent = 'Error: ' + err;
+                });
+                
                 if (whScanner) { whScanner.stop(); whScanner = null; }
                 whActive = false;
             },
