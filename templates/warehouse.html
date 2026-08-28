@@ -68,7 +68,7 @@
                 <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
                 <button class="btn btn-sm btn-success" onclick="document.getElementById('mv-{{ i.id }}').style.display='table-row'">+</button>
                 <a href="/api/warehouse/qr/{{ i.id }}" class="btn btn-sm" style="background:#2c3e50;color:white;padding:4px 6px" title="QR" target="_blank">QR</a>
-                <a href="/api/warehouse/barcode/{{ i.id }}" class="btn btn-sm" style="background:#7f8c8d;color:white;padding:4px 6px" title="Barcode" target="_blank">|||</a>
+                <button class="btn btn-sm" style="background:#7f8c8d;color:white;padding:4px 6px" title="Barcode" onclick="showBarcode('{{ i.id }}', '{{ i.naam }}', '{{ i.supplier_part_number or '' }}')">|||</button>
                 <a href="/warehouse/labels?ids={{ i.id }}" class="btn btn-sm" style="background:#8e44ad;color:white;padding:4px 6px" title="Print label" target="_blank">🏷️</a>
             </td>
         </tr>
@@ -86,7 +86,52 @@
     </table></div>
 </div>
 
+<!-- BARCODE MODAL -->
+<div id="barcodeModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%;text-align:center">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="barcodeTitle" style="margin:0;font-size:16px"></h2>
+            <button onclick="document.getElementById('barcodeModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <svg id="barcodeSvg" style="max-width:100%;margin:16px 0"></svg>
+        <div id="barcodeText" style="font-size:13px;color:#888;margin-bottom:12px"></div>
+        <button onclick="printBarcode()" class="btn btn-sm" style="background:#3498db;color:white">🖨️ {{ _('Print') }}</button>
+    </div>
+</div>
+
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+function showBarcode(id, name, spn) {
+    const code = spn || ('W' + String(id).padStart(5, '0'));
+    document.getElementById('barcodeTitle').textContent = name;
+    document.getElementById('barcodeText').textContent = code;
+    try {
+        JsBarcode('#barcodeSvg', code, {
+            format: 'CODE128',
+            width: 2,
+            height: 80,
+            displayValue: true,
+            fontSize: 14,
+            margin: 10
+        });
+    } catch(e) {
+        document.getElementById('barcodeSvg').innerHTML = '<text x="10" y="30" fill="red">Error: ' + e.message + '</text>';
+    }
+    document.getElementById('barcodeModal').style.display = 'flex';
+}
+
+function printBarcode() {
+    const svg = document.getElementById('barcodeSvg').outerHTML;
+    const name = document.getElementById('barcodeTitle').textContent;
+    const code = document.getElementById('barcodeText').textContent;
+    const w = window.open('', '_blank');
+    w.document.write('<html><body style="text-align:center;font-family:sans-serif"><h3>' + name + '</h3>' + svg + '<p>' + code + '</p><script>setTimeout(function(){window.print();window.close()},500)<\/script></body></html>');
+    w.document.close();
+}
+
+document.getElementById('barcodeModal').addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+</script>
 <script>
 let whScanner = null;
 let whActive = false;

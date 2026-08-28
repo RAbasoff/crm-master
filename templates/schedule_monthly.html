@@ -171,7 +171,7 @@ function bulkSetShift(type) {
     });
     let done = 0;
     entries.forEach(e => {
-        fetch('/schedule/monthly/shift', {
+        csrfFetch('/schedule/monthly/shift', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(e)
@@ -189,7 +189,7 @@ function bulkRemove() {
     });
     let done = 0;
     entries.forEach(e => {
-        fetch('/schedule/monthly/shift', {
+        csrfFetch('/schedule/monthly/shift', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(e)
@@ -202,7 +202,7 @@ function bulkRemove() {
 
 function deleteUserShifts(userId, name) {
     if (!confirm('{{ _("Delete all shifts for") }} ' + name + ' {{ _("this month?") }}')) return;
-    fetch('/schedule/monthly/delete', {
+    csrfFetch('/schedule/monthly/delete', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({user_id: userId, year: {{ year }}, month: {{ month }}})
@@ -217,7 +217,7 @@ function deleteAllMonthShifts() {
     const users = [{% for u in all_users %}{{ u.id }}{% if not loop.last %},{% endif %}{% endfor %}];
     if (users.length === 0) return;
     users.forEach(uid => {
-        fetch('/schedule/monthly/delete', {
+        csrfFetch('/schedule/monthly/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({user_id: uid, year: {{ year }}, month: {{ month }}})

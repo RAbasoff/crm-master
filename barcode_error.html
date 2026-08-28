@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ProMaster">
+    <meta name="csrf-token" content="IjZkZTRkZmQ4ODZhMmU4ZTJlMzI1YjY5NjIzZGU5ODU5MDVlOTQxYjUi.apFH1g.9tO7l-PxfK6g9hkYXNQEK3qbMSY">
+    <title>Панель управления — ProMaster</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html { font-size: 16px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        
+        /* ===== SIDEBAR ===== */
+        .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #0f1629; z-index: 150; display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+        .sidebar-header .logo { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+        .sidebar-header .logo span { color: #5b9cf6; }
+        .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .sb-section { padding: 16px 16px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.75); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: color 0.15s; }
+        .sb-section:hover { color: rgba(255,255,255,0.95); }
+        .sb-section .sb-arrow { font-size: 9px; transition: transform 0.2s; opacity: 0.6; }
+        .sb-section.collapsed .sb-arrow { transform: rotate(-90deg); }
+        .sb-group-items { overflow: hidden; transition: max-height 0.25s ease; }
+        .sb-group-items.collapsed { max-height: 0 !important; }
+        .sb-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: rgba(255,255,255,0.55); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.15s; border-left: 3px solid transparent; cursor: pointer; }
+        .sb-item:hover { color: rgba(255,255,255,0.95); background: rgba(255,255,255,0.1); }
+        .sb-item.active { color: #5b9cf6; background: rgba(91,156,246,0.08); border-left-color: #5b9cf6; }
+        .sb-item .sb-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; opacity: 0.7; }
+        .sb-item.active .sb-icon { opacity: 1; }
+        .sb-item .sb-badge { margin-left: auto; background: #e74c3c; color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; min-width: 18px; text-align: center; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+        .sidebar-footer .sb-user { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.7); font-size: 13px; }
+        .sidebar-footer .sb-user:hover { color: #fff; }
+        .sidebar-footer .sb-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #5b9cf6, #3b7dd8); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0; }
+        .sidebar-footer .sb-user-info { flex: 1; min-width: 0; }
+        .sidebar-footer .sb-user-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-footer .sb-user-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+        
+        /* Sidebar overlay for mobile */
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 140; }
+        .sidebar-overlay.open { display: block; }
+        
+        /* ===== TOPBAR ===== */
+        .topbar { background: #fff; color: #333; height: 56px; display: flex; align-items: center; padding: 0 20px; position: sticky; top: 0; z-index: 100; gap: 12px; border-bottom: 1px solid #e8ecf1; margin-left: 240px; }
+        .topbar .sb-toggle { display: none; background: none; border: none; color: #666; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 18px; }
+        .topbar .sb-toggle:hover { background: #f0f2f5; }
+        
+        /* Search bar */
+        .search-wrap { flex: 1; max-width: 420px; position: relative; }
+        .search-wrap input { width: 100%; padding: 9px 14px 9px 36px; border: 1px solid #e0e4ea; border-radius: 10px; font-size: 13px; background: #f5f7fa; color: #333; transition: all 0.2s; }
+        .search-wrap input:focus { border-color: #5b9cf6; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(91,156,246,0.12); }
+        .search-wrap .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #999; }
+        .search-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 0 0 12px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 400px; overflow-y: auto; z-index: 300; border: 1px solid #e0e4ea; border-top: none; }
+        
+        /* Topbar right */
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+        .tb-btn { background: none; border: none; color: #889; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 16px; position: relative; transition: 0.2s; text-decoration: none; display: flex; align-items: center; }
+        .tb-btn:hover { color: #333; background: #f0f2f5; }
+        .tb-btn .badge-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: #e74c3c; border-radius: 50%; display: none; border: 2px solid #fff; }
+        .tb-btn.has-notif .badge-dot { display: block; }
+        .tb-user { color: #555; font-size: 13px; padding: 6px 10px; text-decoration: none; white-space: nowrap; font-weight: 500; }
+        .tb-user:hover { color: #333; }
+        .tb-sep { width: 1px; height: 20px; background: #e0e4ea; margin: 0 6px; }
+        
+        /* Lang pills */
+        .lang-pills { display: flex; gap: 2px; }
+        .lang-pill { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #999; text-decoration: none; transition: 0.15s; }
+        .lang-pill:hover { color: #333; background: #f0f2f5; }
+        .lang-pill.active { color: #5b9cf6; background: rgba(91,156,246,0.1); }
+        
+        /* Dark toggle */
+        .dark-toggle { background: none; border: none; color: #999; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 16px; transition: 0.2s; }
+        .dark-toggle:hover { color: #333; background: #f0f2f5; }
+        
+        /* ===== LAYOUT ===== */
+        .main-wrap { margin-left: 240px; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .card { background: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); border: 1px solid #e8ecf1; }
+        .card h2 { font-size: 15px; margin-bottom: 14px; color: #1a1a2e; font-weight: 700; }
+        
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .stat-card { background: white; border-radius: 14px; padding: 18px 16px; text-align: left; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; position: relative; overflow: hidden; }
+        .stat-card .stat-icon { font-size: 28px; margin-bottom: 10px; opacity: 0.8; }
+        .stat-card .number { font-size: 28px; font-weight: 800; color: #1a1a2e; line-height: 1; }
+        .stat-card .label { font-size: 12px; color: #888; margin-top: 6px; font-weight: 500; }
+        .stat-card .stat-accent { position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 14px 0 60px; opacity: 0.08; }
+        .stat-card.warn .number { color: #e74c3c; }
+        .stat-card.ok .number { color: #27ae60; }
+        
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+        th { background: #f8f9fc; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 1; }
+        tr:hover { background: #f8f9fc; }
+        tr:last-child td { border-bottom: none; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="email"], .form-group input[type="password"], .form-group input[type="date"], .form-group input[type="time"], .form-group input[type="file"], .form-group select, .form-group textarea { 
+            width: 100%; padding: 11px 14px; border: 1px solid #dde1e8; border-radius: 10px; font-size: 14px; 
+            -webkit-appearance: none; appearance: none; background: white; transition: all 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
+            border-color: #5b9cf6; outline: none; box-shadow: 0 0 0 3px rgba(91,156,246,0.12); 
+        }
+        .form-group input[type="checkbox"], .form-group input[type="radio"] {
+            width: auto; padding: 0; border: none; border-radius: 0; font-size: 16px;
+            -webkit-appearance: auto; appearance: auto; background: auto; min-height: auto; min-width: auto;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; min-height: 40px; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: #5b9cf6; color: white; }
+        .btn-primary:hover { background: #4a8be5; box-shadow: 0 4px 12px rgba(91,156,246,0.3); }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #229954; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-sm { padding: 7px 12px; font-size: 12px; min-height: 32px; border-radius: 8px; }
+        .btn-block { display: flex; width: 100%; }
+        .btn-ghost { background: transparent; color: #666; border: 1px solid #dde1e8; }
+        .btn-ghost:hover { background: #f5f7fa; color: #333; }
+        
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-aangenomen { background: #3498db18; color: #3498db; }
+        .badge-diagnose { background: #f39c1218; color: #f39c12; }
+        .badge-behandeling, .badge-in_progress { background: #9b59b618; color: #9b59b6; }
+        .badge-gereed, .badge-resolved { background: #27ae6018; color: #27ae60; }
+        .badge-afgeleverd, .badge-closed { background: #2ecc7118; color: #2ecc71; }
+        .badge-geannuleerd { background: #e74c3c18; color: #e74c3c; }
+        .badge-open { background: #3498db18; color: #3498db; }
+        .badge-accepted { background: #f39c1218; color: #f39c12; }
+        .badge-parts_ordered { background: #8e44ad18; color: #8e44ad; }
+        .badge-waiting_parts { background: #e67e2218; color: #e67e22; }
+        .badge-reopened { background: #9b59b618; color: #9b59b6; }
+        .badge-active { background: #27ae6018; color: #27ae60; }
+        .badge-maintenance { background: #f39c1218; color: #f39c12; }
+        .badge-broken { background: #e74c3c18; color: #e74c3c; }
+        .badge-purple { background: #9b59b618; color: #9b59b6; }
+        .badge-offline { background: #95a5a618; color: #95a5a6; }
+        .badge-low { background: #27ae6018; color: #27ae60; }
+        .badge-normal { background: #3498db18; color: #3498db; }
+        .badge-high { background: #f39c1218; color: #f39c12; }
+        .badge-critical { background: #e74c3c18; color: #e74c3c; }
+        .badge-user { background: #3498db18; color: #3498db; }
+        .badge-technician { background: #f39c1218; color: #f39c12; }
+        .badge-director { background: #9b59b618; color: #9b59b6; }
+        .badge-admin { background: #e74c3c18; color: #e74c3c; }
+        .badge-quality { background: #27ae6018; color: #27ae60; }
+        
+        .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 14px; font-size: 14px; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+        
+        .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .filters select, .filters input { padding: 9px 12px; border: 1px solid #dde1e8; border-radius: 10px; font-size: 13px; flex: 1; min-width: 120px; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .page-header h1 { font-size: 22px; font-weight: 800; color: #1a1a2e; }
+        
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        
+        .floor-plan { position: relative; background: #f8f9fa; border: 2px solid #ddd; border-radius: 12px; min-height: 400px; overflow: hidden; }
+        .floor-plan .machine-marker { position: absolute; width: 60px; height: 60px; transform: translate(-50%, -50%); cursor: pointer; transition: 0.2s; }
+        .floor-plan .machine-marker:hover { transform: translate(-50%, -50%) scale(1.1); z-index: 10; }
+        .floor-plan .machine-icon { width: 100%; height: 100%; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); border: 2px solid #5b9cf6; }
+        .floor-plan .machine-marker.status-broken .machine-icon { border-color: #e74c3c; background: #fff5f5; }
+        .floor-plan .machine-marker.status-maintenance .machine-icon { border-color: #f39c12; background: #fff9f0; }
+        .floor-plan .machine-marker.status-offline .machine-icon { border-color: #95a5a6; background: #f5f5f5; }
+        .floor-plan .machine-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; font-weight: 600; color: #333; margin-top: 4px; text-align: center; }
+        
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+        .photo-grid img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .photo-grid img:hover { transform: scale(1.05); }
+        
+        .msg-list { max-height: 400px; overflow-y: auto; }
+        .msg-item { padding: 12px; border-bottom: 1px solid #f0f2f5; display: flex; gap: 12px; cursor: pointer; transition: 0.15s; }
+        .msg-item:hover { background: #f8f9fc; }
+        .msg-item.unread { background: #f0f7ff; }
+        .msg-item .msg-avatar { width: 40px; height: 40px; border-radius: 50%; background: #5b9cf6; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+        .msg-item .msg-content { flex: 1; min-width: 0; }
+        .msg-item .msg-subject { font-weight: 600; font-size: 14px; }
+        .msg-item .msg-preview { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .msg-item .msg-time { font-size: 11px; color: #999; }
+        
+        /* NOTIF PANEL */
+        .notif-panel { position: fixed; top: 56px; right: 0; width: 360px; max-height: calc(100vh - 56px); background: white; box-shadow: -4px 0 24px rgba(0,0,0,0.1); z-index: 200; display: none; overflow-y: auto; border-left: 1px solid #e8ecf1; }
+        .notif-panel.open { display: block; }
+        .notif-panel .notif-header { padding: 16px; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; align-items: center; }
+        .notif-panel .notif-header span { font-weight: 700; font-size: 14px; }
+        .notif-panel .notif-item { padding: 12px 16px; border-bottom: 1px solid #f5f7fa; cursor: pointer; transition: 0.15s; }
+        .notif-panel .notif-item:hover { background: #f8f9fc; }
+        .notif-panel .notif-item.unread { background: #f0f7ff; border-left: 3px solid #5b9cf6; }
+        .notif-panel .notif-title { font-size: 13px; font-weight: 600; color: #333; }
+        .notif-panel .notif-msg { font-size: 12px; color: #666; margin-top: 3px; }
+        .notif-panel .notif-time { font-size: 11px; color: #999; margin-top: 3px; }
+        
+        /* BOTTOM NAV */
+        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.08); z-index: 100; padding: 4px 0; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+        .bottom-nav-inner { display: flex; justify-content: space-around; }
+        .bottom-nav a { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #999; font-size: 10px; padding: 6px 8px; border-radius: 8px; transition: 0.2s; }
+        .bottom-nav a.active { color: #5b9cf6; }
+        .bottom-nav a .icon { font-size: 20px; margin-bottom: 2px; }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .topbar { margin-left: 0; }
+            .main-wrap { margin-left: 0; }
+            .topbar .sb-toggle { display: flex; }
+        }
+        
+        @media (max-width: 768px) {
+            html { font-size: 15px; }
+            body { padding-bottom: 72px; }
+            .topbar { height: 52px; padding: 0 12px; }
+            .notif-panel { top: 52px; width: 100%; }
+            .container { padding: 14px; }
+            .card { padding: 16px; border-radius: 12px; }
+            .form-row { grid-template-columns: 1fr; gap: 10px; }
+            .form-group input, .form-group select, .form-group textarea { padding: 14px; font-size: 16px; }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 14px 12px; }
+            .stat-card .number { font-size: 24px; }
+            .stat-card .label { font-size: 11px; }
+            .btn { padding: 14px 20px; font-size: 15px; min-height: 48px; }
+            .btn-sm { padding: 10px 14px; min-height: 40px; }
+            .page-header { flex-direction: column; align-items: stretch; }
+            .page-header .btn { width: 100%; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .filters { flex-direction: column; }
+            .filters select, .filters input { width: 100%; }
+            .bottom-nav { display: block; }
+            .tb-user { display: none; }
+            .lang-pills { display: none; }
+            .search-wrap { display: none; }
+        }
+        
+        @media (max-width: 380px) {
+            .stats { grid-template-columns: 1fr 1fr; }
+            .stat-card .number { font-size: 20px; }
+        }
+        
+        .table-wrap::-webkit-scrollbar { height: 4px; }
+        .table-wrap::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+        
+        @supports (padding: max(0px)) {
+            .container { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+        }
+        
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 68px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 14px 20px; border-radius: 12px; color: white; font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.15); transform: translateX(120%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-width: 360px; }
+        .toast.show { transform: translateX(0); }
+        .toast-success { background: #27ae60; }
+        .toast-error { background: #e74c3c; }
+        .toast-info { background: #5b9cf6; }
+        .toast-warning { background: #f39c12; }
+        
+        /* Loading Spinner */
+        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Smooth transitions */
+        .card { transition: box-shadow 0.2s; }
+        .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        
+        /* Better table hover */
+        table tr { transition: background 0.15s; }
+        
+        /* Pulse animation for notifications */
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .badge-dot { animation: pulse 2s infinite; }
+        
+        /* ===== DARK MODE ===== */
+        body.dark-mode { background: #0d1117; color: #c9d1d9; }
+        body.dark-mode .topbar { background: #161b22; border-color: #21262d; }
+        body.dark-mode .topbar .sb-toggle { color: #8b949e; }
+        body.dark-mode .topbar .sb-toggle:hover { background: #21262d; }
+        body.dark-mode .search-wrap input { background: #0d1117; border-color: #30363d; color: #c9d1d9; }
+        body.dark-mode .search-wrap input:focus { border-color: #5b9cf6; background: #161b22; }
+        body.dark-mode .tb-btn { color: #8b949e; }
+        body.dark-mode .tb-btn:hover { color: #c9d1d9; background: #21262d; }
+        body.dark-mode .tb-user { color: #8b949e; }
+        body.dark-mode .tb-sep { background: #21262d; }
+        body.dark-mode .lang-pill { color: #8b949e; }
+        body.dark-mode .lang-pill:hover { color: #c9d1d9; background: #21262d; }
+        body.dark-mode .lang-pill.active { color: #5b9cf6; background: rgba(91,156,246,0.15); }
+        body.dark-mode .dark-toggle { color: #8b949e; }
+        body.dark-mode .dark-toggle:hover { color: #c9d1d9; background: #21262d; }
+        body.dark-mode .card { background: #161b22; border-color: #21262d; }
+        body.dark-mode .card h2 { color: #e6edf3; }
+        body.dark-mode .stat-card { background: #161b22; border-color: #21262d; }
+        body.dark-mode .stat-card .number { color: #e6edf3; }
+        body.dark-mode .stat-card .label { color: #8b949e; }
+        body.dark-mode table th { background: #161b22; color: #8b949e; }
+        body.dark-mode table tr:hover { background: #161b22; }
+        body.dark-mode td { border-color: #21262d; }
+        body.dark-mode .form-group input, 
+        body.dark-mode .form-group select, 
+        body.dark-mode .form-group textarea { background: #0d1117; color: #c9d1d9; border-color: #30363d; }
+        body.dark-mode .form-group input:focus,
+        body.dark-mode .form-group select:focus,
+        body.dark-mode .form-group textarea:focus { border-color: #5b9cf6; }
+        body.dark-mode .form-group label { color: #8b949e; }
+        body.dark-mode .notif-panel { background: #161b22; border-color: #21262d; }
+        body.dark-mode .notif-item { border-color: #21262d; }
+        body.dark-mode .notif-item:hover { background: #1c2128; }
+        body.dark-mode .notif-title { color: #e6edf3; }
+        body.dark-mode .notif-msg { color: #8b949e; }
+        body.dark-mode .bottom-nav { background: #161b22; }
+        body.dark-mode .bottom-nav a { color: #8b949e; }
+        body.dark-mode .filters select, body.dark-mode .filters input { background: #0d1117; color: #c9d1d9; border-color: #30363d; }
+        body.dark-mode .btn-ghost { border-color: #30363d; color: #8b949e; }
+        body.dark-mode .btn-ghost:hover { background: #21262d; color: #c9d1d9; }
+        body.dark-mode .page-header h1 { color: #e6edf3; }
+        body.dark-mode .search-dropdown { background: #161b22; border-color: #30363d; }
+        body.dark-mode .tb-btn .badge-dot { border-color: #161b22; }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+    
+    <!-- SIDEBAR OVERLAY (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sb-section" onclick="toggleSbGroup(this)">Производство <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            <a href="/" class="sb-item active"><span class="sb-icon">🏠</span>Панель управления</a>
+            <a href="/floor" class="sb-item "><span class="sb-icon">🏭</span>Карта цеха</a>
+            
+            <a href="/map-editor" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>Редактор карты</a>
+            
+            <a href="/machines" class="sb-item "><span class="sb-icon">⚙️</span>Станки</a>
+            <a href="/tool-wear" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>Knife Sharpening</a>
+            <a href="/electricity" class="sb-item "><span class="sb-icon">⚡</span>Electricity</a>
+            <a href="/maintenance-calendar" class="sb-item "><span class="sb-icon">📅</span>Maint. Calendar</a>
+            <a href="/maintenance-plans" class="sb-item "><span class="sb-icon">📋</span>Maint. Plans</a>
+            
+            <a href="/cylinders" class="sb-item "><span class="sb-icon">🔴</span>Баллоны с газом</a>
+            <a href="/repairs" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>Gas System Repairs</a>
+            
+            <a href="/faults" class="sb-item "><span class="sb-icon">⚠️</span>Заявки</a>
+            
+            <a href="/two" class="sb-item "><span class="sb-icon">📝</span>TWO</a>
+            
+            </div>
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Связь <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            <a href="/messages" class="sb-item "><span class="sb-icon">💬</span>Сообщения</a>
+            <a href="/notifications" class="sb-item "><span class="sb-icon">🔔</span>Уведомления</a>
+            </div>
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Персонал <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            
+            <a href="/schedule" class="sb-item "><span class="sb-icon">📅</span>График</a>
+            <a href="/vacations" class="sb-item "><span class="sb-icon">🏖</span>Отпуска</a>
+            
+            <a href="/time-tracking" class="sb-item "><span class="sb-icon">⏱</span>Учёт времени</a>
+            </div>
+            
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Бизнес <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            <a href="/orders" class="sb-item "><span class="sb-icon">📋</span>Рабочие ордера</a>
+            
+            <a href="/responsible" class="sb-item "><span class="sb-icon">👤</span>Ответственный</a>
+            <a href="/workers" class="sb-item "><span class="sb-icon">🔧</span>Техническая Служба</a>
+            <a href="/invoices" class="sb-item "><span class="sb-icon">📄</span>Invoices</a>
+            <a href="/contractors" class="sb-item "><span class="sb-icon">🏢</span>Contractors</a>
+            
+            <a href="/warehouse" class="sb-item "><span class="sb-icon">📦</span>Склад</a>
+            <a href="/purchase-requests" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🛒</span>Заявки на закупку</a>
+            </div>
+            
+            
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Аналитика <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            <a href="/reports" class="sb-item "><span class="sb-icon">📊</span>Отчёты</a>
+            <a href="/stats/faults" class="sb-item "><span class="sb-icon">📈</span>Статистика</a>
+            <a href="/work-report" class="sb-item "><span class="sb-icon">📋</span>Work Report</a>
+            <a href="/archive" class="sb-item "><span class="sb-icon">📦</span>Archive</a>
+            </div>
+            
+            
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Система <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            <a href="/users" class="sb-item "><span class="sb-icon">👥</span>Пользователи</a>
+            <a href="/qr/scan" class="sb-item "><span class="sb-icon">📷</span>QR</a>
+            </div>
+            
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/profile" class="sb-user">
+                <div class="sb-avatar">A</div>
+                <div class="sb-user-info">
+                    <div class="sb-user-name">Administrator</div>
+                    <div class="sb-user-role">admin</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+    
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <button class="sb-toggle" id="sbToggle" onclick="toggleSidebar()">☰</button>
+        
+        <div class="search-wrap" id="searchBarWrap">
+            <form action="/search" method="GET" style="position:relative">
+                <span class="search-icon">🔍</span>
+                <input type="text" name="q" id="globalSearch" placeholder="Search machines, faults, orders..." autocomplete="off">
+                <div class="search-dropdown" id="searchDropdown"></div>
+            </form>
+        </div>
+        
+        <div class="topbar-right">
+            <div class="lang-pills">
+                
+                    <a href="/set_language/nl" class="lang-pill ">NL</a>
+                
+                    <a href="/set_language/en" class="lang-pill ">EN</a>
+                
+                    <a href="/set_language/ru" class="lang-pill active">RU</a>
+                
+                    <a href="/set_language/pl" class="lang-pill ">PL</a>
+                
+            </div>
+            <div class="tb-sep"></div>
+            <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
+            <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()">
+                🔔<span class="badge-dot" id="notifDot"></span>
+            </button>
+            <a href="/logout" class="tb-btn" title="Выйти">⏻</a>
+        </div>
+    </div>
+    
+    <!-- NOTIF PANEL -->
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-header">
+            <span>Уведомления</span>
+            <button onclick="markAllRead()" style="background:none;border:none;color:#5b9cf6;cursor:pointer;font-size:12px;font-weight:600">Отметить все прочитанными</button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+    
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <div class="bottom-nav-inner">
+            <a href="/" class="active"><span class="icon">🏠</span>Главная</a>
+            <a href="/floor" class=""><span class="icon">🏭</span>Карта</a>
+            <a href="/faults" class=""><span class="icon">⚠️</span>Заявки</a>
+            <a href="/messages" class=""><span class="icon">💬</span>Сообщения</a>
+            <a href="#" onclick="toggleSidebar();return false" class=""><span class="icon">☰</span>Ещё</a>
+        </div>
+    </div>
+    
+    <!-- CONTENT -->
+    <div class="main-wrap">
+        <div class="container">
+            
+                
+                    <div class="alert alert-error">An error occurred. Please try again.</div>
+                
+            
+            
+
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden">
+    <div style="position:absolute;top:-20px;right:-20px;width:160px;height:160px;background:rgba(91,156,246,0.1);border-radius:50%"></div>
+    <div style="position:absolute;bottom:-30px;right:60px;width:100px;height:100px;background:rgba(91,156,246,0.06);border-radius:50%"></div>
+    <div style="position:relative;z-index:1">
+        <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px">Welcome back</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Administrator</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.5)">Friday, 28 August 2026</div>
+    </div>
+</div>
+
+<!-- Main Stats -->
+<div class="stats">
+    <div class="stat-card" style="border-left:4px solid #5b9cf6">
+        <div class="stat-accent" style="background:#5b9cf6"></div>
+        <div class="stat-icon">📋</div>
+        <div class="number">3</div>
+        <div class="label">Активные рабочие ордера</div>
+    </div>
+    <div class="stat-card warn" style="border-left:4px solid #e74c3c">
+        <div class="stat-accent" style="background:#e74c3c"></div>
+        <div class="stat-icon">⚠️</div>
+        <div class="number">1</div>
+        <div class="label">Active Faults</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="stat-accent" style="background:#f39c12"></div>
+        <div class="stat-icon">📅</div>
+        <div class="number">0</div>
+        <div class="label">Сегодня</div>
+    </div>
+    <div class="stat-card warn" style="border-left:4px solid #e74c3c">
+        <div class="stat-accent" style="background:#e74c3c"></div>
+        <div class="stat-icon">📦</div>
+        <div class="number">1</div>
+        <div class="label">Мало на складе</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+    <a href="/faults/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">⚠️</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">New Fault</span>
+    </a>
+    <a href="/orders/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">📋</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">New Order</span>
+    </a>
+    <a href="/floor" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">🏭</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">Карта цеха</span>
+    </a>
+    <a href="/messages/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">💬</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">Новое сообщение</span>
+    </a>
+    <a href="/machines" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">⚙️</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">Станки</span>
+    </a>
+    <a href="/warehouse" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.04)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <span style="font-size:28px">📦</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">Склад</span>
+    </a>
+</div>
+
+<!-- Two column layout -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    
+    <!-- Recent Faults -->
+    <div class="card" style="grid-column:1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h2 style="margin:0;font-size:15px">⚠️ Recent Faults</h2>
+            <a href="/faults" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">View all →</a>
+        </div>
+        
+        <div style="display:flex;flex-direction:column;gap:8px">
+            
+            <a href="/faults/22" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#f39c1218">
+                    🟠
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lift draait niet</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Oven 1 · 21-08 06:28</div>
+                </div>
+                <span class="badge badge-closed" style="flex-shrink:0">closed</span>
+            </a>
+            
+            <a href="/faults/21" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#f39c1218">
+                    🟠
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Oven bakt niet</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Oven 1 · 19-08 18:29</div>
+                </div>
+                <span class="badge badge-resolved" style="flex-shrink:0">resolved</span>
+            </a>
+            
+            <a href="/faults/20" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#f39c1218">
+                    🟠
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kan niet eticket plaken</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Oktopus MAX [4] · 19-08 07:45</div>
+                </div>
+                <span class="badge badge-closed" style="flex-shrink:0">closed</span>
+            </a>
+            
+            <a href="/faults/19" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#f39c1218">
+                    🟠
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Machine inpakt niet</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Penta Vac · 19-08 07:27</div>
+                </div>
+                <span class="badge badge-in_progress" style="flex-shrink:0">in_progress</span>
+            </a>
+            
+            <a href="/faults/18" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:#e74c3c18">
+                    🔴
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">De inpakte dosen niet dicht met de folie</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Ypsilon · 17-08 09:55</div>
+                </div>
+                <span class="badge badge-resolved" style="flex-shrink:0">resolved</span>
+            </a>
+            
+        </div>
+        
+    </div>
+    
+    <!-- Recent Work Orders -->
+    <div class="card" style="grid-column:2">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h2 style="margin:0;font-size:15px">📋 Recent Orders</h2>
+            <a href="/orders" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">View all →</a>
+        </div>
+        
+        <div style="display:flex;flex-direction:column;gap:8px">
+            
+            <a href="/orders/4" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;background:#5b9cf618;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#5b9cf6;flex-shrink:0">
+                    001
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Test </div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Hashim · €0</div>
+                </div>
+                <span class="badge badge-aangenomen" style="flex-shrink:0">aangenomen</span>
+            </a>
+            
+            <a href="/orders/1" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;background:#5b9cf618;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#5b9cf6;flex-shrink:0">
+                    001
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Smartphone iPhone 12</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Hashim · €400</div>
+                </div>
+                <span class="badge badge-afgeleverd" style="flex-shrink:0">afgeleverd</span>
+            </a>
+            
+            <a href="/orders/2" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;background:#5b9cf618;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#5b9cf6;flex-shrink:0">
+                    002
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Laptop ASUS X515</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Bartek · €150</div>
+                </div>
+                <span class="badge badge-in-behandeling" style="flex-shrink:0">in behandeling</span>
+            </a>
+            
+            <a href="/orders/3" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#333;transition:background 0.15s;border:1px solid #f0f2f5" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                <div style="width:36px;height:36px;border-radius:10px;background:#5b9cf618;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#5b9cf6;flex-shrink:0">
+                    003
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tablet Samsung Tab A</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">Dina · €0</div>
+                </div>
+                <span class="badge badge-aangenomen" style="flex-shrink:0">aangenomen</span>
+            </a>
+            
+        </div>
+        
+    </div>
+</div>
+
+<!-- Users Management (Admin only) -->
+
+<div class="card" style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="document.getElementById('usersTable').style.display=document.getElementById('usersTable').style.display==='none'?'block':'none';document.getElementById('usersArrow').textContent=document.getElementById('usersTable').style.display==='none'?'▶':'▼'">
+        <h2 style="margin:0;font-size:15px">👥 Пользователи <span style="font-weight:400;color:#888">(7)</span></h2>
+        <div style="display:flex;align-items:center;gap:8px">
+            <a href="/users/new" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">+ Новый пользователь</a>
+            <span id="usersArrow" style="font-size:11px;color:#888;transition:0.2s">▶</span>
+        </div>
+    </div>
+    <div id="usersTable" class="table-wrap" style="display:none;margin-top:14px"><table>
+        <tr><th>ID</th><th>Имя пользователя</th><th>Имя</th><th>Роль</th><th>Статус</th><th>Действия</th></tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/1'">
+            <td style="color:#888">1</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">admin</code></td>
+            <td><a href="/users/1" style="color:#5b9cf6;text-decoration:none;font-weight:600">Administrator</a></td>
+            <td><span class="badge badge-admin">admin</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/1/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/2'">
+            <td style="color:#888">2</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">aristidis</code></td>
+            <td><a href="/users/2" style="color:#5b9cf6;text-decoration:none;font-weight:600">Aristidis</a></td>
+            <td><span class="badge badge-technician">technician</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/2/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/3'">
+            <td style="color:#888">3</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">user</code></td>
+            <td><a href="/users/3" style="color:#5b9cf6;text-decoration:none;font-weight:600">User</a></td>
+            <td><span class="badge badge-user">user</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/3/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/4'">
+            <td style="color:#888">4</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">director</code></td>
+            <td><a href="/users/4" style="color:#5b9cf6;text-decoration:none;font-weight:600">Director</a></td>
+            <td><span class="badge badge-director">director</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/4/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/5'">
+            <td style="color:#888">5</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">maico</code></td>
+            <td><a href="/users/5" style="color:#5b9cf6;text-decoration:none;font-weight:600">Maico</a></td>
+            <td><span class="badge badge-technician">technician</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/5/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/6'">
+            <td style="color:#888">6</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">filip</code></td>
+            <td><a href="/users/6" style="color:#5b9cf6;text-decoration:none;font-weight:600">Filip</a></td>
+            <td><span class="badge badge-technician">technician</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/6/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+        <tr style="cursor:pointer" onclick="window.location='/users/7'">
+            <td style="color:#888">7</td>
+            <td><code style="background:#f5f7fa;padding:2px 8px;border-radius:6px;font-size:12px">ruslan</code></td>
+            <td><a href="/users/7" style="color:#5b9cf6;text-decoration:none;font-weight:600">Ruslan Abasoff</a></td>
+            <td><span class="badge badge-technician">technician</span></td>
+            <td><span class="badge badge-active">Активный</span></td>
+            <td><a href="/users/7/edit" class="btn btn-sm btn-ghost" onclick="event.stopPropagation()">Редактировать</a></td>
+        </tr>
+        
+    </table></div>
+</div>
+
+
+<!-- Low Stock Alert -->
+
+<div class="card" style="border-left:4px solid #e74c3c;margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="margin:0;font-size:15px;color:#e74c3c">📦 Low Stock Alert</h2>
+        <a href="/warehouse" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">Склад →</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+        
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:#fef2f2">
+            <div>
+                <div style="font-weight:600;font-size:13px">V-snaar</div>
+                <div style="font-size:11px;color:#888">Min: 2.0 st</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-weight:700;color:#e74c3c;font-size:14px">0.0 st</span>
+                <a href="/warehouse/5/edit" class="btn btn-sm btn-primary">Заказ</a>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+
+<!-- System Info Footer -->
+<div class="card" style="background:linear-gradient(135deg,#f8f9fc,#f0f2f5);border:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#27ae60;box-shadow:0 0 8px rgba(39,174,96,0.4)"></div>
+            <div>
+                <div style="font-size:12px;color:#888">System Status</div>
+                <div style="font-weight:700;font-size:14px;color:#27ae60">All Systems Operational</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:24px">
+            <div style="text-align:center">
+                <div style="font-size:22px;font-weight:800;color:#1a1a2e">11</div>
+                <div style="font-size:11px;color:#888">Клиенты</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:22px;font-weight:800;color:#1a1a2e">4</div>
+                <div style="font-size:11px;color:#888">Техническая Служба</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+        </div>
+    </div>
+    
+    <script>
+        // SIDEBAR
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+        
+        // Collapsible sidebar sections
+        function toggleSbGroup(sectionEl) {
+            const items = sectionEl.nextElementSibling;
+            if (!items || !items.classList.contains('sb-group-items')) return;
+            const isCollapsed = items.classList.contains('collapsed');
+            if (isCollapsed) {
+                items.style.maxHeight = items.scrollHeight + 'px';
+                items.classList.remove('collapsed');
+                sectionEl.classList.remove('collapsed');
+                localStorage.removeItem('sb-collapsed-' + sectionEl.textContent.trim());
+            } else {
+                items.style.maxHeight = items.scrollHeight + 'px';
+                requestAnimationFrame(() => {
+                    items.style.maxHeight = '0';
+                    items.classList.add('collapsed');
+                    sectionEl.classList.add('collapsed');
+                    localStorage.setItem('sb-collapsed-' + sectionEl.textContent.trim(), '1');
+                });
+            }
+        }
+        
+        // Restore collapsed state from localStorage
+        document.querySelectorAll('.sb-section').forEach(section => {
+            const key = 'sb-collapsed-' + section.textContent.trim();
+            if (localStorage.getItem(key) === '1') {
+                const items = section.nextElementSibling;
+                if (items && items.classList.contains('sb-group-items')) {
+                    items.style.maxHeight = '0';
+                    items.classList.add('collapsed');
+                    section.classList.add('collapsed');
+                }
+            }
+        });
+        
+        // Close sidebar on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSidebar();
+        });
+        
+        // CSRF helper for fetch POST requests
+        function csrfFetch(url, opts = {}) {
+            if (opts.method && opts.method.toUpperCase() !== 'GET') {
+                opts.headers = opts.headers || {};
+                opts.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content;
+            }
+            return fetch(url, opts);
+        }
+
+        // Auto-inject CSRF token into all POST forms
+        (function injectCsrf() {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            function addToken(form) {
+                if ((form.method === 'POST' || form.method === 'post') && !form.querySelector('input[name="csrf_token"]')) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden'; inp.name = 'csrf_token'; inp.value = token;
+                    form.appendChild(inp);
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('form').forEach(addToken);
+                new MutationObserver(mutations => {
+                    mutations.forEach(m => { m.addedNodes.forEach(n => {
+                        if (n.tagName === 'FORM') addToken(n);
+                        if (n.querySelectorAll) n.querySelectorAll('form').forEach(addToken);
+                    });});
+                }).observe(document.body, {childList: true, subtree: true});
+            });
+        })();
+
+        // XSS-safe text escaping for innerHTML
+        function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        // NOTIFICATIONS
+        function toggleNotifications() {
+            document.getElementById('notifPanel').classList.toggle('open');
+            if (document.getElementById('notifPanel').classList.contains('open')) {
+                loadNotifications();
+            }
+        }
+        
+        // Close notif on outside click
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('notifPanel');
+            const notifBtn = document.getElementById('notifBtn');
+            if (panel.classList.contains('open') && !panel.contains(e.target) && !notifBtn.contains(e.target)) {
+                panel.classList.remove('open');
+            }
+        });
+        
+        function loadNotifications() {
+            fetch('/notifications').then(r => r.text()).then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const items = doc.querySelectorAll('.notif-item');
+                const list = document.getElementById('notifList');
+                list.innerHTML = '';
+                if (items.length === 0) {
+                    list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Нет уведомлений</div>';
+                    return;
+                }
+                items.forEach(item => {
+                    list.innerHTML += `<div class="notif-item ${item.classList.contains('unread') ? 'unread' : ''}" onclick="markRead(${item.dataset.id}, '${item.dataset.link}')">
+                        <div class="notif-title">${item.querySelector('.notif-title')?.textContent || ''}</div>
+                        <div class="notif-msg">${item.querySelector('.notif-msg')?.textContent || ''}</div>
+                        <div class="notif-time">${item.querySelector('.notif-time')?.textContent || ''}</div>
+                    </div>`;
+                });
+            });
+        }
+        
+        function updateNotifCount() {
+            fetch('/notifications/unread').then(r => r.json()).then(d => {
+                const btn = document.getElementById('notifBtn');
+                if (d.count > 0) {
+                    btn.classList.add('has-notif');
+                    if (window.lastNotifCount !== undefined && d.count > window.lastNotifCount) {
+                        playNotifSound();
+                    }
+                } else {
+                    btn.classList.remove('has-notif');
+                }
+                window.lastNotifCount = d.count;
+            });
+        }
+        
+        function markRead(id, link) {
+            csrfFetch(`/notifications/${id}/read`, {method: 'POST'}).then(() => {
+                if (link) window.location.href = link;
+                updateNotifCount();
+            });
+        }
+        
+        function markAllRead() {
+            csrfFetch('/notifications/read-all', {method: 'POST'}).then(() => {
+                updateNotifCount();
+                loadNotifications();
+            });
+        }
+        
+        function playNotifSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+                gain.gain.value = 0.15;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.stop(ctx.currentTime + 0.3);
+            } catch(e) {}
+            // Vibrate on mobile for 6 seconds (pattern: vibrate 500ms, pause 200ms, repeat)
+            try {
+                if (navigator.vibrate) {
+                    navigator.vibrate([500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500]);
+                }
+            } catch(e) {}
+        }
+        
+        updateNotifCount();
+        setInterval(updateNotifCount, 30000);
+        
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+        
+        // Maintenance reminders
+        function checkMaintenanceReminders() {
+            fetch('/api/maintenance/reminders').then(r => r.json()).then(items => {
+                if (items.length === 0) return;
+                const overdue = items.filter(i => i.overdue);
+                const soon = items.filter(i => !i.overdue);
+                if (overdue.length > 0 || soon.length > 0) {
+                    const btn = document.getElementById('notifBtn');
+                    btn.classList.add('has-notif');
+                    // Add maintenance badge to nav
+                    const navLink = document.querySelector('a[href="/maintenance-calendar"]');
+                    if (navLink && !navLink.querySelector('.maint-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'maint-badge';
+                        badge.style.cssText = 'background:#e74c3c;color:white;font-size:10px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:bold';
+                        badge.textContent = items.length;
+                        navLink.appendChild(badge);
+                    }
+                }
+            }).catch(() => {});
+        }
+        checkMaintenanceReminders();
+        setInterval(checkMaintenanceReminders, 120000);
+        
+        // Global Search
+        const searchInput = document.getElementById('globalSearch');
+        const searchDropdown = document.getElementById('searchDropdown');
+        let searchTimeout;
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const q = this.value.trim();
+                if (q.length < 2) {
+                    searchDropdown.style.display = 'none';
+                    return;
+                }
+                searchTimeout = setTimeout(() => {
+                    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.results.length === 0) {
+                                searchDropdown.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">No results</div>';
+                            } else {
+                                let html = '';
+                                data.results.slice(0, 8).forEach(r => {
+                                    html += `<a href="${esc(r.url)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f0f2f5;text-decoration:none;color:#333;transition:background 0.15s" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                                        <span style="font-size:18px;width:24px;text-align:center">${esc(r.icon)}</span>
+                                        <div style="flex:1;min-width:0">
+                                            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title)}</div>
+                                            <div style="font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.subtitle)}</div>
+                                        </div>
+                                    </a>`;
+                                });
+                                html += `<a href="/search?q=${encodeURIComponent(q)}" style="display:block;padding:12px;text-align:center;color:#5b9cf6;font-size:13px;font-weight:600;text-decoration:none;border-top:1px solid #eee">View all results →</a>`;
+                                searchDropdown.innerHTML = html;
+                            }
+                            searchDropdown.style.display = 'block';
+                        });
+                }, 300);
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                    searchDropdown.style.display = 'none';
+                }
+            });
+            
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim().length >= 2) {
+                    window.location.href = `/search?q=${encodeURIComponent(this.value.trim())}`;
+                }
+            });
+        }
+        
+        // Dark Mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            document.querySelector('.dark-toggle').textContent = isDark ? '☀️' : '🌙';
+        }
+        
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.dark-toggle').textContent = '☀️';
+        }
+        
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const container = document.querySelector('.toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+        
+        // Convert flash messages to toasts
+        document.querySelectorAll('.alert').forEach(alert => {
+            const type = alert.classList.contains('alert-success') ? 'success' : 
+                        alert.classList.contains('alert-error') ? 'error' : 'info';
+            showToast(alert.textContent, type);
+            alert.style.display = 'none';
+        });
+    </script>
+    
+    <!-- Translation strings for JS -->
+    <script>
+    const T_base = {
+        attention: 'ATTENTION!',
+        criticalWear: 'Critical tool wear:',
+        wear: 'wear',
+        lastReplaced: 'Last replaced',
+        needReplace: 'REPLACEMENT NEEDED!',
+        understood: 'UNDERSTOOD',
+        replace: 'REPLACE',
+        remaining: 'Remaining',
+        fullCylinders: 'full cylinders N₂',
+        needOrder: 'NEED TO ORDER!',
+        cylinders: 'Cylinders'
+    };
+    </script>
+    
+    <!-- TOOL WEAR WARNING POPUP (shows after user interaction) -->
+    <script>
+    (function() {
+        let toolWarningShown = false;
+        function showToolWarning() {
+            if (toolWarningShown) return;
+            toolWarningShown = true;
+            fetch('/api/tool-wear/warnings').then(r => r.json()).then(data => {
+                if (!data.warnings || data.warnings.length === 0) return;
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'toolWearWarning';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+                
+                let list = '';
+                data.warnings.forEach(w => {
+                    list += '<div style="padding:8px 16px;background:rgba(0,0,0,0.15);border-radius:8px;margin-bottom:6px">' +
+                        '<div style="font-size:16px;font-weight:700;color:#000">' + w.machine + '</div>' +
+                        '<div style="font-size:14px;color:#111">' + w.tool + ' — ' + T_base.wear + ' ' + w.wear + '%</div>' +
+                        '<div style="font-size:12px;color:#333">' + T_base.lastReplaced + ': ' + w.last_replaced + '</div>' +
+                        '</div>';
+                });
+                
+                overlay.innerHTML = '<div id="toolFlashBox" style="background:#e67e22;padding:40px 50px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(230,126,34,0.8)">' +
+                    '<div style="font-size:64px;margin-bottom:16px">🔪</div>' +
+                    '<div style="font-size:26px;font-weight:900;color:#000;margin-bottom:16px">' + T_base.attention + '</div>' +
+                    '<div style="font-size:14px;font-weight:600;color:#000;margin-bottom:16px">' + T_base.criticalWear + '</div>' +
+                    list +
+                    '<div style="font-size:16px;font-weight:700;color:#000;margin:16px 0 20px">' + T_base.needReplace + '</div>' +
+                    '<div style="display:flex;gap:10px;justify-content:center">' +
+                    '<button onclick="document.getElementById(\'toolWearWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T_base.understood + '</button>' +
+                    '<button onclick="window.location.href=\'/tool-wear\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#f39c12;color:#000;border-radius:10px;cursor:pointer">' + T_base.replace + '</button>' +
+                    '</div></div>';
+                
+                document.body.appendChild(overlay);
+                
+                const box = document.getElementById('toolFlashBox');
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    box.style.background = flashCount % 2 === 0 ? '#000' : '#e67e22';
+                    box.querySelectorAll('div').forEach(d => {
+                        if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+                    });
+                    flashCount++;
+                    if (flashCount >= 10) {
+                        clearInterval(flashInterval);
+                        box.style.background = '#e67e22';
+                        box.querySelectorAll('div').forEach(d => d.style.color = '#000');
+                    }
+                }, 500);
+            }).catch(() => {});
+        }
+        // Show after first user interaction (click/scroll/touch)
+        ['click','scroll','touchstart'].forEach(evt => {
+            document.addEventListener(evt, showToolWarning, {once: true});
+        });
+    })();
+    </script>
+    
+    <!-- CYLINDER LOW STOCK WARNING POPUP (shows after user interaction) -->
+    <script>
+    (function() {
+        let cylWarningShown = false;
+        function showCylWarning() {
+            if (cylWarningShown) return;
+            cylWarningShown = true;
+            fetch('/api/cylinders/status').then(r => r.json()).then(data => {
+                const n2Full = (data.nitrogen || []).filter(c => c.status === 'full').length;
+                if (n2Full > 4) return;
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'cylinderWarning';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+                
+                overlay.innerHTML = '<div id="cylFlashBox" style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(231,76,60,0.8)">' +
+                    '<div style="font-size:64px;margin-bottom:16px">⚠️</div>' +
+                    '<div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">' + T_base.attention + '</div>' +
+                    '<div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">' + T_base.remaining + ' ' + n2Full + ' ' + T_base.fullCylinders + '</div>' +
+                    '<div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">' + T_base.needOrder + '</div>' +
+                    '<div style="display:flex;gap:10px;justify-content:center">' +
+                    '<button onclick="document.getElementById(\'cylinderWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T_base.understood + '</button>' +
+                    '<button onclick="window.location.href=\'/cylinders\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#f39c12;color:#000;border-radius:10px;cursor:pointer">' + T_base.cylinders + '</button>' +
+                    '</div></div>';
+                
+                document.body.appendChild(overlay);
+                
+                const box = document.getElementById('cylFlashBox');
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    box.style.background = flashCount % 2 === 0 ? '#000' : '#e74c3c';
+                    box.querySelectorAll('div').forEach(d => {
+                        if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+                    });
+                    flashCount++;
+                    if (flashCount >= 10) {
+                        clearInterval(flashInterval);
+                        box.style.background = '#e74c3c';
+                        box.querySelectorAll('div').forEach(d => d.style.color = '#000');
+                    }
+                }, 500);
+            }).catch(() => {});
+        }
+        // Show after first user interaction
+        ['click','scroll','touchstart'].forEach(evt => {
+            document.addEventListener(evt, showCylWarning, {once: true});
+        });
+    })();
+    </script>
+</body>
+</html>
