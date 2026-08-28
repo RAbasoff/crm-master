@@ -194,7 +194,22 @@ async function captureOCR() {
     const canvas = document.getElementById('ocrCanvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    // Pre-process image for better OCR
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        // Convert to grayscale
+        const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+        // Increase contrast (threshold)
+        const val = gray > 140 ? 255 : 0;
+        data[i] = val;
+        data[i+1] = val;
+        data[i+2] = val;
+    }
+    ctx.putImageData(imgData, 0, 0);
     
     document.getElementById('ocrProgress').style.display = 'block';
     document.getElementById('ocrProgressBar').style.width = '10%';
@@ -210,11 +225,18 @@ async function captureOCR() {
             }
         });
         
+        await worker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_/.,() ',
+            preserve_interword_spaces: '1',
+        });
+        
         const result = await worker.recognize(canvas);
         await worker.terminate();
         
         document.getElementById('ocrProgressBar').style.width = '100%';
-        const text = result.data.text.trim();
+        let text = result.data.text.trim();
+        // Clean up common OCR errors
+        text = text.replace(/\n{3,}/g, '\n\n').replace(/[|]/g, 'I').replace(/[{}]/g, '');
         
         if (text) {
             document.getElementById('ocrResult').style.display = 'block';
