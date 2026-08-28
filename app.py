@@ -3907,13 +3907,85 @@ def machine_qr(machine_id):
 @app.route('/api/machines/<int:machine_id>/barcode')
 @login_required
 def machine_barcode(machine_id):
-    import barcode
-    from barcode.writer import ImageWriter
+    from PIL import Image, ImageDraw, ImageFont
     m = Machine.query.get_or_404(machine_id)
     code_str = f"M{m.id:05d}"
-    code128 = barcode.get('code128', code_str, writer=ImageWriter())
+    
+    try:
+        import barcode
+        from barcode.writer import ImageWriter
+        code128 = barcode.get('code128', code_str, writer=ImageWriter())
+        buf = io.BytesIO()
+        code128.write(buf, options={'module_width': 0.3, 'module_height': 8, 'font_size': 8, 'text_distance': 2, 'quiet_zone': 2})
+        buf.seek(0)
+        return send_file(buf, mimetype='image/png', download_name=f'BAR_{m.name}.png')
+    except ImportError:
+        pass
+    
+    # Fallback: generate with Pillow
+    def code128_encode(text):
+        chars = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+        codes = [104]
+        checksum = 104
+        for i, c in enumerate(text):
+            if c in chars:
+                val = chars.index(c) + 32
+                codes.append(val)
+                checksum += val * (i + 1)
+        codes.append(checksum % 103)
+        codes.append(106)
+        patterns = [
+            '11011001100','11001101100','11001100110','10010011000','10010001100',
+            '10001001100','10011001000','10011000100','10001100100','11001001000',
+            '11001000100','11000100100','10110011100','10011011100','10011001110',
+            '10111001100','10011101100','10011100110','11001110010','11001011100',
+            '11001001110','11011100100','11001110100','11101101110','11101001100',
+            '11100101100','11100100110','11101100100','11100110100','11100110010',
+            '11011011000','11011000110','11000110110','10100011000','10001011000',
+            '10001000110','10110001000','10001101000','10001100010','11010001000',
+            '11000101000','11000100010','10110111000','10110001110','10001101110',
+            '10111011000','10111000110','10001110110','11101110110','11010001110',
+            '11000101110','11011101000','11011100010','11011101110','11101011000',
+            '11101000110','11100010110','11101101000','11101100010','11100011010',
+            '11101111010','11001000010','11110001010','10100110000','10100001100',
+            '10010110000','10010000110','10000101100','10000100110','10110010000',
+            '10110000100','10011010000','10011000010','10000110100','10000110010',
+            '11000010010','11001010000','11110111010','11000010100','10001111010',
+            '10100111100','10010111100','10010011110','10111100100','10011110100',
+            '10011110010','11110100100','11110010100','11110010010','11011011110',
+            '11011110110','11110110110','10101111000','10100011110','10001011110',
+            '10111101000','10111100010','11110101000','11110100010','10111011110',
+            '10111101110','11101011110','11110101110','11010000100','11010010000',
+            '11010011100','1100011101011'
+        ]
+        bars = []
+        for c in codes:
+            if c < len(patterns):
+                bars.append(patterns[c])
+        return bars
+    
+    bar_width = 2
+    height = 60
+    text_height = 16
+    bars = code128_encode(code_str)
+    total_width = sum(len(b) for b in bars) * bar_width + 20
+    img = Image.new('RGB', (total_width, height + text_height + 4), 'white')
+    draw = ImageDraw.Draw(img)
+    x = 10
+    for bar_pattern in bars:
+        for bit in bar_pattern:
+            if bit == '1':
+                draw.rectangle([x, 0, x + bar_width - 1, height - 1], fill='black')
+            x += bar_width
+    try:
+        font = ImageFont.truetype("arial.ttf", 12)
+    except:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), code_str, font=font)
+    tw = bbox[2] - bbox[0]
+    draw.text(((total_width - tw) // 2, height + 2), code_str, fill='black', font=font)
     buf = io.BytesIO()
-    code128.write(buf, options={'module_width': 0.3, 'module_height': 8, 'font_size': 8, 'text_distance': 2, 'quiet_zone': 2})
+    img.save(buf, format='PNG')
     buf.seek(0)
     return send_file(buf, mimetype='image/png', download_name=f'BAR_{m.name}.png')
 
@@ -4038,14 +4110,101 @@ def warehouse_qr(item_id):
 @app.route('/api/warehouse/barcode/<int:item_id>')
 @login_required
 def warehouse_barcode(item_id):
-    import barcode
-    from barcode.writer import ImageWriter
+    from PIL import Image, ImageDraw, ImageFont
     item = VoorraadItem.query.get_or_404(item_id)
-    # Use supplier part number if available, otherwise internal code
     code_str = item.supplier_part_number if item.supplier_part_number else f"W{item.id:05d}"
-    code128 = barcode.get('code128', code_str, writer=ImageWriter())
+    
+    try:
+        import barcode
+        from barcode.writer import ImageWriter
+        code128 = barcode.get('code128', code_str, writer=ImageWriter())
+        buf = io.BytesIO()
+        code128.write(buf, options={'module_width': 0.3, 'module_height': 8, 'font_size': 8, 'text_distance': 2, 'quiet_zone': 2})
+        buf.seek(0)
+        return send_file(buf, mimetype='image/png', download_name=f'BAR_{item.naam}.png')
+    except ImportError:
+        # Fallback: generate barcode with Pillow using Code128B encoding
+        pass
+    
+    # Code128 encoding table (subset for alphanumeric)
+    def code128_encode(text):
+        # Code128B character set
+        chars = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+        # Start code B = 104, Stop = 106
+        codes = [104]  # Start B
+        checksum = 104
+        for i, c in enumerate(text):
+            if c in chars:
+                val = chars.index(c) + 32
+                codes.append(val)
+                checksum += val * (i + 1)
+            else:
+                codes.append(0)  # fallback
+        codes.append(checksum % 103)
+        codes.append(106)  # Stop
+        
+        # Code128 bar patterns (widths of bars and spaces)
+        patterns = [
+            '11011001100','11001101100','11001100110','10010011000','10010001100',
+            '10001001100','10011001000','10011000100','10001100100','11001001000',
+            '11001000100','11000100100','10110011100','10011011100','10011001110',
+            '10111001100','10011101100','10011100110','11001110010','11001011100',
+            '11001001110','11011100100','11001110100','11101101110','11101001100',
+            '11100101100','11100100110','11101100100','11100110100','11100110010',
+            '11011011000','11011000110','11000110110','10100011000','10001011000',
+            '10001000110','10110001000','10001101000','10001100010','11010001000',
+            '11000101000','11000100010','10110111000','10110001110','10001101110',
+            '10111011000','10111000110','10001110110','11101110110','11010001110',
+            '11000101110','11011101000','11011100010','11011101110','11101011000',
+            '11101000110','11100010110','11101101000','11101100010','11100011010',
+            '11101111010','11001000010','11110001010','10100110000','10100001100',
+            '10010110000','10010000110','10000101100','10000100110','10110010000',
+            '10110000100','10011010000','10011000010','10000110100','10000110010',
+            '11000010010','11001010000','11110111010','11000010100','10001111010',
+            '10100111100','10010111100','10010011110','10111100100','10011110100',
+            '10011110010','11110100100','11110010100','11110010010','11011011110',
+            '11011110110','11110110110','10101111000','10100011110','10001011110',
+            '10111101000','10111100010','11110101000','11110100010','10111011110',
+            '10111101110','11101011110','11110101110','11010000100','11010010000',
+            '11010011100','1100011101011'
+        ]
+        bars = []
+        for c in codes:
+            if c < len(patterns):
+                bars.append(patterns[c])
+        return bars
+    
+    # Generate image
+    bar_width = 2
+    height = 60
+    text_height = 16
+    total_height = height + text_height + 4
+    
+    bars = code128_encode(code_str)
+    total_width = sum(len(b) for b in bars) * bar_width + 20  # margins
+    
+    img = Image.new('RGB', (total_width, total_height), 'white')
+    draw = ImageDraw.Draw(img)
+    
+    x = 10
+    for bar_pattern in bars:
+        for i, bit in enumerate(bar_pattern):
+            if bit == '1':
+                draw.rectangle([x, 0, x + bar_width - 1, height - 1], fill='black')
+            x += bar_width
+    
+    # Draw text
+    try:
+        font = ImageFont.truetype("arial.ttf", 12)
+    except:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), code_str, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_x = (total_width - text_width) // 2
+    draw.text((text_x, height + 2), code_str, fill='black', font=font)
+    
     buf = io.BytesIO()
-    code128.write(buf, options={'module_width': 0.3, 'module_height': 8, 'font_size': 8, 'text_distance': 2, 'quiet_zone': 2})
+    img.save(buf, format='PNG')
     buf.seek(0)
     return send_file(buf, mimetype='image/png', download_name=f'BAR_{item.naam}.png')
 
