@@ -22,7 +22,7 @@
         <h3 style="margin:0;font-size:14px">📷 {{ _('Scan Warehouse QR / Barcode') }}</h3>
         <button type="button" onclick="toggleWhScanner()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
     </div>
-    <div id="whScanner" style="width:100%;max-width:400px;margin:0 auto"></div>
+    <div id="whScanRegion" style="width:100%;max-width:500px;margin:0 auto"></div>
     <div id="whScanResult" style="margin-top:10px;padding:8px 12px;border-radius:8px;display:none;font-size:13px"></div>
 </div>
 {% if low_stock %}
@@ -88,126 +88,83 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-let whScannerInstance = null;
-let whScannerActive = false;
+let whScanner = null;
+let whActive = false;
 
 function toggleWhScanner() {
     const block = document.getElementById('whScannerBlock');
-    if (whScannerActive) {
-        if (whScannerInstance) { whScannerInstance.stop(); whScannerInstance = null; }
+    if (whActive) {
+        if (whScanner) { whScanner.stop(); whScanner = null; }
         block.style.display = 'none';
-        whScannerActive = false;
+        whActive = false;
     } else {
         block.style.display = 'block';
-        whScannerActive = true;
-        startWhScanner();
+        whActive = true;
+        startWhScan();
     }
 }
 
-function startWhScanner() {
-    if (whScannerInstance) return;
-    const el = document.getElementById('whScanner');
-    if (!el) return;
-    // Small delay to ensure DOM is ready after display:block
-    setTimeout(() => {
-        whScannerInstance = new Html5Qrcode("whScanner", { verbose: false });
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.0,
-            formatsToSupport: [
-                Html5QrcodeSupportedFormats.QR_CODE,
-                Html5QrcodeSupportedFormats.CODE_128,
-                Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.ITF
-            ]
-        };
-        whScannerInstance.start(
+function startWhScan() {
+    if (whScanner) return;
+    setTimeout(function() {
+        whScanner = new Html5Qrcode("whScanRegion");
+        whScanner.start(
             { facingMode: "environment" },
-            config,
-            onWhScanSuccess,
-            () => {}
-        ).catch(err => {
-            const msg = String(err);
-            let hint = '';
-            if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
-                hint = '{{ _("Allow camera access in browser settings") }}.';
-            } else if (msg.includes('NotFoundError')) {
-                hint = '{{ _("No camera found on this device") }}.';
-            } else if (location.protocol !== 'https:') {
-                hint = '{{ _("Camera requires HTTPS. Use https:// URL") }}.';
-            }
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 150 },
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.ITF
+                ]
+            },
+            function(text) {
+                document.getElementById('whScanResult').style.display = 'block';
+                let itemId = null;
+                try { const d = JSON.parse(text); if (d.type === 'warehouse_item' && d.id) itemId = d.id; } catch(e) {}
+                if (!itemId) { const m = text.match(/^W(\d+)$/); if (m) itemId = parseInt(m[1]); }
+                if (itemId) {
+                    const rows = document.querySelectorAll('table tr');
+                    let found = false;
+                    rows.forEach(function(row) {
+                        if (row.querySelector('a[href*="/warehouse/' + itemId + '/edit"]')) {
+                            row.style.background = '#fff3cd';
+                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(function() { row.style.background = ''; }, 3000);
+                            found = true;
+                        }
+                    });
+                    document.getElementById('whScanResult').style.background = found ? '#f0fff0' : '#fff5f0';
+                    document.getElementById('whScanResult').textContent = found ? 'Found: ' + text : 'Not in view: ' + text;
+                } else {
+                    csrfFetch('/api/warehouse/scan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: text}) })
+                    .then(function(r) { return r.json(); }).then(function(d) {
+                        if (d.found) {
+                            document.getElementById('whScanResult').style.background = '#f0fff0';
+                            document.getElementById('whScanResult').innerHTML = '<strong>' + d.name + '</strong> — Qty: ' + d.quantity + ' — <a href="/warehouse/' + d.id + '/edit">Open</a>';
+                        } else {
+                            document.getElementById('whScanResult').style.background = '#fff5f0';
+                            document.getElementById('whScanResult').textContent = 'Not found: ' + text;
+                        }
+                    });
+                }
+                if (whScanner) { whScanner.stop(); whScanner = null; }
+                whActive = false;
+            },
+            function() {}
+        ).catch(function(err) {
             document.getElementById('whScanResult').style.display = 'block';
             document.getElementById('whScanResult').style.background = '#fdf0f0';
-            document.getElementById('whScanResult').innerHTML = '📷 {{ _("Camera error") }}: ' + msg + (hint ? '<br><small>' + hint + '</small>' : '');
+            document.getElementById('whScanResult').textContent = 'Camera error: ' + err;
         });
     }, 300);
 }
-
-function onWhScanSuccess(text) {
-    const result = document.getElementById('whScanResult');
-    result.style.display = 'block';
-
-    // Try to parse QR data
-    let itemId = null;
-    try {
-        const data = JSON.parse(text);
-        if (data.type === 'warehouse_item' && data.id) {
-            itemId = data.id;
-        }
-    } catch(e) {}
-
-    // Try barcode format (W00001)
-    if (!itemId) {
-        const barcodeMatch = text.match(/^W(\d+)$/);
-        if (barcodeMatch) itemId = parseInt(barcodeMatch[1]);
-    }
-
-    if (itemId) {
-        // Highlight the row and scroll to it
-        const rows = document.querySelectorAll('table tr');
-        let found = false;
-        rows.forEach(row => {
-            const editLink = row.querySelector('a[href*="/warehouse/' + itemId + '/edit"]');
-            if (editLink) {
-                row.style.background = '#fff3cd';
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                setTimeout(() => { row.style.background = ''; }, 3000);
-                found = true;
-            }
-        });
-        if (found) {
-            result.style.background = '#f0fff0';
-            result.textContent = '✓ {{ _("Found") }}: ' + text;
-        } else {
-            result.style.background = '#fff5f0';
-            result.textContent = '{{ _("Item not in current view") }}: ' + text + ' — <a href="/warehouse/' + itemId + '/edit">{{ _("Open") }}</a>';
-        }
-    } else {
-        // Search by name/SPN via API
-        csrfFetch('/api/warehouse/scan', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({code: text})
-        }).then(r => r.json()).then(d => {
-            if (d.found) {
-                result.style.background = '#f0fff0';
-                result.innerHTML = '✓ <strong>' + d.name + '</strong> — {{ _("Qty") }}: ' + d.quantity + ' ' + d.unit + ' — <a href="/warehouse/' + d.id + '/edit">{{ _("Open") }}</a>';
-            } else {
-                result.style.background = '#fff5f0';
-                result.textContent = '✗ {{ _("Not found") }}: ' + text;
-            }
-        });
-    }
-
-    // Stop scanner after scan
-    if (whScannerInstance) { whScannerInstance.stop(); whScannerInstance = null; }
-    whScannerActive = false;
-}
 </script>
-<style>#whScanner{border:2px solid #3498db;border-radius:12px;overflow:hidden}#whScanner video{border-radius:10px}</style>
+<style>#whScanRegion{border:2px solid #3498db;border-radius:12px;overflow:hidden}#whScanRegion video{border-radius:10px}</style>
 {% endblock %}
