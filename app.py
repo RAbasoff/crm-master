@@ -6962,6 +6962,87 @@ if __name__ == '__main__':
         ).count()
         return jsonify({'count': count})
     
+    @app.route('/chat/<int:chat_id>/upload', methods=['POST'])
+    @login_required
+    def chat_upload(chat_id):
+        """Upload file/image to chat"""
+        chat = ChatGroup.query.get_or_404(chat_id)
+        if current_user not in chat.members:
+            return jsonify({'error': 'Not a member'}), 403
+        
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file'}), 400
+        
+        file = request.files['file']
+        if not file.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        
+        filename = secure_filename(f"chat_{chat_id}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Determine message type
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'):
+            msg_type = 'image'
+        else:
+            msg_type = 'file'
+        
+        msg = ChatMessage(
+            chat_id=chat_id,
+            sender_id=current_user.id,
+            message=file.filename,
+            message_type=msg_type,
+            file_url=f'/static/uploads/{filename}'
+        )
+        db.session.add(msg)
+        db.session.commit()
+        
+        msg_data = {
+            'id': msg.id,
+            'chat_id': chat_id,
+            'sender_id': current_user.id,
+            'sender_name': current_user.display_name or current_user.username,
+            'message': file.filename,
+            'type': msg_type,
+            'file_url': msg.file_url,
+            'time': msg.created_at.strftime('%H:%M'),
+        }
+        socketio.emit('new_message', msg_data, room=f'chat_{chat_id}')
+        
+        return jsonify({'ok': True, 'message_id': msg.id, 'file_url': msg.file_url})
+    
+    @app.route('/chat/search')
+    @login_required
+    def chat_search():
+        """Search messages across all chats"""
+        q = request.args.get('q', '').strip()
+        if not q or len(q) < 2:
+            return jsonify({'results': []})
+        
+        # Search in chats where user is a member
+        user_chat_ids = db.session.query(ChatGroup.id).filter(
+            ChatGroup.members.any(User.id == current_user.id)
+        )
+        
+        results = ChatMessage.query.filter(
+            ChatMessage.chat_id.in_(user_chat_ids),
+            ChatMessage.message.ilike(f'%{q}%')
+        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
+        
+        return jsonify({
+            'results': [{
+                'id': m.id,
+                'chat_id': m.chat_id,
+                'chat_name': m.chat.name if m.chat else '',
+                'sender_name': m.sender.display_name if m.sender else '',
+                'message': m.message,
+                'type': m.message_type,
+                'file_url': m.file_url,
+                'time': m.created_at.strftime('%d-%m %H:%M'),
+            } for m in results]
+        })
+    
     # ============================================================
     # SOCKETIO EVENTS
     # ============================================================

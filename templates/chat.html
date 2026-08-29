@@ -7,8 +7,17 @@
     <div style="border-right:1px solid #e8ecf1;display:flex;flex-direction:column;background:#f8f9fc">
         <div style="padding:12px 16px;border-bottom:1px solid #e8ecf1;display:flex;justify-content:space-between;align-items:center">
             <h2 style="margin:0;font-size:16px">💬 {{ _('Chats') }}</h2>
-            <button onclick="showNewChatModal()" class="btn btn-sm btn-primary" style="font-size:11px">+ {{ _('New') }}</button>
+            <div style="display:flex;gap:4px">
+                <button onclick="toggleSearch()" class="btn btn-sm" style="background:#eee;font-size:11px">🔍</button>
+                <button onclick="showNewChatModal()" class="btn btn-sm btn-primary" style="font-size:11px">+ {{ _('New') }}</button>
+            </div>
         </div>
+        <!-- Search bar -->
+        <div id="searchBar" style="display:none;padding:8px 12px;border-bottom:1px solid #e8ecf1">
+            <input type="text" id="searchInput" placeholder="{{ _('Search messages...') }}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px" oninput="searchMessages(this.value)">
+        </div>
+        <!-- Search results -->
+        <div id="searchResults" style="display:none;flex:1;overflow-y:auto"></div>
         <div id="chatList" style="flex:1;overflow-y:auto">
             {% for chat in chats %}
             <div class="chat-item" data-id="{{ chat.id }}" onclick="openChat({{ chat.id }})" style="padding:10px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background 0.15s">
@@ -56,7 +65,11 @@
         
         <!-- Input -->
         <div id="chatInput" style="padding:12px 16px;border-top:1px solid #e8ecf1;display:none">
-            <form onsubmit="sendMessage(event)" style="display:flex;gap:8px">
+            <form onsubmit="sendMessage(event)" style="display:flex;gap:8px;align-items:center">
+                <label style="cursor:pointer;padding:8px;background:#f0f0f0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="{{ _('Attach file') }}">
+                    📎
+                    <input type="file" id="fileInput" style="display:none" onchange="uploadFile(this)" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip">
+                </label>
                 <input type="text" id="messageInput" placeholder="{{ _('Type a message...') }}" style="flex:1;padding:10px 14px;border:1px solid #ddd;border-radius:20px;font-size:14px;outline:none" autocomplete="off">
                 <button type="submit" class="btn btn-primary" style="border-radius:20px;padding:10px 20px">➤</button>
             </form>
@@ -185,12 +198,22 @@ function appendMessage(m) {
     const isMine = m.is_mine || m.sender_id === {{ current_user.id }};
     const div = document.createElement('div');
     div.style.cssText = `display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:4px`;
+    
+    let content = '';
+    if (m.type === 'image' && m.file_url) {
+        content = `<a href="${m.file_url}" target="_blank"><img src="${m.file_url}" style="max-width:250px;max-height:200px;border-radius:8px;cursor:pointer"></a>`;
+    } else if (m.type === 'file' && m.file_url) {
+        content = `<a href="${m.file_url}" target="_blank" style="color:${isMine ? 'white' : '#3498db'};text-decoration:none;display:flex;align-items:center;gap:6px">📎 ${m.message}</a>`;
+    } else {
+        content = m.message;
+    }
+    
     div.innerHTML = `
         <div style="max-width:70%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;
             background:${isMine ? '#3498db' : '#f0f0f0'};color:${isMine ? 'white' : '#333'};
             border-bottom-${isMine ? 'right' : 'left'}-radius:4px">
             ${!isMine ? `<div style="font-size:10px;color:#888;margin-bottom:2px">${m.sender_name}</div>` : ''}
-            <div>${m.message}</div>
+            <div>${content}</div>
             <div style="font-size:9px;color:${isMine ? 'rgba(255,255,255,0.6)' : '#aaa'};text-align:right;margin-top:4px">${m.time}</div>
         </div>
     `;
@@ -215,6 +238,77 @@ function sendMessage(e) {
     }).then(r => r.json()).then(d => {
         if (d.ok) input.value = '';
     });
+}
+
+// File upload
+function uploadFile(input) {
+    if (!input.files.length || !currentChatId) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch(`/chat/${currentChatId}/upload`, {
+        method: 'POST',
+        body: formData
+    }).then(r => r.json()).then(d => {
+        if (d.ok) input.value = '';
+    }).catch(err => {
+        alert('{{ _("Upload error") }}: ' + err.message);
+        input.value = '';
+    });
+}
+
+// Search
+function toggleSearch() {
+    const bar = document.getElementById('searchBar');
+    const results = document.getElementById('searchResults');
+    const list = document.getElementById('chatList');
+    if (bar.style.display === 'none') {
+        bar.style.display = 'block';
+        document.getElementById('searchInput').focus();
+    } else {
+        bar.style.display = 'none';
+        results.style.display = 'none';
+        list.style.display = 'block';
+    }
+}
+
+let searchTimeout = null;
+function searchMessages(q) {
+    clearTimeout(searchTimeout);
+    if (q.length < 2) {
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('chatList').style.display = 'block';
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        fetch(`/chat/search?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(d => {
+                const results = document.getElementById('searchResults');
+                const list = document.getElementById('chatList');
+                if (d.results.length > 0) {
+                    results.innerHTML = d.results.map(r => `
+                        <div onclick="openChat(${r.chat_id})" style="padding:8px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer">
+                            <div style="font-size:11px;color:#888">${r.chat_name} · ${r.sender_name} · ${r.time}</div>
+                            <div style="font-size:12px;margin-top:2px">${highlightText(r.message, q)}</div>
+                        </div>
+                    `).join('');
+                    results.style.display = 'block';
+                    list.style.display = 'none';
+                } else {
+                    results.innerHTML = '<div style="padding:20px;text-align:center;color:#999">{{ _("No results") }}</div>';
+                    results.style.display = 'block';
+                    list.style.display = 'none';
+                }
+            });
+    }, 300);
+}
+
+function highlightText(text, q) {
+    if (!q) return text;
+    const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark style="background:#fff3cd;padding:0 2px;border-radius:2px">$1</mark>');
 }
 
 // Typing indicator
