@@ -43,7 +43,11 @@
                     </label>
                 </td>
                 <td>
-                    <div style="display:flex;flex-wrap:wrap;gap:3px">
+                    <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">
+                        <label style="display:flex;align-items:center;gap:3px;font-size:10px;padding:2px 5px;background:#e3f2fd;border-radius:4px;cursor:pointer;font-weight:600">
+                            <input type="checkbox" onchange="toggleAllSections({{ u.id }}, this.checked)" style="width:10px;height:10px">
+                            {{ _('All') }}
+                        </label>
                         {% for s in sections %}
                         <label style="display:flex;align-items:center;gap:3px;font-size:10px;padding:2px 5px;background:{% if s.key in (u.allowed_sections|map(attribute='section_key')|list) %}#e8f5e9{% else %}#f5f5f5{% endif %};border-radius:4px;cursor:pointer">
                             <input type="checkbox" class="section-cb-{{ u.id }}" value="{{ s.key }}" {% if s.key in (u.allowed_sections|map(attribute='section_key')|list) %}checked{% endif %} style="width:10px;height:10px">
@@ -315,6 +319,13 @@ function filterMachines(sectionId) {
         } else {
             row.style.display = 'none';
         }
+    });
+}
+
+function toggleAllSections(userId, checked) {
+    document.querySelectorAll('.section-cb-' + userId).forEach(cb => {
+        cb.checked = checked;
+        cb.closest('label').style.background = checked ? '#e8f5e9' : '#f5f5f5';
     });
 }
 
