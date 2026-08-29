@@ -6821,342 +6821,255 @@ if __name__ == '__main__':
             print("=" * 50)
             print("Save these passwords! They are shown only once.\n")
     
-    # ============================================================
-    # CHAT ROUTES
-    # ============================================================
-    
-    @app.route('/chat')
-    @login_required
-    def chat_page():
-        """Main chat page"""
-        # Get all chats for current user
-        chats = ChatGroup.query.filter(
-            ChatGroup.members.any(User.id == current_user.id)
-        ).order_by(ChatGroup.created_at.desc()).all()
-        
-        # Get all users for creating new chats
-        all_users = User.query.filter(User.is_active_user == True, User.id != current_user.id).order_by(User.display_name).all()
-        
-        return render_template('chat.html', chats=chats, all_users=all_users)
-    
-    @app.route('/chat/new', methods=['POST'])
-    @login_required
-    def chat_new():
-        """Create new chat or get existing direct chat"""
-        data = request.get_json()
-        user_ids = data.get('user_ids', [])
-        name = data.get('name', '')
-        is_group = data.get('is_group', False)
-        
-        if not user_ids:
-            return jsonify({'error': 'No users selected'}), 400
-        
-        # For direct messages, check if chat already exists
-        if not is_group and len(user_ids) == 1:
-            other_id = user_ids[0]
-            existing = ChatGroup.query.filter(
-                ChatGroup.is_group == False,
-                ChatGroup.members.any(User.id == current_user.id),
-                ChatGroup.members.any(User.id == other_id)
-            ).first()
-            if existing:
-                return jsonify({'ok': True, 'chat_id': existing.id})
-        
-        # Create new chat
-        if not name:
-            members = User.query.filter(User.id.in_(user_ids + [current_user.id])).all()
-            name = ', '.join(m.display_name or m.username for m in members)
-        
-        chat = ChatGroup(name=name, is_group=is_group, created_by=current_user.id)
-        db.session.add(chat)
-        db.session.flush()
-        
-        # Add members
-        all_ids = set(user_ids + [current_user.id])
-        for uid in all_ids:
-            u = User.query.get(uid)
-            if u:
-                chat.members.append(u)
-        
-        db.session.commit()
-        return jsonify({'ok': True, 'chat_id': chat.id})
-    
-    @app.route('/chat/<int:chat_id>')
-    @login_required
-    def chat_detail(chat_id):
-        """Get chat messages"""
-        chat = ChatGroup.query.get_or_404(chat_id)
-        # Check membership
-        if current_user not in chat.members:
-            return jsonify({'error': 'Not a member'}), 403
-        
-        messages = ChatMessage.query.filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.asc()).limit(100).all()
-        
-        # Mark messages as read
-        ChatMessage.query.filter(
-            ChatMessage.chat_id == chat_id,
-            ChatMessage.sender_id != current_user.id,
-            ChatMessage.is_read == False
-        ).update({'is_read': True})
-        db.session.commit()
-        
-        return jsonify({
-            'chat': {'id': chat.id, 'name': chat.name, 'is_group': chat.is_group},
-            'members': [{'id': m.id, 'name': m.display_name or m.username} for m in chat.members],
-            'messages': [{
-                'id': m.id,
-                'sender_id': m.sender_id,
-                'sender_name': m.sender.display_name if m.sender else '',
-                'message': m.message,
-                'type': m.message_type,
-                'is_mine': m.sender_id == current_user.id,
-                'time': m.created_at.strftime('%H:%M'),
-                'date': m.created_at.strftime('%d-%m-%Y'),
-            } for m in messages]
-        })
-    
-    @app.route('/chat/<int:chat_id>/send', methods=['POST'])
-    @login_required
-    def chat_send(chat_id):
-        """Send message to chat"""
-        chat = ChatGroup.query.get_or_404(chat_id)
-        if current_user not in chat.members:
-            return jsonify({'error': 'Not a member'}), 403
-        
-        data = request.get_json()
-        message = data.get('message', '').strip()
-        if not message:
-            return jsonify({'error': 'Empty message'}), 400
-        
-        msg = ChatMessage(
-            chat_id=chat_id,
-            sender_id=current_user.id,
-            message=message,
-            message_type=data.get('type', 'text')
-        )
-        db.session.add(msg)
-        db.session.commit()
-        
-        # Emit via SocketIO
-        msg_data = {
-            'id': msg.id,
-            'chat_id': chat_id,
-            'sender_id': current_user.id,
-            'sender_name': current_user.display_name or current_user.username,
-            'message': message,
-            'type': msg.message_type,
-            'time': msg.created_at.strftime('%H:%M'),
-        }
-        socketio.emit('new_message', msg_data, room=f'chat_{chat_id}')
-        
-        # Send push notification to other members
-        for member in chat.members:
-            if member.id != current_user.id:
-                socketio.emit('notification', {
-                    'title': f'💬 {current_user.display_name or current_user.username}',
-                    'body': message[:100],
-                    'chat_id': chat_id,
-                }, room=f'user_{member.id}')
-        
-        return jsonify({'ok': True, 'message_id': msg.id})
-    
-    @app.route('/chat/unread')
-    @login_required
-    def chat_unread():
-        """Get unread message count"""
-        count = ChatMessage.query.filter(
-            ChatMessage.chat_id.in_(
-                db.session.query(ChatGroup.id).filter(
-                    ChatGroup.members.any(User.id == current_user.id)
-                )
-            ),
-            ChatMessage.sender_id != current_user.id,
-            ChatMessage.is_read == False
-        ).count()
-        return jsonify({'count': count})
-    
-    @app.route('/chat/<int:chat_id>/upload', methods=['POST'])
-    @login_required
-    def chat_upload(chat_id):
-        """Upload file/image to chat"""
-        chat = ChatGroup.query.get_or_404(chat_id)
-        if current_user not in chat.members:
-            return jsonify({'error': 'Not a member'}), 403
-        
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file'}), 400
-        
-        file = request.files['file']
-        if not file.filename:
-            return jsonify({'error': 'No file selected'}), 400
-        
-        filename = secure_filename(f"chat_{chat_id}_{file.filename}")
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
-        # Determine message type
-        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
-        if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'):
-            msg_type = 'image'
-        else:
-            msg_type = 'file'
-        
-        msg = ChatMessage(
-            chat_id=chat_id,
-            sender_id=current_user.id,
-            message=file.filename,
-            message_type=msg_type,
-            file_url=f'/static/uploads/{filename}'
-        )
-        db.session.add(msg)
-        db.session.commit()
-        
-        msg_data = {
-            'id': msg.id,
-            'chat_id': chat_id,
-            'sender_id': current_user.id,
-            'sender_name': current_user.display_name or current_user.username,
-            'message': file.filename,
-            'type': msg_type,
-            'file_url': msg.file_url,
-            'time': msg.created_at.strftime('%H:%M'),
-        }
-        socketio.emit('new_message', msg_data, room=f'chat_{chat_id}')
-        
-        return jsonify({'ok': True, 'message_id': msg.id, 'file_url': msg.file_url})
-    
-    @app.route('/chat/search')
-    @login_required
-    def chat_search():
-        """Search messages across all chats"""
-        q = request.args.get('q', '').strip()
-        if not q or len(q) < 2:
-            return jsonify({'results': []})
-        
-        # Search in chats where user is a member
-        user_chat_ids = db.session.query(ChatGroup.id).filter(
-            ChatGroup.members.any(User.id == current_user.id)
-        )
-        
-        results = ChatMessage.query.filter(
-            ChatMessage.chat_id.in_(user_chat_ids),
-            ChatMessage.message.ilike(f'%{q}%')
-        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
-        
-        return jsonify({
-            'results': [{
-                'id': m.id,
-                'chat_id': m.chat_id,
-                'chat_name': m.chat.name if m.chat else '',
-                'sender_name': m.sender.display_name if m.sender else '',
-                'message': m.message,
-                'type': m.message_type,
-                'file_url': m.file_url,
-                'time': m.created_at.strftime('%d-%m %H:%M'),
-            } for m in results]
-        })
-    
-    @app.route('/chat/message/<int:msg_id>/edit', methods=['POST'])
-    @login_required
-    def chat_message_edit(msg_id):
-        """Edit a chat message"""
-        msg = ChatMessage.query.get_or_404(msg_id)
-        if msg.sender_id != current_user.id:
-            return jsonify({'error': 'Not your message'}), 403
-        
-        data = request.get_json()
-        new_text = data.get('message', '').strip()
-        if not new_text:
-            return jsonify({'error': 'Empty message'}), 400
-        
-        msg.message = new_text
-        db.session.commit()
-        
-        socketio.emit('message_edited', {
-            'id': msg.id,
-            'chat_id': msg.chat_id,
-            'message': new_text,
-        }, room=f'chat_{msg.chat_id}')
-        
-        return jsonify({'ok': True})
-    
-    @app.route('/chat/message/<int:msg_id>/delete', methods=['POST'])
-    @login_required
-    def chat_message_delete(msg_id):
-        """Delete a chat message"""
-        msg = ChatMessage.query.get_or_404(msg_id)
-        if msg.sender_id != current_user.id and not current_user.has_role('admin'):
-            return jsonify({'error': 'Not authorized'}), 403
-        
-        chat_id = msg.chat_id
-        db.session.delete(msg)
-        db.session.commit()
-        
-        socketio.emit('message_deleted', {
-            'id': msg_id,
-            'chat_id': chat_id,
-        }, room=f'chat_{chat_id}')
-        
-        return jsonify({'ok': True})
-    
-    @app.route('/chat/online')
-    @login_required
-    def chat_online():
-        """Get online users (based on recent activity)"""
-        from datetime import datetime, timedelta
-        threshold = datetime.utcnow() - timedelta(minutes=5)
-        online_users = User.query.filter(
-            User.is_active_user == True,
-            User.last_login >= threshold
-        ).all() if hasattr(User, 'last_login') else []
-        
-        # Fallback: check recent activity
-        if not online_users:
-            recent = UserActivityLog.query.filter(
-                UserActivityLog.action == 'login',
-                UserActivityLog.created_at >= threshold
-            ).distinct(UserActivityLog.user_id).all()
-            online_ids = set(r.user_id for r in recent)
-            online_users = User.query.filter(User.id.in_(online_ids)).all() if online_ids else []
-        
-        return jsonify({
-            'online': [{'id': u.id, 'name': u.display_name or u.username} for u in online_users]
-        })
-    
-    # ============================================================
-    # SOCKETIO EVENTS (only if flask-socketio is installed)
-    # ============================================================
-    
-    if HAS_SOCKETIO:
-        @socketio.on('connect')
-        def handle_connect():
-            if current_user.is_authenticated:
-                join_room(f'user_{current_user.id}')
-                chats = ChatGroup.query.filter(ChatGroup.members.any(User.id == current_user.id)).all()
-                for chat in chats:
-                    join_room(f'chat_{chat.id}')
-                emit('connected', {'user_id': current_user.id})
-        
-        @socketio.on('join_chat')
-        def handle_join_chat(data):
-            chat_id = data.get('chat_id')
-            if chat_id:
-                join_room(f'chat_{chat_id}')
-        
-        @socketio.on('leave_chat')
-        def handle_leave_chat(data):
-            chat_id = data.get('chat_id')
-            if chat_id:
-                leave_room(f'chat_{chat_id}')
-        
-        @socketio.on('typing')
-        def handle_typing(data):
-            chat_id = data.get('chat_id')
-            if chat_id:
-                emit('user_typing', {
-                    'chat_id': chat_id,
-                    'user_id': current_user.id,
-                    'username': current_user.display_name or current_user.username,
-                }, room=f'chat_{chat_id}', include_self=False)
-    
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+# ============================================================
+# CHAT ROUTES (outside __main__ so they work with WSGI)
+# ============================================================
+
+@app.route('/chat')
+@login_required
+def chat_page():
+    """Main chat page"""
+    chats = ChatGroup.query.filter(
+        ChatGroup.members.any(User.id == current_user.id)
+    ).order_by(ChatGroup.created_at.desc()).all()
+    all_users = User.query.filter(User.is_active_user == True, User.id != current_user.id).order_by(User.display_name).all()
+    return render_template('chat.html', chats=chats, all_users=all_users)
+
+@app.route('/chat/new', methods=['POST'])
+@login_required
+def chat_new():
+    """Create new chat or get existing direct chat"""
+    data = request.get_json()
+    user_ids = data.get('user_ids', [])
+    name = data.get('name', '')
+    is_group = data.get('is_group', False)
+    if not user_ids:
+        return jsonify({'error': 'No users selected'}), 400
+    if not is_group and len(user_ids) == 1:
+        other_id = user_ids[0]
+        existing = ChatGroup.query.filter(
+            ChatGroup.is_group == False,
+            ChatGroup.members.any(User.id == current_user.id),
+            ChatGroup.members.any(User.id == other_id)
+        ).first()
+        if existing:
+            return jsonify({'ok': True, 'chat_id': existing.id})
+    if not name:
+        members = User.query.filter(User.id.in_(user_ids + [current_user.id])).all()
+        name = ', '.join(m.display_name or m.username for m in members)
+    chat = ChatGroup(name=name, is_group=is_group, created_by=current_user.id)
+    db.session.add(chat)
+    db.session.flush()
+    all_ids = set(user_ids + [current_user.id])
+    for uid in all_ids:
+        u = User.query.get(uid)
+        if u:
+            chat.members.append(u)
+    db.session.commit()
+    return jsonify({'ok': True, 'chat_id': chat.id})
+
+@app.route('/chat/<int:chat_id>')
+@login_required
+def chat_detail(chat_id):
+    """Get chat messages"""
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if current_user not in chat.members:
+        return jsonify({'error': 'Not a member'}), 403
+    messages = ChatMessage.query.filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.asc()).limit(100).all()
+    ChatMessage.query.filter(
+        ChatMessage.chat_id == chat_id,
+        ChatMessage.sender_id != current_user.id,
+        ChatMessage.is_read == False
+    ).update({'is_read': True})
+    db.session.commit()
+    return jsonify({
+        'chat': {'id': chat.id, 'name': chat.name, 'is_group': chat.is_group},
+        'members': [{'id': m.id, 'name': m.display_name or m.username} for m in chat.members],
+        'messages': [{
+            'id': m.id, 'sender_id': m.sender_id,
+            'sender_name': m.sender.display_name if m.sender else '',
+            'message': m.message, 'type': m.message_type,
+            'file_url': m.file_url,
+            'is_mine': m.sender_id == current_user.id,
+            'time': m.created_at.strftime('%H:%M'),
+            'date': m.created_at.strftime('%d-%m-%Y'),
+        } for m in messages]
+    })
+
+@app.route('/chat/<int:chat_id>/send', methods=['POST'])
+@login_required
+def chat_send(chat_id):
+    """Send message to chat"""
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if current_user not in chat.members:
+        return jsonify({'error': 'Not a member'}), 403
+    data = request.get_json()
+    message = data.get('message', '').strip()
+    if not message:
+        return jsonify({'error': 'Empty message'}), 400
+    msg = ChatMessage(chat_id=chat_id, sender_id=current_user.id, message=message, message_type=data.get('type', 'text'))
+    db.session.add(msg)
+    db.session.commit()
+    msg_data = {
+        'id': msg.id, 'chat_id': chat_id, 'sender_id': current_user.id,
+        'sender_name': current_user.display_name or current_user.username,
+        'message': message, 'type': msg.message_type,
+        'time': msg.created_at.strftime('%H:%M'),
+    }
+    socketio.emit('new_message', msg_data, room=f'chat_{chat_id}')
+    for member in chat.members:
+        if member.id != current_user.id:
+            socketio.emit('notification', {
+                'title': f'💬 {current_user.display_name or current_user.username}',
+                'body': message[:100], 'chat_id': chat_id,
+            }, room=f'user_{member.id}')
+    return jsonify({'ok': True, 'message_id': msg.id})
+
+@app.route('/chat/unread')
+@login_required
+def chat_unread():
+    """Get unread message count"""
+    count = ChatMessage.query.filter(
+        ChatMessage.chat_id.in_(db.session.query(ChatGroup.id).filter(ChatGroup.members.any(User.id == current_user.id))),
+        ChatMessage.sender_id != current_user.id,
+        ChatMessage.is_read == False
+    ).count()
+    return jsonify({'count': count})
+
+@app.route('/chat/<int:chat_id>/upload', methods=['POST'])
+@login_required
+def chat_upload(chat_id):
+    """Upload file/image to chat"""
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if current_user not in chat.members:
+        return jsonify({'error': 'Not a member'}), 403
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    filename = secure_filename(f"chat_{chat_id}_{file.filename}")
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    msg_type = 'image' if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp') else 'file'
+    msg = ChatMessage(chat_id=chat_id, sender_id=current_user.id, message=file.filename, message_type=msg_type, file_url=f'/static/uploads/{filename}')
+    db.session.add(msg)
+    db.session.commit()
+    msg_data = {
+        'id': msg.id, 'chat_id': chat_id, 'sender_id': current_user.id,
+        'sender_name': current_user.display_name or current_user.username,
+        'message': file.filename, 'type': msg_type, 'file_url': msg.file_url,
+        'time': msg.created_at.strftime('%H:%M'),
+    }
+    socketio.emit('new_message', msg_data, room=f'chat_{chat_id}')
+    return jsonify({'ok': True, 'message_id': msg.id, 'file_url': msg.file_url})
+
+@app.route('/chat/search')
+@login_required
+def chat_search():
+    """Search messages across all chats"""
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return jsonify({'results': []})
+    user_chat_ids = db.session.query(ChatGroup.id).filter(ChatGroup.members.any(User.id == current_user.id))
+    results = ChatMessage.query.filter(
+        ChatMessage.chat_id.in_(user_chat_ids),
+        ChatMessage.message.ilike(f'%{q}%')
+    ).order_by(ChatMessage.created_at.desc()).limit(50).all()
+    return jsonify({
+        'results': [{
+            'id': m.id, 'chat_id': m.chat_id,
+            'chat_name': m.chat.name if m.chat else '',
+            'sender_name': m.sender.display_name if m.sender else '',
+            'message': m.message, 'type': m.message_type,
+            'file_url': m.file_url,
+            'time': m.created_at.strftime('%d-%m %H:%M'),
+        } for m in results]
+    })
+
+@app.route('/chat/message/<int:msg_id>/edit', methods=['POST'])
+@login_required
+def chat_message_edit(msg_id):
+    """Edit a chat message"""
+    msg = ChatMessage.query.get_or_404(msg_id)
+    if msg.sender_id != current_user.id:
+        return jsonify({'error': 'Not your message'}), 403
+    data = request.get_json()
+    new_text = data.get('message', '').strip()
+    if not new_text:
+        return jsonify({'error': 'Empty message'}), 400
+    msg.message = new_text
+    db.session.commit()
+    socketio.emit('message_edited', {'id': msg.id, 'chat_id': msg.chat_id, 'message': new_text}, room=f'chat_{msg.chat_id}')
+    return jsonify({'ok': True})
+
+@app.route('/chat/message/<int:msg_id>/delete', methods=['POST'])
+@login_required
+def chat_message_delete(msg_id):
+    """Delete a chat message"""
+    msg = ChatMessage.query.get_or_404(msg_id)
+    if msg.sender_id != current_user.id and not current_user.has_role('admin'):
+        return jsonify({'error': 'Not authorized'}), 403
+    chat_id = msg.chat_id
+    db.session.delete(msg)
+    db.session.commit()
+    socketio.emit('message_deleted', {'id': msg_id, 'chat_id': chat_id}, room=f'chat_{chat_id}')
+    return jsonify({'ok': True})
+
+@app.route('/chat/online')
+@login_required
+def chat_online():
+    """Get online users"""
+    from datetime import timedelta
+    threshold = datetime.utcnow() - timedelta(minutes=5)
+    online_users = []
+    try:
+        recent = UserActivityLog.query.filter(
+            UserActivityLog.action == 'login',
+            UserActivityLog.created_at >= threshold
+        ).all()
+        online_ids = list(set(r.user_id for r in recent if r.user_id))
+        if online_ids:
+            online_users = User.query.filter(User.id.in_(online_ids)).all()
+    except Exception:
+        pass
+    return jsonify({'online': [{'id': u.id, 'name': u.display_name or u.username} for u in online_users]})
+
+# ============================================================
+# SOCKETIO EVENTS
+# ============================================================
+
+if HAS_SOCKETIO:
+    @socketio.on('connect')
+    def handle_connect():
+        if current_user.is_authenticated:
+            join_room(f'user_{current_user.id}')
+            chats = ChatGroup.query.filter(ChatGroup.members.any(User.id == current_user.id)).all()
+            for chat in chats:
+                join_room(f'chat_{chat.id}')
+            emit('connected', {'user_id': current_user.id})
+    
+    @socketio.on('join_chat')
+    def handle_join_chat(data):
+        chat_id = data.get('chat_id')
+        if chat_id:
+            join_room(f'chat_{chat_id}')
+    
+    @socketio.on('leave_chat')
+    def handle_leave_chat(data):
+        chat_id = data.get('chat_id')
+        if chat_id:
+            leave_room(f'chat_{chat_id}')
+    
+    @socketio.on('typing')
+    def handle_typing(data):
+        chat_id = data.get('chat_id')
+        if chat_id:
+            emit('user_typing', {
+                'chat_id': chat_id,
+                'user_id': current_user.id,
+                'username': current_user.display_name or current_user.username,
+            }, room=f'chat_{chat_id}', include_self=False)
