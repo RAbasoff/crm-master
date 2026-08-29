@@ -766,8 +766,35 @@ def settings():
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
     responsible = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     machines = Machine.query.order_by(Machine.name).all()
+    
+    # Fault statistics for settings page
+    faults_by_priority = {}
+    for p in ['low', 'normal', 'high', 'critical']:
+        faults_by_priority[p] = FaultReport.query.filter_by(priority=p).filter(
+            FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'waiting_parts', 'reopened'])
+        ).count()
+    
+    faults_by_status = {}
+    for s in ['open', 'accepted', 'in_progress', 'parts_ordered', 'waiting_parts', 'resolved', 'closed', 'reopened']:
+        faults_by_status[s] = FaultReport.query.filter_by(status=s).count()
+    
+    # Top machines with faults
+    top_machines_faults = []
+    for m in machines:
+        fault_count = FaultReport.query.filter_by(machine_id=m.id).count()
+        if fault_count > 0:
+            open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
+            critical_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
+            m.fault_count = fault_count
+            m.open_count = open_count
+            m.critical_count = critical_count
+            top_machines_faults.append(m)
+    top_machines_faults.sort(key=lambda x: x.fault_count, reverse=True)
+    
     return render_template('settings.html', users=users, sections=sections, groups=groups,
-        responsible=responsible, machines=machines)
+        responsible=responsible, machines=machines,
+        faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
+        top_machines_faults=top_machines_faults)
 
 @app.route('/settings/user/<int:user_id>/access', methods=['POST'])
 @login_required
@@ -3575,7 +3602,28 @@ def index():
     
     users = User.query.order_by(User.id).all() if current_user.has_role('admin') else []
     
-    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=datetime.utcnow())
+    # Dashboard statistics for admin/director
+    dashboard_stats = {}
+    if current_user.has_role('admin', 'director'):
+        dashboard_stats['low'] = FaultReport.query.filter_by(priority='low').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
+        dashboard_stats['normal'] = FaultReport.query.filter_by(priority='normal').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
+        dashboard_stats['high'] = FaultReport.query.filter_by(priority='high').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
+        dashboard_stats['critical'] = FaultReport.query.filter_by(priority='critical').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
+        
+        # Top machines with faults
+        all_machines = Machine.query.all()
+        top_machines = []
+        for m in all_machines:
+            fc = FaultReport.query.filter_by(machine_id=m.id).count()
+            if fc > 0:
+                m.fault_count = fc
+                m.open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
+                m.critical_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
+                top_machines.append(m)
+        top_machines.sort(key=lambda x: x.fault_count, reverse=True)
+        dashboard_stats['top_machines'] = top_machines
+    
+    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=datetime.utcnow(), dashboard_stats=dashboard_stats)
 
 # ============================================================
 # ROUTES — OPDRACHTEN (existing)

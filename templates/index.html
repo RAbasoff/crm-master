@@ -69,6 +69,58 @@
     </a>
 </div>
 
+<!-- Fault & Machine Statistics -->
+{% if current_user.has_role('admin', 'director') %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <!-- Faults by Priority -->
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0;font-size:14px">⚠️ {{ _('Faults by Priority') }}</h2>
+            <a href="/stats/full" style="font-size:11px;color:#5b9cf6;text-decoration:none">{{ _('Details') }} →</a>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#f0fff0;border-radius:8px">
+                <div style="font-size:20px;font-weight:bold;color:#27ae60">{{ dashboard_stats.low }}</div>
+                <div style="font-size:10px;color:#888">LOW</div>
+            </div>
+            <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#f0f7ff;border-radius:8px">
+                <div style="font-size:20px;font-weight:bold;color:#3498db">{{ dashboard_stats.normal }}</div>
+                <div style="font-size:10px;color:#888">NORMAL</div>
+            </div>
+            <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#fff9f0;border-radius:8px">
+                <div style="font-size:20px;font-weight:bold;color:#f39c12">{{ dashboard_stats.high }}</div>
+                <div style="font-size:10px;color:#888">HIGH</div>
+            </div>
+            <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#fff0f0;border-radius:8px">
+                <div style="font-size:20px;font-weight:bold;color:#e74c3c">{{ dashboard_stats.critical }}</div>
+                <div style="font-size:10px;color:#888">CRITICAL</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Machines -->
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0;font-size:14px">⚙️ {{ _('Top Machines') }}</h2>
+            <a href="/stats/full" style="font-size:11px;color:#5b9cf6;text-decoration:none">{{ _('Details') }} →</a>
+        </div>
+        {% if dashboard_stats.top_machines %}
+        <div style="display:flex;flex-direction:column;gap:6px">
+            {% for m in dashboard_stats.top_machines[:5] %}
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#f8f9fc;border-radius:6px">
+                <a href="/machines/{{ m.id }}" style="flex:1;font-size:12px;font-weight:600;color:#333;text-decoration:none">{{ m.name }}</a>
+                <span style="font-size:11px;color:#888">{{ m.section.name if m.section else '' }}</span>
+                <span style="font-size:12px;font-weight:bold;color:{% if m.critical_count > 0 %}#e74c3c{% elif m.open_count > 0 %}#f39c12{% else %}#27ae60{% endif %}">{{ m.fault_count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:20px;color:#999;font-size:12px">{{ _('No faults') }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Two column layout -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
     
