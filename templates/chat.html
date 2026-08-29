@@ -22,8 +22,9 @@
             {% for chat in chats %}
             <div class="chat-item" data-id="{{ chat.id }}" onclick="openChat({{ chat.id }})" style="padding:10px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background 0.15s">
                 <div style="display:flex;align-items:center;gap:10px">
-                    <div style="width:36px;height:36px;border-radius:50%;background:{% if chat.is_group %}#9b59b6{% else %}#3498db{% endif %};display:flex;align-items:center;justify-content:center;color:white;font-size:14px;flex-shrink:0">
+                    <div style="width:36px;height:36px;border-radius:50%;background:{% if chat.is_group %}#9b59b6{% else %}#3498db{% endif %};display:flex;align-items:center;justify-content:center;color:white;font-size:14px;flex-shrink:0;position:relative">
                         {% if chat.is_group %}👥{% else %}👤{% endif %}
+                        <div class="online-dot" style="position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#95a5a6;border:2px solid #f8f9fc"></div>
                     </div>
                     <div style="flex:1;min-width:0">
                         <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ chat.name }}</div>
@@ -197,6 +198,7 @@ function appendMessage(m) {
     const container = document.getElementById('messagesContainer');
     const isMine = m.is_mine || m.sender_id === {{ current_user.id }};
     const div = document.createElement('div');
+    div.id = 'msg-' + m.id;
     div.style.cssText = `display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:4px`;
     
     let content = '';
@@ -205,8 +207,11 @@ function appendMessage(m) {
     } else if (m.type === 'file' && m.file_url) {
         content = `<a href="${m.file_url}" target="_blank" style="color:${isMine ? 'white' : '#3498db'};text-decoration:none;display:flex;align-items:center;gap:6px">📎 ${m.message}</a>`;
     } else {
-        content = m.message;
+        content = `<span class="msg-text">${m.message}</span>`;
     }
+    
+    const editBtn = isMine ? `<span style="cursor:pointer;margin-left:6px;opacity:0.5;font-size:11px" onclick="editMessage(${m.id})" title="Edit">✏️</span>` : '';
+    const deleteBtn = isMine ? `<span style="cursor:pointer;margin-left:4px;opacity:0.5;font-size:11px" onclick="deleteMessage(${m.id})" title="Delete">🗑</span>` : '';
     
     div.innerHTML = `
         <div style="max-width:70%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;
@@ -214,7 +219,9 @@ function appendMessage(m) {
             border-bottom-${isMine ? 'right' : 'left'}-radius:4px">
             ${!isMine ? `<div style="font-size:10px;color:#888;margin-bottom:2px">${m.sender_name}</div>` : ''}
             <div>${content}</div>
-            <div style="font-size:9px;color:${isMine ? 'rgba(255,255,255,0.6)' : '#aaa'};text-align:right;margin-top:4px">${m.time}</div>
+            <div style="font-size:9px;color:${isMine ? 'rgba(255,255,255,0.6)' : '#aaa'};text-align:right;margin-top:4px;display:flex;justify-content:flex-end;align-items:center">
+                ${m.time}${editBtn}${deleteBtn}
+            </div>
         </div>
     `;
     container.appendChild(div);
@@ -255,6 +262,69 @@ function uploadFile(input) {
     }).catch(err => {
         alert('{{ _("Upload error") }}: ' + err.message);
         input.value = '';
+    });
+}
+
+// Edit message
+function editMessage(msgId) {
+    const msgEl = document.getElementById('msg-' + msgId);
+    if (!msgEl) return;
+    const textEl = msgEl.querySelector('.msg-text');
+    if (!textEl) return;
+    const oldText = textEl.textContent;
+    const newText = prompt('{{ _("Edit message") }}:', oldText);
+    if (!newText || newText === oldText) return;
+    
+    fetch(`/chat/message/${msgId}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: newText})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) textEl.textContent = newText;
+    });
+}
+
+// Delete message
+function deleteMessage(msgId) {
+    if (!confirm('{{ _("Delete this message?") }}')) return;
+    fetch(`/chat/message/${msgId}/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    }).then(r => r.json()).then(d => {
+        if (d.ok) {
+            const msgEl = document.getElementById('msg-' + msgId);
+            if (msgEl) msgEl.remove();
+        }
+    });
+}
+
+// Online status
+function loadOnlineUsers() {
+    fetch('/chat/online').then(r => r.json()).then(d => {
+        // Update online indicators in chat list
+        document.querySelectorAll('.chat-item').forEach(item => {
+            const memberId = item.dataset.memberId;
+            if (memberId && d.online.some(u => u.id == memberId)) {
+                const dot = item.querySelector('.online-dot');
+                if (dot) dot.style.background = '#27ae60';
+            }
+        });
+    });
+}
+
+// SocketIO handlers for edit/delete
+if (socket) {
+    socket.on('message_edited', (data) => {
+        const msgEl = document.getElementById('msg-' + data.id);
+        if (msgEl) {
+            const textEl = msgEl.querySelector('.msg-text');
+            if (textEl) textEl.textContent = data.message;
+        }
+    });
+    
+    socket.on('message_deleted', (data) => {
+        const msgEl = document.getElementById('msg-' + data.id);
+        if (msgEl) msgEl.remove();
     });
 }
 

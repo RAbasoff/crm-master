@@ -45,9 +45,22 @@ os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
 csrf = CSRFProtect(app)
 db.init_app(app)
 from flask_login import LoginManager
-from flask_socketio import SocketIO, emit, join_room, leave_room
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+# SocketIO is optional - works without it (no real-time chat)
+try:
+    from flask_socketio import SocketIO, emit, join_room, leave_room
+    socketio = SocketIO(app, cors_allowed_origins="*")
+    HAS_SOCKETIO = True
+except ImportError:
+    HAS_SOCKETIO = False
+    # Create stub socketio object
+    class _StubSocketIO:
+        def emit(self, *a, **kw): pass
+        def on(self, *a, **kw):
+            def decorator(f): return f
+            return decorator
+    socketio = _StubSocketIO()
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -7043,40 +7056,107 @@ if __name__ == '__main__':
             } for m in results]
         })
     
+    @app.route('/chat/message/<int:msg_id>/edit', methods=['POST'])
+    @login_required
+    def chat_message_edit(msg_id):
+        """Edit a chat message"""
+        msg = ChatMessage.query.get_or_404(msg_id)
+        if msg.sender_id != current_user.id:
+            return jsonify({'error': 'Not your message'}), 403
+        
+        data = request.get_json()
+        new_text = data.get('message', '').strip()
+        if not new_text:
+            return jsonify({'error': 'Empty message'}), 400
+        
+        msg.message = new_text
+        db.session.commit()
+        
+        socketio.emit('message_edited', {
+            'id': msg.id,
+            'chat_id': msg.chat_id,
+            'message': new_text,
+        }, room=f'chat_{msg.chat_id}')
+        
+        return jsonify({'ok': True})
+    
+    @app.route('/chat/message/<int:msg_id>/delete', methods=['POST'])
+    @login_required
+    def chat_message_delete(msg_id):
+        """Delete a chat message"""
+        msg = ChatMessage.query.get_or_404(msg_id)
+        if msg.sender_id != current_user.id and not current_user.has_role('admin'):
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        chat_id = msg.chat_id
+        db.session.delete(msg)
+        db.session.commit()
+        
+        socketio.emit('message_deleted', {
+            'id': msg_id,
+            'chat_id': chat_id,
+        }, room=f'chat_{chat_id}')
+        
+        return jsonify({'ok': True})
+    
+    @app.route('/chat/online')
+    @login_required
+    def chat_online():
+        """Get online users (based on recent activity)"""
+        from datetime import datetime, timedelta
+        threshold = datetime.utcnow() - timedelta(minutes=5)
+        online_users = User.query.filter(
+            User.is_active_user == True,
+            User.last_login >= threshold
+        ).all() if hasattr(User, 'last_login') else []
+        
+        # Fallback: check recent activity
+        if not online_users:
+            recent = UserActivityLog.query.filter(
+                UserActivityLog.action == 'login',
+                UserActivityLog.created_at >= threshold
+            ).distinct(UserActivityLog.user_id).all()
+            online_ids = set(r.user_id for r in recent)
+            online_users = User.query.filter(User.id.in_(online_ids)).all() if online_ids else []
+        
+        return jsonify({
+            'online': [{'id': u.id, 'name': u.display_name or u.username} for u in online_users]
+        })
+    
     # ============================================================
-    # SOCKETIO EVENTS
+    # SOCKETIO EVENTS (only if flask-socketio is installed)
     # ============================================================
     
-    @socketio.on('connect')
-    def handle_connect():
-        if current_user.is_authenticated:
-            join_room(f'user_{current_user.id}')
-            # Join all chat rooms
-            chats = ChatGroup.query.filter(ChatGroup.members.any(User.id == current_user.id)).all()
-            for chat in chats:
-                join_room(f'chat_{chat.id}')
-            emit('connected', {'user_id': current_user.id})
-    
-    @socketio.on('join_chat')
-    def handle_join_chat(data):
-        chat_id = data.get('chat_id')
-        if chat_id:
-            join_room(f'chat_{chat_id}')
-    
-    @socketio.on('leave_chat')
-    def handle_leave_chat(data):
-        chat_id = data.get('chat_id')
-        if chat_id:
-            leave_room(f'chat_{chat_id}')
-    
-    @socketio.on('typing')
-    def handle_typing(data):
-        chat_id = data.get('chat_id')
-        if chat_id:
-            emit('user_typing', {
-                'chat_id': chat_id,
-                'user_id': current_user.id,
-                'username': current_user.display_name or current_user.username,
-            }, room=f'chat_{chat_id}', include_self=False)
+    if HAS_SOCKETIO:
+        @socketio.on('connect')
+        def handle_connect():
+            if current_user.is_authenticated:
+                join_room(f'user_{current_user.id}')
+                chats = ChatGroup.query.filter(ChatGroup.members.any(User.id == current_user.id)).all()
+                for chat in chats:
+                    join_room(f'chat_{chat.id}')
+                emit('connected', {'user_id': current_user.id})
+        
+        @socketio.on('join_chat')
+        def handle_join_chat(data):
+            chat_id = data.get('chat_id')
+            if chat_id:
+                join_room(f'chat_{chat_id}')
+        
+        @socketio.on('leave_chat')
+        def handle_leave_chat(data):
+            chat_id = data.get('chat_id')
+            if chat_id:
+                leave_room(f'chat_{chat_id}')
+        
+        @socketio.on('typing')
+        def handle_typing(data):
+            chat_id = data.get('chat_id')
+            if chat_id:
+                emit('user_typing', {
+                    'chat_id': chat_id,
+                    'user_id': current_user.id,
+                    'username': current_user.display_name or current_user.username,
+                }, room=f'chat_{chat_id}', include_self=False)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
