@@ -21,6 +21,17 @@
     </div>
 </div>
 
+<!-- Legend -->
+<div style="display:flex;gap:16px;align-items:center;padding:8px 12px;margin-bottom:8px;font-size:11px;flex-wrap:wrap">
+    <span style="font-weight:600;color:#555">{{ _('Status') }}:</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#f0fff0,#e0f5e0);border:2px solid #27ae60;display:inline-block"></span> {{ _('OK') }}</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#fff9f0,#fff0d0);border:2px solid #f39c12;display:inline-block"></span> {{ _('Open faults') }}</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#fff0f0,#ffe0e0);border:2px solid #e74c3c;display:inline-block"></span> {{ _('Critical') }}</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);border:2px solid #95a5a6;display:inline-block"></span> {{ _('Offline') }}</span>
+    <span style="color:#888;margin-left:8px">|</span>
+    <span style="color:#888">{{ _('Click machine for details') }}</span>
+</div>
+
 <div class="card" style="padding:0;overflow:hidden;position:relative">
     <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;max-height:70vh">
         <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.2s">
@@ -48,7 +59,8 @@
                  onclick="event.stopPropagation();showMachineInfo({{ m.id }}, '{{ m.name }}', '{{ m.status }}', '{{ m.machine_type or '' }}', '{{ m.section.name if m.section else '' }}')"
                  title="{{ m.name }}{% if m.machine_type %} ({{ m.machine_type }}){% endif %}"
                  data-id="{{ m.id }}"
-                 data-section="{{ m.section_id or '' }}">
+                 data-section="{{ m.section_id or '' }}"
+                 data-fault-status="loading">
                 <div class="machine-icon">
                     <svg width="{{ ((m.marker_size or 50) * 0.6)|int }}" height="{{ ((m.marker_size or 50) * 0.6)|int }}" viewBox="0 0 24 24" fill="none" stroke="{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         {% if m.machine_type and 'CNC' in m.machine_type|upper %}
@@ -251,6 +263,47 @@
     .machine-marker.status-maintenance .machine-icon { border-color: #f39c12; background: linear-gradient(135deg, #fff9f0, #fff0d0); }
     .machine-marker.status-offline .machine-icon { border-color: #95a5a6; background: linear-gradient(135deg, #f5f5f5, #e0e0e0); }
     .machine-marker:not(.status-broken):not(.status-maintenance):not(.status-offline) .machine-icon { background: linear-gradient(135deg, #ffffff, #f0f7ff); }
+    
+    /* Fault-based color indicators */
+    .machine-marker[data-fault-status="critical"] .machine-icon {
+        border-color: #e74c3c !important;
+        background: linear-gradient(135deg, #fff0f0, #ffe0e0) !important;
+        box-shadow: 0 0 0 3px rgba(231,76,60,0.3), 0 3px 12px rgba(231,76,60,0.2) !important;
+    }
+    .machine-marker[data-fault-status="critical"] .machine-icon svg { stroke: #e74c3c !important; }
+    
+    .machine-marker[data-fault-status="open"] .machine-icon {
+        border-color: #f39c12 !important;
+        background: linear-gradient(135deg, #fff9f0, #fff0d0) !important;
+        box-shadow: 0 0 0 3px rgba(243,156,18,0.3), 0 3px 12px rgba(243,156,18,0.2) !important;
+    }
+    .machine-marker[data-fault-status="open"] .machine-icon svg { stroke: #f39c12 !important; }
+    
+    .machine-marker[data-fault-status="ok"] .machine-icon {
+        border-color: #27ae60 !important;
+        background: linear-gradient(135deg, #f0fff0, #e0f5e0) !important;
+    }
+    .machine-marker[data-fault-status="ok"] .machine-icon svg { stroke: #27ae60 !important; }
+    
+    /* Fault status badge */
+    .machine-marker .fault-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        min-width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        font-size: 9px;
+        font-weight: bold;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 3px;
+        z-index: 5;
+    }
+    .machine-marker .fault-badge.badge-critical { background: #e74c3c; }
+    .machine-marker .fault-badge.badge-open { background: #f39c12; }
     .machine-marker.selected .machine-icon {
         box-shadow: 0 0 0 4px rgba(52,152,219,0.4), 0 4px 16px rgba(0,0,0,0.25);
     }
@@ -577,6 +630,45 @@ function closeMachineInfo() {
         selectedMachine = null;
     }
 }
+
+// Load fault status for all machines on the map
+function loadMachineFaultStatus() {
+    const markers = document.querySelectorAll('.machine-marker[data-id]');
+    markers.forEach(marker => {
+        const id = marker.dataset.id;
+        fetch(`/api/machine/${id}/faults`)
+            .then(r => r.json())
+            .then(d => {
+                // Remove old badge
+                const oldBadge = marker.querySelector('.fault-badge');
+                if (oldBadge) oldBadge.remove();
+                
+                if (d.critical > 0) {
+                    marker.dataset.faultStatus = 'critical';
+                    const badge = document.createElement('div');
+                    badge.className = 'fault-badge badge-critical';
+                    badge.textContent = d.critical;
+                    badge.title = d.critical + ' critical faults';
+                    marker.appendChild(badge);
+                } else if (d.open > 0) {
+                    marker.dataset.faultStatus = 'open';
+                    const badge = document.createElement('div');
+                    badge.className = 'fault-badge badge-open';
+                    badge.textContent = d.open;
+                    badge.title = d.open + ' open faults';
+                    marker.appendChild(badge);
+                } else {
+                    marker.dataset.faultStatus = 'ok';
+                }
+            })
+            .catch(() => {
+                marker.dataset.faultStatus = 'ok';
+            });
+    });
+}
+
+// Load on page load
+loadMachineFaultStatus();
 
 // Close panels on click outside
 document.addEventListener('click', function(e) {
