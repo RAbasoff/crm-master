@@ -44,12 +44,36 @@
             <!-- Machines overlay -->
             {% for m in machines %}
             <div class="machine-marker status-{{ m.status }} shape-{{ m.marker_shape or 'circle' }}"
-                 style="left:{{ m.floor_x }}%;top:{{ m.floor_y }}%;width:{{ m.marker_size or 45 }}px;height:{{ m.marker_size or 45 }}px"
+                 style="left:{{ m.floor_x }}%;top:{{ m.floor_y }}%;width:{{ m.marker_size or 50 }}px;height:{{ m.marker_size or 50 }}px"
                  onclick="event.stopPropagation();showMachineInfo({{ m.id }}, '{{ m.name }}', '{{ m.status }}', '{{ m.machine_type or '' }}', '{{ m.section.name if m.section else '' }}')"
-                 title="{{ m.name }}"
+                 title="{{ m.name }}{% if m.machine_type %} ({{ m.machine_type }}){% endif %}"
                  data-id="{{ m.id }}"
                  data-section="{{ m.section_id or '' }}">
-                <div class="machine-icon" style="font-size:{{ ((m.marker_size or 45) * 0.45)|int }}px">⚙️</div>
+                <div class="machine-icon">
+                    <svg width="{{ ((m.marker_size or 50) * 0.6)|int }}" height="{{ ((m.marker_size or 50) * 0.6)|int }}" viewBox="0 0 24 24" fill="none" stroke="{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        {% if m.machine_type and 'CNC' in m.machine_type|upper %}
+                        <rect x="2" y="6" width="20" height="14" rx="2"/><line x1="6" y1="10" x2="18" y2="10"/><circle cx="8" cy="16" r="2"/><circle cx="16" cy="16" r="2"/><line x1="12" y1="2" x2="12" y2="6"/>
+                        {% elif m.machine_type and ('press' in m.machine_type|lower or 'прес' in m.machine_type|lower) %}
+                        <rect x="4" y="2" width="16" height="8" rx="1"/><rect x="6" y="12" width="12" height="10" rx="1"/><line x1="12" y1="10" x2="12" y2="12"/><line x1="8" y1="22" x2="16" y2="22"/>
+                        {% elif m.machine_type and ('weld' in m.machine_type|lower or 'свар' in m.machine_type|lower) %}
+                        <path d="M4 20L12 4L20 20"/><line x1="8" y1="14" x2="16" y2="14"/><circle cx="12" cy="4" r="2" fill="{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#f39c12{% endif %}"/>
+                        {% elif m.machine_type and ('conveyor' in m.machine_type|lower or 'конвей' in m.machine_type|lower or 'лент' in m.machine_type|lower) %}
+                        <circle cx="5" cy="18" r="4"/><circle cx="19" cy="18" r="4"/><line x1="5" y1="14" x2="19" y2="14"/><line x1="5" y1="22" x2="19" y2="22"/><line x1="12" y1="6" x2="12" y2="14"/>
+                        {% elif m.machine_type and ('drill' in m.machine_type|lower or 'сверл' in m.machine_type|lower) %}
+                        <circle cx="12" cy="8" r="6"/><line x1="12" y1="14" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/><line x1="12" y1="2" x2="12" y2="5"/>
+                        {% elif m.machine_type and ('lathe' in m.machine_type|lower or 'токар' in m.machine_type|lower) %}
+                        <rect x="2" y="12" width="20" height="8" rx="2"/><ellipse cx="8" cy="12" rx="4" ry="3"/><line x1="16" y1="10" x2="20" y2="6"/>
+                        {% elif m.machine_type and ('mill' in m.machine_type|lower or 'фрез' in m.machine_type|lower) %}
+                        <rect x="4" y="14" width="16" height="8" rx="1"/><line x1="12" y1="2" x2="12" y2="14"/><circle cx="12" cy="2" r="2"/><line x1="6" y1="14" x2="18" y2="14"/>
+                        {% elif m.machine_type and ('pack' in m.machine_type|lower or 'упаков' in m.machine_type|lower) %}
+                        <rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="12" y1="10" x2="12" y2="20"/>
+                        {% elif m.machine_type and ('robot' in m.machine_type|lower or 'робот' in m.machine_type|lower) %}
+                        <rect x="6" y="4" width="12" height="10" rx="2"/><circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="6" y1="18" x2="18" y2="18"/><line x1="6" y1="18" x2="4" y2="22"/><line x1="18" y1="18" x2="20" y2="22"/>
+                        {% else %}
+                        <circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="3"/>
+                        {% endif %}
+                    </svg>
+                </div>
                 <div class="machine-label">{{ m.name }}</div>
             </div>
             {% endfor %}
@@ -171,20 +195,21 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-        border: 3px solid #3498db;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+        border: 2.5px solid #3498db;
         transition: all 0.2s;
     }
     .machine-marker.shape-circle .machine-icon { border-radius: 50%; }
-    .machine-marker.shape-square .machine-icon { border-radius: 6px; }
+    .machine-marker.shape-square .machine-icon { border-radius: 8px; }
     .machine-marker.shape-hexagon .machine-icon { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
-    .machine-marker.shape-diamond .machine-icon { border-radius: 4px; transform: rotate(45deg); }
+    .machine-marker.shape-diamond .machine-icon { border-radius: 6px; transform: rotate(45deg); }
     .machine-marker.shape-diamond .machine-icon > * { transform: rotate(-45deg); }
-    .machine-marker.status-broken .machine-icon { border-color: #e74c3c; background: #fff5f5; }
-    .machine-marker.status-maintenance .machine-icon { border-color: #f39c12; background: #fff9f0; }
-    .machine-marker.status-offline .machine-icon { border-color: #95a5a6; background: #f5f5f5; }
+    .machine-marker.status-broken .machine-icon { border-color: #e74c3c; background: linear-gradient(135deg, #fff5f5, #ffe0e0); }
+    .machine-marker.status-maintenance .machine-icon { border-color: #f39c12; background: linear-gradient(135deg, #fff9f0, #fff0d0); }
+    .machine-marker.status-offline .machine-icon { border-color: #95a5a6; background: linear-gradient(135deg, #f5f5f5, #e0e0e0); }
+    .machine-marker:not(.status-broken):not(.status-maintenance):not(.status-offline) .machine-icon { background: linear-gradient(135deg, #ffffff, #f0f7ff); }
     .machine-marker.selected .machine-icon {
-        box-shadow: 0 0 0 4px rgba(52,152,219,0.4), 0 4px 12px rgba(0,0,0,0.3);
+        box-shadow: 0 0 0 4px rgba(52,152,219,0.4), 0 4px 16px rgba(0,0,0,0.25);
     }
     .machine-marker .machine-label {
         position: absolute;

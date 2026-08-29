@@ -4,23 +4,51 @@
 <div class="page-header">
     <h1>📊 {{ _('Full Statistics') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <select onchange="location.href='/stats/full?period='+this.value" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
-            <option value="7" {% if period=='7' %}selected{% endif %}>7 {{ _('days') }}</option>
-            <option value="30" {% if period=='30' %}selected{% endif %}>30 {{ _('days') }}</option>
-            <option value="90" {% if period=='90' %}selected{% endif %}>90 {{ _('days') }}</option>
-            <option value="365" {% if period=='365' %}selected{% endif %}>1 {{ _('year') }}</option>
+        <input type="date" id="dateFrom" value="{{ date_from }}" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+        <span style="line-height:32px">—</span>
+        <input type="date" id="dateTo" value="{{ date_to }}" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+        <button onclick="applyDates()" class="btn btn-sm btn-primary">{{ _('Apply') }}</button>
+        <select onchange="setPeriod(this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+            <option value="">{{ _('Period') }}</option>
+            <option value="7">7 {{ _('days') }}</option>
+            <option value="30">30 {{ _('days') }}</option>
+            <option value="90">90 {{ _('days') }}</option>
+            <option value="365">1 {{ _('year') }}</option>
         </select>
         <button onclick="window.print()" class="btn btn-sm" style="background:#2c3e50;color:white">🖨️ {{ _('Print') }}</button>
         <div style="position:relative;display:inline-block">
             <button onclick="toggleExportMenu()" class="btn btn-sm btn-primary">💾 {{ _('Export') }}</button>
             <div id="exportMenu" style="display:none;position:absolute;right:0;top:100%;background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:100;min-width:180px">
-                <a href="/stats/full/export?format=pdf&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📕 PDF</a>
-                <a href="/stats/full/export?format=excel&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📗 Excel (.xlsx)</a>
-                <a href="/stats/full/export?format=word&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📘 Word (.docx)</a>
-                <a href="/stats/full/export?format=txt&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📝 TXT</a>
-                <a href="/stats/full/export?format=csv&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px">📄 CSV</a>
+                <a href="#" onclick="exportStats('pdf')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📕 PDF</a>
+                <a href="#" onclick="exportStats('excel')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📗 Excel (.xlsx)</a>
+                <a href="#" onclick="exportStats('word')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📘 Word (.docx)</a>
+                <a href="#" onclick="exportStats('txt')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📝 TXT</a>
+                <a href="#" onclick="exportStats('csv')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px">📄 CSV</a>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- CHARTS -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+        <h2 style="font-size:14px;margin-bottom:12px">⚠️ {{ _('Faults by Priority') }}</h2>
+        <canvas id="chartPriority" height="200"></canvas>
+    </div>
+    <div class="card">
+        <h2 style="font-size:14px;margin-bottom:12px">📈 {{ _('Faults by Status') }}</h2>
+        <canvas id="chartStatus" height="200"></canvas>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+        <h2 style="font-size:14px;margin-bottom:12px">⚙️ {{ _('Top Machines') }}</h2>
+        <canvas id="chartMachines" height="200"></canvas>
+    </div>
+    <div class="card">
+        <h2 style="font-size:14px;margin-bottom:12px">📦 {{ _('Warehouse') }}</h2>
+        <canvas id="chartWarehouse" height="200"></canvas>
     </div>
 </div>
 
@@ -29,30 +57,10 @@
     <h2>⚠️ {{ _('Fault Reports') }}</h2>
     <div class="stats">
         <div class="stat-card"><div class="number">{{ faults_total }}</div><div class="label">{{ _('Total') }}</div></div>
-        <div class="stat-card"><div class="number">{{ faults_period }}</div><div class="label">{{ _('Last') }} {{ period }} {{ _('days') }}</div></div>
+        <div class="stat-card"><div class="number">{{ faults_period }}</div><div class="label">{{ _('Period') }}</div></div>
         <div class="stat-card warn"><div class="number">{{ faults_open }}</div><div class="label">{{ _('Open') }}</div></div>
         <div class="stat-card ok"><div class="number">{{ faults_resolved }}</div><div class="label">{{ _('Resolved') }}</div></div>
         <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ faults_critical }}</div><div class="label">{{ _('Critical') }}</div></div>
-    </div>
-    <div class="detail-grid" style="margin-top:12px">
-        <div>
-            <h3 style="font-size:13px;margin-bottom:8px">{{ _('By Priority') }}</h3>
-            <div class="table-wrap"><table>
-                <tr><th>{{ _('Priority') }}</th><th>{{ _('Count') }}</th></tr>
-                {% for p, c in faults_by_priority %}
-                <tr><td><span class="badge badge-{{ p }}">{{ p }}</span></td><td>{{ c }}</td></tr>
-                {% endfor %}
-            </table></div>
-        </div>
-        <div>
-            <h3 style="font-size:13px;margin-bottom:8px">{{ _('Top Machines') }}</h3>
-            <div class="table-wrap"><table>
-                <tr><th>{{ _('Machine') }}</th><th>{{ _('Faults') }}</th></tr>
-                {% for name, cnt in top_machines %}
-                <tr><td>{{ name }}</td><td><strong>{{ cnt }}</strong></td></tr>
-                {% endfor %}
-            </table></div>
-        </div>
     </div>
 </div>
 
@@ -88,14 +96,6 @@
     </div>
 </div>
 
-<!-- USERS -->
-<div class="card" style="margin-bottom:16px">
-    <h2>👥 {{ _('Users') }}</h2>
-    <div class="stats">
-        <div class="stat-card"><div class="number">{{ users_total }}</div><div class="label">{{ _('Active Users') }}</div></div>
-    </div>
-</div>
-
 <!-- MACHINES REPORT -->
 <div class="card" style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
@@ -107,36 +107,15 @@
                 <option value="{{ s.id }}" {% if section_filter == s.id|string %}selected{% endif %}>{{ s.name }}</option>
                 {% endfor %}
             </select>
-            <select onchange="updateMachineFilter()" id="groupFilter" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
-                <option value="">{{ _('All Groups') }}</option>
-                {% for g in groups %}
-                <option value="{{ g.id }}" {% if group_filter == g.id|string %}selected{% endif %}>{{ g.name }}</option>
-                {% endfor %}
-            </select>
         </div>
     </div>
-    
-    <div class="stats" style="margin-bottom:12px">
-        <div class="stat-card"><div class="number">{{ machine_report|length }}</div><div class="label">{{ _('Machines') }}</div></div>
-        <div class="stat-card"><div class="number">{{ machine_report|sum(attribute='period_faults') }}</div><div class="label">{{ _('Faults Period') }}</div></div>
-        <div class="stat-card warn"><div class="number">{{ machine_report|sum(attribute='open_faults') }}</div><div class="label">{{ _('Open') }}</div></div>
-        <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ machine_report|sum(attribute='critical_faults') }}</div><div class="label">{{ _('Critical') }}</div></div>
-    </div>
-    
     <div class="table-wrap"><table>
         <tr>
-            <th>{{ _('Machine') }}</th>
-            <th>{{ _('Type') }}</th>
-            <th>{{ _('Serial') }}</th>
-            <th>{{ _('Section') }}</th>
-            <th>{{ _('Total Faults') }}</th>
-            <th>{{ _('Period') }}</th>
-            <th>{{ _('Open') }}</th>
-            <th>{{ _('Critical') }}</th>
-            <th>{{ _('Last Fault') }}</th>
+            <th>{{ _('Machine') }}</th><th>{{ _('Type') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Section') }}</th>
+            <th>{{ _('Total') }}</th><th>{{ _('Period') }}</th><th>{{ _('Open') }}</th><th>{{ _('Critical') }}</th><th>{{ _('Last') }}</th>
         </tr>
         {% for r in machine_report %}
-        <tr {% if r.open_faults > 0 %}style="background:#fff5f5"{% elif r.critical_faults > 0 %}style="background:#fff0f0"{% endif %}>
+        <tr {% if r.open_faults > 0 %}style="background:#fff5f5"{% endif %}>
             <td><a href="/machines/{{ r.machine.id }}" style="color:#3498db"><strong>{{ r.machine.name }}</strong></a></td>
             <td>{{ r.machine.machine_type or '—' }}</td>
             <td style="font-size:12px">{{ r.machine.serial_number or '—' }}</td>
@@ -151,7 +130,46 @@
     </table></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+// Date controls
+function applyDates() {
+    const from = document.getElementById('dateFrom').value;
+    const to = document.getElementById('dateTo').value;
+    if (from && to) {
+        location.href = `/stats/full?date_from=${from}&date_to=${to}`;
+    }
+}
+
+function setPeriod(days) {
+    if (!days) return;
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - parseInt(days));
+    document.getElementById('dateFrom').value = from.toISOString().split('T')[0];
+    document.getElementById('dateTo').value = to.toISOString().split('T')[0];
+    applyDates();
+}
+
+function updateMachineFilter() {
+    const section = document.getElementById('sectionFilter').value;
+    const from = document.getElementById('dateFrom').value;
+    const to = document.getElementById('dateTo').value;
+    let url = `/stats/full?date_from=${from}&date_to=${to}`;
+    if (section) url += '&section=' + section;
+    location.href = url;
+}
+
+function exportStats(format) {
+    const from = document.getElementById('dateFrom').value;
+    const to = document.getElementById('dateTo').value;
+    const section = document.getElementById('sectionFilter').value;
+    let url = `/stats/full/export?format=${format}&date_from=${from}&date_to=${to}`;
+    if (section) url += '&section=' + section;
+    window.location.href = url;
+    document.getElementById('exportMenu').style.display = 'none';
+}
+
 function toggleExportMenu() {
     const menu = document.getElementById('exportMenu');
     menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
@@ -162,21 +180,69 @@ document.addEventListener('click', function(e) {
     }
 });
 
-function updateMachineFilter() {
-    const section = document.getElementById('sectionFilter').value;
-    const group = document.getElementById('groupFilter').value;
-    const period = {{ period }};
-    let url = '/stats/full?period=' + period;
-    if (section) url += '&section=' + section;
-    if (group) url += '&group=' + group;
-    location.href = url;
-}
+// Charts
+const colors = ['#3498db', '#e74c3c', '#f39c12', '#27ae60', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+
+// Priority chart
+new Chart(document.getElementById('chartPriority'), {
+    type: 'doughnut',
+    data: {
+        labels: [{% for p, c in faults_by_priority %}'{{ p }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for p, c in faults_by_priority %}{{ c }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: colors.slice(0, {{ faults_by_priority|length }})
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// Status chart
+new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+        labels: [{% for s, c in faults_by_status %}'{{ s }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for s, c in faults_by_status %}{{ c }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: colors.slice(0, {{ faults_by_status|length }})
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// Top machines chart
+new Chart(document.getElementById('chartMachines'), {
+    type: 'bar',
+    data: {
+        labels: [{% for name, cnt in top_machines %}'{{ name[:15] }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: '{{ _("Faults") }}',
+            data: [{% for name, cnt in top_machines %}{{ cnt }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: '#3498db'
+        }]
+    },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+
+// Warehouse chart
+new Chart(document.getElementById('chartWarehouse'), {
+    type: 'bar',
+    data: {
+        labels: ['{{ _("Total") }}', '{{ _("Low Stock") }}', '{{ _("Incoming") }}', '{{ _("Outgoing") }}'],
+        datasets: [{
+            label: '{{ _("Items") }}',
+            data: [{{ warehouse_total }}, {{ warehouse_low }}, {{ warehouse_incoming }}, {{ warehouse_outgoing }}],
+            backgroundColor: ['#3498db', '#e74c3c', '#27ae60', '#f39c12']
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
 </script>
 
 <style>
 @media print {
     .page-header, .btn, .nav { display: none !important; }
     .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+    canvas { max-width: 100% !important; }
 }
 </style>
 {% endblock %}

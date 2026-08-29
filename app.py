@@ -2955,9 +2955,19 @@ def stats_faults():
 @role_required('admin', 'director')
 def stats_full():
     """Full statistics page with all metrics"""
-    period = request.args.get('period', '30')
-    days = int(period)
-    d_from = datetime.utcnow() - timedelta(days=days)
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    
+    if date_from and date_to:
+        d_from = datetime.strptime(date_from, '%Y-%m-%d')
+        d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+        period = (d_to - d_from).days
+    else:
+        period = int(request.args.get('period', '30'))
+        d_from = datetime.utcnow() - timedelta(days=period)
+        d_to = datetime.utcnow() + timedelta(days=1)
+        date_from = d_from.strftime('%Y-%m-%d')
+        date_to = (d_to - timedelta(days=1)).strftime('%Y-%m-%d')
     
     # Faults stats
     faults_total = FaultReport.query.count()
@@ -3032,7 +3042,7 @@ def stats_full():
     machine_report.sort(key=lambda x: x['period_faults'], reverse=True)
     
     return render_template('stats_full.html',
-        period=period, d_from=d_from,
+        period=period, d_from=d_from, date_from=date_from, date_to=date_to,
         faults_total=faults_total, faults_period=faults_period, faults_open=faults_open,
         faults_resolved=faults_resolved, faults_critical=faults_critical,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
@@ -3052,13 +3062,23 @@ def stats_full():
 def stats_export():
     """Export full statistics in various formats"""
     format_type = request.args.get('format', 'pdf')
-    period = request.args.get('period', '30')
-    days = int(period)
-    d_from = datetime.utcnow() - timedelta(days=days)
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    
+    if date_from and date_to:
+        d_from = datetime.strptime(date_from, '%Y-%m-%d')
+        d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+        period = (d_to - d_from).days
+    else:
+        period = int(request.args.get('period', '30'))
+        d_from = datetime.utcnow() - timedelta(days=period)
+        d_to = datetime.utcnow() + timedelta(days=1)
+        date_from = d_from.strftime('%Y-%m-%d')
+        date_to = (d_to - timedelta(days=1)).strftime('%Y-%m-%d')
     
     # Collect all stats
     stats = {
-        'period': f'Последние {days} дней',
+        'period': f'{date_from} — {date_to}',
         'date': datetime.utcnow().strftime('%d.%m.%Y %H:%M'),
         'faults': {
             'total': FaultReport.query.count(),
