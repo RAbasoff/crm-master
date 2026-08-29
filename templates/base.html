@@ -411,6 +411,7 @@
             {% if current_user.has_role('admin') %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('System') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
+            <a href="/settings" class="sb-item {% if request.endpoint == 'settings' %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Settings') }}</a>
             <a href="/users" class="sb-item {% if 'user' in (request.endpoint or '') and 'profile' not in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👥</span>{{ _('Users') }}</a>
             <a href="/qr/scan" class="sb-item {% if 'qr' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📷</span>QR</a>
             </div>

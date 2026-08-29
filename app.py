@@ -757,6 +757,57 @@ def map_editor():
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     return render_template('map_editor.html', sections=sections, machines=machines, verantwoordelijken=verantwoordelijken)
 
+@app.route('/settings')
+@login_required
+@role_required('admin')
+def settings():
+    users = User.query.order_by(User.display_name).all()
+    sections = FactorySection.query.order_by(FactorySection.name).all()
+    groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
+    return render_template('settings.html', users=users, sections=sections, groups=groups)
+
+@app.route('/settings/user/<int:user_id>/access', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_user_access(user_id):
+    u = User.query.get_or_404(user_id)
+    data = request.get_json()
+    # Update role
+    if 'role' in data:
+        u.role = data['role']
+    # Update section access
+    if 'sections' in data:
+        u.allowed_sections = []
+        for key in data['sections']:
+            db.session.add(UserSectionAccess(user_id=u.id, section_key=key))
+    # Update active status
+    if 'is_active' in data:
+        u.is_active_user = data['is_active']
+    db.session.commit()
+    log_audit('update', 'user_access', u.id, f'Updated access for {u.username}')
+    return jsonify({'ok': True})
+
+@app.route('/settings/section/<int:section_id>/update', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_section_update(section_id):
+    s = FactorySection.query.get_or_404(section_id)
+    data = request.get_json()
+    if 'name' in data:
+        s.name = data['name']
+    if 'color' in data:
+        s.color = data['color']
+    if 'floor_x' in data:
+        s.floor_x = data['floor_x']
+    if 'floor_y' in data:
+        s.floor_y = data['floor_y']
+    if 'width' in data:
+        s.width = data['width']
+    if 'height' in data:
+        s.height = data['height']
+    db.session.commit()
+    return jsonify({'ok': True})
+
 @app.route('/api/map/save-section', methods=['POST'])
 @login_required
 @role_required('admin')
