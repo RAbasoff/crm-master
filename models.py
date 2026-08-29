@@ -922,4 +922,37 @@ class MonthlyArchive(db.Model):
     section = db.Column(db.String(50), nullable=False)  # faults, orders, reports, etc.
     data_json = db.Column(db.Text, nullable=False)  # JSON snapshot
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ============================================================
+# CHAT MODELS
+# ============================================================
+
+chat_members = db.Table('chat_members',
+    db.Column('chat_id', db.Integer, db.ForeignKey('chat_group.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
+class ChatGroup(db.Model):
+    __tablename__ = 'chat_group'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    is_group = db.Column(db.Boolean, default=False)  # False = direct message, True = group
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    creator = db.relationship('User', foreign_keys=[created_by])
+    members = db.relationship('User', secondary=chat_members, backref='chat_groups')
+    messages = db.relationship('ChatMessage', backref='chat', lazy=True, cascade='all, delete-orphan',
+        order_by='ChatMessage.created_at.desc()')
+
+class ChatMessage(db.Model):
+    __tablename__ = 'chat_message'
+    id = db.Column(db.Integer, primary_key=True)
+    chat_id = db.Column(db.Integer, db.ForeignKey('chat_group.id'), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(20), default='text')  # text, image, file, system
+    file_url = db.Column(db.String(500))
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    sender = db.relationship('User', foreign_keys=[sender_id])
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))

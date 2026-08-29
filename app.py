@@ -25,7 +25,8 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     GroupPermission, ResponsibleAuth, ElectricalCabinet, CircuitBreaker, WeekendShift,
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
-                    UserActivityLog, SystemLog)
+                    UserActivityLog, SystemLog,
+                    ChatGroup, ChatMessage)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -44,6 +45,9 @@ os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
 csrf = CSRFProtect(app)
 db.init_app(app)
 from flask_login import LoginManager
+from flask_socketio import SocketIO, emit, join_room, leave_room
+
+socketio = SocketIO(app, cors_allowed_origins="*")
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -6803,5 +6807,195 @@ if __name__ == '__main__':
                 print(f"  {username} / {pw}")
             print("=" * 50)
             print("Save these passwords! They are shown only once.\n")
+    
+    # ============================================================
+    # CHAT ROUTES
+    # ============================================================
+    
+    @app.route('/chat')
+    @login_required
+    def chat_page():
+        """Main chat page"""
+        # Get all chats for current user
+        chats = ChatGroup.query.filter(
+            ChatGroup.members.any(User.id == current_user.id)
+        ).order_by(ChatGroup.created_at.desc()).all()
+        
+        # Get all users for creating new chats
+        all_users = User.query.filter(User.is_active_user == True, User.id != current_user.id).order_by(User.display_name).all()
+        
+        return render_template('chat.html', chats=chats, all_users=all_users)
+    
+    @app.route('/chat/new', methods=['POST'])
+    @login_required
+    def chat_new():
+        """Create new chat or get existing direct chat"""
+        data = request.get_json()
+        user_ids = data.get('user_ids', [])
+        name = data.get('name', '')
+        is_group = data.get('is_group', False)
+        
+        if not user_ids:
+            return jsonify({'error': 'No users selected'}), 400
+        
+        # For direct messages, check if chat already exists
+        if not is_group and len(user_ids) == 1:
+            other_id = user_ids[0]
+            existing = ChatGroup.query.filter(
+                ChatGroup.is_group == False,
+                ChatGroup.members.any(User.id == current_user.id),
+                ChatGroup.members.any(User.id == other_id)
+            ).first()
+            if existing:
+                return jsonify({'ok': True, 'chat_id': existing.id})
+        
+        # Create new chat
+        if not name:
+            members = User.query.filter(User.id.in_(user_ids + [current_user.id])).all()
+            name = ', '.join(m.display_name or m.username for m in members)
+        
+        chat = ChatGroup(name=name, is_group=is_group, created_by=current_user.id)
+        db.session.add(chat)
+        db.session.flush()
+        
+        # Add members
+        all_ids = set(user_ids + [current_user.id])
+        for uid in all_ids:
+            u = User.query.get(uid)
+            if u:
+                chat.members.append(u)
+        
+        db.session.commit()
+        return jsonify({'ok': True, 'chat_id': chat.id})
+    
+    @app.route('/chat/<int:chat_id>')
+    @login_required
+    def chat_detail(chat_id):
+        """Get chat messages"""
+        chat = ChatGroup.query.get_or_404(chat_id)
+        # Check membership
+        if current_user not in chat.members:
+            return jsonify({'error': 'Not a member'}), 403
+        
+        messages = ChatMessage.query.filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.asc()).limit(100).all()
+        
+        # Mark messages as read
+        ChatMessage.query.filter(
+            ChatMessage.chat_id == chat_id,
+            ChatMessage.sender_id != current_user.id,
+            ChatMessage.is_read == False
+        ).update({'is_read': True})
+        db.session.commit()
+        
+        return jsonify({
+            'chat': {'id': chat.id, 'name': chat.name, 'is_group': chat.is_group},
+            'members': [{'id': m.id, 'name': m.display_name or m.username} for m in chat.members],
+            'messages': [{
+                'id': m.id,
+                'sender_id': m.sender_id,
+                'sender_name': m.sender.display_name if m.sender else '',
+                'message': m.message,
+                'type': m.message_type,
+                'is_mine': m.sender_id == current_user.id,
+                'time': m.created_at.strftime('%H:%M'),
+                'date': m.created_at.strftime('%d-%m-%Y'),
+            } for m in messages]
+        })
+    
+    @app.route('/chat/<int:chat_id>/send', methods=['POST'])
+    @login_required
+    def chat_send(chat_id):
+        """Send message to chat"""
+        chat = ChatGroup.query.get_or_404(chat_id)
+        if current_user not in chat.members:
+            return jsonify({'error': 'Not a member'}), 403
+        
+        data = request.get_json()
+        message = data.get('message', '').strip()
+        if not message:
+            return jsonify({'error': 'Empty message'}), 400
+        
+        msg = ChatMessage(
+            chat_id=chat_id,
+            sender_id=current_user.id,
+            message=message,
+            message_type=data.get('type', 'text')
+        )
+        db.session.add(msg)
+        db.session.commit()
+        
+        # Emit via SocketIO
+        msg_data = {
+            'id': msg.id,
+            'chat_id': chat_id,
+            'sender_id': current_user.id,
+            'sender_name': current_user.display_name or current_user.username,
+            'message': message,
+            'type': msg.message_type,
+            'time': msg.created_at.strftime('%H:%M'),
+        }
+        socketio.emit('new_message', msg_data, room=f'chat_{chat_id}')
+        
+        # Send push notification to other members
+        for member in chat.members:
+            if member.id != current_user.id:
+                socketio.emit('notification', {
+                    'title': f'💬 {current_user.display_name or current_user.username}',
+                    'body': message[:100],
+                    'chat_id': chat_id,
+                }, room=f'user_{member.id}')
+        
+        return jsonify({'ok': True, 'message_id': msg.id})
+    
+    @app.route('/chat/unread')
+    @login_required
+    def chat_unread():
+        """Get unread message count"""
+        count = ChatMessage.query.filter(
+            ChatMessage.chat_id.in_(
+                db.session.query(ChatGroup.id).filter(
+                    ChatGroup.members.any(User.id == current_user.id)
+                )
+            ),
+            ChatMessage.sender_id != current_user.id,
+            ChatMessage.is_read == False
+        ).count()
+        return jsonify({'count': count})
+    
+    # ============================================================
+    # SOCKETIO EVENTS
+    # ============================================================
+    
+    @socketio.on('connect')
+    def handle_connect():
+        if current_user.is_authenticated:
+            join_room(f'user_{current_user.id}')
+            # Join all chat rooms
+            chats = ChatGroup.query.filter(ChatGroup.members.any(User.id == current_user.id)).all()
+            for chat in chats:
+                join_room(f'chat_{chat.id}')
+            emit('connected', {'user_id': current_user.id})
+    
+    @socketio.on('join_chat')
+    def handle_join_chat(data):
+        chat_id = data.get('chat_id')
+        if chat_id:
+            join_room(f'chat_{chat_id}')
+    
+    @socketio.on('leave_chat')
+    def handle_leave_chat(data):
+        chat_id = data.get('chat_id')
+        if chat_id:
+            leave_room(f'chat_{chat_id}')
+    
+    @socketio.on('typing')
+    def handle_typing(data):
+        chat_id = data.get('chat_id')
+        if chat_id:
+            emit('user_typing', {
+                'chat_id': chat_id,
+                'user_id': current_user.id,
+                'username': current_user.display_name or current_user.username,
+            }, room=f'chat_{chat_id}', include_self=False)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
