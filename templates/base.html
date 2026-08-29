@@ -403,7 +403,7 @@
             <div class="sb-group-items">
             <a href="/reports" class="sb-item {% if request.endpoint in ['reports', 'report_period', 'report_worker'] %}active{% endif %}"><span class="sb-icon">📊</span>{{ _('Reports') }}</a>
             <a href="/stats/faults" class="sb-item {% if 'stats' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📈</span>{{ _('Statistics') }}</a>
-            <a href="/work-report" class="sb-item {% if 'work_report' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>Work Report</a>
+            <a href="/work-report" class="sb-item {% if 'work_report' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Report') }}</a>
             <a href="/archive" class="sb-item {% if 'archive' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Archive') }}</a>
             </div>
             {% endif %}

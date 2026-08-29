@@ -33,7 +33,7 @@
             <div class="form-group">
                 <label>{{ _('Device') }}</label>
                 <div style="display:flex; gap:8px">
-                    <input type="text" name="apparaat" id="apparaat" value="{{ order.apparaat if order else '' }}" required placeholder="Smartphone, laptop..." style="flex:1">
+                    <input type="text" name="apparaat" id="apparaat" value="{{ order.apparaat if order else '' }}" required placeholder="{{ _('Smartphone, laptop...') }}" style="flex:1">
                     <button type="button" class="btn btn-sm" style="background:#f39c12; color:white" onclick="scanForField('apparaat')">📷</button>
                 </div>
             </div>

@@ -1,0 +1,54 @@
+Сессия 001 — 29.08.2026
+Проект: CRM Мастерская
+
+============================================================
+
+ВЫПОЛНЕННЫЕ ДЕЙСТВИЯ
+
+1. Добавлено логирование пользователей
+   - Модель UserActivityLog: входы, выходы, просмотры страниц, действия
+   - Модель SystemLog: ошибки, предупреждения, системные события
+   - Логирование входов/выходов в маршрутах login/logout
+   - Миграции для новых таблиц
+
+2. Создан модуль расширенных отчётов
+   - Страница: /reports/advanced
+   - Фильтрация по типу: активность, заявки, склад, ошибки, аудит
+   - Фильтрация по пользователю, отделу, периоду
+   - Экспорт в 4 формата: PDF, Excel (.xlsx), Word (.docx), CSV
+   - Кнопка печати
+
+3. Исправлены переводы
+   - Найдены непереведённые строки в шаблонах
+   - Исправлены: Work Report, placeholder'ы форм
+   - Добавлены переводы для новых модулей (отчёты, логирование, TWO)
+   - Скомпилирован .mo файл для русского языка
+
+4. Обновлены зависимости
+   - openpyxl==3.1.5 (Excel)
+   - python-docx==1.2.0 (Word)
+
+============================================================
+
+ИЗМЕНЕНИЯ В ФАЙЛАХ
+
+Файл                                        Действие    Описание
+models.py                                   Изменён     Добавлены UserActivityLog, SystemLog
+utils.py                                    Изменён     Добавлены log_user_activity, log_system
+app.py                                      Изменён     Логирование входов, маршрут /reports/advanced/export
+templates/reports_advanced.html             Создан      Шаблон расширенных отчётов
+templates/reports.html                      Изменён     Ссылки на расширенные отчёты
+templates/base.html                         Изменён     Исправлен перевод Work Report
+templates/contractor_form.html              Изменён     Исправлен placeholder
+templates/machine_form.html                 Изменён     Исправлен placeholder
+templates/order_form.html                   Изменён     Исправлен placeholder
+templates/schedule_user.html                Изменён     Исправлен placeholder
+templates/warehouse_form.html               Изменён     Исправлены placeholder'ы
+templates/worker_form.html                  Изменён     Исправлен placeholder
+translations/ru/LC_MESSAGES/messages.po     Изменён     Добавлены новые переводы
+translations/ru/LC_MESSAGES/messages.mo     Скомпилирован
+requirements.txt                            Изменён     Добавлены openpyxl, python-docx
+
+============================================================
+
+СТАТУС: Готово к деплою

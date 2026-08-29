@@ -832,6 +832,38 @@ class AuditLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     user = db.relationship('User', foreign_keys=[user_id])
 
+class UserActivityLog(db.Model):
+    __tablename__ = 'user_activity_log'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    username = db.Column(db.String(80))
+    action = db.Column(db.String(50), nullable=False, index=True)  # login, logout, page_view, create, update, delete, export
+    page = db.Column(db.String(200))  # URL or page name
+    method = db.Column(db.String(10))  # GET, POST, PUT, DELETE
+    entity_type = db.Column(db.String(50))
+    entity_id = db.Column(db.Integer)
+    details = db.Column(db.Text)
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(300))
+    session_id = db.Column(db.String(100))
+    duration_ms = db.Column(db.Integer)  # request duration in ms
+    status_code = db.Column(db.Integer)  # HTTP status code
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user = db.relationship('User', foreign_keys=[user_id])
+
+class SystemLog(db.Model):
+    __tablename__ = 'system_log'
+    id = db.Column(db.Integer, primary_key=True)
+    level = db.Column(db.String(10), nullable=False, index=True)  # INFO, WARNING, ERROR, CRITICAL
+    category = db.Column(db.String(50), index=True)  # auth, database, email, payment, system, performance
+    message = db.Column(db.Text, nullable=False)
+    details = db.Column(db.Text)  # JSON with extra data
+    source = db.Column(db.String(100))  # function name or module
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    ip_address = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user = db.relationship('User', foreign_keys=[user_id])
+
 class WorkReportEntry(db.Model):
     __tablename__ = 'work_report_entry'
     id = db.Column(db.Integer, primary_key=True)

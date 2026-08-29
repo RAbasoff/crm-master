@@ -1684,3 +1684,195 @@ msgstr "Выбрать все"
 
 msgid "Select machines first"
 msgstr "Сначала выберите станки"
+
+msgid "Work Report"
+msgstr "Отчёт о работе"
+
+msgid "Repair, maintenance..."
+msgstr "Ремонт, обслуживание..."
+
+msgid "Building A, Floor 2, Zone 3..."
+msgstr "Корпус А, Этаж 2, Зона 3..."
+
+msgid "Smartphone, laptop..."
+msgstr "Смартфон, ноутбук..."
+
+msgid "Morning Shift, Night Shift..."
+msgstr "Утренняя смена, Ночная смена..."
+
+msgid "Parts, consumables..."
+msgstr "Запчасти, расходники..."
+
+msgid "Shelf 1, rack 3..."
+msgstr "Полка 1, стеллаж 3..."
+
+msgid "Electronics, mechanics..."
+msgstr "Электроника, механика..."
+
+msgid "Warning Preview"
+msgstr "Предпросмотр предупреждения"
+
+msgid "Advanced Reports"
+msgstr "Расширенные отчёты"
+
+msgid "User Activity"
+msgstr "Активность пользователей"
+
+msgid "Fault Reports"
+msgstr "Заявки о неисправности"
+
+msgid "Errors & Warnings"
+msgstr "Ошибки и предупреждения"
+
+msgid "Audit Log"
+msgstr "Журнал аудита"
+
+msgid "Report Type"
+msgstr "Тип отчёта"
+
+msgid "All users"
+msgstr "Все пользователи"
+
+msgid "All sections"
+msgstr "Все отделы"
+
+msgid "Total Actions"
+msgstr "Всего действий"
+
+msgid "Active Users"
+msgstr "Активные пользователи"
+
+msgid "Incoming"
+msgstr "Приход"
+
+msgid "Outgoing"
+msgstr "Расход"
+
+msgid "Errors"
+msgstr "Ошибки"
+
+msgid "Warnings"
+msgstr "Предупреждения"
+
+msgid "Total Movements"
+msgstr "Всего перемещений"
+
+msgid "No data for selected period"
+msgstr "Нет данных за выбранный период"
+
+msgid "Basic Reports"
+msgstr "Базовые отчёты"
+
+msgid "Save"
+msgstr "Сохранить"
+
+msgid "Show"
+msgstr "Показать"
+
+msgid "Phone Directory"
+msgstr "Телефонный справочник"
+
+msgid "Internal Phone"
+msgstr "Внутренний номер"
+
+msgid "Scan text"
+msgstr "Сканировать текст"
+
+msgid "Capture & Read"
+msgstr "Захватить и прочитать"
+
+msgid "Recognizing text..."
+msgstr "Распознавание текста..."
+
+msgid "Recognized"
+msgstr "Распознано"
+
+msgid "Use as Name"
+msgstr "Использовать как имя"
+
+msgid "Use as Description"
+msgstr "Использовать как описание"
+
+msgid "Use as SPN"
+msgstr "Использовать как артикул"
+
+msgid "Camera error"
+msgstr "Ошибка камеры"
+
+msgid "No text recognized. Try again."
+msgstr "Текст не распознан. Попробуйте снова."
+
+msgid "Processing..."
+msgstr "Обработка..."
+
+msgid "Allow camera access in browser settings"
+msgstr "Разрешите доступ к камере в настройках браузера"
+
+msgid "No camera found on this device"
+msgstr "Камера не найдена на этом устройстве"
+
+msgid "Camera requires HTTPS"
+msgstr "Для камеры требуется HTTPS"
+
+msgid "Scan product"
+msgstr "Сканировать товар"
+
+msgid "Barcode"
+msgstr "Штрих-код"
+
+msgid "Fill in name and save"
+msgstr "Заполните имя и сохраните"
+
+msgid "Item exists"
+msgstr "Товар существует"
+
+msgid "Departments / Sections"
+msgstr "Отделы / Участки"
+
+msgid "Add Department"
+msgstr "Добавить отдел"
+
+msgid "Select Department"
+msgstr "Выбрать отдел"
+
+msgid "Description of work for this department..."
+msgstr "Описание работ для этого отдела..."
+
+msgid "Work list"
+msgstr "Список работ"
+
+msgid "Add work item"
+msgstr "Добавить работу"
+
+msgid "Work item..."
+msgstr "Работа..."
+
+msgid "Machines"
+msgstr "Станки"
+
+msgid "Add Machine"
+msgstr "Добавить станок"
+
+msgid "Select Machine"
+msgstr "Выбрать станок"
+
+msgid "Description of work for this machine..."
+msgstr "Описание работ для этого станка..."
+
+msgid "General description"
+msgstr "Общее описание"
+
+msgid "General description of the work order..."
+msgstr "Общее описание наряда на работу..."
+
+msgid "Additional work beyond the scope..."
+msgstr "Дополнительные работы за рамками..."
+
+msgid "General Checklist"
+msgstr "Общий чек-лист"
+
+msgid "Departments"
+msgstr "Отделы"
+
+msgid "sections"
+msgstr "отделы"

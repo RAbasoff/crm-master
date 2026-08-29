@@ -9,7 +9,7 @@
             <div class="form-group"><label>{{ _('Phone') }}</label><input type="text" name="telefoon" value="{{ worker.telefoon if worker else '' }}" placeholder="+31 6 ..."></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Specialization') }}</label><input type="text" name="specialisatie" value="{{ worker.specialisatie if worker else '' }}" placeholder="Electronics, mechanics..."></div>
+            <div class="form-group"><label>{{ _('Specialization') }}</label><input type="text" name="specialisatie" value="{{ worker.specialisatie if worker else '' }}" placeholder="{{ _('Electronics, mechanics...') }}"></div>
             <div class="form-group"><label>{{ _('Hourly Rate') }} (€/h)</label><input type="number" name="tarief_per_uur" value="{{ worker.tarief_per_uur if worker else 0 }}" step="5"></div>
         </div>
         <div class="form-group">

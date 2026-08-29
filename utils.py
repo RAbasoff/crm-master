@@ -3,7 +3,7 @@ from flask import flash, redirect, url_for, request
 from flask_login import current_user
 from flask_babel import gettext as _
 from datetime import datetime, timedelta
-from models import db, Notification, AuditLog, GroupPermission, Verantwoordelijke
+from models import db, Notification, AuditLog, GroupPermission, Verantwoordelijke, UserActivityLog, SystemLog
 import os
 from werkzeug.utils import secure_filename
 
@@ -91,6 +91,48 @@ def log_audit(action, entity_type=None, entity_id=None, details=None):
             user_id=current_user.id if current_user.is_authenticated else None,
             action=action, entity_type=entity_type, entity_id=entity_id,
             details=details, ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+def log_user_activity(action, page=None, method=None, entity_type=None, entity_id=None, details=None, duration_ms=None, status_code=None):
+    """Log user activity (page views, actions, etc.)"""
+    try:
+        from models import UserActivityLog
+        log = UserActivityLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            username=current_user.username if current_user.is_authenticated else None,
+            action=action,
+            page=page or (request.path if request else None),
+            method=method or (request.method if request else None),
+            entity_type=entity_type,
+            entity_id=entity_id,
+            details=details,
+            ip_address=request.remote_addr if request else None,
+            user_agent=str(request.user_agent)[:300] if request else None,
+            session_id=session.get('_id', '') if session else None,
+            duration_ms=duration_ms,
+            status_code=status_code
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+def log_system(level, category, message, details=None, source=None):
+    """Log system events (errors, warnings, info)"""
+    try:
+        from models import SystemLog
+        log = SystemLog(
+            level=level,
+            category=category,
+            message=message,
+            details=details,
+            source=source,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            ip_address=request.remote_addr if request else None
         )
         db.session.add(log)
         db.session.commit()
@@ -239,6 +281,34 @@ def run_migrations():
             sort_order INTEGER DEFAULT 0
         )"""),
         ("two_checklist_item.assignment_id", "ALTER TABLE two_checklist_item ADD COLUMN assignment_id INTEGER REFERENCES two_assignment(id)"),
+        ("user_activity_log", """CREATE TABLE IF NOT EXISTS user_activity_log (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER REFERENCES user(id),
+            username VARCHAR(80),
+            action VARCHAR(50) NOT NULL,
+            page VARCHAR(200),
+            method VARCHAR(10),
+            entity_type VARCHAR(50),
+            entity_id INTEGER,
+            details TEXT,
+            ip_address VARCHAR(50),
+            user_agent VARCHAR(300),
+            session_id VARCHAR(100),
+            duration_ms INTEGER,
+            status_code INTEGER,
+            created_at DATETIME
+        )"""),
+        ("system_log", """CREATE TABLE IF NOT EXISTS system_log (
+            id INTEGER PRIMARY KEY,
+            level VARCHAR(10) NOT NULL,
+            category VARCHAR(50),
+            message TEXT NOT NULL,
+            details TEXT,
+            source VARCHAR(100),
+            user_id INTEGER REFERENCES user(id),
+            ip_address VARCHAR(50),
+            created_at DATETIME
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

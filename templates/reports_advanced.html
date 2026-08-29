@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Advanced Reports') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Advanced Reports') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/reports" class="btn btn-sm" style="background:#eee">{{ _('Basic Reports') }}</a>
+        <button onclick="window.print()" class="btn btn-sm" style="background:#2c3e50;color:white">🖨️ {{ _('Print') }}</button>
+        <div style="position:relative;display:inline-block">
+            <button onclick="toggleExportMenu()" class="btn btn-sm btn-primary">💾 {{ _('Save') }}</button>
+            <div id="exportMenu" style="display:none;position:absolute;right:0;top:100%;background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:100;min-width:180px">
+                <a href="#" onclick="exportReport('pdf')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📕 PDF</a>
+                <a href="#" onclick="exportReport('excel')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📗 Excel (.xlsx)</a>
+                <a href="#" onclick="exportReport('word')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📘 Word (.docx)</a>
+                <a href="#" onclick="exportReport('csv')" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📄 CSV</a>
+                <a href="#" onclick="printReport()" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px">🖨️ {{ _('Print') }}</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTERS -->
+<div class="card" style="margin-bottom:16px">
+    <form method="GET" action="/reports/advanced" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#888">{{ _('Report Type') }}</label>
+            <select name="type" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+                <option value="activity" {% if report_type=='activity' %}selected{% endif %}>👤 {{ _('User Activity') }}</option>
+                <option value="faults" {% if report_type=='faults' %}selected{% endif %}>⚠️ {{ _('Fault Reports') }}</option>
+                <option value="warehouse" {% if report_type=='warehouse' %}selected{% endif %}>📦 {{ _('Warehouse') }}</option>
+                <option value="errors" {% if report_type=='errors' %}selected{% endif %}>❌ {{ _('Errors & Warnings') }}</option>
+                <option value="users" {% if report_type=='users' %}selected{% endif %}>📋 {{ _('Audit Log') }}</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#888">{{ _('From') }}</label>
+            <input type="date" name="date_from" value="{{ date_from }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+        <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#888">{{ _('To') }}</label>
+            <input type="date" name="date_to" value="{{ date_to }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+        <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#888">{{ _('User') }}</label>
+            <select name="user_id" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+                <option value="">{{ _('All users') }}</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if user_id|string == u.id|string %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if report_type == 'faults' %}
+        <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#888">{{ _('Section') }}</label>
+            <select name="section_id" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+                <option value="">{{ _('All sections') }}</option>
+                {% for s in sections %}
+                <option value="{{ s.id }}" {% if section_id|string == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">{{ _('Show') }}</button>
+    </form>
+</div>
+
+<!-- STATS -->
+{% if stats %}
+<div class="stats" style="margin-bottom:16px">
+    {% if report_type == 'activity' %}
+    <div class="stat-card"><div class="number">{{ stats.total_actions }}</div><div class="label">{{ _('Total Actions') }}</div></div>
+    <div class="stat-card"><div class="number">{{ stats.unique_users }}</div><div class="label">{{ _('Active Users') }}</div></div>
+    {% elif report_type == 'faults' %}
+    <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">{{ _('Total') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ stats.open }}</div><div class="label">{{ _('Open') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ stats.resolved }}</div><div class="label">{{ _('Resolved') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ stats.critical }}</div><div class="label">{{ _('Critical') }}</div></div>
+    {% elif report_type == 'warehouse' %}
+    <div class="stat-card"><div class="number">{{ stats.total_movements }}</div><div class="label">{{ _('Total') }}</div></div>
+    <div class="stat-card ok"><div class="number">{{ stats.incoming }}</div><div class="label">{{ _('Incoming') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ stats.outgoing }}</div><div class="label">{{ _('Outgoing') }}</div></div>
+    {% elif report_type == 'errors' %}
+    <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">{{ _('Total') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ stats.errors }}</div><div class="label">{{ _('Errors') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ stats.warnings }}</div><div class="label">{{ _('Warnings') }}</div></div>
+    {% elif report_type == 'users' %}
+    <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">{{ _('Total Actions') }}</div></div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- DATA TABLE -->
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        {% if report_type == 'activity' %}
+        <tr><th>{{ _('Date') }}</th><th>{{ _('User') }}</th><th>{{ _('Action') }}</th><th>{{ _('Page') }}</th><th>{{ _('Details') }}</th><th>IP</th></tr>
+        {% for r in data %}
+        <tr>
+            <td>{{ r.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><strong>{{ r.username or '—' }}</strong></td>
+            <td><span class="badge badge-{{ 'active' if r.action=='login' else 'broken' if r.action=='logout' else 'open' }}">{{ r.action }}</span></td>
+            <td style="font-size:12px">{{ r.page or '—' }}</td>
+            <td style="font-size:12px">{{ r.details or '—' }}</td>
+            <td style="font-size:11px;color:#888">{{ r.ip_address or '—' }}</td>
+        </tr>
+        {% endfor %}
+        
+        {% elif report_type == 'faults' %}
+        <tr><th>#</th><th>{{ _('Date') }}</th><th>{{ _('Title') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Reporter') }}</th></tr>
+        {% for f in data %}
+        <tr>
+            <td><a href="/faults/{{ f.id }}">{{ f.id }}</a></td>
+            <td>{{ f.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><strong>{{ f.title }}</strong></td>
+            <td>{{ f.machine.name if f.machine else '—' }}</td>
+            <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
+            <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
+            <td>{{ f.reporter.display_name if f.reporter else '—' }}</td>
+        </tr>
+        {% endfor %}
+        
+        {% elif report_type == 'warehouse' %}
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Item') }}</th><th>{{ _('Type') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Comment') }}</th></tr>
+        {% for m in data %}
+        <tr>
+            <td>{{ m.aangemaakt.strftime('%d-%m %H:%M') }}</td>
+            <td><strong>{{ m.item.naam if m.item else '—' }}</strong></td>
+            <td><span class="badge badge-{{ 'active' if m.type=='inkomend' else 'broken' }}">{{ m.type }}</span></td>
+            <td>{{ m.hoeveelheid }}</td>
+            <td>{{ m.opmerking or '—' }}</td>
+        </tr>
+        {% endfor %}
+        
+        {% elif report_type == 'errors' %}
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Level') }}</th><th>{{ _('Category') }}</th><th>{{ _('Message') }}</th><th>{{ _('Source') }}</th><th>{{ _('User') }}</th></tr>
+        {% for r in data %}
+        <tr>
+            <td>{{ r.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><span class="badge badge-{{ 'broken' if r.level=='ERROR' else 'high' if r.level=='WARNING' else 'active' }}">{{ r.level }}</span></td>
+            <td>{{ r.category or '—' }}</td>
+            <td>{{ r.message }}</td>
+            <td style="font-size:12px">{{ r.source or '—' }}</td>
+            <td>{{ r.user.display_name if r.user else '—' }}</td>
+        </tr>
+        {% endfor %}
+        
+        {% elif report_type == 'users' %}
+        <tr><th>{{ _('Date') }}</th><th>{{ _('User') }}</th><th>{{ _('Action') }}</th><th>{{ _('Type') }}</th><th>{{ _('Details') }}</th><th>IP</th></tr>
+        {% for r in data %}
+        <tr>
+            <td>{{ r.created_at.strftime('%d-%m %H:%M') }}</td>
+            <td><strong>{{ r.user.display_name if r.user else '—' }}</strong></td>
+            <td><span class="badge badge-open">{{ r.action }}</span></td>
+            <td>{{ r.entity_type or '—' }}</td>
+            <td style="font-size:12px">{{ r.details or '—' }}</td>
+            <td style="font-size:11px;color:#888">{{ r.ip_address or '—' }}</td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+    </table></div>
+</div>
+
+{% if not data %}
+<div class="card" style="text-align:center;padding:40px;color:#999">
+    <div style="font-size:48px;margin-bottom:12px">📊</div>
+    <div>{{ _('No data for selected period') }}</div>
+</div>
+{% endif %}
+
+<script>
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    window.location.href = '/reports/advanced/export?' + params.toString();
+    document.getElementById('exportMenu').style.display = 'none';
+}
+
+function printReport() {
+    window.print();
+    document.getElementById('exportMenu').style.display = 'none';
+}
+
+// Close menu on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#exportMenu') && !e.target.closest('[onclick*="toggleExportMenu"]')) {
+        document.getElementById('exportMenu').style.display = 'none';
+    }
+});
+</script>
+
+<style>
+@media print {
+    .page-header, .card:first-of-type, .btn, .nav { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+}
+</style>
+{% endblock %}

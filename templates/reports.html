@@ -1,11 +1,30 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Reports') }} — CRM Werkplaats{% endblock %}
 {% block content %}
-<div class="page-header"><h1>{{ _('Reports') }}</h1></div>
+<div class="page-header">
+    <h1>{{ _('Reports') }}</h1>
+    {% if current_user.has_role('admin', 'director') %}
+    <a href="/reports/advanced" class="btn btn-primary">📊 {{ _('Advanced Reports') }}</a>
+    {% endif %}
+</div>
 <div class="stats">
     <a href="/reports/period" class="stat-card" style="text-decoration:none;cursor:pointer">
         <div class="number">📊</div><div class="label">{{ _('Period') }}</div>
     </a>
+    {% if current_user.has_role('admin', 'director') %}
+    <a href="/reports/advanced?type=activity" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">👤</div><div class="label">{{ _('Activity') }}</div>
+    </a>
+    <a href="/reports/advanced?type=faults" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">⚠️</div><div class="label">{{ _('Faults') }}</div>
+    </a>
+    <a href="/reports/advanced?type=warehouse" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">📦</div><div class="label">{{ _('Warehouse') }}</div>
+    </a>
+    <a href="/reports/advanced?type=errors" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">❌</div><div class="label">{{ _('Errors') }}</div>
+    </a>
+    {% endif %}
 </div>
 {% if current_user.has_role('admin', 'director') %}
 <div class="card">

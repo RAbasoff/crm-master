@@ -24,10 +24,12 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     GasSystemComponent, EquipmentRepair, fault_technicians, user_machine, section_responsible,
                     GroupPermission, ResponsibleAuth, ElectricalCabinet, CircuitBreaker, WeekendShift,
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
-                    TWOChecklistItem, TWOSignature, TWOAssignment)
+                    TWOChecklistItem, TWOSignature, TWOAssignment,
+                    UserActivityLog, SystemLog)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
-                   save_uploaded_file, translate_text, run_migrations)
+                   save_uploaded_file, translate_text, run_migrations,
+                   log_user_activity, log_system)
 
 # ============================================================
 # APP CONFIG
@@ -146,6 +148,8 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password) and user.is_active_user:
             login_user(user, remember=True)
+            log_user_activity('login', page='/login', details=f'User {username} logged in')
+            log_system('INFO', 'auth', f'User {username} logged in', source='login')
             next_url = request.args.get('next')
             if next_url:
                 parsed = urlparse(next_url)
@@ -161,18 +165,24 @@ def login():
             person.last_login = datetime.utcnow()
             db.session.commit()
             login_user(auth, remember=True)
+            log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
+            log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
             next_url = request.args.get('next')
             if next_url:
                 parsed = urlparse(next_url)
                 if parsed.netloc and parsed.netloc != request.host:
                     next_url = None
             return redirect(next_url or url_for('floor_plan'))
+        log_system('WARNING', 'auth', f'Failed login attempt for {username}', source='login')
         flash(_('Invalid credentials'), 'error')
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
+    username = current_user.username if current_user.is_authenticated else 'unknown'
+    log_user_activity('logout', page='/logout', details=f'User {username} logged out')
+    log_system('INFO', 'auth', f'User {username} logged out', source='logout')
     logout_user()
     return redirect(url_for('login'))
 
@@ -3779,6 +3789,275 @@ def invoice_delete(invoice_id):
 @role_required('admin', 'director', 'technician')
 def reports():
     return render_template('reports.html')
+
+@app.route('/reports/advanced')
+@login_required
+@role_required('admin', 'director')
+def reports_advanced():
+    report_type = request.args.get('type', 'activity')
+    date_from = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    date_to = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
+    user_id = request.args.get('user_id', '')
+    section_id = request.args.get('section_id', '')
+    
+    d_from = datetime.strptime(date_from, '%Y-%m-%d')
+    d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+    
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
+    sections = FactorySection.query.order_by(FactorySection.name).all()
+    
+    data = []
+    stats = {}
+    
+    if report_type == 'activity':
+        q = UserActivityLog.query.filter(UserActivityLog.created_at >= d_from, UserActivityLog.created_at < d_to)
+        if user_id:
+            q = q.filter_by(user_id=int(user_id))
+        data = q.order_by(UserActivityLog.created_at.desc()).limit(500).all()
+        stats['total_actions'] = q.count()
+        stats['unique_users'] = db.session.query(db.func.count(db.distinct(UserActivityLog.user_id))).filter(UserActivityLog.created_at >= d_from, UserActivityLog.created_at < d_to).scalar()
+        
+    elif report_type == 'faults':
+        q = FaultReport.query.filter(FaultReport.created_at >= d_from, FaultReport.created_at < d_to)
+        if user_id:
+            q = q.filter_by(reporter_id=int(user_id))
+        if section_id:
+            q = q.filter(FaultReport.machine.has(Machine.section_id == int(section_id)))
+        data = q.order_by(FaultReport.created_at.desc()).all()
+        stats['total'] = q.count()
+        stats['open'] = q.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
+        stats['resolved'] = q.filter_by(status='resolved').count()
+        stats['critical'] = q.filter_by(priority='critical').count()
+        
+    elif report_type == 'warehouse':
+        q = VoorraadMutatie.query.filter(VoorraadMutatie.aangemaakt >= d_from, VoorraadMutatie.aangemaakt < d_to)
+        data = q.order_by(VoorraadMutatie.aangemaakt.desc()).limit(500).all()
+        stats['total_movements'] = q.count()
+        stats['incoming'] = q.filter_by(type='inkomend').count()
+        stats['outgoing'] = q.filter_by(type='uitgaand').count()
+        
+    elif report_type == 'errors':
+        q = SystemLog.query.filter(SystemLog.created_at >= d_from, SystemLog.created_at < d_to)
+        if user_id:
+            q = q.filter_by(user_id=int(user_id))
+        data = q.order_by(SystemLog.created_at.desc()).limit(500).all()
+        stats['total'] = q.count()
+        stats['errors'] = q.filter_by(level='ERROR').count()
+        stats['warnings'] = q.filter_by(level='WARNING').count()
+        
+    elif report_type == 'users':
+        q = AuditLog.query.filter(AuditLog.created_at >= d_from, AuditLog.created_at < d_to)
+        if user_id:
+            q = q.filter_by(user_id=int(user_id))
+        data = q.order_by(AuditLog.created_at.desc()).limit(500).all()
+        stats['total'] = q.count()
+        
+    return render_template('reports_advanced.html',
+        report_type=report_type, data=data, stats=stats,
+        users=users, sections=sections,
+        date_from=date_from, date_to=date_to,
+        user_id=user_id, section_id=section_id)
+
+@app.route('/reports/advanced/export')
+@login_required
+@role_required('admin', 'director')
+def reports_export():
+    report_type = request.args.get('type', 'activity')
+    format_type = request.args.get('format', 'csv')
+    date_from = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    date_to = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
+    user_id = request.args.get('user_id', '')
+    
+    d_from = datetime.strptime(date_from, '%Y-%m-%d')
+    d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+    
+    # Collect data
+    headers = []
+    rows = []
+    title = ''
+    
+    if report_type == 'activity':
+        title = 'Активность пользователей'
+        headers = ['Дата', 'Пользователь', 'Действие', 'Страница', 'Детали', 'IP']
+        q = UserActivityLog.query.filter(UserActivityLog.created_at >= d_from, UserActivityLog.created_at < d_to)
+        if user_id: q = q.filter_by(user_id=int(user_id))
+        for r in q.order_by(UserActivityLog.created_at.desc()).limit(1000).all():
+            rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.username or '', r.action or '', r.page or '', r.details or '', r.ip_address or ''])
+    elif report_type == 'faults':
+        title = 'Заявки о неисправности'
+        headers = ['ID', 'Дата', 'Заголовок', 'Станок', 'Приоритет', 'Статус', 'Репортер']
+        q = FaultReport.query.filter(FaultReport.created_at >= d_from, FaultReport.created_at < d_to)
+        if user_id: q = q.filter_by(reporter_id=int(user_id))
+        for f in q.order_by(FaultReport.created_at.desc()).all():
+            rows.append([str(f.id), f.created_at.strftime('%Y-%m-%d %H:%M'), f.title or '', f.machine.name if f.machine else '', f.priority or '', f.status or '', f.reporter.display_name if f.reporter else ''])
+    elif report_type == 'warehouse':
+        title = 'Движение склада'
+        headers = ['Дата', 'Товар', 'Тип', 'Количество', 'Комментарий']
+        q = VoorraadMutatie.query.filter(VoorraadMutatie.aangemaakt >= d_from, VoorraadMutatie.aangemaakt < d_to)
+        for m in q.order_by(VoorraadMutatie.aangemaakt.desc()).limit(1000).all():
+            rows.append([m.aangemaakt.strftime('%Y-%m-%d %H:%M'), m.item.naam if m.item else '', m.type or '', str(m.hoeveelheid), m.opmerking or ''])
+    elif report_type == 'errors':
+        title = 'Ошибки и предупреждения'
+        headers = ['Дата', 'Уровень', 'Категория', 'Сообщение', 'Источник', 'Пользователь']
+        q = SystemLog.query.filter(SystemLog.created_at >= d_from, SystemLog.created_at < d_to)
+        if user_id: q = q.filter_by(user_id=int(user_id))
+        for r in q.order_by(SystemLog.created_at.desc()).limit(1000).all():
+            rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.level or '', r.category or '', r.message or '', r.source or '', r.user.display_name if r.user else ''])
+    elif report_type == 'users':
+        title = 'Журнал аудита'
+        headers = ['Дата', 'Пользователь', 'Действие', 'Тип', 'Детали', 'IP']
+        q = AuditLog.query.filter(AuditLog.created_at >= d_from, AuditLog.created_at < d_to)
+        if user_id: q = q.filter_by(user_id=int(user_id))
+        for r in q.order_by(AuditLog.created_at.desc()).limit(1000).all():
+            rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.user.display_name if r.user else '', r.action or '', r.entity_type or '', r.details or '', r.ip_address or ''])
+    
+    period = f'{date_from} — {date_to}'
+    filename = f'report_{report_type}_{date_from}_{date_to}'
+    
+    # === CSV ===
+    if format_type == 'csv':
+        import csv, io
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        output.seek(0)
+        from flask import Response
+        return Response(output.getvalue(), mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment;filename={filename}.csv'})
+    
+    # === EXCEL ===
+    elif format_type == 'excel':
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        wb = Workbook()
+        ws = wb.active
+        ws.title = title[:31]
+        
+        # Title
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        ws['A1'] = title
+        ws['A1'].font = Font(bold=True, size=14)
+        ws['A2'] = f'Период: {period}'
+        ws['A2'].font = Font(size=10, color='666666')
+        
+        # Headers
+        header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
+        header_font = Font(bold=True, color='FFFFFF', size=11)
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=col, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+        
+        # Data
+        for row_idx, row_data in enumerate(rows, 5):
+            for col_idx, val in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=val)
+                cell.border = thin_border
+                cell.alignment = Alignment(wrap_text=True)
+        
+        # Auto-width
+        for col in range(1, len(headers) + 1):
+            max_len = len(headers[col-1])
+            for row in range(5, len(rows) + 5):
+                cell_val = str(ws.cell(row=row, column=col).value or '')
+                max_len = max(max_len, min(len(cell_val), 40))
+            ws.column_dimensions[ws.cell(row=4, column=col).column_letter].width = max_len + 4
+        
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            download_name=f'{filename}.xlsx', as_attachment=True)
+    
+    # === WORD ===
+    elif format_type == 'word':
+        from docx import Document
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        doc = Document()
+        
+        # Title
+        doc.add_heading(title, level=1)
+        doc.add_paragraph(f'Период: {period}')
+        doc.add_paragraph(f'Сгенерировано: {datetime.utcnow().strftime("%d.%m.%Y %H:%M")}')
+        
+        # Table
+        table = doc.add_table(rows=1, cols=len(headers))
+        table.style = 'Light Grid Accent 1'
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        
+        # Headers
+        for i, h in enumerate(headers):
+            cell = table.rows[0].cells[i]
+            cell.text = h
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.bold = True
+                    run.font.size = Pt(9)
+        
+        # Data
+        for row_data in rows:
+            row = table.add_row()
+            for i, val in enumerate(row_data):
+                row.cells[i].text = str(val)
+                for paragraph in row.cells[i].paragraphs:
+                    for run in paragraph.runs:
+                        run.font.size = Pt(8)
+        
+        buf = io.BytesIO()
+        doc.save(buf)
+        buf.seek(0)
+        return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            download_name=f'{filename}.docx', as_attachment=True)
+    
+    # === PDF ===
+    elif format_type == 'pdf':
+        # Generate HTML table for PDF
+        html = f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+body {{ font-family: Arial; font-size: 10px; padding: 20px; }}
+h1 {{ font-size: 16px; margin-bottom: 5px; }}
+p {{ color: #666; font-size: 11px; margin-bottom: 15px; }}
+table {{ width: 100%; border-collapse: collapse; font-size: 9px; }}
+th {{ background: #2c3e50; color: white; padding: 6px 8px; text-align: left; font-weight: bold; }}
+td {{ padding: 5px 8px; border-bottom: 1px solid #eee; }}
+tr:nth-child(even) {{ background: #f9f9f9; }}
+.footer {{ margin-top: 20px; font-size: 8px; color: #999; text-align: center; }}
+</style></head><body>
+<h1>{title}</h1>
+<p>Период: {period} | Сгенерировано: {datetime.utcnow().strftime("%d.%m.%Y %H:%M")}</p>
+<table><tr>'''
+        for h in headers:
+            html += f'<th>{h}</th>'
+        html += '</tr>'
+        for row in rows:
+            html += '<tr>'
+            for val in row:
+                html += f'<td>{val}</td>'
+            html += '</tr>'
+        html += f'</table><div class="footer">CRM Мастерская — {title} — {period}</div></body></html>'
+        
+        try:
+            import pdfkit
+            pdf = pdfkit.from_string(html, False)
+            from flask import Response
+            return Response(pdf, mimetype='application/pdf',
+                headers={'Content-Disposition': f'attachment;filename={filename}.pdf'})
+        except Exception:
+            # Fallback: return HTML that can be printed as PDF
+            from flask import Response
+            return Response(html, mimetype='text/html',
+                headers={'Content-Disposition': f'attachment;filename={filename}.html'})
+    
+    return jsonify({'error': 'Unknown format'}), 400
 
 @app.route('/reports/period', methods=['GET', 'POST'])
 @login_required
