@@ -4775,6 +4775,48 @@ def qr_generate(order_id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png', download_name=f'QR_{order.nummer}.png')
 
+@app.route('/api/machine/<int:machine_id>/faults')
+@login_required
+def api_machine_faults(machine_id):
+    """Return faults and stats for a machine (used by floor plan)"""
+    m = Machine.query.get_or_404(machine_id)
+    faults = FaultReport.query.filter_by(machine_id=m.id).order_by(FaultReport.created_at.desc()).limit(10).all()
+    total = FaultReport.query.filter_by(machine_id=m.id).count()
+    open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
+    resolved = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status == 'resolved').count()
+    critical = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
+    
+    faults_data = [{
+        'id': f.id,
+        'title': f.title or '',
+        'status': f.status or '',
+        'priority': f.priority or '',
+        'date': f.created_at.strftime('%d-%m-%Y'),
+    } for f in faults]
+    
+    return jsonify({
+        'total': total,
+        'open': open_count,
+        'resolved': resolved,
+        'critical': critical,
+        'faults': faults_data
+    })
+
+@app.route('/faults/<int:fault_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def fault_delete(fault_id):
+    """Delete a fault report"""
+    f = FaultReport.query.get_or_404(fault_id)
+    title = f.title
+    db.session.delete(f)
+    db.session.commit()
+    log_audit('delete', 'fault', fault_id, title)
+    if request.is_json:
+        return jsonify({'ok': True})
+    flash(_('Fault deleted'), 'success')
+    return redirect(url_for('faults_list'))
+
 @app.route('/api/machines/<int:machine_id>/qr')
 @login_required
 def machine_qr(machine_id):
