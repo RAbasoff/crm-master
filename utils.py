@@ -309,28 +309,6 @@ def run_migrations():
             ip_address VARCHAR(50),
             created_at DATETIME
         )"""),
-        ("chat_group", """CREATE TABLE IF NOT EXISTS chat_group (
-            id INTEGER PRIMARY KEY,
-            name VARCHAR(200) NOT NULL,
-            is_group BOOLEAN DEFAULT 0,
-            created_by INTEGER REFERENCES user(id),
-            created_at DATETIME
-        )"""),
-        ("chat_members", """CREATE TABLE IF NOT EXISTS chat_members (
-            chat_id INTEGER NOT NULL REFERENCES chat_group(id),
-            user_id INTEGER NOT NULL REFERENCES user(id),
-            PRIMARY KEY (chat_id, user_id)
-        )"""),
-        ("chat_message", """CREATE TABLE IF NOT EXISTS chat_message (
-            id INTEGER PRIMARY KEY,
-            chat_id INTEGER NOT NULL REFERENCES chat_group(id),
-            sender_id INTEGER NOT NULL REFERENCES user(id),
-            message TEXT NOT NULL,
-            message_type VARCHAR(20) DEFAULT 'text',
-            file_url VARCHAR(500),
-            is_read BOOLEAN DEFAULT 0,
-            created_at DATETIME
-        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

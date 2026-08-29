@@ -349,7 +349,6 @@
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Production') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             <a href="/" class="sb-item {% if request.endpoint == 'index' %}active{% endif %}"><span class="sb-icon">🏠</span>{{ _('Dashboard') }}</a>
-            <a href="/chat" class="sb-item {% if request.endpoint == 'chat_page' %}active{% endif %}"><span class="sb-icon">💬</span>{{ _('Chat') }}<span id="chatBadge" style="display:none;background:#e74c3c;color:white;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px"></span></a>
             <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
             <a href="/machines" class="sb-item {% if 'machine' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Machines') }}</a>
             <a href="/tool-wear" class="sb-item {% if 'tool_wear' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>{{ _('Knife Sharpening') }}</a>
