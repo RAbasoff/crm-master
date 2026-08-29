@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Full Statistics') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 {{ _('Full Statistics') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select onchange="location.href='/stats/full?period='+this.value" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+            <option value="7" {% if period=='7' %}selected{% endif %}>7 {{ _('days') }}</option>
+            <option value="30" {% if period=='30' %}selected{% endif %}>30 {{ _('days') }}</option>
+            <option value="90" {% if period=='90' %}selected{% endif %}>90 {{ _('days') }}</option>
+            <option value="365" {% if period=='365' %}selected{% endif %}>1 {{ _('year') }}</option>
+        </select>
+        <button onclick="window.print()" class="btn btn-sm" style="background:#2c3e50;color:white">🖨️ {{ _('Print') }}</button>
+        <div style="position:relative;display:inline-block">
+            <button onclick="toggleExportMenu()" class="btn btn-sm btn-primary">💾 {{ _('Export') }}</button>
+            <div id="exportMenu" style="display:none;position:absolute;right:0;top:100%;background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:100;min-width:180px">
+                <a href="/stats/full/export?format=pdf&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📕 PDF</a>
+                <a href="/stats/full/export?format=excel&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📗 Excel (.xlsx)</a>
+                <a href="/stats/full/export?format=word&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📘 Word (.docx)</a>
+                <a href="/stats/full/export?format=txt&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px;border-bottom:1px solid #eee">📝 TXT</a>
+                <a href="/stats/full/export?format=csv&period={{ period }}" style="display:block;padding:8px 12px;text-decoration:none;color:#333;font-size:13px">📄 CSV</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAULTS -->
+<div class="card" style="margin-bottom:16px">
+    <h2>⚠️ {{ _('Fault Reports') }}</h2>
+    <div class="stats">
+        <div class="stat-card"><div class="number">{{ faults_total }}</div><div class="label">{{ _('Total') }}</div></div>
+        <div class="stat-card"><div class="number">{{ faults_period }}</div><div class="label">{{ _('Last') }} {{ period }} {{ _('days') }}</div></div>
+        <div class="stat-card warn"><div class="number">{{ faults_open }}</div><div class="label">{{ _('Open') }}</div></div>
+        <div class="stat-card ok"><div class="number">{{ faults_resolved }}</div><div class="label">{{ _('Resolved') }}</div></div>
+        <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ faults_critical }}</div><div class="label">{{ _('Critical') }}</div></div>
+    </div>
+    <div class="detail-grid" style="margin-top:12px">
+        <div>
+            <h3 style="font-size:13px;margin-bottom:8px">{{ _('By Priority') }}</h3>
+            <div class="table-wrap"><table>
+                <tr><th>{{ _('Priority') }}</th><th>{{ _('Count') }}</th></tr>
+                {% for p, c in faults_by_priority %}
+                <tr><td><span class="badge badge-{{ p }}">{{ p }}</span></td><td>{{ c }}</td></tr>
+                {% endfor %}
+            </table></div>
+        </div>
+        <div>
+            <h3 style="font-size:13px;margin-bottom:8px">{{ _('Top Machines') }}</h3>
+            <div class="table-wrap"><table>
+                <tr><th>{{ _('Machine') }}</th><th>{{ _('Faults') }}</th></tr>
+                {% for name, cnt in top_machines %}
+                <tr><td>{{ name }}</td><td><strong>{{ cnt }}</strong></td></tr>
+                {% endfor %}
+            </table></div>
+        </div>
+    </div>
+</div>
+
+<!-- WAREHOUSE -->
+<div class="card" style="margin-bottom:16px">
+    <h2>📦 {{ _('Warehouse') }}</h2>
+    <div class="stats">
+        <div class="stat-card"><div class="number">{{ warehouse_total }}</div><div class="label">{{ _('Total Items') }}</div></div>
+        <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ warehouse_low }}</div><div class="label">{{ _('Low Stock') }}</div></div>
+        <div class="stat-card ok"><div class="number">{{ warehouse_incoming }}</div><div class="label">{{ _('Incoming') }}</div></div>
+        <div class="stat-card warn"><div class="number">{{ warehouse_outgoing }}</div><div class="label">{{ _('Outgoing') }}</div></div>
+    </div>
+</div>
+
+<!-- CYLINDERS -->
+<div class="card" style="margin-bottom:16px">
+    <h2>🔴 {{ _('Gas Cylinders') }}</h2>
+    <div class="stats">
+        <div class="stat-card"><div class="number">{{ cyl_n2_full }}</div><div class="label">N₂ {{ _('Full') }}</div></div>
+        <div class="stat-card warn"><div class="number">{{ cyl_n2_in_use }}</div><div class="label">N₂ {{ _('In Use') }}</div></div>
+        <div class="stat-card"><div class="number">{{ cyl_co2_full }}</div><div class="label">CO₂ {{ _('Full') }}</div></div>
+        <div class="stat-card warn"><div class="number">{{ cyl_co2_in_use }}</div><div class="label">CO₂ {{ _('In Use') }}</div></div>
+    </div>
+</div>
+
+<!-- TWO -->
+<div class="card" style="margin-bottom:16px">
+    <h2>🔧 {{ _('Technical Work Orders') }}</h2>
+    <div class="stats">
+        <div class="stat-card"><div class="number">{{ two_total }}</div><div class="label">{{ _('Total') }}</div></div>
+        <div class="stat-card warn"><div class="number">{{ two_active }}</div><div class="label">{{ _('Active') }}</div></div>
+        <div class="stat-card ok"><div class="number">{{ two_completed }}</div><div class="label">{{ _('Completed') }}</div></div>
+    </div>
+</div>
+
+<!-- USERS -->
+<div class="card" style="margin-bottom:16px">
+    <h2>👥 {{ _('Users') }}</h2>
+    <div class="stats">
+        <div class="stat-card"><div class="number">{{ users_total }}</div><div class="label">{{ _('Active Users') }}</div></div>
+    </div>
+</div>
+
+<!-- MACHINES REPORT -->
+<div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0">⚙️ {{ _('Machines Report') }}</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select onchange="updateMachineFilter()" id="sectionFilter" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+                <option value="">{{ _('All Sections') }}</option>
+                {% for s in sections %}
+                <option value="{{ s.id }}" {% if section_filter == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+            <select onchange="updateMachineFilter()" id="groupFilter" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+                <option value="">{{ _('All Groups') }}</option>
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if group_filter == g.id|string %}selected{% endif %}>{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div class="stats" style="margin-bottom:12px">
+        <div class="stat-card"><div class="number">{{ machine_report|length }}</div><div class="label">{{ _('Machines') }}</div></div>
+        <div class="stat-card"><div class="number">{{ machine_report|sum(attribute='period_faults') }}</div><div class="label">{{ _('Faults Period') }}</div></div>
+        <div class="stat-card warn"><div class="number">{{ machine_report|sum(attribute='open_faults') }}</div><div class="label">{{ _('Open') }}</div></div>
+        <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ machine_report|sum(attribute='critical_faults') }}</div><div class="label">{{ _('Critical') }}</div></div>
+    </div>
+    
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Serial') }}</th>
+            <th>{{ _('Section') }}</th>
+            <th>{{ _('Total Faults') }}</th>
+            <th>{{ _('Period') }}</th>
+            <th>{{ _('Open') }}</th>
+            <th>{{ _('Critical') }}</th>
+            <th>{{ _('Last Fault') }}</th>
+        </tr>
+        {% for r in machine_report %}
+        <tr {% if r.open_faults > 0 %}style="background:#fff5f5"{% elif r.critical_faults > 0 %}style="background:#fff0f0"{% endif %}>
+            <td><a href="/machines/{{ r.machine.id }}" style="color:#3498db"><strong>{{ r.machine.name }}</strong></a></td>
+            <td>{{ r.machine.machine_type or '—' }}</td>
+            <td style="font-size:12px">{{ r.machine.serial_number or '—' }}</td>
+            <td>{{ r.machine.section.name if r.machine.section else '—' }}</td>
+            <td>{{ r.total_faults }}</td>
+            <td><strong>{{ r.period_faults }}</strong></td>
+            <td>{% if r.open_faults > 0 %}<span style="color:#e74c3c;font-weight:bold">{{ r.open_faults }}</span>{% else %}0{% endif %}</td>
+            <td>{% if r.critical_faults > 0 %}<span style="color:#e74c3c;font-weight:bold">{{ r.critical_faults }}</span>{% else %}0{% endif %}</td>
+            <td style="font-size:11px">{% if r.last_fault %}{{ r.last_fault.created_at.strftime('%d-%m-%Y') }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+<script>
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#exportMenu') && !e.target.closest('[onclick*="toggleExportMenu"]')) {
+        document.getElementById('exportMenu').style.display = 'none';
+    }
+});
+
+function updateMachineFilter() {
+    const section = document.getElementById('sectionFilter').value;
+    const group = document.getElementById('groupFilter').value;
+    const period = {{ period }};
+    let url = '/stats/full?period=' + period;
+    if (section) url += '&section=' + section;
+    if (group) url += '&group=' + group;
+    location.href = url;
+}
+</script>
+
+<style>
+@media print {
+    .page-header, .btn, .nav { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+}
+</style>
+{% endblock %}
