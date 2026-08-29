@@ -764,7 +764,10 @@ def settings():
     users = User.query.order_by(User.display_name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
-    return render_template('settings.html', users=users, sections=sections, groups=groups)
+    responsible = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('settings.html', users=users, sections=sections, groups=groups,
+        responsible=responsible, machines=machines)
 
 @app.route('/settings/user/<int:user_id>/access', methods=['POST'])
 @login_required

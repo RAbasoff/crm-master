@@ -5,33 +5,28 @@
     <h1>⚙️ {{ _('Settings') }}</h1>
 </div>
 
-<!-- SETTINGS NAVIGATION -->
-<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-    <button onclick="showTab('users')" class="btn btn-sm tab-btn active" id="tab-users" style="background:#3498db;color:white">👥 {{ _('User Access') }}</button>
-    <button onclick="showTab('sections')" class="btn btn-sm tab-btn" id="tab-sections" style="background:#eee">🏭 {{ _('Sections & Map') }}</button>
+<!-- SETTINGS TABS -->
+<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+    <button onclick="showTab('users')" class="btn btn-sm tab-btn active" id="tab-users" style="background:#3498db;color:white">👥 {{ _('Users') }}</button>
+    <button onclick="showTab('responsible')" class="btn btn-sm tab-btn" id="tab-responsible" style="background:#eee">👤 {{ _('Responsible') }}</button>
+    <button onclick="showTab('machines')" class="btn btn-sm tab-btn" id="tab-machines" style="background:#eee">⚙️ {{ _('Machines') }}</button>
+    <button onclick="showTab('sections')" class="btn btn-sm tab-btn" id="tab-sections" style="background:#eee">🏭 {{ _('Sections') }}</button>
     <button onclick="showTab('groups')" class="btn btn-sm tab-btn" id="tab-groups" style="background:#eee">👥 {{ _('Groups') }}</button>
     <a href="/map-editor" class="btn btn-sm" style="background:#2c3e50;color:white">🗺️ {{ _('Map Editor') }}</a>
 </div>
 
-<!-- TAB: USER ACCESS -->
+<!-- ==================== TAB: USERS ==================== -->
 <div id="tab-content-users" class="tab-content">
     <div class="card">
-        <h2>👥 {{ _('User Access Rights') }}</h2>
-        <p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Manage roles and section access for each user') }}</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">👥 {{ _('User Access Rights') }}</h2>
+            <a href="/users/new" class="btn btn-sm btn-primary">+ {{ _('Add User') }}</a>
+        </div>
         <div class="table-wrap"><table>
-            <tr>
-                <th>{{ _('User') }}</th>
-                <th>{{ _('Role') }}</th>
-                <th>{{ _('Status') }}</th>
-                <th>{{ _('Sections') }}</th>
-                <th>{{ _('Actions') }}</th>
-            </tr>
+            <tr><th>{{ _('User') }}</th><th>{{ _('Role') }}</th><th>{{ _('Status') }}</th><th>{{ _('Sections') }}</th><th>{{ _('Actions') }}</th></tr>
             {% for u in users %}
             <tr id="user-row-{{ u.id }}">
-                <td>
-                    <strong>{{ u.display_name or u.username }}</strong>
-                    <br><small style="color:#888">{{ u.username }}</small>
-                </td>
+                <td><strong>{{ u.display_name or u.username }}</strong><br><small style="color:#888">{{ u.username }}</small></td>
                 <td>
                     <select id="role-{{ u.id }}" onchange="updateUserRole({{ u.id }})" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
                         <option value="user" {% if u.role=='user' %}selected{% endif %}>User</option>
@@ -47,18 +42,45 @@
                     </label>
                 </td>
                 <td>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    <div style="display:flex;flex-wrap:wrap;gap:3px">
                         {% for s in sections %}
-                        <label style="display:flex;align-items:center;gap:4px;font-size:11px;padding:2px 6px;background:{% if s in u.allowed_sections %}#e8f5e9{% else %}#f5f5f5{% endif %};border-radius:4px;cursor:pointer">
-                            <input type="checkbox" class="section-cb-{{ u.id }}" value="{{ s.key }}" {% if s in u.allowed_sections %}checked{% endif %} style="width:12px;height:12px">
-                            <span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }};display:inline-block"></span>
+                        <label style="display:flex;align-items:center;gap:3px;font-size:10px;padding:2px 5px;background:{% if s.key in (u.allowed_sections|map(attribute='section_key')|list) %}#e8f5e9{% else %}#f5f5f5{% endif %};border-radius:4px;cursor:pointer">
+                            <input type="checkbox" class="section-cb-{{ u.id }}" value="{{ s.key }}" {% if s.key in (u.allowed_sections|map(attribute='section_key')|list) %}checked{% endif %} style="width:10px;height:10px">
                             {{ s.name }}
                         </label>
                         {% endfor %}
                     </div>
                 </td>
+                <td><button onclick="saveUserAccess({{ u.id }})" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Save') }}</button></td>
+            </tr>
+            {% endfor %}
+        </table></div>
+    </div>
+</div>
+
+<!-- ==================== TAB: RESPONSIBLE ==================== -->
+<div id="tab-content-responsible" class="tab-content" style="display:none">
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">👤 {{ _('Responsible Persons') }}</h2>
+            <a href="/responsible/new" class="btn btn-sm btn-primary">+ {{ _('Add Person') }}</a>
+        </div>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Name') }}</th><th>{{ _('Position') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Internal') }}</th><th>{{ _('Email') }}</th><th>{{ _('Group') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
+            {% for p in responsible %}
+            <tr>
+                <td><strong>{{ p.naam }}</strong></td>
+                <td>{{ p.position or '—' }}</td>
+                <td>{% if p.telefoon %}<a href="tel:{{ p.telefoon }}" style="color:#3498db">{{ p.telefoon }}</a>{% else %}—{% endif %}</td>
+                <td>{% if p.internal_phone %}<span style="color:#e67e22;font-weight:700">{{ p.internal_phone }}</span>{% else %}—{% endif %}</td>
+                <td>{% if p.email %}<a href="mailto:{{ p.email }}" style="color:#3498db">{{ p.email }}</a>{% else %}—{% endif %}</td>
+                <td>{{ p.resp_group.name if p.resp_group else '—' }}</td>
+                <td>{% if p.is_active %}<span style="color:#27ae60">✓</span>{% else %}<span style="color:#e74c3c">✗</span>{% endif %}</td>
                 <td>
-                    <button onclick="saveUserAccess({{ u.id }})" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Save') }}</button>
+                    <div style="display:flex;gap:4px">
+                        <a href="/responsible/{{ p.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                        <a href="/responsible/{{ p.id }}" class="btn btn-sm" style="background:#eee;font-size:11px">👁</a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -66,34 +88,61 @@
     </div>
 </div>
 
-<!-- TAB: SECTIONS & MAP -->
+<!-- ==================== TAB: MACHINES ==================== -->
+<div id="tab-content-machines" class="tab-content" style="display:none">
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">⚙️ {{ _('Machines') }}</h2>
+            <a href="/machines/new" class="btn btn-sm btn-primary">+ {{ _('Add Machine') }}</a>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <select onchange="filterMachines(this.value)" id="machineSectionFilter" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+                <option value="">{{ _('All Sections') }}</option>
+                {% for s in sections %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Section') }}</th><th>{{ _('Status') }}</th><th>{{ _('Faults') }}</th><th>{{ _('Actions') }}</th></tr>
+            {% for m in machines %}
+            <tr class="machine-row" data-section="{{ m.section_id or '' }}">
+                <td><a href="/machines/{{ m.id }}" style="color:#3498db"><strong>{{ m.name }}</strong></a></td>
+                <td>{{ m.machine_type or '—' }}</td>
+                <td style="font-size:12px">{{ m.serial_number or '—' }}</td>
+                <td>{{ m.section.name if m.section else '—' }}</td>
+                <td><span class="badge badge-{{ m.status }}">{{ m.status }}</span></td>
+                <td>{{ m.fault_reports|length }}</td>
+                <td>
+                    <div style="display:flex;gap:4px">
+                        <a href="/machines/{{ m.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                        <a href="/floor?highlight={{ m.id }}" class="btn btn-sm" style="background:#eee;font-size:11px">📍</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </table></div>
+    </div>
+</div>
+
+<!-- ==================== TAB: SECTIONS ==================== -->
 <div id="tab-content-sections" class="tab-content" style="display:none">
     <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <h2 style="margin:0">🏭 {{ _('Sections') }}</h2>
+            <h2 style="margin:0">🏭 {{ _('Factory Sections') }}</h2>
             <a href="/sections/new" class="btn btn-sm btn-primary">+ {{ _('Add Section') }}</a>
         </div>
         <div class="table-wrap"><table>
-            <tr>
-                <th>{{ _('Name') }}</th>
-                <th>{{ _('Type') }}</th>
-                <th>{{ _('Color') }}</th>
-                <th>{{ _('Position') }}</th>
-                <th>{{ _('Size') }}</th>
-                <th>{{ _('Machines') }}</th>
-                <th>{{ _('Actions') }}</th>
-            </tr>
+            <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Color') }}</th><th>{{ _('Position') }}</th><th>{{ _('Size') }}</th><th>{{ _('Machines') }}</th><th>{{ _('Responsible') }}</th><th>{{ _('Actions') }}</th></tr>
             {% for s in sections %}
             <tr>
                 <td><strong>{{ s.name }}</strong></td>
                 <td>{{ s.section_type }}</td>
-                <td>
-                    <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{ s.color }};vertical-align:middle"></span>
-                    <small style="color:#888">{{ s.color }}</small>
-                </td>
+                <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{ s.color }};vertical-align:middle"></span></td>
                 <td style="font-size:12px">X={{ s.floor_x }}% Y={{ s.floor_y }}%</td>
                 <td style="font-size:12px">{{ s.width }}% × {{ s.height }}%</td>
                 <td>{{ s.machines|length }}</td>
+                <td style="font-size:12px">{% for r in s.responsible_persons %}{{ r.naam }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
                 <td>
                     <div style="display:flex;gap:4px">
                         <a href="/sections/{{ s.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
@@ -106,7 +155,7 @@
     </div>
 </div>
 
-<!-- TAB: GROUPS -->
+<!-- ==================== TAB: GROUPS ==================== -->
 <div id="tab-content-groups" class="tab-content" style="display:none">
     <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -114,21 +163,12 @@
             <a href="/responsible/groups/new" class="btn btn-sm btn-primary">+ {{ _('Add Group') }}</a>
         </div>
         <div class="table-wrap"><table>
-            <tr>
-                <th>{{ _('Name') }}</th>
-                <th>{{ _('Members') }}</th>
-                <th>{{ _('Permissions') }}</th>
-                <th>{{ _('Actions') }}</th>
-            </tr>
+            <tr><th>{{ _('Name') }}</th><th>{{ _('Members') }}</th><th>{{ _('Permissions') }}</th><th>{{ _('Actions') }}</th></tr>
             {% for g in groups %}
             <tr>
                 <td><strong>{{ g.name }}</strong></td>
                 <td>{{ g.members|length }}</td>
-                <td>
-                    {% for p in g.permissions %}
-                    <span style="display:inline-block;padding:1px 4px;background:#e3f2fd;border-radius:3px;font-size:10px;margin:1px">{{ p.section_key }}</span>
-                    {% endfor %}
-                </td>
+                <td>{% for p in g.permissions %}<span style="display:inline-block;padding:1px 4px;background:#e3f2fd;border-radius:3px;font-size:10px;margin:1px">{{ p.section_key }}</span>{% endfor %}</td>
                 <td>
                     <div style="display:flex;gap:4px">
                         <a href="/responsible/groups/{{ g.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
@@ -153,26 +193,21 @@ function showTab(tab) {
 function updateUserRole(userId) {
     const role = document.getElementById('role-' + userId).value;
     csrfFetch('/settings/user/' + userId + '/access', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({role: role})
-    }).then(r => r.json()).then(d => {
-        if (d.ok) showSaveStatus(userId, '✓');
-    });
+    }).then(r => r.json()).then(d => { if (d.ok) showToast('✓ {{ _("Saved") }}'); });
 }
 
 function toggleUserActive(userId, active) {
     csrfFetch('/settings/user/' + userId + '/access', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({is_active: active})
     }).then(r => r.json()).then(d => {
         if (d.ok) {
-            const span = document.querySelector('#user-row-' + userId + ' span');
-            if (span) {
-                span.textContent = active ? '{{ _("Active") }}' : '{{ _("Inactive") }}';
-                span.style.color = active ? '#27ae60' : '#e74c3c';
-            }
+            const row = document.getElementById('user-row-' + userId);
+            const span = row.querySelector('span');
+            span.textContent = active ? '{{ _("Active") }}' : '{{ _("Inactive") }}';
+            span.style.color = active ? '#27ae60' : '#e74c3c';
         }
     });
 }
@@ -181,26 +216,27 @@ function saveUserAccess(userId) {
     const cbs = document.querySelectorAll('.section-cb-' + userId + ':checked');
     const sections = Array.from(cbs).map(cb => cb.value);
     csrfFetch('/settings/user/' + userId + '/access', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({sections: sections})
-    }).then(r => r.json()).then(d => {
-        if (d.ok) showSaveStatus(userId, '✓ {{ _("Saved") }}');
+    }).then(r => r.json()).then(d => { if (d.ok) showToast('✓ {{ _("Saved") }}'); });
+}
+
+function filterMachines(sectionId) {
+    document.querySelectorAll('.machine-row').forEach(row => {
+        if (!sectionId || row.dataset.section === sectionId) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
     });
 }
 
-function showSaveStatus(userId, text) {
-    const row = document.getElementById('user-row-' + userId);
-    if (!row) return;
-    let status = row.querySelector('.save-status');
-    if (!status) {
-        status = document.createElement('span');
-        status.className = 'save-status';
-        status.style.cssText = 'font-size:11px;color:#27ae60;margin-left:8px';
-        row.querySelector('td:last-child').appendChild(status);
-    }
-    status.textContent = text;
-    setTimeout(() => { status.textContent = ''; }, 2000);
+function showToast(text) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#27ae60;color:white;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
 }
 </script>
 {% endblock %}
