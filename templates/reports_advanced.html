@@ -27,6 +27,8 @@
             <select name="type" style="padding:8px;border:1px solid #ddd;border-radius:8px">
                 <option value="activity" {% if report_type=='activity' %}selected{% endif %}>👤 {{ _('User Activity') }}</option>
                 <option value="faults" {% if report_type=='faults' %}selected{% endif %}>⚠️ {{ _('Fault Reports') }}</option>
+                <option value="responsible" {% if report_type=='responsible' %}selected{% endif %}>👥 {{ _('Responsible Persons') }}</option>
+                <option value="machines" {% if report_type=='machines' %}selected{% endif %}>⚙️ {{ _('Machines') }}</option>
                 <option value="warehouse" {% if report_type=='warehouse' %}selected{% endif %}>📦 {{ _('Warehouse') }}</option>
                 <option value="errors" {% if report_type=='errors' %}selected{% endif %}>❌ {{ _('Errors & Warnings') }}</option>
                 <option value="users" {% if report_type=='users' %}selected{% endif %}>📋 {{ _('Audit Log') }}</option>
@@ -49,7 +51,7 @@
                 {% endfor %}
             </select>
         </div>
-        {% if report_type == 'faults' %}
+        {% if report_type == 'faults' or report_type == 'machines' %}
         <div class="form-group" style="margin:0">
             <label style="font-size:11px;color:#888">{{ _('Section') }}</label>
             <select name="section_id" style="padding:8px;border:1px solid #ddd;border-radius:8px">
@@ -85,6 +87,13 @@
     <div class="stat-card warn"><div class="number">{{ stats.warnings }}</div><div class="label">{{ _('Warnings') }}</div></div>
     {% elif report_type == 'users' %}
     <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">{{ _('Total Actions') }}</div></div>
+    {% elif report_type == 'responsible' %}
+    <div class="stat-card"><div class="number">{{ stats.total_persons }}</div><div class="label">{{ _('Responsible Persons') }}</div></div>
+    <div class="stat-card"><div class="number">{{ stats.total_faults }}</div><div class="label">{{ _('Total Requests') }}</div></div>
+    {% elif report_type == 'machines' %}
+    <div class="stat-card"><div class="number">{{ stats.total_machines }}</div><div class="label">{{ _('Machines') }}</div></div>
+    <div class="stat-card"><div class="number">{{ stats.total_faults }}</div><div class="label">{{ _('Total Requests') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ stats.machines_with_faults }}</div><div class="label">{{ _('With Issues') }}</div></div>
     {% endif %}
 </div>
 {% endif %}
@@ -154,6 +163,36 @@
             <td>{{ r.entity_type or '—' }}</td>
             <td style="font-size:12px">{{ r.details or '—' }}</td>
             <td style="font-size:11px;color:#888">{{ r.ip_address or '—' }}</td>
+        </tr>
+        {% endfor %}
+        
+        {% elif report_type == 'responsible' %}
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Position') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Internal Phone') }}</th><th>{{ _('Email') }}</th><th>{{ _('Total Requests') }}</th><th>{{ _('Open') }}</th><th>{{ _('Resolved') }}</th></tr>
+        {% for r in data %}
+        <tr>
+            <td><strong>{{ r.person.naam }}</strong></td>
+            <td>{{ r.person.position or '—' }}</td>
+            <td>{% if r.person.telefoon %}<a href="tel:{{ r.person.telefoon }}" style="color:#3498db">{{ r.person.telefoon }}</a>{% else %}—{% endif %}</td>
+            <td>{% if r.person.internal_phone %}<span style="color:#e67e22;font-weight:700">{{ r.person.internal_phone }}</span>{% else %}—{% endif %}</td>
+            <td>{% if r.person.email %}<a href="mailto:{{ r.person.email }}" style="color:#3498db">{{ r.person.email }}</a>{% else %}—{% endif %}</td>
+            <td><strong>{{ r.total }}</strong></td>
+            <td>{% if r.open > 0 %}<span style="color:#e74c3c;font-weight:bold">{{ r.open }}</span>{% else %}0{% endif %}</td>
+            <td>{% if r.resolved > 0 %}<span style="color:#27ae60">{{ r.resolved }}</span>{% else %}0{% endif %}</td>
+        </tr>
+        {% endfor %}
+        
+        {% elif report_type == 'machines' %}
+        <tr><th>{{ _('Machine') }}</th><th>{{ _('Type') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Section') }}</th><th>{{ _('Period') }}</th><th>{{ _('Total') }}</th><th>{{ _('Open') }}</th><th>{{ _('Critical') }}</th></tr>
+        {% for r in data %}
+        <tr>
+            <td><a href="/machines/{{ r.machine.id }}" style="color:#3498db"><strong>{{ r.machine.name }}</strong></a></td>
+            <td>{{ r.machine.machine_type or '—' }}</td>
+            <td style="font-size:12px">{{ r.machine.serial_number or '—' }}</td>
+            <td>{{ r.machine.section.name if r.machine.section else '—' }}</td>
+            <td><strong>{{ r.period_count }}</strong></td>
+            <td>{{ r.total_count }}</td>
+            <td>{% if r.open > 0 %}<span style="color:#e74c3c;font-weight:bold">{{ r.open }}</span>{% else %}0{% endif %}</td>
+            <td>{% if r.critical > 0 %}<span style="color:#e74c3c;font-weight:bold">{{ r.critical }}</span>{% else %}0{% endif %}</td>
         </tr>
         {% endfor %}
         {% endif %}

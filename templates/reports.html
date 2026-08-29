@@ -24,6 +24,12 @@
     <a href="/reports/advanced?type=errors" class="stat-card" style="text-decoration:none;cursor:pointer">
         <div class="number">❌</div><div class="label">{{ _('Errors') }}</div>
     </a>
+    <a href="/reports/advanced?type=responsible" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">👥</div><div class="label">{{ _('Responsible') }}</div>
+    </a>
+    <a href="/reports/advanced?type=machines" class="stat-card" style="text-decoration:none;cursor:pointer">
+        <div class="number">⚙️</div><div class="label">{{ _('Machines') }}</div>
+    </a>
     {% endif %}
 </div>
 {% if current_user.has_role('admin', 'director') %}

@@ -3852,6 +3852,57 @@ def reports_advanced():
         data = q.order_by(AuditLog.created_at.desc()).limit(500).all()
         stats['total'] = q.count()
         
+    elif report_type == 'responsible':
+        # Report on responsible persons - who submitted what and when
+        persons = Verantwoordelijke.query.filter(Verantwoordelijke.is_active == True).order_by(Verantwoordelijke.naam).all()
+        responsible_data = []
+        for p in persons:
+            faults = FaultReport.query.filter(
+                FaultReport.reporter_id.in_(
+                    db.session.query(User.id).filter(User.person_id == p.id)
+                ),
+                FaultReport.created_at >= d_from,
+                FaultReport.created_at < d_to
+            ).order_by(FaultReport.created_at.desc()).all()
+            if faults or not user_id:
+                responsible_data.append({
+                    'person': p,
+                    'faults': faults,
+                    'total': len(faults),
+                    'open': len([f for f in faults if f.status in ['open', 'accepted', 'in_progress']]),
+                    'resolved': len([f for f in faults if f.status == 'resolved']),
+                })
+        data = responsible_data
+        stats['total_persons'] = len(responsible_data)
+        stats['total_faults'] = sum(r['total'] for r in responsible_data)
+        
+    elif report_type == 'machines':
+        # Report by machines - faults, maintenance, status
+        machines_q = Machine.query.order_by(Machine.name)
+        if section_id:
+            machines_q = machines_q.filter_by(section_id=int(section_id))
+        machines_list = machines_q.all()
+        machine_data = []
+        for m in machines_list:
+            faults = FaultReport.query.filter(
+                FaultReport.machine_id == m.id,
+                FaultReport.created_at >= d_from,
+                FaultReport.created_at < d_to
+            ).order_by(FaultReport.created_at.desc()).all()
+            total_faults = FaultReport.query.filter(FaultReport.machine_id == m.id).count()
+            machine_data.append({
+                'machine': m,
+                'faults': faults,
+                'period_count': len(faults),
+                'total_count': total_faults,
+                'open': len([f for f in faults if f.status in ['open', 'accepted', 'in_progress']]),
+                'critical': len([f for f in faults if f.priority == 'critical']),
+            })
+        data = machine_data
+        stats['total_machines'] = len(machine_data)
+        stats['total_faults'] = sum(r['period_count'] for r in machine_data)
+        stats['machines_with_faults'] = len([r for r in machine_data if r['period_count'] > 0])
+        
     return render_template('reports_advanced.html',
         report_type=report_type, data=data, stats=stats,
         users=users, sections=sections,
@@ -3910,6 +3961,37 @@ def reports_export():
         if user_id: q = q.filter_by(user_id=int(user_id))
         for r in q.order_by(AuditLog.created_at.desc()).limit(1000).all():
             rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.user.display_name if r.user else '', r.action or '', r.entity_type or '', r.details or '', r.ip_address or ''])
+    elif report_type == 'responsible':
+        title = 'Отчёт по ответственным'
+        headers = ['Ответственный', 'Должность', 'Телефон', 'Внутр. номер', 'Email', 'Всего заявок', 'Открытых', 'Решённых']
+        persons = Verantwoordelijke.query.filter(Verantwoordelijke.is_active == True).order_by(Verantwoordelijke.naam).all()
+        for p in persons:
+            fault_count = FaultReport.query.filter(
+                FaultReport.reporter_id.in_(db.session.query(User.id).filter(User.person_id == p.id)),
+                FaultReport.created_at >= d_from, FaultReport.created_at < d_to
+            ).count()
+            open_count = FaultReport.query.filter(
+                FaultReport.reporter_id.in_(db.session.query(User.id).filter(User.person_id == p.id)),
+                FaultReport.created_at >= d_from, FaultReport.created_at < d_to,
+                FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+            ).count()
+            resolved_count = FaultReport.query.filter(
+                FaultReport.reporter_id.in_(db.session.query(User.id).filter(User.person_id == p.id)),
+                FaultReport.created_at >= d_from, FaultReport.created_at < d_to,
+                FaultReport.status == 'resolved'
+            ).count()
+            rows.append([p.naam or '', p.position or '', p.telefoon or '', p.internal_phone or '', p.email or '', str(fault_count), str(open_count), str(resolved_count)])
+    elif report_type == 'machines':
+        title = 'Отчёт по станкам'
+        headers = ['Станок', 'Тип', 'Серийный номер', 'Отдел', 'Заявок за период', 'Всего заявок', 'Открытых', 'Критичных']
+        machines_q = Machine.query.order_by(Machine.name)
+        if section_id: machines_q = machines_q.filter_by(section_id=int(section_id))
+        for m in machines_q.all():
+            period_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.created_at >= d_from, FaultReport.created_at < d_to).count()
+            total_count = FaultReport.query.filter(FaultReport.machine_id == m.id).count()
+            open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
+            critical_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
+            rows.append([m.name or '', m.machine_type or '', m.serial_number or '', m.section.name if m.section else '', str(period_count), str(total_count), str(open_count), str(critical_count)])
     
     period = f'{date_from} — {date_to}'
     filename = f'report_{report_type}_{date_from}_{date_to}'
