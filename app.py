@@ -6835,7 +6835,49 @@ def chat_page():
         ChatGroup.members.any(User.id == current_user.id)
     ).order_by(ChatGroup.created_at.desc()).all()
     all_users = User.query.filter(User.is_active_user == True, User.id != current_user.id).order_by(User.display_name).all()
-    return render_template('chat.html', chats=chats, all_users=all_users)
+    responsible = Verantwoordelijke.query.filter(Verantwoordelijke.is_active == True).order_by(Verantwoordelijke.naam).all()
+    return render_template('chat.html', chats=chats, all_users=all_users, responsible=responsible)
+
+@app.route('/chat/add-responsible', methods=['POST'])
+@login_required
+@role_required('admin')
+def chat_add_responsible():
+    """Create or update group chat with all responsible persons"""
+    # Find or create the "All Responsible" group chat
+    chat = ChatGroup.query.filter_by(name='Все ответственные').first()
+    if not chat:
+        chat = ChatGroup(name='Все ответственные', is_group=True, created_by=current_user.id)
+        db.session.add(chat)
+        db.session.flush()
+    
+    # Add all active responsible persons who have linked user accounts
+    chat.members = [current_user]  # Always include current user
+    responsible = Verantwoordelijke.query.filter(Verantwoordelijke.is_active == True).all()
+    added = []
+    for r in responsible:
+        # Find linked user
+        user = User.query.filter_by(person_id=r.id).first()
+        if user and user not in chat.members:
+            chat.members.append(user)
+            added.append(r.naam)
+        elif not user:
+            # Create a note about unlinked responsible
+            added.append(f"{r.naam} (нет аккаунта)")
+    
+    db.session.commit()
+    
+    # Send system message
+    msg = ChatMessage(
+        chat_id=chat.id,
+        sender_id=current_user.id,
+        message=f'Добавлены ответственные: {", ".join(added)}',
+        message_type='system'
+    )
+    db.session.add(msg)
+    db.session.commit()
+    
+    flash(f'Чат создан/обновлён. Добавлено: {len([a for a in added if "(нет аккаунта)" not in a])} человек', 'success')
+    return redirect(url_for('chat_page'))
 
 @app.route('/chat/new', methods=['POST'])
 @login_required

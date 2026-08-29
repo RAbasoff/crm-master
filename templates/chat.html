@@ -9,6 +9,9 @@
             <h2 style="margin:0;font-size:16px">💬 {{ _('Chats') }}</h2>
             <div style="display:flex;gap:4px">
                 <button onclick="toggleSearch()" class="btn btn-sm" style="background:#eee;font-size:11px">🔍</button>
+                {% if current_user.has_role('admin') %}
+                <a href="/chat/add-responsible" class="btn btn-sm" style="background:#27ae60;color:white;font-size:11px" onclick="return confirm('{{ _('Add all responsible persons to group chat?') }}')">👥+</a>
+                {% endif %}
                 <button onclick="showNewChatModal()" class="btn btn-sm btn-primary" style="font-size:11px">+ {{ _('New') }}</button>
             </div>
         </div>
