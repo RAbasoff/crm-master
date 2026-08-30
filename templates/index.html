@@ -122,10 +122,10 @@
 {% endif %}
 
 <!-- Two column layout -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" class="dashboard-grid">
     
     <!-- Recent Faults -->
-    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}1{% else %}1 / -1{% endif %}">
+    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}1{% else %}1 / -1{% endif %};order:1" data-order="1">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <h2 style="margin:0;font-size:15px">⚠️ {{ _('Recent Faults') }}</h2>
             <a href="/faults" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">{{ _('View all') }} →</a>
@@ -154,7 +154,7 @@
     </div>
     
     <!-- Recent Work Orders -->
-    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}2{% else %}1 / -1{% endif %}">
+    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}2{% else %}1 / -1{% endif %};order:2" data-order="2">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <h2 style="margin:0;font-size:15px">📋 {{ _('Recent Orders') }}</h2>
             <a href="/orders" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">{{ _('View all') }} →</a>
@@ -260,6 +260,8 @@
 <style>
 @media (max-width: 768px) {
     .stats { grid-template-columns: 1fr 1fr; }
+    .dashboard-grid { grid-template-columns: 1fr !important; }
+    .dashboard-grid .card { grid-column: 1 / -1 !important; }
 }
 </style>
 {% endblock %}
