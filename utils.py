@@ -349,6 +349,18 @@ def run_migrations():
             ordered_at DATETIME,
             delivered_at DATETIME
         )"""),
+        ("mule_component", """CREATE TABLE IF NOT EXISTS mule_component (
+            id INTEGER PRIMARY KEY,
+            maintenance_id INTEGER NOT NULL REFERENCES mule_maintenance(id),
+            component_type VARCHAR(50) NOT NULL,
+            model VARCHAR(200),
+            quantity FLOAT DEFAULT 1,
+            knife_number VARCHAR(100),
+            cable_type VARCHAR(100),
+            cable_length VARCHAR(50),
+            gasket_length VARCHAR(50),
+            notes TEXT
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

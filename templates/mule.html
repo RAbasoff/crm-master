@@ -17,6 +17,16 @@
     <div class="stat-card"><div class="number">{{ orders|length }}</div><div class="label">{{ _('Part Orders') }}</div></div>
 </div>
 
+<!-- FILTER -->
+<div class="card" style="padding:12px 16px;margin-bottom:16px">
+    <form method="GET" action="/mule" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;font-weight:600">{{ _('Serial Number') }}:</label>
+        <input type="text" name="serial" value="{{ serial_filter or '' }}" placeholder="{{ _('Filter by serial...') }}" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:200px">
+        <button type="submit" class="btn btn-sm btn-primary">{{ _('Filter') }}</button>
+        {% if serial_filter %}<a href="/mule" class="btn btn-sm" style="background:#eee">{{ _('Clear') }}</a>{% endif %}
+    </form>
+</div>
+
 <!-- MAINTENANCE RECORDS -->
 <div class="card" style="padding:0">
     <div style="padding:12px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">

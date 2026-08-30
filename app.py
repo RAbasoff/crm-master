@@ -26,7 +26,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
                     UserActivityLog, SystemLog,
-                    MuleMaintenance, MuleMaintenancePart, MulePartOrder)
+                    MuleMaintenance, MuleMaintenancePart, MulePartOrder, MuleComponent)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -1560,10 +1560,14 @@ def gen_mule_order_number():
 @login_required
 @role_required('admin', 'director', 'technician')
 def mule_list():
-    maintenance = MuleMaintenance.query.order_by(MuleMaintenance.date.desc()).all()
+    serial_filter = request.args.get('serial', '').strip()
+    q = MuleMaintenance.query
+    if serial_filter:
+        q = q.filter(MuleMaintenance.mule_serial.ilike(f'%{serial_filter}%'))
+    maintenance = q.order_by(MuleMaintenance.date.desc()).all()
     orders = MulePartOrder.query.order_by(MulePartOrder.ordered_at.desc()).limit(20).all()
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('mule.html', maintenance=maintenance, orders=orders, machines=machines)
+    return render_template('mule.html', maintenance=maintenance, orders=orders, machines=machines, serial_filter=serial_filter)
 
 @app.route('/mule/new', methods=['GET', 'POST'])
 @login_required
@@ -1595,6 +1599,26 @@ def mule_new():
                 db.session.add(MuleMaintenancePart(
                     maintenance_id=m.id, part_name=pname.strip(),
                     part_number=pnum.strip(), quantity=pqty
+                ))
+        # Add components
+        comp_types = request.form.getlist('comp_type')
+        comp_models = request.form.getlist('comp_model')
+        comp_qtys = request.form.getlist('comp_qty')
+        comp_knife = request.form.getlist('comp_knife')
+        comp_cable_type = request.form.getlist('comp_cable_type')
+        comp_cable_len = request.form.getlist('comp_cable_len')
+        comp_gasket_len = request.form.getlist('comp_gasket_len')
+        for i, ctype in enumerate(comp_types):
+            if ctype:
+                db.session.add(MuleComponent(
+                    maintenance_id=m.id,
+                    component_type=ctype,
+                    model=comp_models[i] if i < len(comp_models) else '',
+                    quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1,
+                    knife_number=comp_knife[i] if i < len(comp_knife) else '',
+                    cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
+                    cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
+                    gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
                 ))
         db.session.commit()
         log_audit('create', 'mule_maintenance', m.id, f'{m.number} — {m.mule_number}')
@@ -1629,6 +1653,27 @@ def mule_edit(mule_id):
                 db.session.add(MuleMaintenancePart(
                     maintenance_id=m.id, part_name=pname.strip(),
                     part_number=pnum.strip(), quantity=pqty
+                ))
+        # Update components
+        MuleComponent.query.filter_by(maintenance_id=m.id).delete()
+        comp_types = request.form.getlist('comp_type')
+        comp_models = request.form.getlist('comp_model')
+        comp_qtys = request.form.getlist('comp_qty')
+        comp_knife = request.form.getlist('comp_knife')
+        comp_cable_type = request.form.getlist('comp_cable_type')
+        comp_cable_len = request.form.getlist('comp_cable_len')
+        comp_gasket_len = request.form.getlist('comp_gasket_len')
+        for i, ctype in enumerate(comp_types):
+            if ctype:
+                db.session.add(MuleComponent(
+                    maintenance_id=m.id,
+                    component_type=ctype,
+                    model=comp_models[i] if i < len(comp_models) else '',
+                    quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1,
+                    knife_number=comp_knife[i] if i < len(comp_knife) else '',
+                    cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
+                    cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
+                    gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
                 ))
         db.session.commit()
         flash(_('Mule maintenance updated'), 'success')
