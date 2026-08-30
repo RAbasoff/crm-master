@@ -359,6 +359,8 @@ def run_migrations():
             cable_type VARCHAR(100),
             cable_length VARCHAR(50),
             gasket_length VARCHAR(50),
+            spring_size VARCHAR(100),
+            bolt_type VARCHAR(100),
             notes TEXT
         )"""),
     ]

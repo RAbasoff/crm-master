@@ -83,6 +83,8 @@
                                 <option value="knife" {% if c.component_type=='knife' %}selected{% endif %}>🔪 {{ _('Knife') }}</option>
                                 <option value="cable" {% if c.component_type=='cable' %}selected{% endif %}>🔌 {{ _('Cable') }}</option>
                                 <option value="gasket" {% if c.component_type=='gasket' %}selected{% endif %}>⭕ {{ _('Gasket') }}</option>
+                                <option value="spring" {% if c.component_type=='spring' %}selected{% endif %}>🌀 {{ _('Spring') }}</option>
+                                <option value="bolt" {% if c.component_type=='bolt' %}selected{% endif %}>🔩 {{ _('Bolt') }}</option>
                             </select>
                             <input type="number" name="comp_qty" value="{{ c.quantity }}" min="1" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" placeholder="Qty">
                             <button type="button" onclick="this.closest('.comp-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
@@ -93,6 +95,8 @@
                             <input type="text" name="comp_cable_type" value="{{ c.cable_type or '' }}" placeholder="{{ _('Cable type') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'cable' %}display:none{% endif %}">
                             <input type="text" name="comp_cable_len" value="{{ c.cable_length or '' }}" placeholder="{{ _('Cable length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'cable' %}display:none{% endif %}">
                             <input type="text" name="comp_gasket_len" value="{{ c.gasket_length or '' }}" placeholder="{{ _('Gasket length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'gasket' %}display:none{% endif %}">
+                            <input type="text" name="comp_spring" value="{{ c.spring_size or '' }}" placeholder="{{ _('Spring size (L×D×d)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'spring' %}display:none{% endif %}">
+                            <input type="text" name="comp_bolt" value="{{ c.bolt_type or '' }}" placeholder="{{ _('Bolt type (M6, M8...)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'bolt' %}display:none{% endif %}">
                         </div>
                     </div>
                     {% endfor %}
@@ -131,6 +135,8 @@ function addComponent() {
                 <option value="knife">🔪 {{ _('Knife') }}</option>
                 <option value="cable">🔌 {{ _('Cable') }}</option>
                 <option value="gasket">⭕ {{ _('Gasket') }}</option>
+                <option value="spring">🌀 {{ _('Spring') }}</option>
+                <option value="bolt">🔩 {{ _('Bolt') }}</option>
             </select>
             <input type="number" name="comp_qty" value="1" min="1" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" placeholder="Qty">
             <button type="button" onclick="this.closest('.comp-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
@@ -141,6 +147,8 @@ function addComponent() {
             <input type="text" name="comp_cable_type" placeholder="{{ _('Cable type') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_cable_len" placeholder="{{ _('Cable length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_gasket_len" placeholder="{{ _('Gasket length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_spring" placeholder="{{ _('Spring size (L×D×d)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_bolt" placeholder="{{ _('Bolt type (M6, M8...)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
         </div>
     </div>`;
     document.getElementById('componentsList').insertAdjacentHTML('beforeend', html);
@@ -153,11 +161,15 @@ function toggleCompFields(select) {
     const cableType = row.querySelector('[name="comp_cable_type"]');
     const cableLen = row.querySelector('[name="comp_cable_len"]');
     const gasketLen = row.querySelector('[name="comp_gasket_len"]');
+    const spring = row.querySelector('[name="comp_spring"]');
+    const bolt = row.querySelector('[name="comp_bolt"]');
     
     if (knife) knife.style.display = type === 'knife' ? '' : 'none';
     if (cableType) cableType.style.display = type === 'cable' ? '' : 'none';
     if (cableLen) cableLen.style.display = type === 'cable' ? '' : 'none';
     if (gasketLen) gasketLen.style.display = type === 'gasket' ? '' : 'none';
+    if (spring) spring.style.display = type === 'spring' ? '' : 'none';
+    if (bolt) bolt.style.display = type === 'bolt' ? '' : 'none';
 }
 
 // Warehouse parts search

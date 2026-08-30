@@ -1608,6 +1608,8 @@ def mule_new():
         comp_cable_type = request.form.getlist('comp_cable_type')
         comp_cable_len = request.form.getlist('comp_cable_len')
         comp_gasket_len = request.form.getlist('comp_gasket_len')
+        comp_spring = request.form.getlist('comp_spring')
+        comp_bolt = request.form.getlist('comp_bolt')
         for i, ctype in enumerate(comp_types):
             if ctype:
                 db.session.add(MuleComponent(
@@ -1619,6 +1621,8 @@ def mule_new():
                     cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
                     cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
                     gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
+                    spring_size=comp_spring[i] if i < len(comp_spring) else '',
+                    bolt_type=comp_bolt[i] if i < len(comp_bolt) else '',
                 ))
         db.session.commit()
         log_audit('create', 'mule_maintenance', m.id, f'{m.number} — {m.mule_number}')
@@ -1663,6 +1667,8 @@ def mule_edit(mule_id):
         comp_cable_type = request.form.getlist('comp_cable_type')
         comp_cable_len = request.form.getlist('comp_cable_len')
         comp_gasket_len = request.form.getlist('comp_gasket_len')
+        comp_spring = request.form.getlist('comp_spring')
+        comp_bolt = request.form.getlist('comp_bolt')
         for i, ctype in enumerate(comp_types):
             if ctype:
                 db.session.add(MuleComponent(
@@ -1674,6 +1680,8 @@ def mule_edit(mule_id):
                     cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
                     cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
                     gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
+                    spring_size=comp_spring[i] if i < len(comp_spring) else '',
+                    bolt_type=comp_bolt[i] if i < len(comp_bolt) else '',
                 ))
         db.session.commit()
         flash(_('Mule maintenance updated'), 'success')

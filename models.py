@@ -981,17 +981,19 @@ class MuleMaintenance(db.Model):
     components = db.relationship('MuleComponent', backref='maintenance', lazy=True, cascade='all, delete-orphan')
 
 class MuleComponent(db.Model):
-    """Составные части муле: датчик, элемент, нож, кабель, прокладка"""
+    """Составные части муле: датчик, элемент, нож, кабель, прокладка, пружина, болт"""
     __tablename__ = 'mule_component'
     id = db.Column(db.Integer, primary_key=True)
     maintenance_id = db.Column(db.Integer, db.ForeignKey('mule_maintenance.id'), nullable=False)
-    component_type = db.Column(db.String(50), nullable=False)  # sensor, heater, knife, cable, gasket
-    model = db.Column(db.String(200))  # модель
+    component_type = db.Column(db.String(50), nullable=False)  # sensor, heater, knife, cable, gasket, spring, bolt
+    model = db.Column(db.String(200))
     quantity = db.Column(db.Float, default=1)
-    knife_number = db.Column(db.String(100))  # номер ножа (только для типа knife)
-    cable_type = db.Column(db.String(100))  # тип кабеля (только для типа cable)
-    cable_length = db.Column(db.String(50))  # длина кабеля
-    gasket_length = db.Column(db.String(50))  # длина прокладки
+    knife_number = db.Column(db.String(100))
+    cable_type = db.Column(db.String(100))
+    cable_length = db.Column(db.String(50))
+    gasket_length = db.Column(db.String(50))
+    spring_size = db.Column(db.String(100))  # размер пружины (длина, диаметр, проволока)
+    bolt_type = db.Column(db.String(100))  # тип болта (M6, M8, и т.д.)
     notes = db.Column(db.Text)
 
 class MuleMaintenancePart(db.Model):
