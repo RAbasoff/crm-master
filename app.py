@@ -25,7 +25,8 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     GroupPermission, ResponsibleAuth, ElectricalCabinet, CircuitBreaker, WeekendShift,
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
-                    UserActivityLog, SystemLog)
+                    UserActivityLog, SystemLog,
+                    MuleMaintenance, MuleMaintenancePart, MulePartOrder)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -1530,6 +1531,152 @@ def api_maintenance_reminders():
     
     reminders.sort(key=lambda r: r['date'])
     return jsonify(reminders)
+
+# ============================================================
+# ROUTES — MULE MAINTENANCE
+# ============================================================
+
+def gen_mule_number():
+    vandaag = datetime.utcnow()
+    prefix = vandaag.strftime('%Y%m%d')
+    laatste = MuleMaintenance.query.filter(MuleMaintenance.number.like(f'MUL-{prefix}-%')).order_by(MuleMaintenance.id.desc()).first()
+    if laatste:
+        num = int(laatste.number.split('-')[2]) + 1
+    else:
+        num = 1
+    return f'MUL-{prefix}-{num:04d}'
+
+def gen_mule_order_number():
+    vandaag = datetime.utcnow()
+    prefix = vandaag.strftime('%Y%m%d')
+    laatste = MulePartOrder.query.filter(MulePartOrder.order_number.like(f'MPO-{prefix}-%')).order_by(MulePartOrder.id.desc()).first()
+    if laatste:
+        num = int(laatste.order_number.split('-')[2]) + 1
+    else:
+        num = 1
+    return f'MPO-{prefix}-{num:04d}'
+
+@app.route('/mule')
+@login_required
+@role_required('admin', 'director', 'technician')
+def mule_list():
+    maintenance = MuleMaintenance.query.order_by(MuleMaintenance.date.desc()).all()
+    orders = MulePartOrder.query.order_by(MulePartOrder.ordered_at.desc()).limit(20).all()
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('mule.html', maintenance=maintenance, orders=orders, machines=machines)
+
+@app.route('/mule/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'technician')
+def mule_new():
+    if request.method == 'POST':
+        m = MuleMaintenance(
+            number=gen_mule_number(),
+            mule_number=request.form['mule_number'],
+            machine_id=int(request.form['machine_id']) if request.form.get('machine_id') else None,
+            date=datetime.strptime(request.form['date'], '%Y-%m-%d').date(),
+            reason=request.form['reason'],
+            next_date=datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None,
+            periodicity=request.form.get('periodicity', ''),
+            notes=request.form.get('notes', ''),
+            created_by=current_user.id
+        )
+        db.session.add(m)
+        db.session.flush()
+        # Add parts
+        part_names = request.form.getlist('part_name')
+        part_numbers = request.form.getlist('part_number')
+        part_qtys = request.form.getlist('part_qty')
+        for i, pname in enumerate(part_names):
+            if pname.strip():
+                pnum = part_numbers[i] if i < len(part_numbers) else ''
+                pqty = float(part_qtys[i]) if i < len(part_qtys) and part_qtys[i] else 1
+                db.session.add(MuleMaintenancePart(
+                    maintenance_id=m.id, part_name=pname.strip(),
+                    part_number=pnum.strip(), quantity=pqty
+                ))
+        db.session.commit()
+        log_audit('create', 'mule_maintenance', m.id, f'{m.number} — {m.mule_number}')
+        flash(_('Mule maintenance recorded'), 'success')
+        return redirect(url_for('mule_list'))
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('mule_form.html', mule=None, machines=machines)
+
+@app.route('/mule/<int:mule_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'technician')
+def mule_edit(mule_id):
+    m = MuleMaintenance.query.get_or_404(mule_id)
+    if request.method == 'POST':
+        m.mule_number = request.form['mule_number']
+        m.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
+        m.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+        m.reason = request.form['reason']
+        m.next_date = datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None
+        m.periodicity = request.form.get('periodicity', '')
+        m.notes = request.form.get('notes', '')
+        # Update parts
+        MuleMaintenancePart.query.filter_by(maintenance_id=m.id).delete()
+        part_names = request.form.getlist('part_name')
+        part_numbers = request.form.getlist('part_number')
+        part_qtys = request.form.getlist('part_qty')
+        for i, pname in enumerate(part_names):
+            if pname.strip():
+                pnum = part_numbers[i] if i < len(part_numbers) else ''
+                pqty = float(part_qtys[i]) if i < len(part_qtys) and part_qtys[i] else 1
+                db.session.add(MuleMaintenancePart(
+                    maintenance_id=m.id, part_name=pname.strip(),
+                    part_number=pnum.strip(), quantity=pqty
+                ))
+        db.session.commit()
+        flash(_('Mule maintenance updated'), 'success')
+        return redirect(url_for('mule_list'))
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('mule_form.html', mule=m, machines=machines)
+
+@app.route('/mule/<int:mule_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def mule_delete(mule_id):
+    m = MuleMaintenance.query.get_or_404(mule_id)
+    db.session.delete(m)
+    db.session.commit()
+    flash(_('Mule maintenance deleted'), 'success')
+    return redirect(url_for('mule_list'))
+
+@app.route('/mule/order', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def mule_order():
+    o = MulePartOrder(
+        order_number=gen_mule_order_number(),
+        mule_number=request.form.get('mule_number', ''),
+        part_name=request.form['part_name'],
+        part_number=request.form.get('part_number', ''),
+        quantity=float(request.form.get('quantity', 1)),
+        unit=request.form.get('unit', 'st'),
+        supplier=request.form.get('supplier', ''),
+        urgency=request.form.get('urgency', 'normal'),
+        notes=request.form.get('notes', ''),
+        ordered_by=current_user.id
+    )
+    db.session.add(o)
+    db.session.commit()
+    flash(_('Part order created'), 'success')
+    return redirect(url_for('mule_list'))
+
+@app.route('/mule/order/<int:order_id>/status', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def mule_order_status(order_id):
+    o = MulePartOrder.query.get_or_404(order_id)
+    new_status = request.form.get('status')
+    if new_status in ('pending', 'ordered', 'delivered', 'cancelled'):
+        o.status = new_status
+        if new_status == 'delivered':
+            o.delivered_at = datetime.utcnow()
+    db.session.commit()
+    return redirect(url_for('mule_list'))
 
 # ============================================================
 # ROUTES — GAS CYLINDERS

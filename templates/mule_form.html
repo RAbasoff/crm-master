@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Mule Maintenance') if mule else _('New Mule Maintenance') }} — CRM{% endblock %}
+{% block content %}
+<h1>{{ _('Edit Mule Maintenance') + ': ' + mule.number if mule else _('New Mule Maintenance') }}</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Mule Number') }} *</label><input type="text" name="mule_number" value="{{ mule.mule_number if mule else '' }}" required placeholder="Mule-01"></div>
+            <div class="form-group"><label>{{ _('Date') }} *</label><input type="date" name="date" value="{{ mule.date.strftime('%Y-%m-%d') if mule else '' }}" required></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Machine') }}</label>
+                <select name="machine_id">
+                    <option value="">{{ _('Select Machine') }}</option>
+                    {% for m in machines %}
+                    <option value="{{ m.id }}" {% if mule and mule.machine_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Periodicity') }}</label>
+                <select name="periodicity">
+                    <option value="">{{ _('Select') }}</option>
+                    <option value="daily" {% if mule and mule.periodicity=='daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                    <option value="weekly" {% if mule and mule.periodicity=='weekly' %}selected{% endif %}>{{ _('Weekly') }}</option>
+                    <option value="biweekly" {% if mule and mule.periodicity=='biweekly' %}selected{% endif %}>{{ _('Biweekly') }}</option>
+                    <option value="monthly" {% if mule and mule.periodicity=='monthly' %}selected{% endif %}>{{ _('Monthly') }}</option>
+                    <option value="quarterly" {% if mule and mule.periodicity=='quarterly' %}selected{% endif %}>{{ _('Quarterly') }}</option>
+                    <option value="yearly" {% if mule and mule.periodicity=='yearly' %}selected{% endif %}>{{ _('Yearly') }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group"><label>{{ _('Reason') }} *</label><textarea name="reason" rows="3" required placeholder="{{ _('Reason for maintenance...') }}">{{ mule.reason if mule else '' }}</textarea></div>
+        <div class="form-group"><label>{{ _('Next Maintenance Date') }}</label><input type="date" name="next_date" value="{{ mule.next_date.strftime('%Y-%m-%d') if mule and mule.next_date else '' }}"></div>
+
+        <!-- PARTS -->
+        <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="font-size:14px;margin:0">🔩 {{ _('Used Parts') }}</h3>
+                <button type="button" class="btn btn-sm" style="background:#3498db;color:white" onclick="addPart()">+ {{ _('Add Part') }}</button>
+            </div>
+            <div id="partsList">
+                {% if mule and mule.parts %}
+                    {% for p in mule.parts %}
+                    <div class="part-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+                        <input type="text" name="part_name" value="{{ p.part_name }}" placeholder="{{ _('Part name') }}" style="flex:2;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                        <input type="text" name="part_number" value="{{ p.part_number or '' }}" placeholder="{{ _('Part number') }}" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                        <input type="number" name="part_qty" value="{{ p.quantity }}" min="0.1" step="0.1" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                        <button type="button" onclick="this.closest('.part-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group"><label>{{ _('Notes') }}</label><textarea name="notes" rows="2">{{ mule.notes if mule else '' }}</textarea></div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/mule" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addPart() {
+    const html = `
+    <div class="part-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <input type="text" name="part_name" placeholder="{{ _('Part name') }}" style="flex:2;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        <input type="text" name="part_number" placeholder="{{ _('Part number') }}" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        <input type="number" name="part_qty" value="1" min="0.1" step="0.1" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        <button type="button" onclick="this.closest('.part-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
+    </div>`;
+    document.getElementById('partsList').insertAdjacentHTML('beforeend', html);
+}
+</script>
+{% endblock %}

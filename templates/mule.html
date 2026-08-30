@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Mule Maintenance') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Mule Maintenance') }}</h1>
+    <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('orderModal').style.display='flex'" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Order Parts') }}</button>
+        <a href="/mule/new" class="btn btn-primary">+ {{ _('New Record') }}</a>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ maintenance|length }}</div><div class="label">{{ _('Total Records') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ maintenance|selectattr('status','equalto','planned')|list|length }}</div><div class="label">{{ _('Planned') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ maintenance|selectattr('status','equalto','overdue')|list|length }}</div><div class="label">{{ _('Overdue') }}</div></div>
+    <div class="stat-card"><div class="number">{{ orders|length }}</div><div class="label">{{ _('Part Orders') }}</div></div>
+</div>
+
+<!-- MAINTENANCE RECORDS -->
+<div class="card" style="padding:0">
+    <div style="padding:12px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0;font-size:15px">📋 {{ _('Maintenance Records') }}</h2>
+    </div>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Date') }}</th>
+            <th>{{ _('Mule') }}</th>
+            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Reason') }}</th>
+            <th>{{ _('Parts') }}</th>
+            <th>{{ _('Next') }}</th>
+            <th>{{ _('Periodicity') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for m in maintenance %}
+        <tr>
+            <td><strong>{{ m.number }}</strong></td>
+            <td>{{ m.date.strftime('%d-%m-%Y') }}</td>
+            <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ m.mule_number }}</span></td>
+            <td>{{ m.machine.name if m.machine else '—' }}</td>
+            <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.reason }}</td>
+            <td>{{ m.parts|length }}</td>
+            <td>{% if m.next_date %}{{ m.next_date.strftime('%d-%m-%Y') }}{% else %}—{% endif %}</td>
+            <td>{{ m.periodicity or '—' }}</td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <a href="/mule/{{ m.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                    <form method="POST" action="/mule/{{ m.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                        <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+<!-- PART ORDERS -->
+<div class="card" style="padding:0;margin-top:16px">
+    <div style="padding:12px 16px;border-bottom:1px solid #eee">
+        <h2 style="margin:0;font-size:15px">🛒 {{ _('Part Orders') }}</h2>
+    </div>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Order') }}</th>
+            <th>{{ _('Mule') }}</th>
+            <th>{{ _('Part') }}</th>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Qty') }}</th>
+            <th>{{ _('Supplier') }}</th>
+            <th>{{ _('Urgency') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for o in orders %}
+        <tr>
+            <td><strong>{{ o.order_number }}</strong></td>
+            <td>{{ o.mule_number or '—' }}</td>
+            <td>{{ o.part_name }}</td>
+            <td style="font-size:12px">{{ o.part_number or '—' }}</td>
+            <td>{{ o.quantity }} {{ o.unit }}</td>
+            <td>{{ o.supplier or '—' }}</td>
+            <td><span class="badge badge-{{ 'critical' if o.urgency=='critical' else 'high' if o.urgency=='urgent' else 'open' }}">{{ o.urgency }}</span></td>
+            <td><span class="badge badge-{{ 'active' if o.status=='delivered' else 'high' if o.status=='ordered' else 'open' }}">{{ o.status }}</span></td>
+            <td>
+                {% if o.status != 'delivered' and o.status != 'cancelled' %}
+                <form method="POST" action="/mule/order/{{ o.id }}/status" style="display:inline">
+                    <select name="status" onchange="this.form.submit()" style="font-size:11px;padding:2px">
+                        <option value="">{{ _('Change') }}</option>
+                        <option value="ordered">{{ _('Ordered') }}</option>
+                        <option value="delivered">{{ _('Delivered') }}</option>
+                        <option value="cancelled">{{ _('Cancelled') }}</option>
+                    </select>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+<!-- ORDER PARTS MODAL -->
+<div id="orderModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:16px">🛒 {{ _('Order Parts for Mule') }}</h2>
+            <button onclick="document.getElementById('orderModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <form method="POST" action="/mule/order">
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Mule Number') }}</label><input type="text" name="mule_number" placeholder="Mule-01"></div>
+                <div class="form-group"><label>{{ _('Urgency') }}</label>
+                    <select name="urgency">
+                        <option value="normal">{{ _('Normal') }}</option>
+                        <option value="urgent">{{ _('Urgent') }}</option>
+                        <option value="critical">{{ _('Critical') }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Part Name') }} *</label><input type="text" name="part_name" required></div>
+                <div class="form-group"><label>{{ _('Part Number') }}</label><input type="text" name="part_number"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Quantity') }}</label><input type="number" name="quantity" value="1" min="1"></div>
+                <div class="form-group"><label>{{ _('Supplier') }}</label><input type="text" name="supplier"></div>
+            </div>
+            <div class="form-group"><label>{{ _('Notes') }}</label><textarea name="notes" rows="2"></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('orderModal').style.display='none'">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Order') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

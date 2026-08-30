@@ -309,6 +309,45 @@ def run_migrations():
             ip_address VARCHAR(50),
             created_at DATETIME
         )"""),
+        ("mule_maintenance", """CREATE TABLE IF NOT EXISTS mule_maintenance (
+            id INTEGER PRIMARY KEY,
+            number VARCHAR(30) UNIQUE NOT NULL,
+            mule_number VARCHAR(100) NOT NULL,
+            machine_id INTEGER REFERENCES machine(id),
+            date DATE NOT NULL,
+            reason TEXT NOT NULL,
+            next_date DATE,
+            periodicity VARCHAR(50),
+            status VARCHAR(20) DEFAULT 'completed',
+            notes TEXT,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME
+        )"""),
+        ("mule_maintenance_part", """CREATE TABLE IF NOT EXISTS mule_maintenance_part (
+            id INTEGER PRIMARY KEY,
+            maintenance_id INTEGER NOT NULL REFERENCES mule_maintenance(id),
+            part_name VARCHAR(200) NOT NULL,
+            part_number VARCHAR(100),
+            quantity FLOAT DEFAULT 1,
+            unit VARCHAR(20) DEFAULT 'st',
+            notes TEXT
+        )"""),
+        ("mule_part_order", """CREATE TABLE IF NOT EXISTS mule_part_order (
+            id INTEGER PRIMARY KEY,
+            order_number VARCHAR(30) UNIQUE NOT NULL,
+            mule_number VARCHAR(100),
+            part_name VARCHAR(200) NOT NULL,
+            part_number VARCHAR(100),
+            quantity FLOAT DEFAULT 1,
+            unit VARCHAR(20) DEFAULT 'st',
+            supplier VARCHAR(200),
+            urgency VARCHAR(20) DEFAULT 'normal',
+            status VARCHAR(20) DEFAULT 'pending',
+            notes TEXT,
+            ordered_by INTEGER REFERENCES user(id),
+            ordered_at DATETIME,
+            delivered_at DATETIME
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
