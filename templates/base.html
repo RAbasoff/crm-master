@@ -230,30 +230,48 @@
             body { padding-bottom: 72px; }
             .topbar { height: 52px; padding: 0 12px; }
             .notif-panel { top: 52px; width: 100%; }
-            .container { padding: 14px; }
-            .card { padding: 16px; border-radius: 12px; }
+            .container { padding: 12px; }
+            .card { padding: 14px; border-radius: 12px; margin-bottom: 12px; }
             .form-row { grid-template-columns: 1fr; gap: 10px; }
             .form-group input, .form-group select, .form-group textarea { padding: 14px; font-size: 16px; }
-            .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .stat-card { padding: 14px 12px; }
-            .stat-card .number { font-size: 24px; }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 12px 10px; border-radius: 10px; }
+            .stat-card .number { font-size: 22px; }
             .stat-card .label { font-size: 11px; }
-            .btn { padding: 14px 20px; font-size: 15px; min-height: 48px; }
-            .btn-sm { padding: 10px 14px; min-height: 40px; }
-            .page-header { flex-direction: column; align-items: stretch; }
+            .btn { padding: 14px 20px; font-size: 15px; min-height: 48px; border-radius: 12px; }
+            .btn-sm { padding: 10px 14px; min-height: 40px; font-size: 13px; }
+            .page-header { flex-direction: column; align-items: stretch; gap: 8px; }
+            .page-header h1 { font-size: 18px; }
             .page-header .btn { width: 100%; }
             .detail-grid { grid-template-columns: 1fr; }
             .filters { flex-direction: column; }
             .filters select, .filters input { width: 100%; }
-            .bottom-nav { display: block; }
+            .bottom-nav { display: flex; }
             .tb-user { display: none; }
             .lang-pills { display: none; }
             .search-wrap { display: none; }
+            .table-wrap { margin: 0 -14px; padding: 0 14px; }
+            table { font-size: 12px; }
+            th, td { padding: 8px 10px; }
+            .badge { font-size: 10px; padding: 2px 6px; }
+            .photo-grid { grid-template-columns: repeat(2, 1fr); }
+            .modal-content { padding: 16px; margin: 10px; }
+        }
+        
+        @media (max-width: 480px) {
+            .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .stat-card .number { font-size: 20px; }
+            .stat-card .label { font-size: 10px; }
+            .container { padding: 10px; }
+            .card { padding: 12px; }
+            .btn { padding: 12px 16px; font-size: 14px; }
+            .form-group label { font-size: 12px; }
+            .page-header h1 { font-size: 16px; }
         }
         
         @media (max-width: 380px) {
-            .stats { grid-template-columns: 1fr 1fr; }
-            .stat-card .number { font-size: 20px; }
+            .stats { grid-template-columns: 1fr; }
+            .stat-card .number { font-size: 18px; }
         }
         
         .table-wrap::-webkit-scrollbar { height: 4px; }
@@ -444,6 +462,7 @@
                 {% endfor %}
             </div>
             <div class="tb-sep"></div>
+            <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="{{ _('Install App') }}">📲</button>
             <button class="dark-toggle" onclick="toggleDarkMode()" title="{{ _('Toggle dark mode') }}">🌙</button>
             <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()">
                 🔔<span class="badge-dot" id="notifDot"></span>
@@ -466,9 +485,9 @@
         <div class="bottom-nav-inner">
             <a href="/" class="{% if request.endpoint == 'index' %}active{% endif %}"><span class="icon">🏠</span>{{ _('Home') }}</a>
             <a href="/floor" class="{% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="icon">🏭</span>{{ _('Floor') }}</a>
-            <a href="/faults" class="{% if 'fault' in (request.endpoint or '') %}active{% endif %}"><span class="icon">⚠️</span>{{ _('Faults') }}</a>
-            <a href="/messages" class="{% if 'message' in (request.endpoint or '') %}active{% endif %}"><span class="icon">💬</span>{{ _('Messages') }}</a>
-            <a href="#" onclick="toggleSidebar();return false" class=""><span class="icon">☰</span>{{ _('More') }}</a>
+            <a href="/faults/new" class=""><span class="icon" style="font-size:24px">➕</span>{{ _('Fault') }}</a>
+            <a href="/warehouse" class="{% if 'warehouse' in (request.endpoint or '') %}active{% endif %}"><span class="icon">📦</span>{{ _('Stock') }}</a>
+            <a href="#" onclick="toggleSidebar();return false" class=""><span class="icon">☰</span>{{ _('Menu') }}</a>
         </div>
     </div>
     
@@ -669,6 +688,36 @@
                     .catch(err => console.log('SW registration failed:', err));
             });
         }
+        
+        // PWA Install Prompt
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button if not already installed
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                const installBtn = document.getElementById('installBtn');
+                if (installBtn) installBtn.style.display = 'flex';
+            }
+        });
+        
+        function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(choice => {
+                if (choice.outcome === 'accepted') {
+                    const installBtn = document.getElementById('installBtn');
+                    if (installBtn) installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        }
+        
+        // Hide install button if already installed
+        window.addEventListener('appinstalled', () => {
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) installBtn.style.display = 'none';
+        });
         
         // Maintenance reminders
         function checkMaintenanceReminders() {

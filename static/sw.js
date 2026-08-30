@@ -1,10 +1,12 @@
-const CACHE_NAME = 'crm-werkplaats-v1';
+const CACHE_NAME = 'promaster-v2';
 const STATIC_ASSETS = [
     '/',
-    '/static/manifest.json'
+    '/static/manifest.json',
+    '/static/icon-192.png',
+    '/static/icon-512.png'
 ];
 
-// Install
+// Install - cache static assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
@@ -14,7 +16,7 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
-// Activate
+// Activate - clean old caches
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => {
@@ -26,18 +28,23 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
-// Fetch - Network First for API, Cache First for static
+// Fetch strategy
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
     
+    // Skip chrome-extension and non-http
+    if (!url.protocol.startsWith('http')) return;
+    
     // API calls - Network First
     if (url.pathname.startsWith('/api/')) {
         event.respondWith(
             fetch(event.request)
-                .catch(() => caches.match(event.request))
+                .catch(() => new Response(JSON.stringify({error: 'Offline'}), {
+                    headers: {'Content-Type': 'application/json'}
+                }))
         );
         return;
     }
@@ -47,8 +54,10 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             caches.match(event.request).then(cached => {
                 return cached || fetch(event.request).then(response => {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    }
                     return response;
                 });
             })
@@ -60,11 +69,17 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(() => {
+                return caches.match(event.request).then(cached => {
+                    return cached || caches.match('/');
+                });
+            })
     );
 });
 
@@ -72,23 +87,36 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
     const data = event.data ? event.data.json() : {};
     const options = {
-        body: data.body || 'New notification',
+        body: data.body || 'Новое уведомление',
         icon: '/static/icon-192.png',
         badge: '/static/icon-192.png',
-        vibrate: [100, 50, 100],
-        data: {
-            url: data.url || '/'
-        }
+        vibrate: [200, 100, 200],
+        tag: data.tag || 'default',
+        renotify: true,
+        data: { url: data.url || '/' },
+        actions: [
+            { action: 'open', title: 'Открыть' },
+            { action: 'close', title: 'Закрыть' }
+        ]
     };
     event.waitUntil(
-        self.registration.showNotification(data.title || 'CRM Werkplaats', options)
+        self.registration.showNotification(data.title || 'ProMaster', options)
     );
 });
 
 // Notification click
 self.addEventListener('notificationclick', event => {
     event.notification.close();
+    if (event.action === 'close') return;
     event.waitUntil(
-        clients.openWindow(event.notification.data.url)
+        clients.matchAll({type: 'window'}).then(clientList => {
+            for (const client of clientList) {
+                if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    client.navigate(event.notification.data.url);
+                    return client.focus();
+                }
+            }
+            return clients.openWindow(event.notification.data.url);
+        })
     );
 });

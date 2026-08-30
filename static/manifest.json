@@ -1,12 +1,13 @@
 {
-    "name": "CRM Werkplaats",
-    "short_name": "CRM Pro",
-    "description": "CRM system for workshop management",
+    "name": "ProMaster CRM",
+    "short_name": "ProMaster",
+    "description": "CRM система для мастерской — заявки, склад, станки, отчёты",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#1a1a2e",
     "theme_color": "#1a1a2e",
-    "orientation": "any",
+    "orientation": "portrait-primary",
     "icons": [
         {
             "src": "/static/icon-192.png",
@@ -22,7 +23,26 @@
         }
     ],
     "categories": ["business", "productivity"],
-    "lang": "nl",
-    "screenshots": [],
-    "prefer_related_applications": false
+    "lang": "ru",
+    "prefer_related_applications": false,
+    "shortcuts": [
+        {
+            "name": "Новая заявка",
+            "short_name": "Заявка",
+            "url": "/faults/new",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "Склад",
+            "short_name": "Склад",
+            "url": "/warehouse",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "Карта цеха",
+            "short_name": "Карта",
+            "url": "/floor",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+        }
+    ]
 }
