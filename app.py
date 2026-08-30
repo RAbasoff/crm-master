@@ -1573,6 +1573,7 @@ def mule_new():
         m = MuleMaintenance(
             number=gen_mule_number(),
             mule_number=request.form['mule_number'],
+            mule_serial=request.form.get('mule_serial', ''),
             machine_id=int(request.form['machine_id']) if request.form.get('machine_id') else None,
             date=datetime.strptime(request.form['date'], '%Y-%m-%d').date(),
             reason=request.form['reason'],
@@ -1609,6 +1610,7 @@ def mule_edit(mule_id):
     m = MuleMaintenance.query.get_or_404(mule_id)
     if request.method == 'POST':
         m.mule_number = request.form['mule_number']
+        m.mule_serial = request.form.get('mule_serial', '')
         m.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
         m.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
         m.reason = request.form['reason']

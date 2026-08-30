@@ -313,6 +313,7 @@ def run_migrations():
             id INTEGER PRIMARY KEY,
             number VARCHAR(30) UNIQUE NOT NULL,
             mule_number VARCHAR(100) NOT NULL,
+            mule_serial VARCHAR(100),
             machine_id INTEGER REFERENCES machine(id),
             date DATE NOT NULL,
             reason TEXT NOT NULL,

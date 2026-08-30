@@ -27,6 +27,7 @@
             <th>{{ _('Number') }}</th>
             <th>{{ _('Date') }}</th>
             <th>{{ _('Mule') }}</th>
+            <th>{{ _('Serial') }}</th>
             <th>{{ _('Machine') }}</th>
             <th>{{ _('Reason') }}</th>
             <th>{{ _('Parts') }}</th>
@@ -39,6 +40,7 @@
             <td><strong>{{ m.number }}</strong></td>
             <td>{{ m.date.strftime('%d-%m-%Y') }}</td>
             <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ m.mule_number }}</span></td>
+            <td style="font-size:12px;color:#888">{{ m.mule_serial or '—' }}</td>
             <td>{{ m.machine.name if m.machine else '—' }}</td>
             <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.reason }}</td>
             <td>{{ m.parts|length }}</td>

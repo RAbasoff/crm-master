@@ -965,6 +965,7 @@ class MuleMaintenance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(30), unique=True, nullable=False)
     mule_number = db.Column(db.String(100), nullable=False)
+    mule_serial = db.Column(db.String(100))  # серийный номер муле
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
     date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text, nullable=False)

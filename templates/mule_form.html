@@ -6,8 +6,10 @@
     <form method="POST">
         <div class="form-row">
             <div class="form-group"><label>{{ _('Mule Number') }} *</label><input type="text" name="mule_number" value="{{ mule.mule_number if mule else '' }}" required placeholder="Mule-01"></div>
-            <div class="form-group"><label>{{ _('Date') }} *</label><input type="date" name="date" value="{{ mule.date.strftime('%Y-%m-%d') if mule else '' }}" required></div>
+            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="mule_serial" value="{{ mule.mule_serial if mule and mule.mule_serial else '' }}" placeholder="SN-12345"></div>
         </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Date') }} *</label><input type="date" name="date" value="{{ mule.date.strftime('%Y-%m-%d') if mule else '' }}" required></div>
         <div class="form-row">
             <div class="form-group"><label>{{ _('Machine') }}</label>
                 <select name="machine_id">
