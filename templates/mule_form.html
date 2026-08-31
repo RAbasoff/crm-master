@@ -94,6 +94,7 @@
                         <div class="comp-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
                             <input type="text" name="comp_model" value="{{ c.model or '' }}" placeholder="{{ _('Model') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px">
                             <input type="text" name="comp_knife" value="{{ c.knife_number or '' }}" placeholder="{{ _('Knife number') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'knife' %}display:none{% endif %}">
+                            <input type="text" name="comp_knife_size" value="{{ c.knife_size or '' }}" placeholder="{{ _('Knife size (mm)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'knife' %}display:none{% endif %}">
                             <input type="text" name="comp_cable_type" value="{{ c.cable_type or '' }}" placeholder="{{ _('Cable type') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'cable' %}display:none{% endif %}">
                             <input type="text" name="comp_cable_len" value="{{ c.cable_length or '' }}" placeholder="{{ _('Cable length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'cable' %}display:none{% endif %}">
                             <input type="text" name="comp_gasket_len" value="{{ c.gasket_length or '' }}" placeholder="{{ _('Gasket length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'gasket' %}display:none{% endif %}">
@@ -152,6 +153,7 @@ function addComponent() {
         <div class="comp-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <input type="text" name="comp_model" placeholder="{{ _('Model') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px">
             <input type="text" name="comp_knife" placeholder="{{ _('Knife number') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_knife_size" placeholder="{{ _('Knife size (mm)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_cable_type" placeholder="{{ _('Cable type') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_cable_len" placeholder="{{ _('Cable length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_gasket_len" placeholder="{{ _('Gasket length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
@@ -170,6 +172,7 @@ function toggleCompFields(select) {
     const row = select.closest('.comp-row');
     const type = select.value;
     const knife = row.querySelector('[name="comp_knife"]');
+    const knifeSize = row.querySelector('[name="comp_knife_size"]');
     const cableType = row.querySelector('[name="comp_cable_type"]');
     const cableLen = row.querySelector('[name="comp_cable_len"]');
     const gasketLen = row.querySelector('[name="comp_gasket_len"]');
@@ -181,6 +184,7 @@ function toggleCompFields(select) {
     const replace = row.querySelector('[name="comp_replace"]');
     
     if (knife) knife.style.display = type === 'knife' ? '' : 'none';
+    if (knifeSize) knifeSize.style.display = type === 'knife' ? '' : 'none';
     if (cableType) cableType.style.display = type === 'cable' ? '' : 'none';
     if (cableLen) cableLen.style.display = type === 'cable' ? '' : 'none';
     if (gasketLen) gasketLen.style.display = type === 'gasket' ? '' : 'none';

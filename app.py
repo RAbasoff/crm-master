@@ -1605,6 +1605,7 @@ def mule_new():
         comp_models = request.form.getlist('comp_model')
         comp_qtys = request.form.getlist('comp_qty')
         comp_knife = request.form.getlist('comp_knife')
+        comp_knife_size = request.form.getlist('comp_knife_size')
         comp_cable_type = request.form.getlist('comp_cable_type')
         comp_cable_len = request.form.getlist('comp_cable_len')
         comp_gasket_len = request.form.getlist('comp_gasket_len')
@@ -1622,6 +1623,7 @@ def mule_new():
                     model=comp_models[i] if i < len(comp_models) else '',
                     quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1,
                     knife_number=comp_knife[i] if i < len(comp_knife) else '',
+                    knife_size=comp_knife_size[i] if i < len(comp_knife_size) else '',
                     cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
                     cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
                     gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
@@ -1672,6 +1674,7 @@ def mule_edit(mule_id):
         comp_models = request.form.getlist('comp_model')
         comp_qtys = request.form.getlist('comp_qty')
         comp_knife = request.form.getlist('comp_knife')
+        comp_knife_size = request.form.getlist('comp_knife_size')
         comp_cable_type = request.form.getlist('comp_cable_type')
         comp_cable_len = request.form.getlist('comp_cable_len')
         comp_gasket_len = request.form.getlist('comp_gasket_len')
@@ -1689,6 +1692,7 @@ def mule_edit(mule_id):
                     model=comp_models[i] if i < len(comp_models) else '',
                     quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1,
                     knife_number=comp_knife[i] if i < len(comp_knife) else '',
+                    knife_size=comp_knife_size[i] if i < len(comp_knife_size) else '',
                     cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
                     cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
                     gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
@@ -4362,12 +4366,21 @@ def warehouse_group_delete(group_id):
 @login_required
 @role_required('admin')
 def warehouse_groups_auto():
-    manufacturers = [m[0] for m in db.session.query(Machine.manufacturer).distinct().all() if m[0]]
     created = 0
+    # Create groups from machine manufacturers
+    manufacturers = [m[0] for m in db.session.query(Machine.manufacturer).distinct().all() if m[0]]
     for mfg in manufacturers:
         existing = WarehouseGroup.query.filter_by(manufacturer=mfg).first()
         if not existing:
             g = WarehouseGroup(name=mfg, manufacturer=mfg, description=f'Auto-created from manufacturer: {mfg}')
+            db.session.add(g)
+            created += 1
+    # Create groups from contractors
+    contractors = Contractor.query.filter(Contractor.company_name.isnot(None), Contractor.company_name != '').all()
+    for c in contractors:
+        existing = WarehouseGroup.query.filter_by(name=c.company_name).first()
+        if not existing:
+            g = WarehouseGroup(name=c.company_name, manufacturer=c.company_name, description=f'Contractor: {c.company_name} - {c.service_type or ""}')
             db.session.add(g)
             created += 1
     db.session.commit()

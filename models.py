@@ -997,6 +997,7 @@ class MuleComponent(db.Model):
     model = db.Column(db.String(200))
     quantity = db.Column(db.Float, default=1)
     knife_number = db.Column(db.String(100))
+    knife_size = db.Column(db.String(50))  # размер ножа в мм (длина лезвия)
     cable_type = db.Column(db.String(100))
     cable_length = db.Column(db.String(50))
     gasket_length = db.Column(db.String(50))

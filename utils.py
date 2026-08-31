@@ -363,6 +363,7 @@ def run_migrations():
             model VARCHAR(200),
             quantity FLOAT DEFAULT 1,
             knife_number VARCHAR(100),
+            knife_size VARCHAR(50),
             cable_type VARCHAR(100),
             cable_length VARCHAR(50),
             gasket_length VARCHAR(50),
