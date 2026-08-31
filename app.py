@@ -1529,6 +1529,23 @@ def api_maintenance_reminders():
                 'days_left': days_left, 'overdue': days_left < 0
             })
     
+    # Add consumable replacement reminders (filters, oils, etc.)
+    consumables = VoorraadItem.query.filter(
+        VoorraadItem.consumable_type.isnot(None),
+        VoorraadItem.consumable_type != '',
+        VoorraadItem.next_replacement.isnot(None)
+    ).all()
+    for c in consumables:
+        if c.next_replacement and c.next_replacement <= soon:
+            days_left = (c.next_replacement - today).days
+            reminders.append({
+                'type': 'consumable', 'part': c.naam, 'machine': c.compatible_machines or '—',
+                'machine_id': None, 'part_id': c.id,
+                'date': c.next_replacement.isoformat(),
+                'days_left': days_left, 'overdue': days_left < 0,
+                'consumable_type': c.consumable_type, 'volume': c.volume or ''
+            })
+    
     reminders.sort(key=lambda r: r['date'])
     return jsonify(reminders)
 
@@ -3228,6 +3245,28 @@ def notifications_read_all():
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/consumable-reminders')
+@login_required
+@role_required('admin', 'director', 'technician')
+def consumable_reminders():
+    """Show upcoming consumable replacements"""
+    today = datetime.utcnow().date()
+    soon = today + timedelta(days=30)
+    
+    # Get all consumables with replacement dates
+    upcoming = VoorraadItem.query.filter(
+        VoorraadItem.consumable_type.isnot(None),
+        VoorraadItem.consumable_type != '',
+        VoorraadItem.next_replacement.isnot(None),
+        VoorraadItem.next_replacement <= soon
+    ).order_by(VoorraadItem.next_replacement).all()
+    
+    overdue = [c for c in upcoming if c.next_replacement < today]
+    soon_list = [c for c in upcoming if today <= c.next_replacement <= soon]
+    
+    return render_template('consumable_reminders.html', 
+        overdue=overdue, soon=soon_list, today=today)
 
 # ============================================================
 # ROUTES — DIRECTOR STATISTICS

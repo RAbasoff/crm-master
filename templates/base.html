@@ -410,6 +410,7 @@
             <a href="/contractors" class="sb-item {% if 'contractor' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🏢</span>{{ _('Contractors') }}</a>
             {% endif %}
             <a href="/warehouse" class="sb-item {% if 'warehouse' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Warehouse') }}</a>
+            <a href="/consumable-reminders" class="sb-item {% if 'consumable_reminders' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔔</span>{{ _('Replacement Reminders') }}</a>
             <a href="/purchase-requests" class="sb-item {% if 'purchase' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🛒</span>{{ _('Purchase Requests') }}</a>
             </div>
             {% endif %}

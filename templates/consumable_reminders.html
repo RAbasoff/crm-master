@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Consumable Reminders') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔔 {{ _('Consumable Replacement Reminders') }}</h1>
+    <a href="/warehouse" class="btn btn-sm" style="background:#eee">{{ _('Warehouse') }}</a>
+</div>
+
+<!-- OVERDUE -->
+{% if overdue %}
+<div class="card" style="border-left:4px solid #e74c3c;margin-bottom:16px">
+    <h2 style="color:#e74c3c">⚠️ {{ _('Overdue') }} ({{ overdue|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Item') }}</th><th>{{ _('Type') }}</th><th>{{ _('Volume') }}</th><th>{{ _('Machines') }}</th><th>{{ _('Due Date') }}</th><th>{{ _('Days Overdue') }}</th><th>{{ _('Action') }}</th></tr>
+        {% for c in overdue %}
+        <tr style="background:#fff5f5">
+            <td><strong>{{ c.naam }}</strong></td>
+            <td>{{ c.consumable_type }}</td>
+            <td>{{ c.volume or '—' }}</td>
+            <td>{{ c.compatible_machines or '—' }}</td>
+            <td style="color:#e74c3c;font-weight:bold">{{ c.next_replacement.strftime('%d-%m-%Y') }}</td>
+            <td style="color:#e74c3c;font-weight:bold">{{ (today - c.next_replacement).days }}</td>
+            <td><a href="/warehouse/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Replace') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- UPCOMING -->
+{% if soon %}
+<div class="card" style="border-left:4px solid #f39c12;margin-bottom:16px">
+    <h2 style="color:#f39c12">📅 {{ _('Upcoming') }} ({{ soon|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Item') }}</th><th>{{ _('Type') }}</th><th>{{ _('Volume') }}</th><th>{{ _('Machines') }}</th><th>{{ _('Due Date') }}</th><th>{{ _('Days Left') }}</th><th>{{ _('Action') }}</th></tr>
+        {% for c in soon %}
+        <tr>
+            <td><strong>{{ c.naam }}</strong></td>
+            <td>{{ c.consumable_type }}</td>
+            <td>{{ c.volume or '—' }}</td>
+            <td>{{ c.compatible_machines or '—' }}</td>
+            <td>{{ c.next_replacement.strftime('%d-%m-%Y') }}</td>
+            <td style="color:{% if (c.next_replacement - today).days <= 7 %}#e74c3c{% else %}#f39c12{% endif %};font-weight:bold">{{ (c.next_replacement - today).days }}</td>
+            <td><a href="/warehouse/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Replace') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+{% if not overdue and not soon %}
+<div class="card" style="text-align:center;padding:40px;color:#999">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <div>{{ _('No upcoming replacements') }}</div>
+</div>
+{% endif %}
+{% endblock %}
