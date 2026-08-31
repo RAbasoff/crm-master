@@ -243,6 +243,7 @@ def run_migrations():
             created_at DATETIME
         )"""),
         ("warehouse_item.supplier_part_number", "ALTER TABLE warehouse_item ADD COLUMN supplier_part_number VARCHAR(100)"),
+        ("warehouse_item.contractor_id", "ALTER TABLE warehouse_item ADD COLUMN contractor_id INTEGER REFERENCES contractor(id)"),
         ("warehouse_item.consumable_type", "ALTER TABLE warehouse_item ADD COLUMN consumable_type VARCHAR(50)"),
         ("warehouse_item.consumable_subtype", "ALTER TABLE warehouse_item ADD COLUMN consumable_subtype VARCHAR(100)"),
         ("warehouse_item.volume", "ALTER TABLE warehouse_item ADD COLUMN volume VARCHAR(50)"),

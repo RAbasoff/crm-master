@@ -4456,6 +4456,7 @@ def warehouse_new():
             description=request.form.get('description', ''),
             categorie=request.form.get('categorie',''),
             group_id=int(request.form['group_id']) if request.form.get('group_id') else None,
+            contractor_id=int(request.form['contractor_id']) if request.form.get('contractor_id') else None,
             supplier_part_number=request.form.get('supplier_part_number','').strip() or None,
             eenheid=request.form.get('eenheid','st'),
             hoeveelheid=float(request.form.get('hoeveelheid',0)),
@@ -4474,7 +4475,8 @@ def warehouse_new():
         flash(_('Item added') + f': {i.naam}', 'success')
         return redirect(url_for('warehouse_list'))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
-    return render_template('warehouse_form.html', item=None, groups=groups)
+    contractors = Contractor.query.order_by(Contractor.company_name).all()
+    return render_template('warehouse_form.html', item=None, groups=groups, contractors=contractors)
 
 @app.route('/warehouse/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -4486,6 +4488,7 @@ def warehouse_edit(item_id):
         item.description = request.form.get('description', '')
         item.categorie = request.form.get('categorie','')
         item.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
+        item.contractor_id = int(request.form['contractor_id']) if request.form.get('contractor_id') else None
         item.supplier_part_number = request.form.get('supplier_part_number','').strip() or None
         item.eenheid = request.form.get('eenheid','st')
         item.hoeveelheid = float(request.form.get('hoeveelheid',0))
@@ -4503,7 +4506,8 @@ def warehouse_edit(item_id):
         flash(_('Item updated'), 'success')
         return redirect(url_for('warehouse_list'))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
-    return render_template('warehouse_form.html', item=item, groups=groups)
+    contractors = Contractor.query.order_by(Contractor.company_name).all()
+    return render_template('warehouse_form.html', item=item, groups=groups, contractors=contractors)
 
 @app.route('/warehouse/duplicates')
 @login_required

@@ -404,6 +404,7 @@ class VoorraadItem(db.Model):
     description = db.Column(db.Text)
     categorie = db.Column(db.String(100))
     group_id = db.Column(db.Integer, db.ForeignKey('warehouse_group.id'))
+    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))  # supplier/contractor
     supplier_part_number = db.Column(db.String(100))
     eenheid = db.Column(db.String(20), default='st')
     hoeveelheid = db.Column(db.Float, default=0)
@@ -419,6 +420,7 @@ class VoorraadItem(db.Model):
     last_replacement = db.Column(db.Date)  # date of last replacement
     next_replacement = db.Column(db.Date)  # date of next replacement
     aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
+    contractor = db.relationship('Contractor', backref='warehouse_items')
     mutaties = db.relationship('VoorraadMutatie', backref='item', lazy=True, cascade='all, delete-orphan')
 
 class VoorraadMutatie(db.Model):
