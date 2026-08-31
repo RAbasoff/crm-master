@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Edit Equipment') if eq else _('New Equipment') }} — CRM{% endblock %}
+{% block title %}{{ _('Edit Mule') if eq else _('New Mule') }} — CRM{% endblock %}
 {% block content %}
-<h1>{{ _('Edit Equipment') + ': ' + eq.number if eq else _('New Equipment Maintenance') }}</h1>
+<h1>{{ _('Edit Mule') + ': ' + eq.number if eq else _('New Mule Maintenance') }}</h1>
 <div class="card">
     <form method="POST">
         <div class="form-row">
