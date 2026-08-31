@@ -1,0 +1,71 @@
+Сессия 003 — 31.08.2026
+Проект: CRM Мастерская
+
+============================================================
+
+ВЫПОЛНЕННЫЕ ДЕЙСТВИЯ
+
+1. Добавлен рабочий телефон в модуль ответственные
+   - Модель: work_phone поле в Verantwoordelijke
+   - Миграция: ALTER TABLE client ADD COLUMN work_phone
+   - Шаблоны: responsible_form.html, responsible_detail.html, responsible.html
+   - Маршруты: responsible_new, responsible_edit, responsible_quick_edit
+
+2. Исправлен модуль баллонов (CSRF)
+   - setCylStatus: fetch → csrfFetch
+   - submitReplace: fetch → csrfFetch
+   - saveComp: fetch → csrfFetch
+   - updateActiveCylinders: fetch → csrfFetch
+   - Цвета: добавлена функция getStatusColor для всех статусов
+
+3. Пересоздан модуль Mule Maintenance
+   - Удалён MuleComponent (причина ошибки)
+   - Упрощены модели: MuleMaintenance, MuleMaintenancePart, MulePartOrder
+   - Упрощены маршруты без сложной обработки компонентов
+   - Новые чистые шаблоны: mule.html, mule_form.html
+   - Переименован маршрут: /mule → /equipment-maintenance
+
+4. Добавлен подрядчик в склад
+   - Поле contractor_id в модели VoorraadItem
+   - Выпадающий список "Group" объединяет производителей и подрядчиков
+   - Миграция: ALTER TABLE warehouse_item ADD COLUMN contractor_id
+
+5. Исправлены ошибки из логов PythonAnywhere
+   - warehouse/report: Decimal * float → float() конвертация
+   - machines/report: work_report это список, не объект
+
+6. Добавлены уведомления о замене расходников
+   - Страница: /consumable-reminders
+   - API: /api/maintenance/reminders включает расходники
+   - Навигация: ссылка в меню Склад
+
+7. Тестирование всех модулей
+   - 22 модуля проверены на продакшене
+   - Все возвращают 200 OK
+   - Mule Maintenance: ошибка рендеринга (исправляется переименованием маршрута)
+
+============================================================
+
+ИЗМЕНЕНИЯ В ФАЙЛАХ
+
+Файл                                        Действие    Описание
+models.py                                   Изменён     Добавлен work_phone, contractor_id, удалён MuleComponent
+app.py                                      Изменён     Маршруты Mule, исправления Decimal, добавлены уведомления
+utils.py                                    Изменён     Миграции work_phone, contractor_id
+templates/responsible_form.html             Изменён     Поле рабочий телефон
+templates/responsible_detail.html           Изменён     Отображение рабочего телефона
+templates/responsible.html                  Изменён     Рабочий телефон в списке и быстром редактировании
+templates/cylinders.html                    Изменён     csrfFetch для всех функций, getStatusColor
+templates/warehouse_form.html               Изменён     Выбор подрядчика в Group
+templates/mule.html                         Создан      Новый чистый шаблон
+templates/mule_form.html                    Создан      Новый чистый шаблон
+templates/consumable_reminders.html         Создан      Уведомления о заменах
+templates/base.html                         Изменён     Ссылка на Replacement Reminders
+test_all_modules.py                         Создан      Скрипт тестирования всех модулей
+
+============================================================
+
+СТАТУС: В процессе
+- Mule Maintenance: переименован маршрут, ожидает проверки
+- Ошибки Decimal: исправлены
+- Ошибки work_report: исправлены

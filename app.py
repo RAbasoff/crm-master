@@ -622,7 +622,7 @@ def machines_report():
             'faults_resolved': len([f for f in faults if f.status in ['resolved', 'closed']]),
             'maintenance_total': len(maintenance),
             'maintenance_cost': sum(rec.cost for rec in maintenance),
-            'fault_cost': sum(f.work_report.time_spent_hours * 50 for f in faults if f.work_report)  # estimate
+            'fault_cost': sum(sum(wr.time_spent_hours or 0 for wr in f.work_report) * 50 for f in faults if f.work_report)  # estimate
         })
     
     return render_template('machines_report.html', report_data=report_data, 
@@ -1573,7 +1573,7 @@ def gen_mule_order_number():
         num = 1
     return f'MPO-{prefix}-{num:04d}'
 
-@app.route('/mule')
+@app.route('/equipment-maintenance')
 @login_required
 @role_required('admin', 'director', 'technician')
 def mule_list():
@@ -1586,7 +1586,7 @@ def mule_list():
     machines = Machine.query.order_by(Machine.name).all()
     return render_template('mule.html', maintenance=maintenance, orders=orders, machines=machines, serial_filter=serial_filter)
 
-@app.route('/mule/new', methods=['GET', 'POST'])
+@app.route('/equipment-maintenance/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'technician')
 def mule_new():
@@ -1624,7 +1624,7 @@ def mule_new():
     machines = Machine.query.order_by(Machine.name).all()
     return render_template('mule_form.html', mule=None, machines=machines)
 
-@app.route('/mule/<int:mule_id>/edit', methods=['GET', 'POST'])
+@app.route('/equipment-maintenance/<int:mule_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'technician')
 def mule_edit(mule_id):
@@ -5553,8 +5553,8 @@ def warehouse_search_report():
     # Report data
     total_in = sum(m.hoeveelheid for m in movements if m.type == 'inkomend')
     total_out = sum(m.hoeveelheid for m in movements if m.type == 'uitgaand')
-    total_in_value = sum(m.hoeveelheid * m.item.prijs for m in movements if m.type == 'inkomend')
-    total_out_value = sum(m.hoeveelheid * m.item.prijs for m in movements if m.type == 'uitgaand')
+    total_in_value = sum(float(m.hoeveelheid) * float(m.item.prijs or 0) for m in movements if m.type == 'inkomend')
+    total_out_value = sum(float(m.hoeveelheid) * float(m.item.prijs or 0) for m in movements if m.type == 'uitgaand')
 
     # Grouped report by item
     item_report = {}
