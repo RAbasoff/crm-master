@@ -1,31 +1,31 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Mule Maintenance') }} — CRM{% endblock %}
+{% block title %}{{ _('Equipment Maintenance') }} — CRM{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>🔧 {{ _('Mule Maintenance') }}</h1>
+    <h1>🔧 {{ _('Equipment Maintenance') }}</h1>
     <div style="display:flex;gap:8px">
         <button onclick="document.getElementById('orderModal').style.display='flex'" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Order Parts') }}</button>
-        <a href="/equipment-maintenance/new" class="btn btn-primary">+ {{ _('New Record') }}</a>
+        <a href="/equipment/new" class="btn btn-primary">+ {{ _('New Record') }}</a>
     </div>
 </div>
 
 <!-- STATS -->
 <div class="stats">
-    <div class="stat-card"><div class="number">{{ maintenance|length }}</div><div class="label">{{ _('Total Records') }}</div></div>
+    <div class="stat-card"><div class="number">{{ records|length }}</div><div class="label">{{ _('Total Records') }}</div></div>
     <div class="stat-card"><div class="number">{{ orders|length }}</div><div class="label">{{ _('Part Orders') }}</div></div>
 </div>
 
 <!-- FILTER -->
 <div class="card" style="padding:12px 16px;margin-bottom:16px">
-    <form method="GET" action="/equipment-maintenance" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <form method="GET" action="/equipment" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <label style="font-size:12px;font-weight:600">{{ _('Serial Number') }}:</label>
-        <input type="text" name="serial" value="{{ serial_filter or '' }}" placeholder="{{ _('Filter by serial...') }}" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:200px">
+        <input type="text" name="serial" value="{{ serial or '' }}" placeholder="{{ _('Filter by serial...') }}" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:200px">
         <button type="submit" class="btn btn-sm btn-primary">{{ _('Filter') }}</button>
-        {% if serial_filter %}<a href="/equipment-maintenance" class="btn btn-sm" style="background:#eee">{{ _('Clear') }}</a>{% endif %}
+        {% if serial %}<a href="/equipment" class="btn btn-sm" style="background:#eee">{{ _('Clear') }}</a>{% endif %}
     </form>
 </div>
 
-<!-- MAINTENANCE RECORDS -->
+<!-- RECORDS -->
 <div class="card" style="padding:0">
     <div style="padding:12px 16px;border-bottom:1px solid #eee">
         <h2 style="margin:0;font-size:15px">📋 {{ _('Maintenance Records') }}</h2>
@@ -34,7 +34,7 @@
         <tr>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Date') }}</th>
-            <th>{{ _('Mule') }}</th>
+            <th>{{ _('Name') }}</th>
             <th>{{ _('Serial') }}</th>
             <th>{{ _('Machine') }}</th>
             <th>{{ _('Reason') }}</th>
@@ -43,21 +43,21 @@
             <th>{{ _('Periodicity') }}</th>
             <th>{{ _('Actions') }}</th>
         </tr>
-        {% for m in maintenance %}
+        {% for r in records %}
         <tr>
-            <td><strong>{{ m.number }}</strong></td>
-            <td>{{ m.date.strftime('%d-%m-%Y') }}</td>
-            <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ m.mule_number }}</span></td>
-            <td style="font-size:12px;color:#888">{{ m.mule_serial or '—' }}</td>
-            <td>{{ m.machine.name if m.machine else '—' }}</td>
-            <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.reason }}</td>
-            <td>{{ m.parts|length }}</td>
-            <td>{% if m.next_date %}{{ m.next_date.strftime('%d-%m-%Y') }}{% else %}—{% endif %}</td>
-            <td>{{ m.periodicity or '—' }}</td>
+            <td><strong>{{ r.number }}</strong></td>
+            <td>{{ r.date.strftime('%d-%m-%Y') }}</td>
+            <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ r.name }}</span></td>
+            <td style="font-size:12px;color:#888">{{ r.serial or '—' }}</td>
+            <td>{{ r.machine.name if r.machine else '—' }}</td>
+            <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.reason }}</td>
+            <td>{{ r.parts|length }}</td>
+            <td>{% if r.next_date %}{{ r.next_date.strftime('%d-%m-%Y') }}{% else %}—{% endif %}</td>
+            <td>{{ r.periodicity or '—' }}</td>
             <td>
                 <div style="display:flex;gap:4px">
-                    <a href="/equipment-maintenance/{{ m.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
-                    <form method="POST" action="/equipment-maintenance/{{ m.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                    <a href="/equipment/{{ r.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                    <form method="POST" action="/equipment/{{ r.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
                         <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
                     </form>
                 </div>
@@ -75,7 +75,7 @@
     <div class="table-wrap"><table>
         <tr>
             <th>{{ _('Order') }}</th>
-            <th>{{ _('Mule') }}</th>
+            <th>{{ _('Equipment') }}</th>
             <th>{{ _('Part') }}</th>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Qty') }}</th>
@@ -87,16 +87,16 @@
         {% for o in orders %}
         <tr>
             <td><strong>{{ o.order_number }}</strong></td>
-            <td>{{ o.mule_number or '—' }}</td>
+            <td>{{ o.equipment_name or '—' }}</td>
             <td>{{ o.part_name }}</td>
             <td style="font-size:12px">{{ o.part_number or '—' }}</td>
-            <td>{{ o.quantity }} {{ o.unit }}</td>
+            <td>{{ o.quantity }}</td>
             <td>{{ o.supplier or '—' }}</td>
             <td><span class="badge badge-{{ 'critical' if o.urgency=='critical' else 'high' if o.urgency=='urgent' else 'open' }}">{{ o.urgency }}</span></td>
             <td><span class="badge badge-{{ 'active' if o.status=='delivered' else 'high' if o.status=='ordered' else 'open' }}">{{ o.status }}</span></td>
             <td>
                 {% if o.status != 'delivered' and o.status != 'cancelled' %}
-                <form method="POST" action="/equipment-maintenance/order/{{ o.id }}/status" style="display:inline">
+                <form method="POST" action="/equipment/order/{{ o.id }}/status" style="display:inline">
                     <select name="status" onchange="this.form.submit()" style="font-size:11px;padding:2px">
                         <option value="">{{ _('Change') }}</option>
                         <option value="ordered">{{ _('Ordered') }}</option>
@@ -115,12 +115,12 @@
 <div id="orderModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
     <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="margin:0;font-size:16px">🛒 {{ _('Order Parts for Mule') }}</h2>
+            <h2 style="margin:0;font-size:16px">🛒 {{ _('Order Parts') }}</h2>
             <button onclick="document.getElementById('orderModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
         </div>
-        <form method="POST" action="/equipment-maintenance/order">
+        <form method="POST" action="/equipment/order">
             <div class="form-row">
-                <div class="form-group"><label>{{ _('Mule Number') }}</label><input type="text" name="mule_number" placeholder="Mule-01"></div>
+                <div class="form-group"><label>{{ _('Equipment Name') }}</label><input type="text" name="equipment_name" placeholder="Mule-01"></div>
                 <div class="form-group"><label>{{ _('Urgency') }}</label>
                     <select name="urgency">
                         <option value="normal">{{ _('Normal') }}</option>

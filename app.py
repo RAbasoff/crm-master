@@ -26,7 +26,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
                     UserActivityLog, SystemLog,
-                    MuleMaintenance, MuleMaintenancePart, MulePartOrder)
+                    EquipmentMaintenance, EquipmentPart, EquipmentPartOrder)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -1550,51 +1550,45 @@ def api_maintenance_reminders():
     return jsonify(reminders)
 
 # ============================================================
-# ROUTES — MULE MAINTENANCE
+# ROUTES — EQUIPMENT MAINTENANCE
 # ============================================================
 
-def gen_mule_number():
-    vandaag = datetime.utcnow()
-    prefix = vandaag.strftime('%Y%m%d')
-    laatste = MuleMaintenance.query.filter(MuleMaintenance.number.like(f'MUL-{prefix}-%')).order_by(MuleMaintenance.id.desc()).first()
-    if laatste:
-        num = int(laatste.number.split('-')[2]) + 1
-    else:
-        num = 1
-    return f'MUL-{prefix}-{num:04d}'
+def gen_eq_number():
+    today = datetime.utcnow()
+    prefix = today.strftime('%Y%m%d')
+    last = EquipmentMaintenance.query.filter(EquipmentMaintenance.number.like(f'EQ-{prefix}-%')).order_by(EquipmentMaintenance.id.desc()).first()
+    num = int(last.number.split('-')[2]) + 1 if last else 1
+    return f'EQ-{prefix}-{num:04d}'
 
-def gen_mule_order_number():
-    vandaag = datetime.utcnow()
-    prefix = vandaag.strftime('%Y%m%d')
-    laatste = MulePartOrder.query.filter(MulePartOrder.order_number.like(f'MPO-{prefix}-%')).order_by(MulePartOrder.id.desc()).first()
-    if laatste:
-        num = int(laatste.order_number.split('-')[2]) + 1
-    else:
-        num = 1
-    return f'MPO-{prefix}-{num:04d}'
+def gen_eq_order_number():
+    today = datetime.utcnow()
+    prefix = today.strftime('%Y%m%d')
+    last = EquipmentPartOrder.query.filter(EquipmentPartOrder.order_number.like(f'EPO-{prefix}-%')).order_by(EquipmentPartOrder.id.desc()).first()
+    num = int(last.order_number.split('-')[2]) + 1 if last else 1
+    return f'EPO-{prefix}-{num:04d}'
 
-@app.route('/equipment-maintenance')
+@app.route('/equipment')
 @login_required
 @role_required('admin', 'director', 'technician')
-def mule_list():
-    serial_filter = request.args.get('serial', '').strip()
-    q = MuleMaintenance.query
-    if serial_filter:
-        q = q.filter(MuleMaintenance.mule_serial.ilike(f'%{serial_filter}%'))
-    maintenance = q.order_by(MuleMaintenance.date.desc()).all()
-    orders = MulePartOrder.query.order_by(MulePartOrder.ordered_at.desc()).limit(20).all()
+def equipment_list():
+    q = EquipmentMaintenance.query
+    serial = request.args.get('serial', '').strip()
+    if serial:
+        q = q.filter(EquipmentMaintenance.serial.ilike(f'%{serial}%'))
+    records = q.order_by(EquipmentMaintenance.date.desc()).all()
+    orders = EquipmentPartOrder.query.order_by(EquipmentPartOrder.created_at.desc()).limit(20).all()
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('mule.html', maintenance=maintenance, orders=orders, machines=machines, serial_filter=serial_filter)
+    return render_template('equipment.html', records=records, orders=orders, machines=machines, serial=serial)
 
-@app.route('/equipment-maintenance/new', methods=['GET', 'POST'])
+@app.route('/equipment/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'technician')
-def mule_new():
+def equipment_new():
     if request.method == 'POST':
-        m = MuleMaintenance(
-            number=gen_mule_number(),
-            mule_number=request.form['mule_number'],
-            mule_serial=request.form.get('mule_serial', ''),
+        eq = EquipmentMaintenance(
+            number=gen_eq_number(),
+            name=request.form['name'],
+            serial=request.form.get('serial', ''),
             machine_id=int(request.form['machine_id']) if request.form.get('machine_id') else None,
             date=datetime.strptime(request.form['date'], '%Y-%m-%d').date(),
             reason=request.form['reason'],
@@ -1603,103 +1597,94 @@ def mule_new():
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
-        db.session.add(m)
+        db.session.add(eq)
         db.session.flush()
-        # Add parts
-        part_names = request.form.getlist('part_name')
-        part_numbers = request.form.getlist('part_number')
-        part_qtys = request.form.getlist('part_qty')
-        for i, pname in enumerate(part_names):
+        for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
-                pnum = part_numbers[i] if i < len(part_numbers) else ''
-                pqty = float(part_qtys[i]) if i < len(part_qtys) and part_qtys[i] else 1
-                db.session.add(MuleMaintenancePart(
-                    maintenance_id=m.id, part_name=pname.strip(),
-                    part_number=pnum.strip(), quantity=pqty
+                db.session.add(EquipmentPart(
+                    equipment_id=eq.id,
+                    name=pname.strip(),
+                    number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
+                    quantity=float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
                 ))
         db.session.commit()
-        log_audit('create', 'mule_maintenance', m.id, f'{m.number} — {m.mule_number}')
-        flash(_('Mule maintenance recorded'), 'success')
-        return redirect(url_for('mule_list'))
+        log_audit('create', 'equipment', eq.id, f'{eq.number} — {eq.name}')
+        flash(_('Equipment maintenance recorded'), 'success')
+        return redirect(url_for('equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('mule_form.html', mule=None, machines=machines)
+    return render_template('equipment_form.html', eq=None, machines=machines)
 
-@app.route('/equipment-maintenance/<int:mule_id>/edit', methods=['GET', 'POST'])
+@app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'technician')
-def mule_edit(mule_id):
-    m = MuleMaintenance.query.get_or_404(mule_id)
+def equipment_edit(eq_id):
+    eq = EquipmentMaintenance.query.get_or_404(eq_id)
     if request.method == 'POST':
-        m.mule_number = request.form['mule_number']
-        m.mule_serial = request.form.get('mule_serial', '')
-        m.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
-        m.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
-        m.reason = request.form['reason']
-        m.next_date = datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None
-        m.periodicity = request.form.get('periodicity', '')
-        m.notes = request.form.get('notes', '')
-        # Update parts
-        MuleMaintenancePart.query.filter_by(maintenance_id=m.id).delete()
-        part_names = request.form.getlist('part_name')
-        part_numbers = request.form.getlist('part_number')
-        part_qtys = request.form.getlist('part_qty')
-        for i, pname in enumerate(part_names):
+        eq.name = request.form['name']
+        eq.serial = request.form.get('serial', '')
+        eq.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
+        eq.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+        eq.reason = request.form['reason']
+        eq.next_date = datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None
+        eq.periodicity = request.form.get('periodicity', '')
+        eq.notes = request.form.get('notes', '')
+        EquipmentPart.query.filter_by(equipment_id=eq.id).delete()
+        for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
-                pnum = part_numbers[i] if i < len(part_numbers) else ''
-                pqty = float(part_qtys[i]) if i < len(part_qtys) and part_qtys[i] else 1
-                db.session.add(MuleMaintenancePart(
-                    maintenance_id=m.id, part_name=pname.strip(),
-                    part_number=pnum.strip(), quantity=pqty
+                db.session.add(EquipmentPart(
+                    equipment_id=eq.id,
+                    name=pname.strip(),
+                    number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
+                    quantity=float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
                 ))
         db.session.commit()
-        flash(_('Mule maintenance updated'), 'success')
-        return redirect(url_for('mule_list'))
+        flash(_('Equipment maintenance updated'), 'success')
+        return redirect(url_for('equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('mule_form.html', mule=m, machines=machines)
+    return render_template('equipment_form.html', eq=eq, machines=machines)
 
-@app.route('/mule/<int:mule_id>/delete', methods=['POST'])
+@app.route('/equipment/<int:eq_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin')
-def mule_delete(mule_id):
-    m = MuleMaintenance.query.get_or_404(mule_id)
-    db.session.delete(m)
+def equipment_delete(eq_id):
+    eq = EquipmentMaintenance.query.get_or_404(eq_id)
+    db.session.delete(eq)
     db.session.commit()
-    flash(_('Mule maintenance deleted'), 'success')
-    return redirect(url_for('mule_list'))
+    flash(_('Equipment maintenance deleted'), 'success')
+    return redirect(url_for('equipment_list'))
 
-@app.route('/mule/order', methods=['POST'])
+@app.route('/equipment/order', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
-def mule_order():
-    o = MulePartOrder(
-        order_number=gen_mule_order_number(),
-        mule_number=request.form.get('mule_number', ''),
+def equipment_order():
+    o = EquipmentPartOrder(
+        order_number=gen_eq_order_number(),
+        equipment_name=request.form.get('equipment_name', ''),
         part_name=request.form['part_name'],
         part_number=request.form.get('part_number', ''),
         quantity=float(request.form.get('quantity', 1)),
-        unit=request.form.get('unit', 'st'),
         supplier=request.form.get('supplier', ''),
         urgency=request.form.get('urgency', 'normal'),
         notes=request.form.get('notes', ''),
-        ordered_by=current_user.id
+        created_by=current_user.id
     )
     db.session.add(o)
     db.session.commit()
     flash(_('Part order created'), 'success')
-    return redirect(url_for('mule_list'))
+    return redirect(url_for('equipment_list'))
 
-@app.route('/mule/order/<int:order_id>/status', methods=['POST'])
+@app.route('/equipment/order/<int:order_id>/status', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
-def mule_order_status(order_id):
-    o = MulePartOrder.query.get_or_404(order_id)
+def equipment_order_status(order_id):
+    o = EquipmentPartOrder.query.get_or_404(order_id)
     new_status = request.form.get('status')
     if new_status in ('pending', 'ordered', 'delivered', 'cancelled'):
         o.status = new_status
         if new_status == 'delivered':
             o.delivered_at = datetime.utcnow()
     db.session.commit()
-    return redirect(url_for('mule_list'))
+    return redirect(url_for('equipment_list'))
 
 # ============================================================
 # ROUTES — GAS CYLINDERS

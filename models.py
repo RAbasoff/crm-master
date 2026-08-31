@@ -968,15 +968,15 @@ class ChatMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id])
 
 # ============================================================
-# MULE MAINTENANCE MODELS
+# EQUIPMENT MAINTENANCE MODELS
 # ============================================================
 
-class MuleMaintenance(db.Model):
-    __tablename__ = 'mule_maintenance'
+class EquipmentMaintenance(db.Model):
+    __tablename__ = 'equipment_maintenance'
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(30), unique=True, nullable=False)
-    mule_number = db.Column(db.String(100), nullable=False)
-    mule_serial = db.Column(db.String(100))
+    name = db.Column(db.String(200), nullable=False)
+    serial = db.Column(db.String(100))
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
     date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text, nullable=False)
@@ -986,34 +986,32 @@ class MuleMaintenance(db.Model):
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    machine = db.relationship('Machine', backref='mule_maintenance')
+    machine = db.relationship('Machine', backref='equipment_maintenance')
     creator = db.relationship('User', foreign_keys=[created_by])
-    parts = db.relationship('MuleMaintenancePart', backref='maintenance', lazy=True, cascade='all, delete-orphan')
+    parts = db.relationship('EquipmentPart', backref='equipment', lazy=True, cascade='all, delete-orphan')
 
-class MuleMaintenancePart(db.Model):
-    __tablename__ = 'mule_maintenance_part'
+class EquipmentPart(db.Model):
+    __tablename__ = 'equipment_part'
     id = db.Column(db.Integer, primary_key=True)
-    maintenance_id = db.Column(db.Integer, db.ForeignKey('mule_maintenance.id'), nullable=False)
-    part_name = db.Column(db.String(200), nullable=False)
-    part_number = db.Column(db.String(100))
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    number = db.Column(db.String(100))
     quantity = db.Column(db.Float, default=1)
-    unit = db.Column(db.String(20), default='st')
     notes = db.Column(db.Text)
 
-class MulePartOrder(db.Model):
-    __tablename__ = 'mule_part_order'
+class EquipmentPartOrder(db.Model):
+    __tablename__ = 'equipment_part_order'
     id = db.Column(db.Integer, primary_key=True)
     order_number = db.Column(db.String(30), unique=True, nullable=False)
-    mule_number = db.Column(db.String(100))
+    equipment_name = db.Column(db.String(200))
     part_name = db.Column(db.String(200), nullable=False)
     part_number = db.Column(db.String(100))
     quantity = db.Column(db.Float, default=1)
-    unit = db.Column(db.String(20), default='st')
     supplier = db.Column(db.String(200))
     urgency = db.Column(db.String(20), default='normal')
     status = db.Column(db.String(20), default='pending')
     notes = db.Column(db.Text)
-    ordered_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    ordered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     delivered_at = db.Column(db.DateTime)
-    orderer = db.relationship('User', foreign_keys=[ordered_by])
+    creator = db.relationship('User', foreign_keys=[created_by])
