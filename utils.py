@@ -243,6 +243,13 @@ def run_migrations():
             created_at DATETIME
         )"""),
         ("warehouse_item.supplier_part_number", "ALTER TABLE warehouse_item ADD COLUMN supplier_part_number VARCHAR(100)"),
+        ("warehouse_item.consumable_type", "ALTER TABLE warehouse_item ADD COLUMN consumable_type VARCHAR(50)"),
+        ("warehouse_item.consumable_subtype", "ALTER TABLE warehouse_item ADD COLUMN consumable_subtype VARCHAR(100)"),
+        ("warehouse_item.volume", "ALTER TABLE warehouse_item ADD COLUMN volume VARCHAR(50)"),
+        ("warehouse_item.compatible_machines", "ALTER TABLE warehouse_item ADD COLUMN compatible_machines TEXT"),
+        ("warehouse_item.replacement_interval", "ALTER TABLE warehouse_item ADD COLUMN replacement_interval VARCHAR(50)"),
+        ("warehouse_item.last_replacement", "ALTER TABLE warehouse_item ADD COLUMN last_replacement DATE"),
+        ("warehouse_item.next_replacement", "ALTER TABLE warehouse_item ADD COLUMN next_replacement DATE"),
         ("fault_report.contractor_id", "ALTER TABLE fault_report ADD COLUMN contractor_id INTEGER REFERENCES contractor(id)"),
         ("weekend_shift", "CREATE TABLE IF NOT EXISTS weekend_shift (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id) NOT NULL, date DATE NOT NULL, shift_type VARCHAR(20) DEFAULT 'full', notes TEXT, created_by INTEGER REFERENCES user(id), created_at DATETIME)"),
         ("fault_status_history", "CREATE TABLE IF NOT EXISTS fault_status_history (id INTEGER PRIMARY KEY, fault_id INTEGER REFERENCES fault_report(id) NOT NULL, old_status VARCHAR(20), new_status VARCHAR(20) NOT NULL, reason TEXT, changed_by INTEGER REFERENCES user(id), changed_at DATETIME)"),

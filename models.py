@@ -410,6 +410,14 @@ class VoorraadItem(db.Model):
     minimum = db.Column(db.Float, default=0)
     prijs = db.Column(Numeric(10, 2), default=0)
     locatie = db.Column(db.String(100))
+    # Consumable fields (for filters, oils, etc.)
+    consumable_type = db.Column(db.String(50))  # filter, oil, grease, coolant
+    consumable_subtype = db.Column(db.String(100))  # air filter, oil filter, hydraulic oil, etc.
+    volume = db.Column(db.String(50))  # volume (L, kg)
+    compatible_machines = db.Column(db.Text)  # compatible machine models
+    replacement_interval = db.Column(db.String(50))  # replacement interval (e.g., "500 hours", "monthly")
+    last_replacement = db.Column(db.Date)  # date of last replacement
+    next_replacement = db.Column(db.Date)  # date of next replacement
     aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
     mutaties = db.relationship('VoorraadMutatie', backref='item', lazy=True, cascade='all, delete-orphan')
 

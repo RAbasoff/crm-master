@@ -4409,7 +4409,14 @@ def warehouse_new():
             hoeveelheid=float(request.form.get('hoeveelheid',0)),
             minimum=float(request.form.get('minimum',0)),
             prijs=float(request.form.get('prijs',0)),
-            locatie=request.form.get('locatie','')
+            locatie=request.form.get('locatie',''),
+            consumable_type=request.form.get('consumable_type',''),
+            consumable_subtype=request.form.get('consumable_subtype',''),
+            volume=request.form.get('volume',''),
+            compatible_machines=request.form.get('compatible_machines',''),
+            replacement_interval=request.form.get('replacement_interval',''),
+            last_replacement=datetime.strptime(request.form['last_replacement'], '%Y-%m-%d').date() if request.form.get('last_replacement') else None,
+            next_replacement=datetime.strptime(request.form['next_replacement'], '%Y-%m-%d').date() if request.form.get('next_replacement') else None,
         )
         db.session.add(i); db.session.commit()
         flash(_('Item added') + f': {i.naam}', 'success')
@@ -4433,6 +4440,13 @@ def warehouse_edit(item_id):
         item.minimum = float(request.form.get('minimum',0))
         item.prijs = float(request.form.get('prijs',0))
         item.locatie = request.form.get('locatie','')
+        item.consumable_type = request.form.get('consumable_type','')
+        item.consumable_subtype = request.form.get('consumable_subtype','')
+        item.volume = request.form.get('volume','')
+        item.compatible_machines = request.form.get('compatible_machines','')
+        item.replacement_interval = request.form.get('replacement_interval','')
+        item.last_replacement = datetime.strptime(request.form['last_replacement'], '%Y-%m-%d').date() if request.form.get('last_replacement') else None
+        item.next_replacement = datetime.strptime(request.form['next_replacement'], '%Y-%m-%d').date() if request.form.get('next_replacement') else None
         db.session.commit()
         flash(_('Item updated'), 'success')
         return redirect(url_for('warehouse_list'))

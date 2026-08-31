@@ -69,6 +69,35 @@
             <div class="form-group"><label>{{ _('Price') }} (€)</label><input type="number" name="prijs" value="{{ item.prijs if item else 0 }}" step="0.01"></div>
         </div>
         <div class="form-group"><label>{{ _('Location') }}</label><input type="text" name="locatie" value="{{ item.locatie if item else '' }}" placeholder="{{ _('Shelf 1, rack 3...') }}"></div>
+        
+        <!-- CONSUMABLE FIELDS -->
+        <div class="card" style="background:#f0fff0;margin:16px 0;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">🔧 {{ _('Machine Consumables') }} ({{ _('Filters, Oils, etc.') }})</h3>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Type') }}</label>
+                    <select name="consumable_type" id="consumableType" onchange="toggleConsumableFields()">
+                        <option value="">{{ _('Not a consumable') }}</option>
+                        <option value="filter" {% if item and item.consumable_type=='filter' %}selected{% endif %}>🔧 {{ _('Filter') }}</option>
+                        <option value="oil" {% if item and item.consumable_type=='oil' %}selected{% endif %}>🛢️ {{ _('Oil') }}</option>
+                        <option value="grease" {% if item and item.consumable_type=='grease' %}selected{% endif %}>🧴 {{ _('Grease') }}</option>
+                        <option value="coolant" {% if item and item.consumable_type=='coolant' %}selected{% endif %}>💧 {{ _('Coolant') }}</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>{{ _('Subtype') }}</label>
+                    <input type="text" name="consumable_subtype" value="{{ item.consumable_subtype if item and item.consumable_subtype else '' }}" placeholder="{{ _('Air filter, oil filter, hydraulic oil...') }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Volume') }}</label><input type="text" name="volume" value="{{ item.volume if item and item.volume else '' }}" placeholder="5L, 10kg, 1L..."></div>
+                <div class="form-group"><label>{{ _('Compatible Machines') }}</label><input type="text" name="compatible_machines" value="{{ item.compatible_machines if item and item.compatible_machines else '' }}" placeholder="{{ _('CNC-001, Press-002...') }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Replacement Interval') }}</label><input type="text" name="replacement_interval" value="{{ item.replacement_interval if item and item.replacement_interval else '' }}" placeholder="500 hours, monthly, yearly..."></div>
+                <div class="form-group"><label>{{ _('Last Replacement') }}</label><input type="date" name="last_replacement" value="{{ item.last_replacement.strftime('%Y-%m-%d') if item and item.last_replacement else '' }}"></div>
+            </div>
+            <div class="form-group"><label>{{ _('Next Replacement') }}</label><input type="date" name="next_replacement" value="{{ item.next_replacement.strftime('%Y-%m-%d') if item and item.next_replacement else '' }}"></div>
+        </div>
+        
         <div style="display:flex;gap:8px;align-items:center">
             <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
             <a href="/warehouse" class="btn" style="background:#eee">{{ _('Cancel') }}</a>

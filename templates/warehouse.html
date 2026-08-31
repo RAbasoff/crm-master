@@ -53,12 +53,13 @@
 </div>
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Group') }}</th><th>{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
+        <tr><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Type') }}</th><th>{{ _('Group') }}</th><th>{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
         {% for i in items %}
         <tr>
-            <td>{{ i.naam }}</td>
+            <td>{{ i.naam }}{% if i.consumable_type %} <span style="font-size:10px;background:#e8f5e9;padding:1px 4px;border-radius:3px">{{ i.consumable_type }}</span>{% endif %}</td>
             <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
             <td>{{ i.categorie or '—' }}</td>
+            <td style="font-size:11px">{% if i.consumable_subtype %}{{ i.consumable_subtype }}{% elif i.volume %}{{ i.volume }}{% else %}—{% endif %}</td>
             <td>{% if i.group %}<a href="/warehouse?group={{ i.group.id }}" style="color:#3498db">{{ i.group.name }}</a>{% else %}—{% endif %}</td>
             <td>{% if i.locatie %}📍 {{ i.locatie }}{% else %}—{% endif %}</td>
             <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ i.hoeveelheid }}</td>
