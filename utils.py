@@ -361,6 +361,10 @@ def run_migrations():
             gasket_length VARCHAR(50),
             spring_size VARCHAR(100),
             bolt_type VARCHAR(100),
+            filter_type VARCHAR(100),
+            oil_type VARCHAR(100),
+            volume VARCHAR(50),
+            replacement_date DATE,
             notes TEXT
         )"""),
     ]

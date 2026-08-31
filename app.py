@@ -1610,6 +1610,10 @@ def mule_new():
         comp_gasket_len = request.form.getlist('comp_gasket_len')
         comp_spring = request.form.getlist('comp_spring')
         comp_bolt = request.form.getlist('comp_bolt')
+        comp_filter = request.form.getlist('comp_filter')
+        comp_oil = request.form.getlist('comp_oil')
+        comp_volume = request.form.getlist('comp_volume')
+        comp_replace = request.form.getlist('comp_replace')
         for i, ctype in enumerate(comp_types):
             if ctype:
                 db.session.add(MuleComponent(
@@ -1623,6 +1627,10 @@ def mule_new():
                     gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
                     spring_size=comp_spring[i] if i < len(comp_spring) else '',
                     bolt_type=comp_bolt[i] if i < len(comp_bolt) else '',
+                    filter_type=comp_filter[i] if i < len(comp_filter) else '',
+                    oil_type=comp_oil[i] if i < len(comp_oil) else '',
+                    volume=comp_volume[i] if i < len(comp_volume) else '',
+                    replacement_date=datetime.strptime(comp_replace[i], '%Y-%m-%d').date() if i < len(comp_replace) and comp_replace[i] else None,
                 ))
         db.session.commit()
         log_audit('create', 'mule_maintenance', m.id, f'{m.number} — {m.mule_number}')
@@ -1669,6 +1677,10 @@ def mule_edit(mule_id):
         comp_gasket_len = request.form.getlist('comp_gasket_len')
         comp_spring = request.form.getlist('comp_spring')
         comp_bolt = request.form.getlist('comp_bolt')
+        comp_filter = request.form.getlist('comp_filter')
+        comp_oil = request.form.getlist('comp_oil')
+        comp_volume = request.form.getlist('comp_volume')
+        comp_replace = request.form.getlist('comp_replace')
         for i, ctype in enumerate(comp_types):
             if ctype:
                 db.session.add(MuleComponent(
@@ -1682,6 +1694,10 @@ def mule_edit(mule_id):
                     gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
                     spring_size=comp_spring[i] if i < len(comp_spring) else '',
                     bolt_type=comp_bolt[i] if i < len(comp_bolt) else '',
+                    filter_type=comp_filter[i] if i < len(comp_filter) else '',
+                    oil_type=comp_oil[i] if i < len(comp_oil) else '',
+                    volume=comp_volume[i] if i < len(comp_volume) else '',
+                    replacement_date=datetime.strptime(comp_replace[i], '%Y-%m-%d').date() if i < len(comp_replace) and comp_replace[i] else None,
                 ))
         db.session.commit()
         flash(_('Mule maintenance updated'), 'success')

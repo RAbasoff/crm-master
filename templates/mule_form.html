@@ -85,6 +85,8 @@
                                 <option value="gasket" {% if c.component_type=='gasket' %}selected{% endif %}>⭕ {{ _('Gasket') }}</option>
                                 <option value="spring" {% if c.component_type=='spring' %}selected{% endif %}>🌀 {{ _('Spring') }}</option>
                                 <option value="bolt" {% if c.component_type=='bolt' %}selected{% endif %}>🔩 {{ _('Bolt') }}</option>
+                                <option value="filter" {% if c.component_type=='filter' %}selected{% endif %}>🔧 {{ _('Filter') }}</option>
+                                <option value="oil" {% if c.component_type=='oil' %}selected{% endif %}>🛢️ {{ _('Oil') }}</option>
                             </select>
                             <input type="number" name="comp_qty" value="{{ c.quantity }}" min="1" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" placeholder="Qty">
                             <button type="button" onclick="this.closest('.comp-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
@@ -97,6 +99,10 @@
                             <input type="text" name="comp_gasket_len" value="{{ c.gasket_length or '' }}" placeholder="{{ _('Gasket length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'gasket' %}display:none{% endif %}">
                             <input type="text" name="comp_spring" value="{{ c.spring_size or '' }}" placeholder="{{ _('Spring size (L×D×d)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'spring' %}display:none{% endif %}">
                             <input type="text" name="comp_bolt" value="{{ c.bolt_type or '' }}" placeholder="{{ _('Bolt type (M6, M8...)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'bolt' %}display:none{% endif %}">
+                            <input type="text" name="comp_filter" value="{{ c.filter_type or '' }}" placeholder="{{ _('Filter type (air, oil, hydraulic)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'filter' %}display:none{% endif %}">
+                            <input type="text" name="comp_oil" value="{{ c.oil_type or '' }}" placeholder="{{ _('Oil type (hydraulic, lubricant, coolant)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type != 'oil' %}display:none{% endif %}">
+                            <input type="text" name="comp_volume" value="{{ c.volume or '' }}" placeholder="{{ _('Volume (L)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type not in ['filter','oil'] %}display:none{% endif %}">
+                            <input type="date" name="comp_replace" value="{{ c.replacement_date.strftime('%Y-%m-%d') if c.replacement_date else '' }}" placeholder="{{ _('Replacement date') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type not in ['filter','oil'] %}display:none{% endif %}">
                         </div>
                     </div>
                     {% endfor %}
@@ -137,6 +143,8 @@ function addComponent() {
                 <option value="gasket">⭕ {{ _('Gasket') }}</option>
                 <option value="spring">🌀 {{ _('Spring') }}</option>
                 <option value="bolt">🔩 {{ _('Bolt') }}</option>
+                <option value="filter">🔧 {{ _('Filter') }}</option>
+                <option value="oil">🛢️ {{ _('Oil') }}</option>
             </select>
             <input type="number" name="comp_qty" value="1" min="1" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" placeholder="Qty">
             <button type="button" onclick="this.closest('.comp-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
@@ -149,6 +157,10 @@ function addComponent() {
             <input type="text" name="comp_gasket_len" placeholder="{{ _('Gasket length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_spring" placeholder="{{ _('Spring size (L×D×d)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
             <input type="text" name="comp_bolt" placeholder="{{ _('Bolt type (M6, M8...)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_filter" placeholder="{{ _('Filter type (air, oil, hydraulic)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_oil" placeholder="{{ _('Oil type (hydraulic, lubricant, coolant)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_volume" placeholder="{{ _('Volume (L)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="date" name="comp_replace" placeholder="{{ _('Replacement date') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
         </div>
     </div>`;
     document.getElementById('componentsList').insertAdjacentHTML('beforeend', html);
@@ -163,6 +175,10 @@ function toggleCompFields(select) {
     const gasketLen = row.querySelector('[name="comp_gasket_len"]');
     const spring = row.querySelector('[name="comp_spring"]');
     const bolt = row.querySelector('[name="comp_bolt"]');
+    const filter = row.querySelector('[name="comp_filter"]');
+    const oil = row.querySelector('[name="comp_oil"]');
+    const volume = row.querySelector('[name="comp_volume"]');
+    const replace = row.querySelector('[name="comp_replace"]');
     
     if (knife) knife.style.display = type === 'knife' ? '' : 'none';
     if (cableType) cableType.style.display = type === 'cable' ? '' : 'none';
@@ -170,6 +186,10 @@ function toggleCompFields(select) {
     if (gasketLen) gasketLen.style.display = type === 'gasket' ? '' : 'none';
     if (spring) spring.style.display = type === 'spring' ? '' : 'none';
     if (bolt) bolt.style.display = type === 'bolt' ? '' : 'none';
+    if (filter) filter.style.display = type === 'filter' ? '' : 'none';
+    if (oil) oil.style.display = type === 'oil' ? '' : 'none';
+    if (volume) volume.style.display = (type === 'filter' || type === 'oil') ? '' : 'none';
+    if (replace) replace.style.display = (type === 'filter' || type === 'oil') ? '' : 'none';
 }
 
 // Warehouse parts search
