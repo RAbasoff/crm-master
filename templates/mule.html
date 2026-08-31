@@ -12,8 +12,6 @@
 <!-- STATS -->
 <div class="stats">
     <div class="stat-card"><div class="number">{{ maintenance|length }}</div><div class="label">{{ _('Total Records') }}</div></div>
-    <div class="stat-card warn"><div class="number">{{ maintenance|selectattr('status','equalto','planned')|list|length }}</div><div class="label">{{ _('Planned') }}</div></div>
-    <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ maintenance|selectattr('status','equalto','overdue')|list|length }}</div><div class="label">{{ _('Overdue') }}</div></div>
     <div class="stat-card"><div class="number">{{ orders|length }}</div><div class="label">{{ _('Part Orders') }}</div></div>
 </div>
 
@@ -29,7 +27,7 @@
 
 <!-- MAINTENANCE RECORDS -->
 <div class="card" style="padding:0">
-    <div style="padding:12px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
+    <div style="padding:12px 16px;border-bottom:1px solid #eee">
         <h2 style="margin:0;font-size:15px">📋 {{ _('Maintenance Records') }}</h2>
     </div>
     <div class="table-wrap"><table>

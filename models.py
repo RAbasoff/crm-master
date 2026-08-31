@@ -989,28 +989,6 @@ class MuleMaintenance(db.Model):
     machine = db.relationship('Machine', backref='mule_maintenance')
     creator = db.relationship('User', foreign_keys=[created_by])
     parts = db.relationship('MuleMaintenancePart', backref='maintenance', lazy=True, cascade='all, delete-orphan')
-    components = db.relationship('MuleComponent', backref='maintenance', lazy=True, cascade='all, delete-orphan')
-
-class MuleComponent(db.Model):
-    """Составные части муле: датчик, элемент, нож, кабель, прокладка, пружина, болт, фильтр, масло"""
-    __tablename__ = 'mule_component'
-    id = db.Column(db.Integer, primary_key=True)
-    maintenance_id = db.Column(db.Integer, db.ForeignKey('mule_maintenance.id'), nullable=False)
-    component_type = db.Column(db.String(50), nullable=False)
-    model = db.Column(db.String(200))
-    quantity = db.Column(db.Float, default=1)
-    knife_number = db.Column(db.String(100))
-    knife_size = db.Column(db.String(50))  # размер ножа в мм (длина лезвия)
-    cable_type = db.Column(db.String(100))
-    cable_length = db.Column(db.String(50))
-    gasket_length = db.Column(db.String(50))
-    spring_size = db.Column(db.String(100))
-    bolt_type = db.Column(db.String(100))
-    filter_type = db.Column(db.String(100))  # тип фильтра (воздушный, масляный, гидравлический)
-    oil_type = db.Column(db.String(100))  # тип масла (гидравлическое, смазочное, охлаждающее)
-    volume = db.Column(db.String(50))  # объём (для масла и фильтров)
-    replacement_date = db.Column(db.Date)  # дата замены
-    notes = db.Column(db.Text)
 
 class MuleMaintenancePart(db.Model):
     __tablename__ = 'mule_maintenance_part'

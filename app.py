@@ -26,7 +26,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
                     UserActivityLog, SystemLog,
-                    MuleMaintenance, MuleMaintenancePart, MulePartOrder, MuleComponent)
+                    MuleMaintenance, MuleMaintenancePart, MulePartOrder)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -1617,40 +1617,6 @@ def mule_new():
                     maintenance_id=m.id, part_name=pname.strip(),
                     part_number=pnum.strip(), quantity=pqty
                 ))
-        # Add components
-        comp_types = request.form.getlist('comp_type')
-        comp_models = request.form.getlist('comp_model')
-        comp_qtys = request.form.getlist('comp_qty')
-        comp_knife = request.form.getlist('comp_knife')
-        comp_knife_size = request.form.getlist('comp_knife_size')
-        comp_cable_type = request.form.getlist('comp_cable_type')
-        comp_cable_len = request.form.getlist('comp_cable_len')
-        comp_gasket_len = request.form.getlist('comp_gasket_len')
-        comp_spring = request.form.getlist('comp_spring')
-        comp_bolt = request.form.getlist('comp_bolt')
-        comp_filter = request.form.getlist('comp_filter')
-        comp_oil = request.form.getlist('comp_oil')
-        comp_volume = request.form.getlist('comp_volume')
-        comp_replace = request.form.getlist('comp_replace')
-        for i, ctype in enumerate(comp_types):
-            if ctype:
-                db.session.add(MuleComponent(
-                    maintenance_id=m.id,
-                    component_type=ctype,
-                    model=comp_models[i] if i < len(comp_models) else '',
-                    quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1,
-                    knife_number=comp_knife[i] if i < len(comp_knife) else '',
-                    knife_size=comp_knife_size[i] if i < len(comp_knife_size) else '',
-                    cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
-                    cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
-                    gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
-                    spring_size=comp_spring[i] if i < len(comp_spring) else '',
-                    bolt_type=comp_bolt[i] if i < len(comp_bolt) else '',
-                    filter_type=comp_filter[i] if i < len(comp_filter) else '',
-                    oil_type=comp_oil[i] if i < len(comp_oil) else '',
-                    volume=comp_volume[i] if i < len(comp_volume) else '',
-                    replacement_date=datetime.strptime(comp_replace[i], '%Y-%m-%d').date() if i < len(comp_replace) and comp_replace[i] else None,
-                ))
         db.session.commit()
         log_audit('create', 'mule_maintenance', m.id, f'{m.number} — {m.mule_number}')
         flash(_('Mule maintenance recorded'), 'success')
@@ -1684,41 +1650,6 @@ def mule_edit(mule_id):
                 db.session.add(MuleMaintenancePart(
                     maintenance_id=m.id, part_name=pname.strip(),
                     part_number=pnum.strip(), quantity=pqty
-                ))
-        # Update components
-        MuleComponent.query.filter_by(maintenance_id=m.id).delete()
-        comp_types = request.form.getlist('comp_type')
-        comp_models = request.form.getlist('comp_model')
-        comp_qtys = request.form.getlist('comp_qty')
-        comp_knife = request.form.getlist('comp_knife')
-        comp_knife_size = request.form.getlist('comp_knife_size')
-        comp_cable_type = request.form.getlist('comp_cable_type')
-        comp_cable_len = request.form.getlist('comp_cable_len')
-        comp_gasket_len = request.form.getlist('comp_gasket_len')
-        comp_spring = request.form.getlist('comp_spring')
-        comp_bolt = request.form.getlist('comp_bolt')
-        comp_filter = request.form.getlist('comp_filter')
-        comp_oil = request.form.getlist('comp_oil')
-        comp_volume = request.form.getlist('comp_volume')
-        comp_replace = request.form.getlist('comp_replace')
-        for i, ctype in enumerate(comp_types):
-            if ctype:
-                db.session.add(MuleComponent(
-                    maintenance_id=m.id,
-                    component_type=ctype,
-                    model=comp_models[i] if i < len(comp_models) else '',
-                    quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1,
-                    knife_number=comp_knife[i] if i < len(comp_knife) else '',
-                    knife_size=comp_knife_size[i] if i < len(comp_knife_size) else '',
-                    cable_type=comp_cable_type[i] if i < len(comp_cable_type) else '',
-                    cable_length=comp_cable_len[i] if i < len(comp_cable_len) else '',
-                    gasket_length=comp_gasket_len[i] if i < len(comp_gasket_len) else '',
-                    spring_size=comp_spring[i] if i < len(comp_spring) else '',
-                    bolt_type=comp_bolt[i] if i < len(comp_bolt) else '',
-                    filter_type=comp_filter[i] if i < len(comp_filter) else '',
-                    oil_type=comp_oil[i] if i < len(comp_oil) else '',
-                    volume=comp_volume[i] if i < len(comp_volume) else '',
-                    replacement_date=datetime.strptime(comp_replace[i], '%Y-%m-%d').date() if i < len(comp_replace) and comp_replace[i] else None,
                 ))
         db.session.commit()
         flash(_('Mule maintenance updated'), 'success')
