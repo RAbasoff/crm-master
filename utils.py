@@ -377,6 +377,54 @@ def run_migrations():
             replacement_date DATE,
             notes TEXT
         )"""),
+        ("equipment_maintenance", """CREATE TABLE IF NOT EXISTS equipment_maintenance (
+            id INTEGER PRIMARY KEY,
+            number VARCHAR(30) UNIQUE NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            serial VARCHAR(100),
+            machine_id INTEGER REFERENCES machine(id),
+            date DATE NOT NULL,
+            reason TEXT NOT NULL,
+            next_date DATE,
+            periodicity VARCHAR(50),
+            status VARCHAR(20) DEFAULT 'completed',
+            notes TEXT,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME
+        )"""),
+        ("equipment_part", """CREATE TABLE IF NOT EXISTS equipment_part (
+            id INTEGER PRIMARY KEY,
+            equipment_id INTEGER NOT NULL REFERENCES equipment_maintenance(id),
+            name VARCHAR(200) NOT NULL,
+            number VARCHAR(100),
+            quantity FLOAT DEFAULT 1,
+            notes TEXT
+        )"""),
+        ("equipment_component", """CREATE TABLE IF NOT EXISTS equipment_component (
+            id INTEGER PRIMARY KEY,
+            equipment_id INTEGER NOT NULL REFERENCES equipment_maintenance(id),
+            component_type VARCHAR(50) NOT NULL,
+            model VARCHAR(200),
+            size VARCHAR(100),
+            length VARCHAR(50),
+            quantity FLOAT DEFAULT 1,
+            notes TEXT
+        )"""),
+        ("equipment_part_order", """CREATE TABLE IF NOT EXISTS equipment_part_order (
+            id INTEGER PRIMARY KEY,
+            order_number VARCHAR(30) UNIQUE NOT NULL,
+            equipment_name VARCHAR(200),
+            part_name VARCHAR(200) NOT NULL,
+            part_number VARCHAR(100),
+            quantity FLOAT DEFAULT 1,
+            supplier VARCHAR(200),
+            urgency VARCHAR(20) DEFAULT 'normal',
+            status VARCHAR(20) DEFAULT 'pending',
+            notes TEXT,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME,
+            delivered_at DATETIME
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

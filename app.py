@@ -1599,6 +1599,7 @@ def equipment_new():
         )
         db.session.add(eq)
         db.session.flush()
+        # Add parts
         for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
                 db.session.add(EquipmentPart(
@@ -1606,6 +1607,22 @@ def equipment_new():
                     name=pname.strip(),
                     number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
                     quantity=float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
+                ))
+        # Add components
+        comp_types = request.form.getlist('comp_type')
+        comp_models = request.form.getlist('comp_model')
+        comp_sizes = request.form.getlist('comp_size')
+        comp_lengths = request.form.getlist('comp_length')
+        comp_qtys = request.form.getlist('comp_qty')
+        for i, ctype in enumerate(comp_types):
+            if ctype:
+                db.session.add(EquipmentComponent(
+                    equipment_id=eq.id,
+                    component_type=ctype,
+                    model=comp_models[i] if i < len(comp_models) else '',
+                    size=comp_sizes[i] if i < len(comp_sizes) else '',
+                    length=comp_lengths[i] if i < len(comp_lengths) else '',
+                    quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1
                 ))
         db.session.commit()
         log_audit('create', 'equipment', eq.id, f'{eq.number} — {eq.name}')
@@ -1636,6 +1653,23 @@ def equipment_edit(eq_id):
                     name=pname.strip(),
                     number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
                     quantity=float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
+                ))
+        # Update components
+        EquipmentComponent.query.filter_by(equipment_id=eq.id).delete()
+        comp_types = request.form.getlist('comp_type')
+        comp_models = request.form.getlist('comp_model')
+        comp_sizes = request.form.getlist('comp_size')
+        comp_lengths = request.form.getlist('comp_length')
+        comp_qtys = request.form.getlist('comp_qty')
+        for i, ctype in enumerate(comp_types):
+            if ctype:
+                db.session.add(EquipmentComponent(
+                    equipment_id=eq.id,
+                    component_type=ctype,
+                    model=comp_models[i] if i < len(comp_models) else '',
+                    size=comp_sizes[i] if i < len(comp_sizes) else '',
+                    length=comp_lengths[i] if i < len(comp_lengths) else '',
+                    quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1
                 ))
         db.session.commit()
         flash(_('Equipment maintenance updated'), 'success')

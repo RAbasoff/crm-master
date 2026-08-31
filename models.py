@@ -989,6 +989,7 @@ class EquipmentMaintenance(db.Model):
     machine = db.relationship('Machine', backref='equipment_maintenance')
     creator = db.relationship('User', foreign_keys=[created_by])
     parts = db.relationship('EquipmentPart', backref='equipment', lazy=True, cascade='all, delete-orphan')
+    components = db.relationship('EquipmentComponent', backref='equipment', lazy=True, cascade='all, delete-orphan')
 
 class EquipmentPart(db.Model):
     __tablename__ = 'equipment_part'
@@ -996,6 +997,18 @@ class EquipmentPart(db.Model):
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False)
     name = db.Column(db.String(200), nullable=False)
     number = db.Column(db.String(100))
+    quantity = db.Column(db.Float, default=1)
+    notes = db.Column(db.Text)
+
+class EquipmentComponent(db.Model):
+    """Обязательные составляющие: ножи, прокладки, пружины, датчики, кабели, штекеры, элементы нагрева"""
+    __tablename__ = 'equipment_component'
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False)
+    component_type = db.Column(db.String(50), nullable=False)  # knife, gasket, spring, sensor, cable, plug, heater
+    model = db.Column(db.String(200))
+    size = db.Column(db.String(100))  # размер (для ножей, прокладок)
+    length = db.Column(db.String(50))  # длина (для прокладок, кабелей)
     quantity = db.Column(db.Float, default=1)
     notes = db.Column(db.Text)
 

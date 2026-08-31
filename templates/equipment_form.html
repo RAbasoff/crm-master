@@ -54,6 +54,41 @@
             </div>
         </div>
 
+        <!-- COMPONENTS -->
+        <div class="card" style="background:#f0fff0;margin:16px 0;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="font-size:14px;margin:0">⚙️ {{ _('Components') }}</h3>
+                <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="addComponent()">+ {{ _('Add Component') }}</button>
+            </div>
+            <div id="componentsList">
+                {% if eq and eq.components %}
+                    {% for c in eq.components %}
+                    <div class="comp-row" style="background:white;border:1px solid #e8ecf1;border-radius:8px;padding:10px;margin-bottom:8px">
+                        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+                            <select name="comp_type" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" onchange="toggleCompFields(this)">
+                                <option value="">{{ _('Select type') }}</option>
+                                <option value="knife" {% if c.component_type=='knife' %}selected{% endif %}>🔪 {{ _('Knife') }}</option>
+                                <option value="gasket" {% if c.component_type=='gasket' %}selected{% endif %}>⭕ {{ _('Gasket') }}</option>
+                                <option value="spring" {% if c.component_type=='spring' %}selected{% endif %}>🌀 {{ _('Spring') }}</option>
+                                <option value="sensor" {% if c.component_type=='sensor' %}selected{% endif %}>🌡️ {{ _('Temperature Sensor') }}</option>
+                                <option value="cable" {% if c.component_type=='cable' %}selected{% endif %}>🔌 {{ _('Cable') }}</option>
+                                <option value="plug" {% if c.component_type=='plug' %}selected{% endif %}>🔗 {{ _('Plug/Connector') }}</option>
+                                <option value="heater" {% if c.component_type=='heater' %}selected{% endif %}>🔥 {{ _('Heating Element') }}</option>
+                            </select>
+                            <input type="number" name="comp_qty" value="{{ c.quantity }}" min="1" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" placeholder="Qty">
+                            <button type="button" onclick="this.closest('.comp-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
+                        </div>
+                        <div class="comp-fields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                            <input type="text" name="comp_model" value="{{ c.model or '' }}" placeholder="{{ _('Model') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                            <input type="text" name="comp_size" value="{{ c.size or '' }}" placeholder="{{ _('Size (mm)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type not in ['knife','gasket'] %}display:none{% endif %}">
+                            <input type="text" name="comp_length" value="{{ c.length or '' }}" placeholder="{{ _('Length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;{% if c.component_type not in ['gasket','cable'] %}display:none{% endif %}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
         <div class="form-group"><label>{{ _('Notes') }}</label><textarea name="notes" rows="2">{{ eq.notes if eq else '' }}</textarea></div>
         <div style="display:flex;gap:8px">
             <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
@@ -72,6 +107,41 @@ function addPart() {
         <button type="button" onclick="this.closest('.part-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
     </div>`;
     document.getElementById('partsList').insertAdjacentHTML('beforeend', html);
+}
+
+function addComponent() {
+    const html = `
+    <div class="comp-row" style="background:white;border:1px solid #e8ecf1;border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+            <select name="comp_type" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" onchange="toggleCompFields(this)">
+                <option value="">{{ _('Select type') }}</option>
+                <option value="knife">🔪 {{ _('Knife') }}</option>
+                <option value="gasket">⭕ {{ _('Gasket') }}</option>
+                <option value="spring">🌀 {{ _('Spring') }}</option>
+                <option value="sensor">🌡️ {{ _('Temperature Sensor') }}</option>
+                <option value="cable">🔌 {{ _('Cable') }}</option>
+                <option value="plug">🔗 {{ _('Plug/Connector') }}</option>
+                <option value="heater">🔥 {{ _('Heating Element') }}</option>
+            </select>
+            <input type="number" name="comp_qty" value="1" min="1" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px" placeholder="Qty">
+            <button type="button" onclick="this.closest('.comp-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
+        </div>
+        <div class="comp-fields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <input type="text" name="comp_model" placeholder="{{ _('Model') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+            <input type="text" name="comp_size" placeholder="{{ _('Size (mm)') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+            <input type="text" name="comp_length" placeholder="{{ _('Length') }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;display:none">
+        </div>
+    </div>`;
+    document.getElementById('componentsList').insertAdjacentHTML('beforeend', html);
+}
+
+function toggleCompFields(select) {
+    const row = select.closest('.comp-row');
+    const type = select.value;
+    const size = row.querySelector('[name="comp_size"]');
+    const length = row.querySelector('[name="comp_length"]');
+    if (size) size.style.display = (type === 'knife' || type === 'gasket') ? '' : 'none';
+    if (length) length.style.display = (type === 'gasket' || type === 'cable') ? '' : 'none';
 }
 </script>
 {% endblock %}
