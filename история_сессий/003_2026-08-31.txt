@@ -1,4 +1,4 @@
-Сессия 003 — 31.08.2026
+Сессия 003 — 31.08.2026 (финал)
 Проект: CRM Мастерская
 
 ============================================================
@@ -16,56 +16,62 @@
    - submitReplace: fetch → csrfFetch
    - saveComp: fetch → csrfFetch
    - updateActiveCylinders: fetch → csrfFetch
-   - Цвета: добавлена функция getStatusColor для всех статусов
+   - Цвета: добавлена функция getStatusColor для всех статусов (full/in_use/empty/leak/faulty)
 
 3. Пересоздан модуль Mule Maintenance
    - Удалён MuleComponent (причина ошибки)
    - Упрощены модели: MuleMaintenance, MuleMaintenancePart, MulePartOrder
-   - Упрощены маршруты без сложной обработки компонентов
-   - Новые чистые шаблоны: mule.html, mule_form.html
-   - Переименован маршрут: /mule → /equipment-maintenance
+   - Переименован в Equipment Maintenance (маршрут /equipment)
+   - Затем переименован обратно в Mule Maintenance (отображение)
+   - Новые чистые шаблоны: equipment.html, equipment_form.html
 
-4. Добавлен подрядчик в склад
+4. Добавлены обязательные составляющие в Mule Maintenance
+   - Ножи (модель, размер, количество)
+   - Прокладки (тип, размер, длина)
+   - Пружины (тип, количество)
+   - Температурный датчик (модель, количество)
+   - Кабель (тип, длина)
+   - Штекер (тип, количество)
+   - Разогревающий элемент (тип, модель, количество)
+   - Модель: EquipmentComponent с полями component_type, model, size, length, quantity
+
+5. Добавлен подрядчик в склад
    - Поле contractor_id в модели VoorraadItem
    - Выпадающий список "Group" объединяет производителей и подрядчиков
    - Миграция: ALTER TABLE warehouse_item ADD COLUMN contractor_id
 
-5. Исправлены ошибки из логов PythonAnywhere
+6. Исправлены ошибки из логов PythonAnywhere
    - warehouse/report: Decimal * float → float() конвертация
    - machines/report: work_report это список, не объект
 
-6. Добавлены уведомления о замене расходников
+7. Добавлены уведомления о замене расходников
    - Страница: /consumable-reminders
    - API: /api/maintenance/reminders включает расходники
    - Навигация: ссылка в меню Склад
 
-7. Тестирование всех модулей
+8. Тестирование всех модулей
    - 22 модуля проверены на продакшене
    - Все возвращают 200 OK
-   - Mule Maintenance: ошибка рендеринга (исправляется переименованием маршрута)
 
 ============================================================
 
 ИЗМЕНЕНИЯ В ФАЙЛАХ
 
 Файл                                        Действие    Описание
-models.py                                   Изменён     Добавлен work_phone, contractor_id, удалён MuleComponent
-app.py                                      Изменён     Маршруты Mule, исправления Decimal, добавлены уведомления
-utils.py                                    Изменён     Миграции work_phone, contractor_id
+models.py                                   Изменён     Добавлены work_phone, contractor_id, EquipmentComponent
+app.py                                      Изменён     Маршруты Equipment, исправления Decimal, уведомления
+utils.py                                    Изменён     Миграции work_phone, contractor_id, equipment_component
 templates/responsible_form.html             Изменён     Поле рабочий телефон
 templates/responsible_detail.html           Изменён     Отображение рабочего телефона
-templates/responsible.html                  Изменён     Рабочий телефон в списке и быстром редактировании
-templates/cylinders.html                    Изменён     csrfFetch для всех функций, getStatusColor
-templates/warehouse_form.html               Изменён     Выбор подрядчика в Group
-templates/mule.html                         Создан      Новый чистый шаблон
-templates/mule_form.html                    Создан      Новый чистый шаблон
+templates/responsible.html                  Изменён     Рабочий телефон в списке
+templates/cylinders.html                    Изменён     csrfFetch, getStatusColor
+templates/warehouse_form.html               Изменён     Выбор подрядчика
+templates/equipment.html                    Создан      Новый шаблон Mule Maintenance
+templates/equipment_form.html               Создан      Новый шаблон с компонентами
 templates/consumable_reminders.html         Создан      Уведомления о заменах
-templates/base.html                         Изменён     Ссылка на Replacement Reminders
-test_all_modules.py                         Создан      Скрипт тестирования всех модулей
+templates/base.html                         Изменён     Ссылка на Mule Maintenance
+test_all_modules.py                         Создан      Скрипт тестирования
 
 ============================================================
 
-СТАТУС: В процессе
-- Mule Maintenance: переименован маршрут, ожидает проверки
-- Ошибки Decimal: исправлены
-- Ошибки work_report: исправлены
+СТАТУС: Завершено, готово к деплою
