@@ -358,7 +358,7 @@ function setCylStatus(newStatus) {
 
 // === LOAD ACTIVE CYLINDERS INTO SVG ===
 function updateActiveCylinders() {
-    fetch('/cylinders/api/active').then(r => r.json()).then(d => {
+    csrfFetch('/cylinders/api/active').then(r => r.json()).then(d => {
         // N2 left (Group 1) - first in_use
         const n2l = d.n2_left;
         const n2r = d.n2_right;
@@ -368,10 +368,22 @@ function updateActiveCylinders() {
         document.querySelector('.n2-right-status').textContent = n2r ? n2r.status.toUpperCase() : 'EMPTY';
         
         // Color based on status
+        function getStatusColor(status) {
+            if (!status) return '#e74c3c';
+            switch(status) {
+                case 'full': return '#27ae60';
+                case 'in_use': return '#f39c12';
+                case 'empty': return '#e74c3c';
+                case 'leak': return '#9b59b6';
+                case 'faulty': return '#566573';
+                default: return '#95a5a6';
+            }
+        }
+        
         const n2lRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="left"]');
         const n2rRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="right"]');
-        n2lRect.setAttribute('fill', n2l ? (n2l.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
-        n2rRect.setAttribute('fill', n2r ? (n2r.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
+        n2lRect.setAttribute('fill', getStatusColor(n2l ? n2l.status : null));
+        n2rRect.setAttribute('fill', getStatusColor(n2r ? n2r.status : null));
         
         // Store IDs for click
         n2lRect.dataset.cylId = n2l ? n2l.id : '';
@@ -387,8 +399,8 @@ function updateActiveCylinders() {
         
         const co2lRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="left"]');
         const co2rRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="right"]');
-        co2lRect.setAttribute('fill', co2l ? (co2l.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
-        co2rRect.setAttribute('fill', co2r ? (co2r.status === 'in_use' ? '#f39c12' : '#27ae60') : '#e74c3c');
+        co2lRect.setAttribute('fill', getStatusColor(co2l ? co2l.status : null));
+        co2rRect.setAttribute('fill', getStatusColor(co2r ? co2r.status : null));
         
         co2lRect.dataset.cylId = co2l ? co2l.id : '';
         co2rRect.dataset.cylId = co2r ? co2r.id : '';
