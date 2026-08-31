@@ -4121,6 +4121,7 @@ def responsible_new():
             naam=full_name,
             telefoon=request.form.get('telefoon', ''),
             internal_phone=request.form.get('internal_phone', ''),
+            work_phone=request.form.get('work_phone', ''),
             email=request.form.get('email', ''),
             group_id=int(request.form['group_id']) if request.form.get('group_id') else None,
             access_level=request.form.get('access_level', 'floor'),
@@ -4201,6 +4202,7 @@ def responsible_quick_edit(resp_id):
     c.position = request.form.get('position', '').strip()
     c.telefoon = request.form.get('telefoon', '').strip()
     c.internal_phone = request.form.get('internal_phone', '').strip()
+    c.work_phone = request.form.get('work_phone', '').strip()
     c.email = request.form.get('email', '').strip()
     db.session.commit()
     flash(_('Responsible person updated'), 'success')
@@ -4277,6 +4279,7 @@ def responsible_edit(resp_id):
         c.naam = f"{first_name} {last_name}".strip()
         c.telefoon = request.form.get('telefoon', '')
         c.internal_phone = request.form.get('internal_phone', '')
+        c.work_phone = request.form.get('work_phone', '')
         c.email = request.form.get('email', '')
         c.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
         c.access_level = request.form.get('access_level', c.access_level or 'floor')

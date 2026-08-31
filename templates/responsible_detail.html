@@ -20,6 +20,7 @@
         </p>
         {% if person.telefoon2 %}<p><strong>{{ _('Phone') }} 2:</strong> <a href="tel:{{ person.telefoon2 }}" style="color:#3498db">{{ person.telefoon2 }}</a></p>{% endif %}
         {% if person.internal_phone %}<p><strong>{{ _('Internal Phone') }}:</strong> <span style="color:#3498db;font-weight:600">{{ person.internal_phone }}</span></p>{% endif %}
+        {% if person.work_phone %}<p><strong>{{ _('Work Phone') }}:</strong> <a href="tel:{{ person.work_phone }}" style="color:#27ae60;font-weight:600">{{ person.work_phone }}</a></p>{% endif %}
         <p><strong>{{ _('Email') }}:</strong>
             {% if person.email %}<a href="mailto:{{ person.email }}" style="color:#3498db">{{ person.email }}</a>{% else %}—{% endif %}
         </p>

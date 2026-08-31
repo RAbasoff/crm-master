@@ -346,7 +346,7 @@ function openReplaceFromModal() { closeStatusModal(); openReplace(statusCylId, s
 
 function setCylStatus(newStatus) {
     if (!statusCylId) return;
-    fetch('/cylinders/status', {
+    csrfFetch('/cylinders/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({cylinder_id: statusCylId, status: newStatus, notes: document.getElementById('statusNotes').value})
@@ -434,7 +434,7 @@ function submitReplace() {
     const sid = document.getElementById('newCylSelect').value;
     const num = document.getElementById('newCylNumber').value.trim();
     if (!sid && !num) { alert(T.selectOrEnter); return; }
-    fetch('/cylinders/replace', {
+    csrfFetch('/cylinders/replace', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({cylinder_id: rId, new_cylinder_id: sid ? parseInt(sid) : null, new_number: num, gas_type: rGas, notes: document.getElementById('newCylNotes').value})
     }).then(r => r.json()).then(d => { if (d.ok) location.reload(); else alert(d.error); });
@@ -554,7 +554,7 @@ document.addEventListener('contextmenu', function(e) {
     e.preventDefault();
     const cid = parseInt(el.dataset.cid);
     if (!cid || !confirm('Reset to OK?')) return;
-    fetch('/cylinders/component/' + cid + '/update', {
+    csrfFetch('/cylinders/component/' + cid + '/update', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: 'ok', notes: ''})
@@ -620,7 +620,7 @@ function saveComp() {
     const btn = document.getElementById('saveCompBtn');
     btn.disabled = true;
     btn.textContent = '...';
-    fetch('/cylinders/component/' + currentCompId + '/update', {
+    csrfFetch('/cylinders/component/' + currentCompId + '/update', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: status, notes: notes})

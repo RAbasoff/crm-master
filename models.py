@@ -273,6 +273,7 @@ class Verantwoordelijke(db.Model):
     telefoon = db.Column(db.String(50))
     telefoon2 = db.Column(db.String(50))
     internal_phone = db.Column(db.String(50))
+    work_phone = db.Column(db.String(50))  # рабочий телефон
     email = db.Column(db.String(100))
     website = db.Column(db.String(200))
     adres = db.Column(db.String(300))

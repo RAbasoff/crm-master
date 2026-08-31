@@ -25,6 +25,10 @@
                 <label>{{ _('Internal Phone') }}</label>
                 <input type="text" name="internal_phone" value="{{ verantwoordelijke.internal_phone if verantwoordelijke else '' }}" placeholder="ext. 123">
             </div>
+            <div class="form-group">
+                <label>{{ _('Work Phone') }}</label>
+                <input type="text" name="work_phone" value="{{ verantwoordelijke.work_phone if verantwoordelijke else '' }}" placeholder="+31 20 ...">
+            </div>
         </div>
         <div class="form-row">
             <div class="form-group">

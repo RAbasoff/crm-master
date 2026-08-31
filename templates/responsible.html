@@ -30,6 +30,7 @@
             <div style="font-size:12px;color:#888;margin-top:2px">
                 {% if c.position %}{{ c.position }} · {% endif %}
                 {% if c.telefoon %}📞 {{ c.telefoon }}{% endif %}
+                {% if c.work_phone %} · 🏢 {{ c.work_phone }}{% endif %}
                 {% if c.internal_phone %} · ☎️ {{ c.internal_phone }}{% endif %}
                 {% if c.email %} · ✉️ {{ c.email }}{% endif %}
             </div>
@@ -107,6 +108,10 @@
             <div style="flex:1;min-width:100px">
                 <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Internal') }}</label>
                 <input type="text" name="internal_phone" value="{{ c.internal_phone or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
+            </div>
+            <div style="flex:1;min-width:100px">
+                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Work') }}</label>
+                <input type="text" name="work_phone" value="{{ c.work_phone or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
             </div>
             <div style="flex:1;min-width:140px">
                 <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Email') }}</label>

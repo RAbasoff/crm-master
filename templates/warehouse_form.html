@@ -47,22 +47,19 @@
         </div>
         <div class="form-row">
             <div class="form-group"><label>Supplier Part Number</label><input type="text" name="supplier_part_number" id="fieldSPN" value="{{ item.supplier_part_number if item and item.supplier_part_number else '' }}" placeholder="e.g. 6ES7214-1AG40-0XB0"></div>
-            <div class="form-group"><label>{{ _('Supplier / Contractor') }}</label>
-                <select name="contractor_id" id="fieldContractor">
-                    <option value="">{{ _('Select supplier...') }}</option>
-                    {% for c in contractors %}
-                    <option value="{{ c.id }}" {% if item and item.contractor_id == c.id %}selected{% endif %}>{{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label>{{ _('Group') }} ({{ _('by manufacturer') }})</label>
+            <div class="form-group"><label>{{ _('Group') }} ({{ _('manufacturer / supplier') }})</label>
                 <select name="group_id" id="fieldGroup">
                     <option value="">{{ _('No group') }}</option>
                     {% for g in groups %}
-                    <option value="{{ g.id }}" {% if item and item.group_id == g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
+                    <option value="g_{{ g.id }}" {% if item and item.group_id == g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
                     {% endfor %}
+                    {% if contractors %}
+                    <optgroup label="── {{ _('Suppliers / Contractors') }} ──">
+                    {% for c in contractors %}
+                    <option value="c_{{ c.id }}" {% if item and item.contractor_id == c.id %}selected{% endif %}>🏢 {{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}</option>
+                    {% endfor %}
+                    </optgroup>
+                    {% endif %}
                 </select>
             </div>
         </div>
