@@ -60,7 +60,10 @@
                  title="{{ m.name }}{% if m.machine_type %} ({{ m.machine_type }}){% endif %}"
                  data-id="{{ m.id }}"
                  data-section="{{ m.section_id or '' }}"
-                 data-fault-status="loading">
+                 data-fault-status="loading"
+                 draggable="true"
+                 ondragstart="dragStartMachine(event, {{ m.id }})"
+                 ondragend="dragEndMachine(event)">
                 <div class="machine-icon">
                     <svg width="{{ ((m.marker_size or 50) * 0.6)|int }}" height="{{ ((m.marker_size or 50) * 0.6)|int }}" viewBox="0 0 24 24" fill="none" stroke="{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         {% if m.machine_type and 'CNC' in m.machine_type|upper %}
@@ -68,7 +71,7 @@
                         {% elif m.machine_type and ('press' in m.machine_type|lower or 'прес' in m.machine_type|lower) %}
                         <rect x="4" y="2" width="16" height="8" rx="1"/><rect x="6" y="12" width="12" height="10" rx="1"/><line x1="12" y1="10" x2="12" y2="12"/><line x1="8" y1="22" x2="16" y2="22"/>
                         {% elif m.machine_type and ('weld' in m.machine_type|lower or 'свар' in m.machine_type|lower) %}
-                        <path d="M4 20L12 4L20 20"/><line x1="8" y1="14" x2="16" y2="14"/><circle cx="12" cy="4" r="2" fill="{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#f39c12{% endif %}"/>
+                        <path d="M4 20L12 4L20 20"/><line x1="8" y1="14" x2="16" y2="14"/><circle cx="12" cy="4" r="2" fill="#f39c12"/>
                         {% elif m.machine_type and ('conveyor' in m.machine_type|lower or 'конвей' in m.machine_type|lower or 'лент' in m.machine_type|lower) %}
                         <circle cx="5" cy="18" r="4"/><circle cx="19" cy="18" r="4"/><line x1="5" y1="14" x2="19" y2="14"/><line x1="5" y1="22" x2="19" y2="22"/><line x1="12" y1="6" x2="12" y2="14"/>
                         {% elif m.machine_type and ('drill' in m.machine_type|lower or 'сверл' in m.machine_type|lower) %}
@@ -700,5 +703,74 @@ if (highlightMachine) {
 window.addEventListener('load', function() {
     setTimeout(zoomToFit, 300);
 });
+
+// Drag & Drop for machines on floor plan
+let draggedMachineId = null;
+
+function dragStartMachine(event, machineId) {
+    draggedMachineId = machineId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', machineId);
+    event.target.style.opacity = '0.4';
+    event.target.style.zIndex = '100';
+}
+
+function dragEndMachine(event) {
+    event.target.style.opacity = '1';
+    event.target.style.zIndex = '';
+    draggedMachineId = null;
+}
+
+// Make floor plan a drop zone
+const floorPlan = document.getElementById('floorPlanWrapper');
+if (floorPlan) {
+    floorPlan.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+    
+    floorPlan.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (!draggedMachineId) return;
+        
+        const rect = floorPlan.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+        const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+        
+        // Clamp to valid range
+        const clampedX = Math.max(3, Math.min(97, parseFloat(x)));
+        const clampedY = Math.max(3, Math.min(97, parseFloat(y)));
+        
+        // Update position visually
+        const marker = document.querySelector(`.machine-marker[data-id="${draggedMachineId}"]`);
+        if (marker) {
+            marker.style.left = clampedX + '%';
+            marker.style.top = clampedY + '%';
+        }
+        
+        // Save position to server
+        csrfFetch('/api/map/save-machine-pos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                machine_id: parseInt(draggedMachineId),
+                floor_x: clampedX,
+                floor_y: clampedY
+            })
+        }).then(r => r.json()).then(d => {
+            if (d.ok) {
+                showToast('✓ {{ _("Machine position saved") }}');
+            }
+        });
+    });
+}
+
+function showToast(text) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#27ae60;color:white;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
 </script>
 {% endblock %}
