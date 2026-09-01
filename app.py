@@ -1514,7 +1514,33 @@ def maintenance_plan_new():
             p.work_act_file = fn
         db.session.add(p)
         db.session.commit()
-        flash(_('Maintenance plan created'), 'success')
+        
+        # Check if TWO should be created
+        create_two = request.form.get('create_two') == 'yes'
+        worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
+        
+        if create_two and worker_id:
+            # Create TWO from maintenance plan
+            two = TechnicalWorkOrder(
+                number=gen_two_number(),
+                machine_id=p.machine_id,
+                description=f'ТО: {p.title}\n{p.description}',
+                planned_date=p.planned_start,
+                status='assigned',
+                created_by=current_user.id
+            )
+            db.session.add(two)
+            db.session.flush()
+            # Assign worker
+            worker = Monteur.query.get(worker_id)
+            if worker:
+                two.workers.append(worker)
+            db.session.commit()
+            log_audit('create', 'two_from_plan', two.id, f'{two.number} from plan {p.id}')
+            flash(_('Maintenance plan created with TWO') + f': {two.number}', 'success')
+        else:
+            flash(_('Maintenance plan created'), 'success')
+        
         return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
@@ -3958,6 +3984,16 @@ def index():
                 top_machines.append(m)
         top_machines.sort(key=lambda x: x.fault_count, reverse=True)
         dashboard_stats['top_machines'] = top_machines
+        
+        # TWO warnings - active TWOs that need attention
+        today = datetime.utcnow().date()
+        active_twos = TechnicalWorkOrder.query.filter(
+            TechnicalWorkOrder.status.in_(['draft', 'assigned', 'in_progress'])
+        ).all()
+        overdue_twos = [t for t in active_twos if t.planned_date and t.planned_date < today]
+        dashboard_stats['active_twos'] = len(active_twos)
+        dashboard_stats['overdue_twos'] = len(overdue_twos)
+        dashboard_stats['overdue_two_list'] = overdue_twos[:5]
     
     return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=datetime.utcnow(), dashboard_stats=dashboard_stats)
 

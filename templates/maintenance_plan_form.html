@@ -116,13 +116,23 @@
             <div id="internalFields" style="display:{% if plan and plan.is_external %}none{% else %}block{% endif %}">
                 <div class="form-group">
                     <label>{{ _('Worker / Technician') }}</label>
-                    <select name="worker_id">
+                    <select name="worker_id" id="workerSelect">
                         <option value="">{{ _('Select worker') }}</option>
                         {% for w in workers %}
                         <option value="{{ w.id }}" {% if plan and plan.worker_id == w.id %}selected{% endif %}>{{ w.naam }} ({{ w.specialisatie }})</option>
                         {% endfor %}
                     </select>
                 </div>
+                {% if not plan %}
+                <div class="form-group" style="background:#fff3cd;padding:12px;border-radius:8px;border:1px solid #f39c12">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+                        <input type="checkbox" id="createTwo" onchange="toggleTwoOption()" style="width:18px;height:18px">
+                        🔧 {{ _('Create TWO for this work?') }}
+                    </label>
+                    <input type="hidden" name="create_two" id="createTwoField" value="no">
+                    <small style="color:#888;display:block;margin-top:4px">{{ _('If checked, a Technical Work Order will be created and assigned to the selected technician') }}</small>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -167,6 +177,19 @@ function toggleExternal() {
     const ext = document.getElementById('isExternal').checked;
     document.getElementById('externalFields').style.display = ext ? 'block' : 'none';
     document.getElementById('internalFields').style.display = ext ? 'none' : 'block';
+}
+
+function toggleTwoOption() {
+    const checked = document.getElementById('createTwo').checked;
+    document.getElementById('createTwoField').value = checked ? 'yes' : 'no';
+    if (checked) {
+        const worker = document.getElementById('workerSelect').value;
+        if (!worker) {
+            alert('{{ _("Please select a technician first") }}');
+            document.getElementById('createTwo').checked = false;
+            document.getElementById('createTwoField').value = 'no';
+        }
+    }
 }
 </script>
 {% endblock %}

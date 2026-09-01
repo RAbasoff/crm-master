@@ -118,6 +118,34 @@
         <div style="text-align:center;padding:20px;color:#999;font-size:12px">{{ _('No faults') }}</div>
         {% endif %}
     </div>
+    
+    <!-- TWO Warnings -->
+    {% if dashboard_stats.active_twos is defined and dashboard_stats.active_twos > 0 %}
+    <div class="card" style="border-left:4px solid {% if dashboard_stats.overdue_twos > 0 %}#e74c3c{% else %}#f39c12{% endif %}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0;font-size:14px">🔧 {{ _('Active TWOs') }}</h2>
+            <a href="/two" style="font-size:11px;color:#5b9cf6;text-decoration:none">{{ _('View all') }} →</a>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:8px">
+            <div style="text-align:center;padding:8px;background:#f0f7ff;border-radius:8px;flex:1">
+                <div style="font-size:20px;font-weight:bold;color:#3498db">{{ dashboard_stats.active_twos }}</div>
+                <div style="font-size:10px;color:#888">{{ _('Active') }}</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:{% if dashboard_stats.overdue_twos > 0 %}#fff0f0{% else %}#f0fff0{% endif %};border-radius:8px;flex:1">
+                <div style="font-size:20px;font-weight:bold;color:{% if dashboard_stats.overdue_twos > 0 %}#e74c3c{% else %}#27ae60{% endif %}">{{ dashboard_stats.overdue_twos }}</div>
+                <div style="font-size:10px;color:#888">{{ _('Overdue') }}</div>
+            </div>
+        </div>
+        {% if dashboard_stats.overdue_two_list %}
+        <div style="font-size:11px;color:#e74c3c;margin-top:4px">
+            ⚠️ {{ _('Overdue TWOs') }}:
+            {% for t in dashboard_stats.overdue_two_list %}
+            <a href="/two/{{ t.id }}" style="color:#e74c3c">{{ t.number }}</a>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
