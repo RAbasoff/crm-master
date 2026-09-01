@@ -13,6 +13,7 @@
     <button onclick="showTab('users')" class="btn btn-sm tab-btn active" id="tab-users" style="background:#3498db;color:white">👥 {{ _('Users') }}</button>
     <button onclick="showTab('responsible')" class="btn btn-sm tab-btn" id="tab-responsible" style="background:#eee">👤 {{ _('Responsible') }}</button>
     <button onclick="showTab('machines')" class="btn btn-sm tab-btn" id="tab-machines" style="background:#eee">⚙️ {{ _('Machines') }}</button>
+    <button onclick="showTab('machine-assign')" class="btn btn-sm tab-btn" id="tab-machine-assign" style="background:#eee">🔄 {{ _('Assign Machines') }}</button>
     <button onclick="showTab('sections')" class="btn btn-sm tab-btn" id="tab-sections" style="background:#eee">🏭 {{ _('Sections') }}</button>
     <button onclick="showTab('faults')" class="btn btn-sm tab-btn" id="tab-faults" style="background:#eee">⚠️ {{ _('Fault Types') }}</button>
     <button onclick="showTab('groups')" class="btn btn-sm tab-btn" id="tab-groups" style="background:#eee">👥 {{ _('Groups') }}</button>
@@ -157,6 +158,80 @@
             </tr>
             {% endfor %}
         </table></div>
+    </div>
+</div>
+
+<!-- ==================== TAB: MACHINE ASSIGN (Drag & Drop) ==================== -->
+<div id="tab-content-machine-assign" class="tab-content" style="display:none">
+    <div class="card">
+        <h2 style="margin-bottom:12px">🔄 {{ _('Assign Machines to Sections & Users') }}</h2>
+        <p style="font-size:12px;color:#888;margin-bottom:16px">{{ _('Drag machines between sections or assign to users') }}</p>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <!-- BY SECTION -->
+            <div>
+                <h3 style="font-size:14px;margin-bottom:8px">🏭 {{ _('By Section') }}</h3>
+                {% for s in sections %}
+                <div class="section-drop" data-section-id="{{ s.id }}" style="margin-bottom:12px;padding:10px;background:#f8f9fa;border-radius:8px;border:2px dashed transparent;min-height:60px;transition:border-color 0.2s"
+                     ondragover="event.preventDefault();this.style.borderColor='#3498db'" 
+                     ondragleave="this.style.borderColor='transparent'"
+                     ondrop="dropMachine(event, 'section', {{ s.id }})">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                        <span style="width:12px;height:12px;border-radius:3px;background:{{ s.color }};display:inline-block"></span>
+                        <strong style="font-size:13px">{{ s.name }}</strong>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px" id="section-machines-{{ s.id }}">
+                        {% for m in machines if m.section_id == s.id %}
+                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" 
+                              style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:grab;font-weight:600">
+                            ⚙️ {{ m.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                <!-- Unassigned -->
+                <div class="section-drop" data-section-id="" style="margin-bottom:12px;padding:10px;background:#fff5f5;border-radius:8px;border:2px dashed transparent;min-height:60px"
+                     ondragover="event.preventDefault();this.style.borderColor='#e74c3c'" 
+                     ondragleave="this.style.borderColor='transparent'"
+                     ondrop="dropMachine(event, 'section', '')">
+                    <div style="margin-bottom:6px"><strong style="font-size:13px;color:#e74c3c">{{ _('Unassigned') }}</strong></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px" id="section-machines-none">
+                        {% for m in machines if not m.section_id %}
+                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" 
+                              style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:grab;font-weight:600">
+                            ⚙️ {{ m.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BY USER -->
+            <div>
+                <h3 style="font-size:14px;margin-bottom:8px">👤 {{ _('By User') }}</h3>
+                {% for u in users %}
+                <div class="user-drop" data-user-id="{{ u.id }}" style="margin-bottom:12px;padding:10px;background:#f8f9fa;border-radius:8px;border:2px dashed transparent;min-height:60px;transition:border-color 0.2s"
+                     ondragover="event.preventDefault();this.style.borderColor='#3498db'" 
+                     ondragleave="this.style.borderColor='transparent'"
+                     ondrop="dropMachine(event, 'user', {{ u.id }})">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                        <div style="width:24px;height:24px;border-radius:50%;background:#3498db;display:flex;align-items:center;justify-content:center;color:white;font-size:10px">{{ (u.display_name or u.username)[0]|upper }}</div>
+                        <strong style="font-size:13px">{{ u.display_name or u.username }}</strong>
+                        <span class="badge badge-{{ u.role }}" style="font-size:9px">{{ u.role }}</span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px" id="user-machines-{{ u.id }}">
+                        {% for m in u.assigned_machines %}
+                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" 
+                              style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:grab;font-weight:600">
+                            ⚙️ {{ m.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -386,6 +461,47 @@ function showToast(text) {
     toast.textContent = text;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+}
+
+// Drag & Drop for machine assignment
+let draggedMachineId = null;
+
+function dragMachine(event, machineId) {
+    draggedMachineId = machineId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.target.style.opacity = '0.5';
+    setTimeout(() => { event.target.style.opacity = '1'; }, 100);
+}
+
+function dropMachine(event, targetType, targetId) {
+    event.preventDefault();
+    event.currentTarget.style.borderColor = 'transparent';
+    if (!draggedMachineId) return;
+    
+    if (targetType === 'section') {
+        csrfFetch('/settings/machine/' + draggedMachineId + '/move-section', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({section_id: targetId || null})
+        }).then(r => r.json()).then(d => {
+            if (d.ok) {
+                showToast('✓ {{ _("Machine moved") }}');
+                location.reload();
+            }
+        });
+    } else if (targetType === 'user') {
+        csrfFetch('/settings/machine/' + draggedMachineId + '/assign-user', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: targetId, action: 'add'})
+        }).then(r => r.json()).then(d => {
+            if (d.ok) {
+                showToast('✓ {{ _("Machine assigned") }}');
+                location.reload();
+            }
+        });
+    }
+    draggedMachineId = null;
 }
 </script>
 {% endblock %}

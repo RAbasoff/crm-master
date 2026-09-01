@@ -374,6 +374,7 @@ def user_new():
             first_name=request.form.get('first_name', ''),
             last_name=request.form.get('last_name', ''),
             display_name=request.form.get('display_name', ''),
+            phone=request.form.get('phone', ''),
             role=request.form.get('role', 'user'),
             access_level=request.form.get('access_level', 'full'),
             person_id=int(request.form['person_id']) if request.form.get('person_id') else None,
@@ -413,6 +414,7 @@ def user_edit(user_id):
         u.first_name = request.form.get('first_name', u.first_name)
         u.last_name = request.form.get('last_name', u.last_name)
         u.display_name = request.form.get('display_name', u.display_name)
+        u.phone = request.form.get('phone', u.phone or '')
         u.role = request.form.get('role', u.role)
         u.access_level = request.form.get('access_level', u.access_level)
         u.person_id = int(request.form['person_id']) if request.form.get('person_id') else None
@@ -909,6 +911,42 @@ def settings_section_update(section_id):
         s.width = data['width']
     if 'height' in data:
         s.height = data['height']
+    db.session.commit()
+    return jsonify({'ok': True})
+
+@app.route('/settings/machine/<int:machine_id>/move-section', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_machine_move_section(machine_id):
+    """Move machine to a different section"""
+    m = Machine.query.get_or_404(machine_id)
+    data = request.get_json()
+    new_section_id = data.get('section_id')
+    if new_section_id:
+        m.section_id = int(new_section_id)
+    else:
+        m.section_id = None
+    db.session.commit()
+    log_audit('move', 'machine', m.id, f'{m.name} → section {new_section_id}')
+    return jsonify({'ok': True})
+
+@app.route('/settings/machine/<int:machine_id>/assign-user', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_machine_assign_user(machine_id):
+    """Assign machine to a user"""
+    m = Machine.query.get_or_404(machine_id)
+    data = request.get_json()
+    user_id = data.get('user_id')
+    action = data.get('action', 'add')  # add or remove
+    if action == 'add' and user_id:
+        u = User.query.get(int(user_id))
+        if u and m not in u.assigned_machines:
+            u.assigned_machines.append(m)
+    elif action == 'remove' and user_id:
+        u = User.query.get(int(user_id))
+        if u and m in u.assigned_machines:
+            u.assigned_machines.remove(m)
     db.session.commit()
     return jsonify({'ok': True})
 

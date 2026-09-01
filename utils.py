@@ -281,6 +281,7 @@ def run_migrations():
         )"""),
         ("client.internal_phone", "ALTER TABLE client ADD COLUMN internal_phone VARCHAR(50)"),
         ("client.work_phone", "ALTER TABLE client ADD COLUMN work_phone VARCHAR(50)"),
+        ("user.phone", "ALTER TABLE user ADD COLUMN phone VARCHAR(50)"),
         ("two_assignment", """CREATE TABLE IF NOT EXISTS two_assignment (
             id INTEGER PRIMARY KEY,
             two_id INTEGER NOT NULL REFERENCES technical_work_order(id),

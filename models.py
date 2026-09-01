@@ -32,6 +32,7 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
     display_name = db.Column(db.String(200))
+    phone = db.Column(db.String(50))  # мобильный телефон
     role = db.Column(db.String(20), default='user', index=True)
     access_level = db.Column(db.String(20), default='full')
     person_id = db.Column(db.Integer, db.ForeignKey('client.id'))

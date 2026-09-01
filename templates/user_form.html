@@ -14,6 +14,9 @@
         </div>
         <div class="form-row">
             <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" value="{{ user.display_name if user else '' }}" placeholder="{{ _('Shown in interface') }}"></div>
+            <div class="form-group"><label>{{ _('Mobile Phone') }}</label><input type="text" name="phone" value="{{ user.phone if user and user.phone else '' }}" placeholder="+31 6 ..."></div>
+        </div>
+        <div class="form-row">
             <div class="form-group">
                 <label>{{ _('Role') }}</label>
                 <select name="role" id="roleSelect" onchange="onRoleChange()">
