@@ -37,6 +37,10 @@
                     <strong style="color:#e74c3c">Admin</strong>
                     <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('Full access to everything') }}</p>
                 </div>
+                <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #9b59b6">
+                    <strong style="color:#9b59b6">Moderator</strong>
+                    <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('All modules, no system changes') }}</p>
+                </div>
                 <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #f39c12">
                     <strong style="color:#f39c12">Director</strong>
                     <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('All except settings, users') }}</p>
@@ -70,6 +74,7 @@
                         <option value="user" {% if u.role=='user' %}selected{% endif %}>👤 User</option>
                         <option value="technician" {% if u.role=='technician' %}selected{% endif %}>🔧 Technician</option>
                         <option value="director" {% if u.role=='director' %}selected{% endif %}>📊 Director</option>
+                        <option value="moderator" {% if u.role=='moderator' %}selected{% endif %}>🛡️ Moderator</option>
                         <option value="admin" {% if u.role=='admin' %}selected{% endif %}>⚡ Admin</option>
                     </select>
                 </td>
@@ -82,6 +87,7 @@
                 <td>
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
                         <button onclick="setRole({{ u.id }}, 'admin')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#e74c3c;color:white">Admin</button>
+                        <button onclick="setRole({{ u.id }}, 'moderator')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#9b59b6;color:white">Mod</button>
                         <button onclick="setRole({{ u.id }}, 'director')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#f39c12;color:white">Director</button>
                         <button onclick="setRole({{ u.id }}, 'technician')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#3498db;color:white">Tech</button>
                         <button onclick="setRole({{ u.id }}, 'user')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#27ae60;color:white">User</button>
