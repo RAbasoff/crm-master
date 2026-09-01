@@ -23,7 +23,9 @@
     <div class="detail-grid">
         <div>
             {% if machine.photo %}
-            <img src="/static/uploads/{{ machine.photo }}" style="width:100%;max-height:300px;object-fit:cover;border-radius:12px;margin-bottom:16px">
+            <div style="text-align:center;margin-bottom:16px;background:#f8f9fa;border-radius:12px;padding:8px">
+                <img src="/static/uploads/{{ machine.photo }}" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:8px;display:block;margin:0 auto">
+            </div>
             {% endif %}
             <h2>{{ _('General Info') }}</h2>
             <p><strong>{{ _('Name') }}:</strong> {{ machine.name }}</p>
