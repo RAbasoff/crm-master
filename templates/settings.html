@@ -13,7 +13,8 @@
     <button onclick="showTab('users')" class="btn btn-sm tab-btn active" id="tab-users" style="background:#3498db;color:white">👥 {{ _('Users') }}</button>
     <button onclick="showTab('responsible')" class="btn btn-sm tab-btn" id="tab-responsible" style="background:#eee">👤 {{ _('Responsible') }}</button>
     <button onclick="showTab('machines')" class="btn btn-sm tab-btn" id="tab-machines" style="background:#eee">⚙️ {{ _('Machines') }}</button>
-    <button onclick="showTab('machine-assign')" class="btn btn-sm tab-btn" id="tab-machine-assign" style="background:#eee">🔄 {{ _('Assign Machines') }}</button>
+    <button onclick="showTab('machine-assign')" class="btn btn-sm tab-btn" id="tab-machine-assign" style="background:#eee">🔄 {{ _('Assign') }}</button>
+    <button onclick="showTab('section-assign')" class="btn btn-sm tab-btn" id="tab-section-assign" style="background:#eee">🏭 {{ _('Section Machines') }}</button>
     <button onclick="showTab('sections')" class="btn btn-sm tab-btn" id="tab-sections" style="background:#eee">🏭 {{ _('Sections') }}</button>
     <button onclick="showTab('faults')" class="btn btn-sm tab-btn" id="tab-faults" style="background:#eee">⚠️ {{ _('Fault Types') }}</button>
     <button onclick="showTab('groups')" class="btn btn-sm tab-btn" id="tab-groups" style="background:#eee">👥 {{ _('Groups') }}</button>
@@ -244,6 +245,68 @@
                 {% endfor %}
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ==================== TAB: SECTION MACHINES ASSIGNMENT ==================== -->
+<div id="tab-content-section-assign" class="tab-content" style="display:none">
+    <div class="card">
+        <h2 style="margin-bottom:12px">🏭 {{ _('Assign Machines to Responsible Persons by Section') }}</h2>
+        <p style="font-size:12px;color:#888;margin-bottom:16px">{{ _('Each machine is assigned to a technical service and technician') }}</p>
+        
+        {% for s in sections %}
+        <div style="margin-bottom:16px;padding:14px;background:#f8f9fa;border-radius:10px;border-left:4px solid {{ s.color }}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="width:14px;height:14px;border-radius:4px;background:{{ s.color }};display:inline-block"></span>
+                <strong style="font-size:14px">{{ s.name }}</strong>
+                <span style="font-size:11px;color:#888">({{ s.machines|length }} {{ _('machines') }})</span>
+            </div>
+            
+            <!-- Responsible persons in this section -->
+            {% set section_persons = [] %}
+            {% for p in responsible if s in p.resp_sections %}
+                {% if section_persons.append(p) %}{% endif %}
+            {% endfor %}
+            
+            {% if section_persons %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
+                {% for p in section_persons %}
+                <div style="background:white;padding:10px;border-radius:8px;border:1px solid #e8ecf1">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                        <div style="width:28px;height:28px;border-radius:50%;background:#3498db;display:flex;align-items:center;justify-content:center;color:white;font-size:11px">{{ (p.naam or '?')[0]|upper }}</div>
+                        <div>
+                            <div style="font-weight:600;font-size:12px">{{ p.naam }}</div>
+                            <div style="font-size:10px;color:#888">{{ p.position or '' }} {% if p.telefoon %}· 📞 {{ p.telefoon }}{% endif %}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:3px" id="person-machines-{{ p.id }}">
+                        {% for m in s.machines if p in m.assigned_users or m.responsible_person_id == p.id %}
+                        <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;background:#e8f5e9;border:1px solid #c8e6c9;border-radius:4px;font-size:10px">
+                            ⚙️ {{ m.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="font-size:11px;color:#888">{{ _('No responsible persons assigned to this section') }}</p>
+            {% endif %}
+            
+            <!-- Machines in this section -->
+            <div style="margin-top:10px">
+                <div style="font-size:11px;color:#888;margin-bottom:4px">{{ _('Machines in this section:') }}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    {% for m in s.machines %}
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px">
+                        ⚙️ {{ m.name }}
+                        {% if m.assigned_users %}<span style="font-size:9px;color:#888">({% for u in m.assigned_users %}{{ u.display_name or u.username }}{% if not loop.last %}, {% endif %}{% endfor %})</span>{% endif %}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
