@@ -7,38 +7,26 @@
 
 1. Добавлен рабочий телефон в модуль ответственные
    - Модель: work_phone поле в Verantwoordelijke
-   - Миграция: ALTER TABLE client ADD COLUMN work_phone
    - Шаблоны: responsible_form.html, responsible_detail.html, responsible.html
    - Маршруты: responsible_new, responsible_edit, responsible_quick_edit
 
 2. Исправлен модуль баллонов (CSRF)
-   - setCylStatus: fetch → csrfFetch
-   - submitReplace: fetch → csrfFetch
-   - saveComp: fetch → csrfFetch
-   - updateActiveCylinders: fetch → csrfFetch
-   - Цвета: добавлена функция getStatusColor для всех статусов (full/in_use/empty/leak/faulty)
+   - setCylStatus, submitReplace, saveComp, updateActiveCylinders: fetch → csrfFetch
+   - Цвета: добавлена функция getStatusColor для всех статусов
 
 3. Пересоздан модуль Mule Maintenance
    - Удалён MuleComponent (причина ошибки)
-   - Упрощены модели: MuleMaintenance, MuleMaintenancePart, MulePartOrder
    - Переименован в Equipment Maintenance (маршрут /equipment)
    - Затем переименован обратно в Mule Maintenance (отображение)
-   - Новые чистые шаблоны: equipment.html, equipment_form.html
+   - Новые шаблоны: equipment.html, equipment_form.html
 
 4. Добавлены обязательные составляющие в Mule Maintenance
-   - Ножи (модель, размер, количество)
-   - Прокладки (тип, размер, длина)
-   - Пружины (тип, количество)
-   - Температурный датчик (модель, количество)
-   - Кабель (тип, длина)
-   - Штекер (тип, количество)
-   - Разогревающий элемент (тип, модель, количество)
-   - Модель: EquipmentComponent с полями component_type, model, size, length, quantity
+   - Ножи, прокладки, пружины, датчики, кабели, штекеры, разогревающие элементы
+   - Модель: EquipmentComponent
 
 5. Добавлен подрядчик в склад
    - Поле contractor_id в модели VoorraadItem
-   - Выпадающий список "Group" объединяет производителей и подрядчиков
-   - Миграция: ALTER TABLE warehouse_item ADD COLUMN contractor_id
+   - Переименован в "Поставщик" в интерфейсе
 
 6. Исправлены ошибки из логов PythonAnywhere
    - warehouse/report: Decimal * float → float() конвертация
@@ -46,32 +34,68 @@
 
 7. Добавлены уведомления о замене расходников
    - Страница: /consumable-reminders
-   - API: /api/maintenance/reminders включает расходники
-   - Навигация: ссылка в меню Склад
+   - API: /api/maintenance/reminders
 
-8. Тестирование всех модулей
-   - 22 модуля проверены на продакшене
-   - Все возвращают 200 OK
+8. Добавлено логирование пользователей
+   - Модели: UserActivityLog, SystemLog
+   - Логирование входов/выходов
+
+9. Создан модуль расширенных отчётов
+   - /reports/advanced — фильтрация по типу, пользователю, периоду
+   - Экспорт: PDF, Excel, Word, CSV, TXT
+
+10. Создан модуль полной статистики
+    - /stats/full — графики Chart.js, выбор дат
+    - Отчёт по станкам с фильтрацией по цеху
+    - Экспорт в 5 форматах
+
+11. Обновлена карта цеха
+    - Новые SVG-иконки станков (квадраты/прямоугольники + круги)
+    - Цветовая индикация: зелёный=OK, жёлтый=открытые, красный=критичные
+    - Подписи названий станков
+    - Сетка для выравнивания
+    - Масштабирование колесом мыши
+    - Перетаскивание станков с сохранением позиции
+
+12. Расширен функционал карты цеха
+    - Клик по станку: заявки, статистика, кнопки действий
+    - API: /api/machine/{id}/faults, /faults/{id}/delete
+
+13. Раздел настроек
+    - /settings — 6 вкладок
+    - Управление пользователями с быстрым назначением ролей
+    - Drag-and-drop станков между отделами и пользователями
+    - Кнопки добавления станков в отделы
+    - Отображение ответственных
+
+14. Переименование "подрядчик" → "поставщик" в складе
+
+15. Улучшения PWA
+    - manifest.json: русский язык, ярлыки
+    - Service Worker: кэширование, offline
+    - CSS: 4 брейкпоинта для мобильных
+    - Нижняя навигация
+    - Кнопка установки приложения
+
+16. Управление доступом пользователей
+    - Все разделы в SECTION_KEYS
+    - Кнопки "Выбрать все / Снять все"
+    - Роли: Admin, Moderator, Director, Technician, User
+
+17. TWO из плана обслуживания
+    - Галочка "Создать TWO?" при создании плана
+    - Автоматическое создание наряда для техника
+    - Предупреждения TWO на дашборде
+
+18. Email уведомления
+    - Функция send_email()
+    - Уведомления при критичных заявках
+    - EMAIL_CONFIG.txt с инструкциями
+
+19. Бэкап базы данных
+    - Кнопка "Backup DB" в настройках
+    - Автоматическое сохранение последних 10 копий
 
 ============================================================
 
-ИЗМЕНЕНИЯ В ФАЙЛАХ
-
-Файл                                        Действие    Описание
-models.py                                   Изменён     Добавлены work_phone, contractor_id, EquipmentComponent
-app.py                                      Изменён     Маршруты Equipment, исправления Decimal, уведомления
-utils.py                                    Изменён     Миграции work_phone, contractor_id, equipment_component
-templates/responsible_form.html             Изменён     Поле рабочий телефон
-templates/responsible_detail.html           Изменён     Отображение рабочего телефона
-templates/responsible.html                  Изменён     Рабочий телефон в списке
-templates/cylinders.html                    Изменён     csrfFetch, getStatusColor
-templates/warehouse_form.html               Изменён     Выбор подрядчика
-templates/equipment.html                    Создан      Новый шаблон Mule Maintenance
-templates/equipment_form.html               Создан      Новый шаблон с компонентами
-templates/consumable_reminders.html         Создан      Уведомления о заменах
-templates/base.html                         Изменён     Ссылка на Mule Maintenance
-test_all_modules.py                         Создан      Скрипт тестирования
-
-============================================================
-
-СТАТУС: Завершено, готово к деплою
+СТАТУС: Завершено
