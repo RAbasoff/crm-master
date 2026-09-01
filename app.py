@@ -402,6 +402,14 @@ def user_new():
 def user_edit(user_id):
     u = User.query.get_or_404(user_id)
     if request.method == 'POST':
+        new_username = request.form.get('username', '').strip()
+        if new_username and new_username != u.username:
+            # Check if username already exists
+            existing = User.query.filter_by(username=new_username).first()
+            if existing:
+                flash(_('Username already exists'), 'error')
+                return redirect(url_for('user_edit', user_id=user_id))
+            u.username = new_username
         u.first_name = request.form.get('first_name', u.first_name)
         u.last_name = request.form.get('last_name', u.last_name)
         u.display_name = request.form.get('display_name', u.display_name)

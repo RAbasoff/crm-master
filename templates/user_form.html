@@ -5,7 +5,7 @@
 <div class="card">
     <form method="POST">
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Username') }} *</label><input type="text" name="username" value="{{ user.username if user else '' }}" required {{ 'readonly' if user else '' }}></div>
+            <div class="form-group"><label>{{ _('Login (Username)') }} *</label><input type="text" name="username" value="{{ user.username if user else '' }}" required placeholder="{{ _('e.g. ivan.petrov') }}"></div>
             <div class="form-group"><label>{{ _('Password') }} {{ '' if user else '*' }}</label><input type="password" name="password" {{ 'required' if not user else '' }} placeholder="{{ _('Leave empty to keep current') if user else '' }}"></div>
         </div>
         <div class="form-row">
@@ -13,19 +13,19 @@
             <div class="form-group"><label>{{ _('Last Name') }}</label><input type="text" name="last_name" value="{{ user.last_name if user else '' }}"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" value="{{ user.display_name if user else '' }}"></div>
+            <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" value="{{ user.display_name if user else '' }}" placeholder="{{ _('Shown in interface') }}"></div>
             <div class="form-group">
                 <label>{{ _('Role') }}</label>
                 <select name="role" id="roleSelect" onchange="onRoleChange()">
-                    {% for r, label in [('admin', _('Admin')), ('moderator', _('Moderator')), ('director', _('Director')), ('technician', _('Technician')), ('user', _('User'))] %}
-                    <option value="{{ r }}" {% if user and user.role==r %}selected{% endif %}>{{ label }}</option>
+                    {% for r, label, desc in [
+                        ('admin', _('Admin'), _('Full access: settings, users, all modules')),
+                        ('director', _('Director'), _('All modules except settings and user management')),
+                        ('technician', _('Technician'), _('Machines, faults, warehouse, TWO, cylinders')),
+                        ('user', _('User'), _('View only, create fault reports'))
+                    ] %}
+                    <option value="{{ r }}" {% if user and user.role==r %}selected{% endif %}>{{ label }} — {{ desc }}</option>
                     {% endfor %}
                 </select>
-                <small style="color:#888;font-size:11px">
-                    {{ _('Admin') }}: {{ _('full access') }} |
-                    {{ _('Moderator') }}: {{ _('full access, no system changes') }} |
-                    {{ _('Others') }}: {{ _('controlled by permissions') }}
-                </small>
             </div>
         </div>
 
@@ -118,7 +118,7 @@ function toggleSections() {
 }
 function onRoleChange() {
     const role = document.getElementById('roleSelect').value;
-    if (role === 'admin' || role === 'moderator') {
+    if (role === 'admin') {
         document.getElementById('accessLevel').value = 'full';
         document.getElementById('sectionsBlock').style.display = 'none';
     }
