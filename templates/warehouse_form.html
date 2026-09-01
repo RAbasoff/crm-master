@@ -54,9 +54,9 @@
                     <option value="g_{{ g.id }}" {% if item and item.group_id == g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
                     {% endfor %}
                     {% if contractors %}
-                    <optgroup label="── {{ _('Suppliers / Contractors') }} ──">
+                    <optgroup label="── {{ _('Suppliers') }} ──">
                     {% for c in contractors %}
-                    <option value="c_{{ c.id }}" {% if item and item.contractor_id == c.id %}selected{% endif %}>🏢 {{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}</option>
+                    <option value="c_{{ c.id }}" {% if item and item.contractor_id == c.id %}selected{% endif %}>📦 {{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}</option>
                     {% endfor %}
                     </optgroup>
                     {% endif %}
