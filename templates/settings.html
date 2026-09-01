@@ -185,12 +185,14 @@
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                         <span style="width:12px;height:12px;border-radius:3px;background:{{ s.color }};display:inline-block"></span>
                         <strong style="font-size:13px">{{ s.name }}</strong>
+                        <a href="/machines/new?section={{ s.id }}" class="btn btn-sm" style="font-size:10px;padding:2px 6px;background:#27ae60;color:white;margin-left:auto">+ {{ _('Add') }}</a>
                     </div>
                     <div style="display:flex;flex-wrap:wrap;gap:4px" id="section-machines-{{ s.id }}">
                         {% for m in machines if m.section_id == s.id %}
-                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" 
+                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" title="{% for u in m.assigned_users %}{{ u.display_name or u.username }}{% if not loop.last %}, {% endif %}{% endfor %}"
                               style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:grab;font-weight:600">
                             ⚙️ {{ m.name }}
+                            {% if m.assigned_users %}<span style="font-size:9px;color:#888">({{ m.assigned_users|length }}👤)</span>{% endif %}
                         </span>
                         {% endfor %}
                     </div>
@@ -201,12 +203,16 @@
                      ondragover="event.preventDefault();this.style.borderColor='#e74c3c'" 
                      ondragleave="this.style.borderColor='transparent'"
                      ondrop="dropMachine(event, 'section', '')">
-                    <div style="margin-bottom:6px"><strong style="font-size:13px;color:#e74c3c">{{ _('Unassigned') }}</strong></div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                        <strong style="font-size:13px;color:#e74c3c">{{ _('Unassigned') }}</strong>
+                        <a href="/machines/new" class="btn btn-sm" style="font-size:10px;padding:2px 6px;background:#27ae60;color:white;margin-left:auto">+ {{ _('Add') }}</a>
+                    </div>
                     <div style="display:flex;flex-wrap:wrap;gap:4px" id="section-machines-none">
                         {% for m in machines if not m.section_id %}
-                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" 
+                        <span draggable="true" ondragstart="dragMachine(event, {{ m.id }})" title="{% for u in m.assigned_users %}{{ u.display_name or u.username }}{% if not loop.last %}, {% endif %}{% endfor %}"
                               style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:grab;font-weight:600">
                             ⚙️ {{ m.name }}
+                            {% if m.assigned_users %}<span style="font-size:9px;color:#888">({{ m.assigned_users|length }}👤)</span>{% endif %}
                         </span>
                         {% endfor %}
                     </div>
