@@ -67,4 +67,39 @@
         {% endif %}
     </div>
 </div>
+
+<!-- LINKED TWOs -->
+<div class="card" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0">🔧 {{ _('Technical Work Orders') }}</h2>
+        <a href="/two/new?machine={{ plan.machine_id }}&description={{ plan.title|urlencode }}" class="btn btn-sm btn-primary">+ {{ _('Create TWO') }}</a>
+    </div>
+    {% set linked_twos = [] %}
+    {% for two in plan.machine.work_orders if two.description and plan.title in two.description %}
+        {% if linked_twos.append(two) %}{% endif %}
+    {% endfor %}
+    {% if linked_twos %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Number') }}</th><th>{{ _('Status') }}</th><th>{{ _('Workers') }}</th><th>{{ _('Planned') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for t in linked_twos %}
+        <tr>
+            <td><a href="/two/{{ t.id }}" style="color:#3498db"><strong>{{ t.number }}</strong></a></td>
+            <td><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+            <td>{% for w in t.workers %}{{ w.naam }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            <td>{{ t.planned_date.strftime('%d-%m-%Y') if t.planned_date else '—' }}</td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <a href="/two/{{ t.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                    <form method="POST" action="/two/{{ t.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this TWO?') }}')">
+                        <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888;font-size:13px">{{ _('No linked TWOs. Create one from the button above.') }}</p>
+    {% endif %}
+</div>
 {% endblock %}

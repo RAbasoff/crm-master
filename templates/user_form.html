@@ -45,6 +45,10 @@
             </div>
             <div id="sectionsBlock" style="display:{% if user and user.access_level == 'partial' %}block{% else %}none{% endif %}">
                 <label style="font-weight:600;font-size:13px;margin-bottom:8px;display:block">{{ _('Allowed sections') }}</label>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <button type="button" class="btn btn-sm" style="font-size:10px;background:#27ae60;color:white" onclick="selectAllSections(true)">{{ _('Select All') }}</button>
+                    <button type="button" class="btn btn-sm" style="font-size:10px;background:#e74c3c;color:white" onclick="selectAllSections(false)">{{ _('Deselect All') }}</button>
+                </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;padding:12px;background:white;border-radius:8px">
                     {% set labels = {
                         'machines': _('Machines'), 'warehouse': _('Warehouse'), 'orders': _('Work Orders'),
@@ -55,7 +59,9 @@
                         'purchase_requests': _('Purchase Requests'), 'users': _('Users'),
                         'sections': _('Sections'), 'floor': _('Floor Plan'),
                         'invoices': _('Invoices'), 'contractors': _('Contractors'),
-                        'two': _('TWO'), 'audit_log': _('Audit Log')
+                        'two': _('TWO'), 'audit_log': _('Audit Log'),
+                        'settings': _('Settings'), 'statistics': _('Statistics'),
+                        'equipment': _('Equipment'), 'consumables': _('Consumables')
                     } %}
                     {% for key in section_keys %}
                     <label style="display:flex;align-items:center;gap:6px;font-size:13px">
@@ -129,6 +135,9 @@ function onRoleChange() {
 }
 function toggleAllMachines(master) {
     document.querySelectorAll('.machine-check input[type="checkbox"]').forEach(cb => { cb.checked = master.checked; });
+}
+function selectAllSections(state) {
+    document.querySelectorAll('input[name="allowed_sections"]').forEach(cb => { cb.checked = state; });
 }
 function updateSelectAll() {
     const all = document.querySelectorAll('.machine-check input[type="checkbox"]');

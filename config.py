@@ -33,4 +33,6 @@ LANGUAGES = {'nl': 'Nederlands', 'en': 'English', 'ru': 'Русский', 'pl': 
 
 SECTION_KEYS = ['machines', 'warehouse', 'orders', 'clients', 'workers', 'faults',
                 'messages', 'reports', 'schedule', 'time_tracking', 'vacations',
-                'cylinders', 'maintenance', 'purchase_requests', 'users', 'sections', 'floor']
+                'cylinders', 'maintenance', 'purchase_requests', 'users', 'sections', 'floor',
+                'invoices', 'contractors', 'two', 'audit_log', 'settings', 'statistics',
+                'equipment', 'consumables']
