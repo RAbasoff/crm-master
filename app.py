@@ -1003,9 +1003,9 @@ def api_map_delete_section():
 @role_required('admin')
 def api_map_save_machine_pos():
     data = request.get_json()
-    m = Machine.query.get_or_404(data['id'])
-    m.floor_x = data['x']
-    m.floor_y = data['y']
+    m = Machine.query.get_or_404(data.get('machine_id') or data.get('id'))
+    m.floor_x = data.get('floor_x') or data.get('x')
+    m.floor_y = data.get('floor_y') or data.get('y')
     db.session.commit()
     return jsonify({'ok': True})
 

@@ -74,7 +74,7 @@
             <!-- Machines overlay -->
             {% for m in machines %}
             <div class="machine-marker status-{{ m.status }}"
-                 style="left:{{ m.floor_x }}%;top:{{ m.floor_y }}%;transform:translate(-50%,-50%)"
+                 style="left:{{ m.floor_x }}%;top:{{ m.floor_y }}%"
                  onclick="event.stopPropagation();showMachineInfo({{ m.id }}, '{{ m.name }}', '{{ m.status }}', '{{ m.machine_type or '' }}', '{{ m.section.name if m.section else '' }}')"
                  title="{{ m.name }}{% if m.machine_type %} ({{ m.machine_type }}){% endif %}"
                  data-id="{{ m.id }}"
@@ -289,16 +289,17 @@
     
     .machine-marker {
         position: absolute;
+        transform: translate(-50%, -50%);
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
         z-index: 10;
     }
     .machine-marker:hover {
-        transform: translate(-50%, -50%) scale(1.15) !important;
+        transform: translate(-50%, -50%) scale(1.15);
         z-index: 20;
     }
     .machine-marker.selected {
-        transform: translate(-50%, -50%) scale(1.2) !important;
+        transform: translate(-50%, -50%) scale(1.2);
         z-index: 30;
     }
     .machine-marker .machine-icon-wrap {
