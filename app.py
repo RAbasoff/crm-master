@@ -50,6 +50,57 @@ from flask_login import LoginManager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# ============================================================
+# IMPROVEMENTS: Backup, Email, Cost Tracking
+# ============================================================
+
+def backup_database():
+    """Create automatic backup of the database"""
+    import shutil
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+    backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+    os.makedirs(backup_dir, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_path = os.path.join(backup_dir, f'werkplaats_{timestamp}.db')
+    if os.path.exists(db_path):
+        shutil.copy2(db_path, backup_path)
+        # Keep only last 10 backups
+        backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
+        for old in backups[:-10]:
+            os.remove(os.path.join(backup_dir, old))
+        return backup_path
+    return None
+
+def send_email(to_email, subject, body):
+    """Send email notification"""
+    import smtplib
+    from email.mime.text import MIMEText
+    smtp_host = os.environ.get('SMTP_HOST', '')
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    if not smtp_host or not smtp_user:
+        return False
+    msg = MIMEText(body, 'html')
+    msg['Subject'] = subject
+    msg['From'] = smtp_user
+    msg['To'] = to_email
+    try:
+        server = smtplib.SMTP(smtp_host, 587)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception:
+        return False
+
+def calculate_fault_cost(fault):
+    """Calculate estimated cost for a fault"""
+    cost = 0
+    for wr in fault.work_report:
+        cost += float(wr.time_spent_hours or 0) * 50
+    return cost
+
 # Auto-create database tables and seed data on import (for WSGI deployment)
 with app.app_context():
     db.create_all()
@@ -798,6 +849,18 @@ def settings():
         responsible=responsible, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
         top_machines_faults=top_machines_faults)
+
+@app.route('/settings/backup', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_backup():
+    """Create database backup"""
+    path = backup_database()
+    if path:
+        flash(_('Backup created: {}').format(os.path.basename(path)), 'success')
+    else:
+        flash(_('Backup failed'), 'error')
+    return redirect(url_for('settings'))
 
 @app.route('/settings/user/<int:user_id>/access', methods=['POST'])
 @login_required
@@ -2764,6 +2827,20 @@ def fault_new():
 
         log_audit('create', 'fault', f.id, f'{f.title} — {f.machine.name} (приоритет: {f.priority})')
         add_work_report(f'⚠️ Новая поломка: {f.title} — {f.machine.name} (приоритет: {f.priority})')
+        
+        # Send email notification for critical faults
+        if f.priority == 'critical':
+            admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
+            for admin in admins:
+                if admin.email:
+                    send_email(
+                        admin.email,
+                        f'🔴 КРИТИЧЕСКАЯ ЗАЯВКА: {f.title}',
+                        f'<h2>Критическая заявка #{f.id}</h2>'
+                        f'<p><strong>Станок:</strong> {f.machine.name}</p>'
+                        f'<p><strong>Описание:</strong> {f.description[:200]}</p>'
+                        f'<p><a href="https://rabasoff.pythonanywhere.com/faults/{f.id}">Открыть заявку</a></p>'
+                    )
 
         flash(_('Fault report created'), 'success')
         return redirect(url_for('faults_list'))
