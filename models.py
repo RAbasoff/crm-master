@@ -405,24 +405,29 @@ class VoorraadItem(db.Model):
     description = db.Column(db.Text)
     categorie = db.Column(db.String(100))
     group_id = db.Column(db.Integer, db.ForeignKey('warehouse_group.id'))
-    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))  # supplier/contractor
+    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))
     supplier_part_number = db.Column(db.String(100))
     eenheid = db.Column(db.String(20), default='st')
     hoeveelheid = db.Column(db.Float, default=0)
     minimum = db.Column(db.Float, default=0)
     prijs = db.Column(Numeric(10, 2), default=0)
     locatie = db.Column(db.String(100))
-    # Consumable fields (for filters, oils, etc.)
-    consumable_type = db.Column(db.String(50))  # filter, oil, grease, coolant
-    consumable_subtype = db.Column(db.String(100))  # air filter, oil filter, hydraulic oil, etc.
-    volume = db.Column(db.String(50))  # volume (L, kg)
-    compatible_machines = db.Column(db.Text)  # compatible machine models
-    replacement_interval = db.Column(db.String(50))  # replacement interval (e.g., "500 hours", "monthly")
-    last_replacement = db.Column(db.Date)  # date of last replacement
-    next_replacement = db.Column(db.Date)  # date of next replacement
+    # New fields
+    serial_number = db.Column(db.String(100))  # серийный номер
+    expiry_date = db.Column(db.Date)  # срок годности
+    barcode = db.Column(db.String(100))  # штрих-код
+    # Consumable fields
+    consumable_type = db.Column(db.String(50))
+    consumable_subtype = db.Column(db.String(100))
+    volume = db.Column(db.String(50))
+    compatible_machines = db.Column(db.Text)
+    replacement_interval = db.Column(db.String(50))
+    last_replacement = db.Column(db.Date)
+    next_replacement = db.Column(db.Date)
     aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
     contractor = db.relationship('Contractor', backref='warehouse_items')
     mutaties = db.relationship('VoorraadMutatie', backref='item', lazy=True, cascade='all, delete-orphan')
+    reservations = db.relationship('WarehouseReservation', backref='item', lazy=True, cascade='all, delete-orphan')
 
 class VoorraadMutatie(db.Model):
     __tablename__ = 'warehouse_movement'
@@ -432,7 +437,35 @@ class VoorraadMutatie(db.Model):
     hoeveelheid = db.Column(db.Float, nullable=False)
     opdracht_id = db.Column(db.Integer, db.ForeignKey('opdracht.id'))
     opmerking = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # кто совершил
     aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', foreign_keys=[user_id])
+
+class WarehouseReservation(db.Model):
+    """Резервирование товара под заказ/станок"""
+    __tablename__ = 'warehouse_reservation'
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    reserved_for = db.Column(db.String(200))  # для чего (заказ, станок, проект)
+    reserved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    reserved_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)  # когда истекает резерв
+    notes = db.Column(db.Text)
+    user = db.relationship('User', foreign_keys=[reserved_by])
+
+class SupplierPrice(db.Model):
+    """Цены от разных поставщиков на один товар"""
+    __tablename__ = 'supplier_price'
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False)
+    supplier_name = db.Column(db.String(200), nullable=False)
+    price = db.Column(Numeric(10, 2), nullable=False)
+    delivery_days = db.Column(db.Integer)  # срок доставки
+    min_order = db.Column(db.Float)  # минимальный заказ
+    notes = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    item = db.relationship('VoorraadItem', backref='supplier_prices')
 
 class Invoice(db.Model):
     __tablename__ = 'invoice'

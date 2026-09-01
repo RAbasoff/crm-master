@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Inventory Check') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📋 {{ _('Inventory Check') }}</h1>
+    <a href="/warehouse" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+<p style="color:#888;margin-bottom:16px">{{ _('Count actual quantities and compare with system. Click Save to update.') }}</p>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Item') }}</th>
+            <th>{{ _('Location') }}</th>
+            <th>{{ _('System Qty') }}</th>
+            <th>{{ _('Actual Qty') }}</th>
+            <th>{{ _('Diff') }}</th>
+            <th></th>
+        </tr>
+        {% for item in items %}
+        <tr id="row-{{ item.id }}">
+            <td><strong>{{ item.naam }}</strong></td>
+            <td>{{ item.locatie or '—' }}</td>
+            <td>{{ item.hoeveelheid }}</td>
+            <td><input type="number" id="qty-{{ item.id }}" value="{{ item.hoeveelheid }}" step="0.1" style="width:80px;padding:4px;border:1px solid #ddd;border-radius:4px" onchange="calcDiff({{ item.id }}, {{ item.hoeveelheid }})"></td>
+            <td id="diff-{{ item.id }}">0</td>
+            <td><button class="btn btn-sm btn-primary" onclick="saveInventory({{ item.id }})">{{ _('Save') }}</button></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+<script>
+function calcDiff(id, systemQty) {
+    const actual = parseFloat(document.getElementById('qty-' + id).value) || 0;
+    const diff = actual - systemQty;
+    const el = document.getElementById('diff-' + id);
+    el.textContent = diff > 0 ? '+' + diff : diff;
+    el.style.color = diff !== 0 ? '#e74c3c' : '#27ae60';
+    el.style.fontWeight = 'bold';
+}
+
+function saveInventory(id) {
+    const actual = parseFloat(document.getElementById('qty-' + id).value) || 0;
+    csrfFetch('/warehouse/inventory/check', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({item_id: id, quantity: actual})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) {
+            const row = document.getElementById('row-' + id);
+            row.style.background = '#f0fff0';
+            setTimeout(() => { row.style.background = ''; }, 2000);
+        }
+    });
+}
+</script>
+{% endblock %}

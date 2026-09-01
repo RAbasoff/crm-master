@@ -26,7 +26,8 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
                     UserActivityLog, SystemLog,
-                    EquipmentMaintenance, EquipmentPart, EquipmentPartOrder)
+                    EquipmentMaintenance, EquipmentPart, EquipmentPartOrder,
+                    WarehouseReservation, SupplierPrice)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -4515,12 +4516,144 @@ def warehouse_move(item_id):
         return redirect(url_for('warehouse_list'))
     m = VoorraadMutatie(item_id=item_id, type=mt, hoeveelheid=qty,
                         opdracht_id=request.form.get('opdracht_id') or None,
-                        opmerking=request.form.get('opmerking',''))
+                        opmerking=request.form.get('opmerking',''),
+                        user_id=current_user.id)
     if mt == 'inkomend': item.hoeveelheid += qty
     else: item.hoeveelheid -= qty
     db.session.add(m); db.session.commit()
     flash(_('{} {} {} — {}').format(mt.capitalize(), qty, item.eenheid, item.naam), 'success')
     return redirect(url_for('warehouse_list'))
+
+@app.route('/warehouse/reserve/<int:item_id>', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def warehouse_reserve(item_id):
+    """Резервирование товара"""
+    item = VoorraadItem.query.get_or_404(item_id)
+    qty = float(request.form.get('quantity', 1))
+    if qty > item.hoeveelheid:
+        flash(_('Insufficient stock for reservation!'), 'error')
+        return redirect(url_for('warehouse_list'))
+    r = WarehouseReservation(
+        item_id=item_id,
+        quantity=qty,
+        reserved_for=request.form.get('reserved_for', ''),
+        reserved_by=current_user.id,
+        notes=request.form.get('notes', '')
+    )
+    db.session.add(r)
+    db.session.commit()
+    flash(_('Reserved {} {} for {}').format(qty, item.eenheid, r.reserved_for), 'success')
+    return redirect(url_for('warehouse_list'))
+
+@app.route('/warehouse/reserve/<int:res_id>/release', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def warehouse_release(res_id):
+    """Снятие резерва"""
+    r = WarehouseReservation.query.get_or_404(res_id)
+    db.session.delete(r)
+    db.session.commit()
+    flash(_('Reservation released'), 'success')
+    return redirect(url_for('warehouse_list'))
+
+@app.route('/warehouse/inventory')
+@login_required
+@role_required('admin', 'director')
+def warehouse_inventory():
+    """Инвентаризация — пересчёт остатков"""
+    items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    return render_template('warehouse_inventory.html', items=items)
+
+@app.route('/warehouse/inventory/check', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def warehouse_inventory_check():
+    """Сохранение результатов инвентаризации"""
+    data = request.get_json()
+    item_id = data.get('item_id')
+    actual_qty = float(data.get('quantity', 0))
+    item = VoorraadItem.query.get(item_id)
+    if not item:
+        return jsonify({'error': 'Item not found'}), 404
+    diff = actual_qty - item.hoeveelheid
+    if diff != 0:
+        m = VoorraadMutatie(
+            item_id=item_id,
+            type='inkomend' if diff > 0 else 'uitgaand',
+            hoeveelheid=abs(diff),
+            opmerking=f'Инвентаризация: было {item.hoeveelheid}, стало {actual_qty}',
+            user_id=current_user.id
+        )
+        item.hoeveelheid = actual_qty
+        db.session.add(m)
+        db.session.commit()
+    return jsonify({'ok': True, 'diff': diff})
+
+@app.route('/warehouse/<int:item_id>/prices')
+@login_required
+@role_required('admin', 'director')
+def warehouse_prices(item_id):
+    """Сравнение цен поставщиков"""
+    item = VoorraadItem.query.get_or_404(item_id)
+    prices = SupplierPrice.query.filter_by(item_id=item_id).order_by(SupplierPrice.price).all()
+    return render_template('warehouse_prices.html', item=item, prices=prices)
+
+@app.route('/warehouse/<int:item_id>/prices/add', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def warehouse_price_add(item_id):
+    """Добавление цены поставщика"""
+    p = SupplierPrice(
+        item_id=item_id,
+        supplier_name=request.form['supplier_name'],
+        price=float(request.form['price']),
+        delivery_days=int(request.form['delivery_days']) if request.form.get('delivery_days') else None,
+        min_order=float(request.form['min_order']) if request.form.get('min_order') else None,
+        notes=request.form.get('notes', '')
+    )
+    db.session.add(p)
+    db.session.commit()
+    flash(_('Price added'), 'success')
+    return redirect(url_for('warehouse_prices', item_id=item_id))
+
+@app.route('/warehouse/import', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def warehouse_import():
+    """Импорт товаров из CSV"""
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if not file:
+            flash(_('No file'), 'error')
+            return redirect(url_for('warehouse_import'))
+        import csv, io
+        content = file.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+        count = 0
+        for row in reader:
+            naam = row.get('name', row.get('Name', '')).strip()
+            if not naam:
+                continue
+            item = VoorraadItem(
+                naam=naam,
+                description=row.get('description', ''),
+                categorie=row.get('category', ''),
+                supplier_part_number=row.get('spn', ''),
+                eenheid=row.get('unit', 'st'),
+                hoeveelheid=float(row.get('quantity', 0)),
+                minimum=float(row.get('minimum', 0)),
+                prijs=float(row.get('price', 0)),
+                locatie=row.get('location', ''),
+                serial_number=row.get('serial', ''),
+                barcode=row.get('barcode', '')
+            )
+            db.session.add(item)
+            count += 1
+        db.session.commit()
+        flash(_('{} items imported').format(count), 'success')
+        return redirect(url_for('warehouse_list'))
+    return render_template('warehouse_import.html')
 
 # ============================================================
 # ROUTES — INVOICES

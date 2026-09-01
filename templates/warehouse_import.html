@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Import Items') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📥 {{ _('Import Items from CSV') }}</h1>
+    <a href="/warehouse" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <h2>{{ _('CSV Format') }}</h2>
+    <p style="font-size:13px;color:#888;margin-bottom:12px">{{ _('Upload a CSV file with the following columns:') }}</p>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:16px">
+        name,description,category,spn,unit,quantity,minimum,price,location,serial,barcode
+    </div>
+    <p style="font-size:12px;color:#888;margin-bottom:16px">
+        <strong>name</strong> — required. Other columns are optional.<br>
+        <strong>spn</strong> — Supplier Part Number<br>
+        <strong>unit</strong> — st, kg, m, L (default: st)
+    </p>
+    
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>{{ _('CSV File') }}</label>
+            <input type="file" name="file" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Import') }}</button>
+    </form>
+</div>
+
+<div class="card" style="margin-top:16px">
+    <h2>{{ _('Example CSV') }}</h2>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;font-family:monospace;font-size:11px;white-space:pre">name,description,category,spn,unit,quantity,minimum,price,location,serial,barcode
+Bearing 6205,Deep groove ball bearing,Bearings,6205-2RS,st,10,3,12.50,Shelf A2,,
+Hydraulic oil ISO 46,Hydraulic oil 20L,Oils,,L,2,1,45.00,Shelf B1,,4006381333901
+Air filter AF-200,Compressor air filter,Filters,AF-200,st,5,2,28.00,Shelf C3,,
+</div>
+</div>
+{% endblock %}

@@ -11,6 +11,8 @@
         <a href="/warehouse/labels" class="btn btn-sm" style="background:#8e44ad;color:white" target="_blank">🏷️ {{ _('Print all labels') }}</a>
         {% if current_user.has_role('admin') %}
         <a href="/warehouse/duplicates" class="btn btn-sm" style="background:#e67e22;color:white">🔍 {{ _('Duplicates') }}</a>
+        <a href="/warehouse/inventory" class="btn btn-sm" style="background:#27ae60;color:white">📋 {{ _('Inventory') }}</a>
+        <a href="/warehouse/import" class="btn btn-sm" style="background:#9b59b6;color:white">📥 {{ _('Import CSV') }}</a>
         {% endif %}
         <a href="/warehouse/new" class="btn btn-primary">+ {{ _('New Item') }}</a>
     </div>
@@ -71,6 +73,7 @@
                 <a href="/api/warehouse/qr/{{ i.id }}" class="btn btn-sm" style="background:#2c3e50;color:white;padding:4px 6px" title="QR" target="_blank">QR</a>
                 <button class="btn btn-sm" style="background:#7f8c8d;color:white;padding:4px 6px" title="Barcode" onclick="showBarcode('{{ i.id }}', '{{ i.naam }}', '{{ i.supplier_part_number or '' }}')">|||</button>
                 <a href="/warehouse/labels?ids={{ i.id }}" class="btn btn-sm" style="background:#8e44ad;color:white;padding:4px 6px" title="Print label" target="_blank">🏷️</a>
+                <a href="/warehouse/{{ i.id }}/prices" class="btn btn-sm" style="background:#f39c12;color:white;padding:4px 6px" title="{{ _('Supplier Prices') }}">💰</a>
             </td>
         </tr>
         <tr id="mv-{{ i.id }}" style="display:none; background:#f8f9fa">

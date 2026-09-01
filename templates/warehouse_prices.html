@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Supplier Prices') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>💰 {{ _('Supplier Prices') }}: {{ item.naam }}</h1>
+    <a href="/warehouse" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ prices|length }}</div><div class="label">{{ _('Suppliers') }}</div></div>
+    {% if prices %}
+    <div class="stat-card ok"><div class="number">€{{ "%.2f"|format(prices[0].price) }}</div><div class="label">{{ _('Best Price') }}</div></div>
+    <div class="stat-card"><div class="number">{{ prices[0].supplier_name }}</div><div class="label">{{ _('Best Supplier') }}</div></div>
+    {% endif %}
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Supplier') }}</th>
+            <th>{{ _('Price') }}</th>
+            <th>{{ _('Delivery') }}</th>
+            <th>{{ _('Min Order') }}</th>
+            <th>{{ _('Notes') }}</th>
+            <th>{{ _('Updated') }}</th>
+        </tr>
+        {% for p in prices %}
+        <tr {% if loop.first %}style="background:#f0fff0"{% endif %}>
+            <td><strong>{{ p.supplier_name }}</strong></td>
+            <td style="font-weight:bold;color:{% if loop.first %}#27ae60{% else %}#333{% endif %}">€{{ "%.2f"|format(p.price) }}</td>
+            <td>{{ p.delivery_days or '—' }} {{ _('days') }}</td>
+            <td>{{ p.min_order or '—' }}</td>
+            <td>{{ p.notes or '—' }}</td>
+            <td style="font-size:11px">{{ p.updated_at.strftime('%d-%m-%Y') }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+<!-- ADD PRICE -->
+<div class="card" style="margin-top:16px">
+    <h2>+ {{ _('Add Supplier Price') }}</h2>
+    <form method="POST" action="/warehouse/{{ item.id }}/prices/add">
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Supplier') }} *</label><input type="text" name="supplier_name" required></div>
+            <div class="form-group"><label>{{ _('Price') }} (€) *</label><input type="number" name="price" step="0.01" required></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Delivery Days') }}</label><input type="number" name="delivery_days" min="1"></div>
+            <div class="form-group"><label>{{ _('Min Order') }}</label><input type="number" name="min_order" step="0.1"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Notes') }}</label><input type="text" name="notes"></div>
+        <button type="submit" class="btn btn-primary">{{ _('Add') }}</button>
+    </form>
+</div>
+{% endblock %}

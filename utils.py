@@ -425,6 +425,30 @@ def run_migrations():
             created_at DATETIME,
             delivered_at DATETIME
         )"""),
+        ("warehouse_item.serial_number", "ALTER TABLE warehouse_item ADD COLUMN serial_number VARCHAR(100)"),
+        ("warehouse_item.expiry_date", "ALTER TABLE warehouse_item ADD COLUMN expiry_date DATE"),
+        ("warehouse_item.barcode", "ALTER TABLE warehouse_item ADD COLUMN barcode VARCHAR(100)"),
+        ("warehouse_movement.user_id", "ALTER TABLE warehouse_movement ADD COLUMN user_id INTEGER REFERENCES user(id)"),
+        ("warehouse_reservation", """CREATE TABLE IF NOT EXISTS warehouse_reservation (
+            id INTEGER PRIMARY KEY,
+            item_id INTEGER NOT NULL REFERENCES warehouse_item(id),
+            quantity FLOAT NOT NULL,
+            reserved_for VARCHAR(200),
+            reserved_by INTEGER REFERENCES user(id),
+            reserved_at DATETIME,
+            expires_at DATETIME,
+            notes TEXT
+        )"""),
+        ("supplier_price", """CREATE TABLE IF NOT EXISTS supplier_price (
+            id INTEGER PRIMARY KEY,
+            item_id INTEGER NOT NULL REFERENCES warehouse_item(id),
+            supplier_name VARCHAR(200) NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            delivery_days INTEGER,
+            min_order FLOAT,
+            notes TEXT,
+            updated_at DATETIME
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
