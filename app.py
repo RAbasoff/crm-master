@@ -244,15 +244,33 @@ def logout():
 @login_required
 def profile():
     if request.method == 'POST':
+        # Change username
+        new_username = request.form.get('username', '').strip()
+        if new_username and new_username != current_user.username:
+            existing = User.query.filter_by(username=new_username).first()
+            if existing:
+                flash(_('Username already taken'), 'error')
+                return redirect(url_for('profile'))
+            current_user.username = new_username
+
+        # Change display name
+        current_user.display_name = request.form.get('display_name', current_user.display_name)
+        current_user.phone = request.form.get('phone', current_user.phone)
+
+        # Change password
         new_pass = request.form.get('new_password')
         if new_pass:
-            if hasattr(current_user, '_person'):
-                current_user._person.set_password(new_pass)
-            else:
-                current_user.set_password(new_pass)
-                current_user.display_name = request.form.get('display_name', current_user.display_name)
-            db.session.commit()
-            flash(_('Profile updated'), 'success')
+            confirm_pass = request.form.get('confirm_password')
+            if new_pass != confirm_pass:
+                flash(_('Passwords do not match'), 'error')
+                return redirect(url_for('profile'))
+            if len(new_pass) < 4:
+                flash(_('Password must be at least 4 characters'), 'error')
+                return redirect(url_for('profile'))
+            current_user.set_password(new_pass)
+
+        db.session.commit()
+        flash(_('Profile updated'), 'success')
     return render_template('profile.html')
 
 # ============================================================
@@ -294,6 +312,16 @@ def user_change_password(user_id):
 @role_required('admin')
 def user_cabinet_update(user_id):
     u = User.query.get_or_404(user_id)
+
+    # Change username
+    new_username = request.form.get('username', '').strip()
+    if new_username and new_username != u.username:
+        existing = User.query.filter_by(username=new_username).first()
+        if existing:
+            flash(_('Username already taken'), 'error')
+            return redirect(url_for('user_cabinet', user_id=u.id))
+        u.username = new_username
+
     u.first_name = request.form.get('first_name', u.first_name)
     u.last_name = request.form.get('last_name', u.last_name)
     u.display_name = request.form.get('display_name', u.display_name)
@@ -456,6 +484,16 @@ def monteur_permissions(user_id):
     if u.role != 'technician':
         flash(_('Only technicians can be edited here'), 'error')
         return redirect(url_for('monteurs_list'))
+
+    # Change username
+    new_username = request.form.get('username', '').strip()
+    if new_username and new_username != u.username:
+        existing = User.query.filter_by(username=new_username).first()
+        if existing:
+            flash(_('Username already taken'), 'error')
+            return redirect(url_for('monteurs_list'))
+        u.username = new_username
+
     u.access_level = request.form.get('access_level', 'full')
     UserSectionAccess.query.filter_by(user_id=u.id).delete()
     for key in request.form.getlist('allowed_sections'):
