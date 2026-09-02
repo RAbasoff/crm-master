@@ -15,8 +15,8 @@
     <div class="card">
         <h2>{{ _('Personal Info') }}</h2>
         <div class="form-group">
-            <label>{{ _('Username') }}</label>
-            <input type="text" value="{{ user.username }}" readonly style="background:#f5f5f5">
+            <label>{{ _('Username') }} ({{ _('Login') }})</label>
+            <input type="text" name="username" value="{{ user.username }}" required>
         </div>
         <div class="form-row">
             <div class="form-group">

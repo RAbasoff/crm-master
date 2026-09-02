@@ -43,6 +43,12 @@ app.config['WTF_CSRF_TIME_LIMIT'] = None  # no timeout for long sessions
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance'), exist_ok=True)
 
+# Register blueprints
+from blueprints.electricity import bp as electricity_bp
+app.register_blueprint(electricity_bp)
+from blueprints.monteurs import bp as monteurs_bp
+app.register_blueprint(monteurs_bp)
+
 csrf = CSRFProtect(app)
 db.init_app(app)
 from flask_login import LoginManager
@@ -244,15 +250,33 @@ def logout():
 @login_required
 def profile():
     if request.method == 'POST':
+        # Change username
+        new_username = request.form.get('username', '').strip()
+        if new_username and new_username != current_user.username:
+            existing = User.query.filter_by(username=new_username).first()
+            if existing:
+                flash(_('Username already taken'), 'error')
+                return redirect(url_for('profile'))
+            current_user.username = new_username
+
+        # Change display name
+        current_user.display_name = request.form.get('display_name', current_user.display_name)
+        current_user.phone = request.form.get('phone', current_user.phone)
+
+        # Change password
         new_pass = request.form.get('new_password')
         if new_pass:
-            if hasattr(current_user, '_person'):
-                current_user._person.set_password(new_pass)
-            else:
-                current_user.set_password(new_pass)
-                current_user.display_name = request.form.get('display_name', current_user.display_name)
-            db.session.commit()
-            flash(_('Profile updated'), 'success')
+            confirm_pass = request.form.get('confirm_password')
+            if new_pass != confirm_pass:
+                flash(_('Passwords do not match'), 'error')
+                return redirect(url_for('profile'))
+            if len(new_pass) < 4:
+                flash(_('Password must be at least 4 characters'), 'error')
+                return redirect(url_for('profile'))
+            current_user.set_password(new_pass)
+
+        db.session.commit()
+        flash(_('Profile updated'), 'success')
     return render_template('profile.html')
 
 # ============================================================
@@ -294,6 +318,16 @@ def user_change_password(user_id):
 @role_required('admin')
 def user_cabinet_update(user_id):
     u = User.query.get_or_404(user_id)
+
+    # Change username
+    new_username = request.form.get('username', '').strip()
+    if new_username and new_username != u.username:
+        existing = User.query.filter_by(username=new_username).first()
+        if existing:
+            flash(_('Username already taken'), 'error')
+            return redirect(url_for('user_cabinet', user_id=u.id))
+        u.username = new_username
+
     u.first_name = request.form.get('first_name', u.first_name)
     u.last_name = request.form.get('last_name', u.last_name)
     u.display_name = request.form.get('display_name', u.display_name)
@@ -439,39 +473,6 @@ def user_edit(user_id):
         return redirect(url_for('users_list'))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     return render_template('user_form.html', user=u, machines=Machine.query.all(), section_keys=SECTION_KEYS, verantwoordelijken=verantwoordelijken)
-
-@app.route('/monteurs')
-@login_required
-@role_required('admin')
-def monteurs_list():
-    monteurs = User.query.filter_by(role='technician').order_by(User.display_name).all()
-    machines = Machine.query.order_by(Machine.name).all()
-    return render_template('monteurs.html', monteurs=monteurs, machines=machines, section_keys=SECTION_KEYS)
-
-@app.route('/monteurs/<int:user_id>/permissions', methods=['POST'])
-@login_required
-@role_required('admin')
-def monteur_permissions(user_id):
-    u = User.query.get_or_404(user_id)
-    if u.role != 'technician':
-        flash(_('Only technicians can be edited here'), 'error')
-        return redirect(url_for('monteurs_list'))
-    u.access_level = request.form.get('access_level', 'full')
-    UserSectionAccess.query.filter_by(user_id=u.id).delete()
-    for key in request.form.getlist('allowed_sections'):
-        db.session.add(UserSectionAccess(user_id=u.id, section_key=key))
-    u.assigned_machines = []
-    for mid in request.form.getlist('machines'):
-        m = Machine.query.get(int(mid))
-        if m:
-            u.assigned_machines.append(m)
-    u.is_active_user = 'is_active' in request.form
-    new_pass = request.form.get('password')
-    if new_pass:
-        u.set_password(new_pass)
-    db.session.commit()
-    flash(_('Permissions updated for') + ' ' + (u.display_name or u.username), 'success')
-    return redirect(url_for('monteurs_list'))
 
 # ============================================================
 # ROUTES — MACHINES & FACTORY FLOOR
@@ -1184,182 +1185,6 @@ def machine_part_delete(machine_id, part_id):
     db.session.commit()
     flash(_('Part deleted'), 'success')
     return redirect(url_for('machine_parts', machine_id=m.id))
-
-# ============================================================
-# ROUTES — ELECTRICITY / ELECTRICAL CABINETS
-# ============================================================
-
-@app.route('/electricity')
-@login_required
-def electricity_list():
-    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
-    cab_map = {c.id: c for c in cabinets}
-    all_breakers = [b for cab in cabinets for b in cab.breakers]
-    stats = {
-        'total': len(all_breakers),
-        'on': sum(1 for b in all_breakers if b.status == 'on'),
-        'off': sum(1 for b in all_breakers if b.status == 'off'),
-    }
-    # 4 physical panels from photos
-    panels = [
-        {'name': 'Panel 1 — VRACHTWAGEN / VERPAKKING / WERKVOORBEREIDING',
-         'cabinet_ids': [3, 4, 5, 6]},
-        {'name': 'Panel 2 — CANALIS / KOUDE / WATER / TECHNIEKEN',
-         'cabinet_ids': [7, 8, 9, 10, 11]},
-        {'name': 'Panel 3 — LOGISTIEK',
-         'cabinet_ids': [12, 13]},
-        {'name': 'Panel 4 — DISTRIBUTIE / UGL / ALGEMEEN / WB',
-         'cabinet_ids': [14, 15, 16, 17, 18]},
-    ]
-    for p in panels:
-        p['cabinets'] = [cab_map[cid] for cid in p['cabinet_ids'] if cid in cab_map]
-        p['total_breakers'] = sum(len(c.breakers) for c in p['cabinets'])
-        p['on_count'] = sum(1 for c in p['cabinets'] for b in c.breakers if b.status == 'on')
-    return render_template('electricity.html', cabinets=cabinets, stats=stats, panels=panels)
-
-@app.route('/electricity/cabinet/new', methods=['GET', 'POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def cabinet_new():
-    if request.method == 'POST':
-        c = ElectricalCabinet(
-            name=request.form['name'],
-            location=request.form.get('location', ''),
-            cabinet_type=request.form.get('cabinet_type', 'distribution'),
-            description=request.form.get('description', ''),
-            manufacturer=request.form.get('manufacturer', ''),
-            serial_number=request.form.get('serial_number', ''),
-            main_fuse_amps=int(request.form['main_fuse_amps']) if request.form.get('main_fuse_amps') else None,
-            voltage=request.form.get('voltage', '400V/230V'),
-            schematic_x=int(request.form.get('schematic_x', 0)),
-            schematic_y=int(request.form.get('schematic_y', 0))
-        )
-        if 'photo' in request.files and request.files['photo'].filename:
-            filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            c.photo = filename
-        db.session.add(c)
-        db.session.commit()
-        flash(_('Cabinet created'), 'success')
-        return redirect(url_for('cabinet_detail', cabinet_id=c.id))
-    return render_template('cabinet_form.html', cabinet=None)
-
-@app.route('/electricity/cabinet/<int:cabinet_id>')
-@login_required
-def cabinet_detail(cabinet_id):
-    c = ElectricalCabinet.query.get_or_404(cabinet_id)
-    return render_template('cabinet_detail.html', cabinet=c)
-
-@app.route('/electricity/cabinet/<int:cabinet_id>/edit', methods=['GET', 'POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def cabinet_edit(cabinet_id):
-    c = ElectricalCabinet.query.get_or_404(cabinet_id)
-    if request.method == 'POST':
-        c.name = request.form['name']
-        c.location = request.form.get('location', '')
-        c.cabinet_type = request.form.get('cabinet_type', 'distribution')
-        c.description = request.form.get('description', '')
-        c.manufacturer = request.form.get('manufacturer', '')
-        c.serial_number = request.form.get('serial_number', '')
-        c.main_fuse_amps = int(request.form['main_fuse_amps']) if request.form.get('main_fuse_amps') else None
-        c.voltage = request.form.get('voltage', '400V/230V')
-        c.schematic_x = int(request.form.get('schematic_x', 0))
-        c.schematic_y = int(request.form.get('schematic_y', 0))
-        if 'photo' in request.files and request.files['photo'].filename:
-            filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            c.photo = filename
-        db.session.commit()
-        flash(_('Cabinet updated'), 'success')
-        return redirect(url_for('cabinet_detail', cabinet_id=c.id))
-    return render_template('cabinet_form.html', cabinet=c)
-
-@app.route('/electricity/cabinet/<int:cabinet_id>/delete', methods=['POST'])
-@login_required
-@role_required('admin')
-def cabinet_delete(cabinet_id):
-    c = ElectricalCabinet.query.get_or_404(cabinet_id)
-    c.is_active = False
-    db.session.commit()
-    flash(_('Cabinet deleted'), 'success')
-    return redirect(url_for('electricity_list'))
-
-@app.route('/electricity/cabinet/<int:cabinet_id>/breaker/new', methods=['GET', 'POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def breaker_new(cabinet_id):
-    c = ElectricalCabinet.query.get_or_404(cabinet_id)
-    if request.method == 'POST':
-        b = CircuitBreaker(
-            cabinet_id=c.id,
-            label=request.form['label'],
-            description=request.form.get('description', ''),
-            breaker_type=request.form.get('breaker_type', 'MCB'),
-            amperage=int(request.form['amperage']) if request.form.get('amperage') else None,
-            poles=int(request.form.get('poles', 1)),
-            curve_type=request.form.get('curve_type', 'C'),
-            phase=request.form.get('phase', ''),
-            status=request.form.get('status', 'on'),
-            connected_to=request.form.get('connected_to', ''),
-            notes=request.form.get('notes', ''),
-            row=int(request.form.get('row', 1)),
-            position=int(request.form.get('position', 1))
-        )
-        db.session.add(b)
-        db.session.commit()
-        flash(_('Breaker added'), 'success')
-        return redirect(url_for('cabinet_detail', cabinet_id=c.id))
-    return render_template('breaker_form.html', cabinet=c, breaker=None)
-
-@app.route('/electricity/breaker/<int:breaker_id>/edit', methods=['GET', 'POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def breaker_edit(breaker_id):
-    b = CircuitBreaker.query.get_or_404(breaker_id)
-    if request.method == 'POST':
-        b.label = request.form['label']
-        b.description = request.form.get('description', '')
-        b.breaker_type = request.form.get('breaker_type', 'MCB')
-        b.amperage = int(request.form['amperage']) if request.form.get('amperage') else None
-        b.poles = int(request.form.get('poles', 1))
-        b.curve_type = request.form.get('curve_type', 'C')
-        b.phase = request.form.get('phase', '')
-        b.status = request.form.get('status', 'on')
-        b.connected_to = request.form.get('connected_to', '')
-        b.notes = request.form.get('notes', '')
-        b.row = int(request.form.get('row', 1))
-        b.position = int(request.form.get('position', 1))
-        db.session.commit()
-        flash(_('Breaker updated'), 'success')
-        return redirect(url_for('cabinet_detail', cabinet_id=b.cabinet_id))
-    return render_template('breaker_form.html', cabinet=b.cabinet, breaker=b)
-
-@app.route('/electricity/breaker/<int:breaker_id>/toggle', methods=['POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def breaker_toggle(breaker_id):
-    b = CircuitBreaker.query.get_or_404(breaker_id)
-    b.status = 'off' if b.status == 'on' else 'on'
-    db.session.commit()
-    return jsonify({'status': b.status})
-
-@app.route('/electricity/breaker/<int:breaker_id>/delete', methods=['POST'])
-@login_required
-@role_required('admin')
-def breaker_delete(breaker_id):
-    b = CircuitBreaker.query.get_or_404(breaker_id)
-    cabinet_id = b.cabinet_id
-    db.session.delete(b)
-    db.session.commit()
-    flash(_('Breaker deleted'), 'success')
-    return redirect(url_for('cabinet_detail', cabinet_id=cabinet_id))
-
-@app.route('/electricity/schematic')
-@login_required
-def electricity_schematic():
-    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
-    return render_template('electricity_schematic.html', cabinets=cabinets)
 
 # ============================================================
 # ROUTES — MAINTENANCE CALENDAR
