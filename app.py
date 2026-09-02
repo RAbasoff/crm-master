@@ -4271,6 +4271,7 @@ def responsible_new():
             internal_phone=request.form.get('internal_phone', ''),
             work_phone=request.form.get('work_phone', ''),
             email=request.form.get('email', ''),
+            username=request.form.get('username', '').strip() or None,
             group_id=int(request.form['group_id']) if request.form.get('group_id') else None,
             access_level=request.form.get('access_level', 'floor'),
             notities=request.form.get('notities', '')
@@ -4278,6 +4279,10 @@ def responsible_new():
         # Set password if provided
         password = request.form.get('password', '').strip()
         if password:
+            confirm = request.form.get('confirm_password', '')
+            if password != confirm:
+                flash(_('Passwords do not match'), 'error')
+                return redirect(url_for('responsible_new'))
             c.set_password(password)
         db.session.add(c)
         db.session.flush()
@@ -4429,6 +4434,15 @@ def responsible_edit(resp_id):
         c.internal_phone = request.form.get('internal_phone', '')
         c.work_phone = request.form.get('work_phone', '')
         c.email = request.form.get('email', '')
+        # Update username
+        new_username = request.form.get('username', '').strip()
+        if new_username != (c.username or ''):
+            if new_username:
+                existing = Verantwoordelijke.query.filter_by(username=new_username).first()
+                if existing and existing.id != c.id:
+                    flash(_('Username already taken'), 'error')
+                    return redirect(url_for('responsible_edit', resp_id=c.id))
+            c.username = new_username or None
         c.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
         c.access_level = request.form.get('access_level', c.access_level or 'floor')
         c.is_active = 'is_active' in request.form
@@ -4436,6 +4450,10 @@ def responsible_edit(resp_id):
         # Update password if provided
         password = request.form.get('password', '').strip()
         if password:
+            confirm = request.form.get('confirm_password', '')
+            if password != confirm:
+                flash(_('Passwords do not match'), 'error')
+                return redirect(url_for('responsible_edit', resp_id=c.id))
             c.set_password(password)
         # Update sections
         section_ids = request.form.getlist('sections')

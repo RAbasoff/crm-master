@@ -293,6 +293,7 @@ class Verantwoordelijke(db.Model):
     notities = db.Column(db.Text)
     aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
     # Auth fields for responsible person login
+    username = db.Column(db.String(80), unique=True, nullable=True)
     password_hash = db.Column(db.String(200))
     access_level = db.Column(db.String(20), default='floor')  # floor, full, limited
     is_active = db.Column(db.Boolean, default=True)

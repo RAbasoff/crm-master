@@ -42,15 +42,26 @@
             <h3 style="font-size:14px;margin-bottom:12px">🔐 {{ _('Login Access') }}</h3>
             <div class="form-row">
                 <div class="form-group">
+                    <label>{{ _('Username') }} ({{ _('Login') }})</label>
+                    <input type="text" name="username" value="{{ verantwoordelijke.username if verantwoordelijke else '' }}" placeholder="{{ _('e.g. john.doe') }}">
+                    <small style="color:#888;font-size:11px">{{ _('Used to login to the system') }}</small>
+                </div>
+                <div class="form-group">
                     <label>{{ _('Password') }}</label>
                     <input type="password" name="password" placeholder="{{ _('Leave empty to keep current') if verantwoordelijke else '' }}" autocomplete="new-password">
                     <small style="color:#888;font-size:11px">
                         {% if verantwoordelijke and verantwoordelijke.password_hash %}
-                        ✓ {{ _('Login set') }}: {{ verantwoordelijke.email or verantwoordelijke.naam }}
+                        ✓ {{ _('Login set') }}: {{ verantwoordelijke.username or verantwoordelijke.email or verantwoordelijke.naam }}
                         {% else %}
                         {{ _('Set password to allow login') }}
                         {% endif %}
                     </small>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ _('Confirm Password') }}</label>
+                    <input type="password" name="confirm_password" placeholder="{{ _('Repeat password') }}">
                 </div>
                 <div class="form-group">
                     <label>{{ _('Access Level') }}</label>
