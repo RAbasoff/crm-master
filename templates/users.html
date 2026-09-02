@@ -100,15 +100,14 @@
         </div>
         <form id="editUserForm" method="POST">
             <div class="form-row">
-                <div class="form-group"><label>{{ _('Username') }}</label><input type="text" name="username" id="edit_username" readonly style="background:#f0f0f0"></div>
-                <div class="form-group"><label>{{ _('Password') }} ({{ _('leave empty to keep') }})</label><input type="password" name="password" id="edit_password"></div>
+                <div class="form-group"><label>{{ _('Username') }} ({{ _('Login') }})</label><input type="text" name="username" id="edit_username" required></div>
+                <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" id="edit_display_name"></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>{{ _('First Name') }}</label><input type="text" name="first_name" id="edit_first_name"></div>
                 <div class="form-group"><label>{{ _('Last Name') }}</label><input type="text" name="last_name" id="edit_last_name"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" id="edit_display_name"></div>
                 <div class="form-group">
                     <label>{{ _('Role') }}</label>
                     <select name="role" id="edit_role">
@@ -117,19 +116,25 @@
                         {% endfor %}
                     </select>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>{{ _('Access Level') }}</label>
-                <select name="access_level" id="edit_access_level">
-                    <option value="full">{{ _('Full access') }}</option>
-                    <option value="partial">{{ _('Partial access') }}</option>
-                    <option value="limited">{{ _('Limited access') }}</option>
-                </select>
+                <div class="form-group">
+                    <label>{{ _('Access Level') }}</label>
+                    <select name="access_level" id="edit_access_level">
+                        <option value="full">{{ _('Full access') }}</option>
+                        <option value="partial">{{ _('Partial access') }}</option>
+                        <option value="limited">{{ _('Limited access') }}</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group">
                 <label><input type="checkbox" name="is_active" id="edit_is_active"> {{ _('Active') }}</label>
             </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end">
+            <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+            <h3 style="font-size:14px;margin-bottom:10px">🔒 {{ _('Change Password') }}</h3>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('New Password') }}</label><input type="password" name="password" id="edit_password" placeholder="{{ _('Leave empty to keep current') }}"></div>
+                <div class="form-group"><label>{{ _('Confirm Password') }}</label><input type="password" name="confirm_password" placeholder="{{ _('Repeat new password') }}"></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
                 <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('editUserModal').style.display='none'">{{ _('Cancel') }}</button>
                 <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
             </div>
