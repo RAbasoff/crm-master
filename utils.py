@@ -225,6 +225,7 @@ def run_migrations():
         ("client.access_level", "ALTER TABLE client ADD COLUMN access_level VARCHAR(20) DEFAULT 'floor'"),
         ("client.is_active", "ALTER TABLE client ADD COLUMN is_active BOOLEAN DEFAULT 1"),
         ("client.last_login", "ALTER TABLE client ADD COLUMN last_login DATETIME"),
+        ("client.username", "ALTER TABLE client ADD COLUMN username VARCHAR(80)"),
         ("gas_system_component.installed_at", "ALTER TABLE gas_system_component ADD COLUMN installed_at DATETIME"),
         ("equipment_repair", """CREATE TABLE IF NOT EXISTS equipment_repair (
             id INTEGER PRIMARY KEY,
