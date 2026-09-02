@@ -3,7 +3,7 @@ from flask import flash, redirect, url_for, request
 from flask_login import current_user
 from flask_babel import gettext as _
 from datetime import datetime, timedelta
-from models import db, Notification, AuditLog, GroupPermission, Verantwoordelijke, UserActivityLog, SystemLog
+from models import db, Notification, AuditLog, GroupPermission, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry
 import os
 from werkzeug.utils import secure_filename
 
@@ -497,3 +497,17 @@ def run_migrations():
 
     conn.commit()
     conn.close()
+
+
+def add_work_report(entry_text):
+    """Add entry to Work Report log from anywhere in the app"""
+    from flask_login import current_user
+    try:
+        entry = WorkReportEntry(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            entry=entry_text
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
