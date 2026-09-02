@@ -4,41 +4,24 @@
 <h1>{{ _('Profile') }}</h1>
 <div class="card">
     <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
-                <label>{{ _('Username') }} ({{ _('Login') }})</label>
-                <input type="text" name="username" value="{{ current_user.username }}" required>
+                <label>{{ _('Username') }}</label>
+                <input type="text" value="{{ current_user.username }}" readonly style="background:#f5f5f5">
             </div>
             <div class="form-group">
                 <label>{{ _('Role') }}</label>
                 <input type="text" value="{{ current_user.role }}" readonly style="background:#f5f5f5">
             </div>
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>{{ _('Display Name') }}</label>
-                <input type="text" name="display_name" value="{{ current_user.display_name or '' }}">
-            </div>
-            <div class="form-group">
-                <label>{{ _('Phone') }}</label>
-                <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="+31...">
-            </div>
+        <div class="form-group">
+            <label>{{ _('Display Name') }}</label>
+            <input type="text" name="display_name" value="{{ current_user.display_name or '' }}">
         </div>
-
-        <hr style="margin:20px 0;border:none;border-top:1px solid #eee">
-        <h3 style="margin-bottom:12px">{{ _('Change Password') }}</h3>
-        <div class="form-row">
-            <div class="form-group">
-                <label>{{ _('New Password') }}</label>
-                <input type="password" name="new_password" placeholder="{{ _('Leave empty to keep current') }}">
-            </div>
-            <div class="form-group">
-                <label>{{ _('Confirm Password') }}</label>
-                <input type="password" name="confirm_password" placeholder="{{ _('Repeat new password') }}">
-            </div>
+        <div class="form-group">
+            <label>{{ _('New Password') }}</label>
+            <input type="password" name="new_password" placeholder="{{ _('Leave empty to keep current') }}">
         </div>
-
         <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
     </form>
 </div>
