@@ -1,52 +1,157 @@
 {% extends "base.html" %}
-{% block title %}{{ _('User Groups') }} — CRM{% endblock %}
+{% block title %}{{ _('Users') }} — CRM{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>👥 {{ _('User Groups') }}</h1>
+    <h1>👥 {{ _('Users') }} ({{ users|length }})</h1>
     <button class="btn btn-primary" onclick="document.getElementById('newUserModal').style.display='flex'">+ {{ _('New User') }}</button>
 </div>
 
-<!-- ROLE DESCRIPTIONS -->
-<div class="card" style="background:#f8f9fa;margin-bottom:16px">
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-        <div style="padding:8px;background:#e74c3c22;border-radius:8px"><strong>Admin</strong><br><small>{{ _('Full access, system settings') }}</small></div>
-        <div style="padding:8px;background:#9b59b622;border-radius:8px"><strong>Moderator</strong><br><small>{{ _('Full access, no system changes') }}</small></div>
-        <div style="padding:8px;background:#3498db22;border-radius:8px"><strong>Director</strong><br><small>{{ _('Set by admin/moderator') }}</small></div>
-        <div style="padding:8px;background:#f39c1222;border-radius:8px"><strong>Technician</strong><br><small>{{ _('Set by admin/moderator') }}</small></div>
-        <div style="padding:8px;background:#27ae6022;border-radius:8px"><strong>User</strong><br><small>{{ _('Set by admin/moderator') }}</small></div>
+{% set labels = {
+    'machines': _('Machines'), 'warehouse': _('Warehouse'), 'orders': _('Work Orders'),
+    'clients': _('Responsible'), 'workers': _('Workers'), 'faults': _('Faults'),
+    'messages': _('Messages'), 'reports': _('Reports'), 'schedule': _('Schedule'),
+    'time_tracking': _('Time Tracking'), 'vacations': _('Vacations'),
+    'cylinders': _('Gas Cylinders'), 'maintenance': _('Maintenance'),
+    'purchase_requests': _('Purchase Requests'), 'users': _('Users'),
+    'sections': _('Sections'), 'floor': _('Floor Plan'),
+    'invoices': _('Invoices'), 'contractors': _('Contractors'),
+    'two': _('TWO'), 'audit_log': _('Audit Log'), 'settings': _('Settings'),
+    'statistics': _('Statistics'), 'equipment': _('Mule Maintenance'),
+    'consumables': _('Consumables'), 'electricity': _('Electricity'),
+    'tool_wear': _('Knife Sharpening')
+} %}
+
+{% for u in users %}
+<div class="card" style="margin-bottom:8px;border-left:4px solid {% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#f39c12{% elif u.role=='director' %}#3498db{% else %}#27ae60{% endif %};padding:0">
+    <!-- HEADER ROW — always visible -->
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer" onclick="toggleUser({{ u.id }})">
+        <div style="width:40px;height:40px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#f39c12{% elif u.role=='director' %}#3498db{% else %}#27ae60{% endif %};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">
+            {{ (u.display_name or u.username)[0]|upper }}
+        </div>
+        <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:15px">{{ u.display_name or u.username }}</div>
+            <div style="font-size:12px;color:#888">@{{ u.username }} · <span class="badge badge-{{ u.role }}" style="font-size:10px">{{ u.role }}</span>
+                {% if not u.is_active_user %} <span class="badge badge-offline" style="font-size:10px">{{ _('Inactive') }}</span>{% endif %}
+            </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+            <span style="font-size:11px;color:#888">{{ u.allowed_sections|length }} {{ _('sections') }}</span>
+            <span style="font-size:18px;color:#aaa;transition:transform 0.2s" id="arrow-{{ u.id }}">▼</span>
+        </div>
+    </div>
+
+    <!-- EXPANDED FORM — hidden by default -->
+    <div id="user-{{ u.id }}" style="display:none;border-top:1px solid #eee;padding:16px">
+        <form method="POST" action="/users/{{ u.id }}/cabinet-update">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- ROW 1: Login + Password -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="form-group" style="margin-bottom:0">
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Username') }}</label>
+                    <input type="text" name="username" value="{{ u.username }}" required style="padding:6px 8px;font-size:13px">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('New Password') }}</label>
+                    <input type="password" name="new_password" placeholder="{{ _('Keep current') }}" style="padding:6px 8px;font-size:13px">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Confirm Password') }}</label>
+                    <input type="password" name="confirm_password" placeholder="{{ _('Repeat') }}" style="padding:6px 8px;font-size:13px">
+                </div>
+            </div>
+
+            <!-- ROW 2: Name + Role + Status -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="form-group" style="margin-bottom:0">
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Display Name') }}</label>
+                    <input type="text" name="display_name" value="{{ u.display_name or '' }}" style="padding:6px 8px;font-size:13px">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Phone') }}</label>
+                    <input type="text" name="phone" value="{{ u.phone or '' }}" style="padding:6px 8px;font-size:13px">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Role') }}</label>
+                    <select name="role" style="padding:6px 8px;font-size:13px">
+                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('moderator', 'Moderator'), ('admin', 'Admin')] %}
+                        <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;display:flex;align-items:flex-end">
+                    <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+                        <input type="checkbox" name="is_active" {% if u.is_active_user %}checked{% endif %}> {{ _('Active') }}
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECTION ACCESS -->
+            <details style="margin-bottom:12px">
+                <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#3498db;padding:6px 0">
+                    🔑 {{ _('Section Access') }} ({{ u.allowed_sections|length }}/{{ section_keys|length }})
+                </summary>
+                <div style="display:flex;gap:6px;margin:8px 0">
+                    <button type="button" class="btn btn-sm" style="background:#e3f2fd;font-size:11px;padding:2px 8px" onclick="toggleAllSections({{ u.id }}, true)">{{ _('Select All') }}</button>
+                    <button type="button" class="btn btn-sm" style="background:#ffebee;font-size:11px;padding:2px 8px" onclick="toggleAllSections({{ u.id }}, false)">{{ _('Deselect All') }}</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:3px;padding:10px;background:#f8f9fa;border-radius:8px" id="sections-{{ u.id }}">
+                    {% for key in section_keys %}
+                    <label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:3px 6px;border-radius:4px;cursor:pointer" onmouseover="this.style.background='#e8f4fd'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="allowed_sections" value="{{ key }}"
+                            {% if u.allowed_sections|selectattr('section_key','equalto',key)|list|length > 0 %}checked{% endif %}>
+                        {{ labels.get(key, key) }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+
+            <!-- ASSIGNED MACHINES -->
+            <details style="margin-bottom:16px">
+                <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#3498db;padding:6px 0">
+                    🏭 {{ _('Assigned Machines') }} ({{ u.assigned_machines|length }})
+                </summary>
+                <div style="display:flex;gap:6px;margin:8px 0">
+                    <button type="button" class="btn btn-sm" style="background:#e3f2fd;font-size:11px;padding:2px 8px" onclick="toggleAllMachines({{ u.id }}, true)">{{ _('Select All') }}</button>
+                    <button type="button" class="btn btn-sm" style="background:#ffebee;font-size:11px;padding:2px 8px" onclick="toggleAllMachines({{ u.id }}, false)">{{ _('Deselect All') }}</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:3px;padding:10px;background:#f8f9fa;border-radius:8px" id="machines-{{ u.id }}">
+                    {% for m in machines %}
+                    <label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:3px 6px;border-radius:4px;cursor:pointer" onmouseover="this.style.background='#e8f4fd'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="machines" value="{{ m.id }}"
+                            {% if m in u.assigned_machines %}checked{% endif %}>
+                        {{ m.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+
+            <!-- ACTIONS -->
+            <div style="display:flex;gap:8px;justify-content:space-between">
+                <div>
+                    {% if u.id != current_user.id %}
+                    <button type="button" class="btn btn-danger btn-sm" style="font-size:12px"
+                        onclick="if(confirm('{{ _('Delete user') }} {{ u.username }}?')){document.getElementById('deleteForm-{{ u.id }}').submit()}">
+                        🗑 {{ _('Delete') }}
+                    </button>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">💾 {{ _('Save') }}</button>
+            </div>
+        </form>
+        {% if u.id != current_user.id %}
+        <form id="deleteForm-{{ u.id }}" method="POST" action="/users/{{ u.id }}/delete" style="display:none"></form>
+        {% endif %}
     </div>
 </div>
+{% endfor %}
 
-<!-- USERS TABLE -->
-<div class="card" style="padding:0">
-    <div class="table-wrap"><table>
-        <tr>
-            <th>{{ _('Name') }}</th>
-            <th>{{ _('Username') }}</th>
-            <th>{{ _('Password') }}</th>
-            <th>{{ _('Role') }}</th>
-            <th>{{ _('Access') }}</th>
-            <th>{{ _('Status') }}</th>
-            <th></th>
-        </tr>
-        {% for u in users %}
-        <tr>
-            <td><strong>{{ u.first_name or '' }} {{ u.last_name or '' }}</strong>{% if u.display_name %}<br><small style="color:#888">{{ u.display_name }}</small>{% endif %}</td>
-            <td><code>{{ u.username }}</code></td>
-            <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">••••••</code></td>
-            <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
-            <td><span class="badge badge-{% if u.access_level == 'full' %}active{% elif u.access_level == 'partial' %}high{% else %}broken{% endif %}">{{ u.access_level }}</span></td>
-            <td>{% if u.is_active_user %}<span class="badge badge-active">{{ _('Active') }}</span>{% else %}<span class="badge badge-offline">{{ _('Inactive') }}</span>{% endif %}</td>
-            <td>
-                <div style="display:flex;gap:4px">
-                    <button class="btn btn-sm btn-primary" style="padding:4px 8px" onclick="editUser({{ u.id }})">✏️</button>
-                    <a href="/users/{{ u.id }}" class="btn btn-sm" style="background:#eee;padding:4px 8px">👤</a>
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </table></div>
+{% if not users %}
+<div class="card" style="text-align:center;padding:40px;color:#999">
+    <div style="font-size:48px;margin-bottom:12px">👥</div>
+    <h3 style="color:#666">{{ _('No users found') }}</h3>
 </div>
+{% endif %}
 
 <!-- NEW USER MODAL -->
 <div id="newUserModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
@@ -75,14 +180,6 @@
                     </select>
                 </div>
             </div>
-            <div class="form-group">
-                <label>{{ _('Access Level') }}</label>
-                <select name="access_level">
-                    <option value="full">{{ _('Full access') }}</option>
-                    <option value="partial">{{ _('Partial access') }}</option>
-                    <option value="limited">{{ _('Limited access') }}</option>
-                </select>
-            </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
                 <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('newUserModal').style.display='none'">{{ _('Cancel') }}</button>
                 <button type="submit" class="btn btn-primary">{{ _('Create') }}</button>
@@ -91,89 +188,28 @@
     </div>
 </div>
 
-<!-- EDIT USER MODAL -->
-<div id="editUserModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
-    <div style="background:white;border-radius:16px;padding:24px;max-width:600px;width:95%;max-height:90vh;overflow:auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="margin:0">{{ _('Edit User') }}</h2>
-            <button onclick="document.getElementById('editUserModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
-        </div>
-        <form id="editUserForm" method="POST">
-            <div class="form-row">
-                <div class="form-group"><label>{{ _('Username') }} ({{ _('Login') }})</label><input type="text" name="username" id="edit_username" required></div>
-                <div class="form-group"><label>{{ _('Display Name') }}</label><input type="text" name="display_name" id="edit_display_name"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>{{ _('First Name') }}</label><input type="text" name="first_name" id="edit_first_name"></div>
-                <div class="form-group"><label>{{ _('Last Name') }}</label><input type="text" name="last_name" id="edit_last_name"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>{{ _('Role') }}</label>
-                    <select name="role" id="edit_role">
-                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('moderator', 'Moderator'), ('admin', 'Admin')] %}
-                        <option value="{{ r }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>{{ _('Access Level') }}</label>
-                    <select name="access_level" id="edit_access_level">
-                        <option value="full">{{ _('Full access') }}</option>
-                        <option value="partial">{{ _('Partial access') }}</option>
-                        <option value="limited">{{ _('Limited access') }}</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" name="is_active" id="edit_is_active"> {{ _('Active') }}</label>
-            </div>
-            <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
-            <h3 style="font-size:14px;margin-bottom:10px">🔒 {{ _('Change Password') }}</h3>
-            <div class="form-row">
-                <div class="form-group"><label>{{ _('New Password') }}</label><input type="password" name="password" id="edit_password" placeholder="{{ _('Leave empty to keep current') }}"></div>
-                <div class="form-group"><label>{{ _('Confirm Password') }}</label><input type="password" name="confirm_password" placeholder="{{ _('Repeat new password') }}"></div>
-            </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-                <button type="button" class="btn" style="background:#eee" onclick="document.getElementById('editUserModal').style.display='none'">{{ _('Cancel') }}</button>
-                <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script>
-// User data for editing
-const users = {
-    {% for u in users %}
-    {{ u.id }}: {
-        username: '{{ u.username }}',
-        first_name: '{{ u.first_name or "" }}',
-        last_name: '{{ u.last_name or "" }}',
-        display_name: '{{ u.display_name or "" }}',
-        role: '{{ u.role }}',
-        access_level: '{{ u.access_level }}',
-        is_active: {{ 'true' if u.is_active_user else 'false' }}
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-};
-
-function editUser(id) {
-    const u = users[id];
-    if (!u) return;
-    document.getElementById('edit_username').value = u.username;
-    document.getElementById('edit_first_name').value = u.first_name;
-    document.getElementById('edit_last_name').value = u.last_name;
-    document.getElementById('edit_display_name').value = u.display_name;
-    document.getElementById('edit_role').value = u.role;
-    document.getElementById('edit_access_level').value = u.access_level;
-    document.getElementById('edit_is_active').checked = u.is_active;
-    document.getElementById('edit_password').value = '';
-    document.getElementById('editUserForm').action = '/users/' + id + '/edit';
-    document.getElementById('editUserModal').style.display = 'flex';
+function toggleUser(id) {
+    const el = document.getElementById('user-' + id);
+    const arrow = document.getElementById('arrow-' + id);
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+    } else {
+        el.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+    }
 }
 
-// Close modals on outside click
+function toggleAllSections(userId, checked) {
+    document.querySelectorAll('#sections-' + userId + ' input[type=checkbox]').forEach(cb => cb.checked = checked);
+}
+
+function toggleAllMachines(userId, checked) {
+    document.querySelectorAll('#machines-' + userId + ' input[type=checkbox]').forEach(cb => cb.checked = checked);
+}
+
+// Close modal on outside click
 document.querySelectorAll('[id$="Modal"]').forEach(m => {
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
 });

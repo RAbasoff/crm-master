@@ -303,7 +303,8 @@ def profile():
 @role_required('admin')
 def users_list():
     users = User.query.all()
-    return render_template('users.html', users=users)
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('users.html', users=users, section_keys=SECTION_KEYS, machines=machines)
 
 @app.route('/users/<int:user_id>')
 @login_required
