@@ -4239,9 +4239,13 @@ def responsible_quick_edit(resp_id):
     old_username = c.username or None
     if new_username != old_username:
         if new_username:
-            existing = Verantwoordelijke.query.filter_by(username=new_username).first()
-            if existing and existing.id != c.id:
-                flash(_('Username already taken by') + f': {existing.naam}', 'error')
+            existing_v = Verantwoordelijke.query.filter_by(username=new_username).first()
+            if existing_v and existing_v.id != c.id:
+                flash(_('Username already taken by') + f': {existing_v.naam}', 'error')
+                return redirect(url_for('responsible_list'))
+            existing_u = User.query.filter_by(username=new_username).first()
+            if existing_u:
+                flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
                 return redirect(url_for('responsible_list'))
         c.username = new_username
     # Update access level
@@ -4350,7 +4354,7 @@ def responsible_edit(resp_id):
                     return redirect(url_for('responsible_edit', resp_id=c.id))
                 existing_u = User.query.filter_by(username=new_username).first()
                 if existing_u:
-                    flash(_('Username already taken by') + f': {existing_u.display_name or existing_u.username}', 'error')
+                    flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
                     return redirect(url_for('responsible_edit', resp_id=c.id))
             c.username = new_username
         c.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
