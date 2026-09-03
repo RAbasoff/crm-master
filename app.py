@@ -1786,7 +1786,15 @@ def equipment_list():
     records = q.order_by(EquipmentMaintenance.date.desc()).all()
     orders = EquipmentPartOrder.query.order_by(EquipmentPartOrder.created_at.desc()).limit(20).all()
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('equipment.html', records=records, orders=orders, machines=machines, serial=serial)
+    # Find warehouse items linked to mule maintenance parts that are low or out of stock
+    used_wh_ids = db.session.query(EquipmentPart.warehouse_item_id).filter(
+        EquipmentPart.warehouse_item_id.isnot(None)).distinct().all()
+    used_wh_ids = [w[0] for w in used_wh_ids]
+    low_stock_parts = VoorraadItem.query.filter(
+        VoorraadItem.id.in_(used_wh_ids),
+        VoorraadItem.hoeveelheid <= VoorraadItem.minimum
+    ).order_by(VoorraadItem.naam).all() if used_wh_ids else []
+    return render_template('equipment.html', records=records, orders=orders, machines=machines, serial=serial, low_stock_parts=low_stock_parts)
 
 @app.route('/equipment/new', methods=['GET', 'POST'])
 @login_required
@@ -1807,15 +1815,29 @@ def equipment_new():
         )
         db.session.add(eq)
         db.session.flush()
-        # Add parts
+        # Add parts + deduct from warehouse
+        wh_ids = request.form.getlist('part_warehouse_id')
         for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
+                wh_id = int(wh_ids[i]) if i < len(wh_ids) and wh_ids[i] else None
+                qty = float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
                 db.session.add(EquipmentPart(
                     equipment_id=eq.id,
+                    warehouse_item_id=wh_id,
                     name=pname.strip(),
                     number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
-                    quantity=float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
+                    quantity=qty
                 ))
+                # Deduct from warehouse
+                if wh_id:
+                    wi = VoorraadItem.query.get(wh_id)
+                    if wi:
+                        wi.hoeveelheid -= qty
+                        db.session.add(VoorraadMutatie(
+                            item_id=wh_id, type='uitgaand', hoeveelheid=qty,
+                            opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
+                            user_id=current_user.id
+                        ))
         # Add components
         comp_types = request.form.getlist('comp_type')
         comp_models = request.form.getlist('comp_model')
@@ -1837,7 +1859,8 @@ def equipment_new():
         flash(_('Equipment maintenance recorded'), 'success')
         return redirect(url_for('equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('equipment_form.html', eq=None, machines=machines)
+    warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    return render_template('equipment_form.html', eq=None, machines=machines, warehouse_items=warehouse_items)
 
 @app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1854,14 +1877,27 @@ def equipment_edit(eq_id):
         eq.periodicity = request.form.get('periodicity', '')
         eq.notes = request.form.get('notes', '')
         EquipmentPart.query.filter_by(equipment_id=eq.id).delete()
+        wh_ids = request.form.getlist('part_warehouse_id')
         for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
+                wh_id = int(wh_ids[i]) if i < len(wh_ids) and wh_ids[i] else None
+                qty = float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
                 db.session.add(EquipmentPart(
                     equipment_id=eq.id,
+                    warehouse_item_id=wh_id,
                     name=pname.strip(),
                     number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
-                    quantity=float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
+                    quantity=qty
                 ))
+                if wh_id:
+                    wi = VoorraadItem.query.get(wh_id)
+                    if wi:
+                        wi.hoeveelheid -= qty
+                        db.session.add(VoorraadMutatie(
+                            item_id=wh_id, type='uitgaand', hoeveelheid=qty,
+                            opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
+                            user_id=current_user.id
+                        ))
         # Update components
         EquipmentComponent.query.filter_by(equipment_id=eq.id).delete()
         comp_types = request.form.getlist('comp_type')
@@ -1883,7 +1919,8 @@ def equipment_edit(eq_id):
         flash(_('Equipment maintenance updated'), 'success')
         return redirect(url_for('equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('equipment_form.html', eq=eq, machines=machines)
+    warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    return render_template('equipment_form.html', eq=eq, machines=machines, warehouse_items=warehouse_items)
 
 @app.route('/equipment/<int:eq_id>/delete', methods=['POST'])
 @login_required

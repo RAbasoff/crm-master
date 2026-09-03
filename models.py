@@ -1030,10 +1030,12 @@ class EquipmentPart(db.Model):
     __tablename__ = 'equipment_part'
     id = db.Column(db.Integer, primary_key=True)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False)
+    warehouse_item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'))
     name = db.Column(db.String(200), nullable=False)
     number = db.Column(db.String(100))
     quantity = db.Column(db.Float, default=1)
     notes = db.Column(db.Text)
+    warehouse_item = db.relationship('VoorraadItem', foreign_keys=[warehouse_item_id])
 
 class EquipmentComponent(db.Model):
     """Обязательные составляющие: ножи, прокладки, пружины, датчики, кабели, штекеры, элементы нагрева"""

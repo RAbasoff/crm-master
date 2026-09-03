@@ -44,9 +44,16 @@
                 {% if eq and eq.parts %}
                     {% for p in eq.parts %}
                     <div class="part-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
-                        <input type="text" name="part_name" value="{{ p.name }}" placeholder="{{ _('Part name') }}" style="flex:2;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
-                        <input type="text" name="part_number" value="{{ p.number or '' }}" placeholder="{{ _('Part number') }}" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                        <select name="part_warehouse_id" style="flex:2;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px" onchange="onWarehousePartSelect(this)">
+                            <option value="">{{ _('Select from warehouse...') }}</option>
+                            {% for w in warehouse_items %}
+                            <option value="{{ w.id }}" data-name="{{ w.naam }}" data-spn="{{ w.supplier_part_number or '' }}" data-qty="{{ w.hoeveelheid }}" data-unit="{{ w.eenheid }}" {% if p.warehouse_item_id == w.id %}selected{% endif %}>{{ w.naam }}{% if w.supplier_part_number %} ({{ w.supplier_part_number }}){% endif %} [{{ w.hoeveelheid }} {{ w.eenheid }}]</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="part_name" value="{{ p.name }}" placeholder="{{ _('Part name') }}" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                        <input type="text" name="part_number" value="{{ p.number or '' }}" placeholder="SPN" style="width:120px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
                         <input type="number" name="part_qty" value="{{ p.quantity }}" min="0.1" step="0.1" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                        <span class="stock-info" style="font-size:11px;color:#888;min-width:60px"></span>
                         <button type="button" onclick="this.closest('.part-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
                     </div>
                     {% endfor %}
@@ -98,15 +105,50 @@
 </div>
 
 <script>
+var warehouseItems = [
+    {% for w in warehouse_items %}
+    {id:{{ w.id }}, name:'{{ w.naam|e }}', spn:'{{ (w.supplier_part_number or "")|e }}', qty:{{ w.hoeveelheid }}, unit:'{{ w.eenheid }}', min:{{ w.minimum }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
 function addPart() {
-    const html = `
+    var opts = '<option value="">{{ _("Select from warehouse...") }}</option>';
+    warehouseItems.forEach(function(w) {
+        opts += '<option value="' + w.id + '" data-name="' + w.name + '" data-spn="' + w.spn + '" data-qty="' + w.qty + '" data-unit="' + w.unit + '">' + w.name + (w.spn ? ' (' + w.spn + ')' : '') + ' [' + w.qty + ' ' + w.unit + ']</option>';
+    });
+    var html = `
     <div class="part-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
-        <input type="text" name="part_name" placeholder="{{ _('Part name') }}" style="flex:2;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
-        <input type="text" name="part_number" placeholder="{{ _('Part number') }}" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        <select name="part_warehouse_id" style="flex:2;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px" onchange="onWarehousePartSelect(this)">
+            ${opts}
+        </select>
+        <input type="text" name="part_name" placeholder="{{ _('Part name') }}" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        <input type="text" name="part_number" placeholder="SPN" style="width:120px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
         <input type="number" name="part_qty" value="1" min="0.1" step="0.1" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        <span class="stock-info" style="font-size:11px;color:#888;min-width:60px"></span>
         <button type="button" onclick="this.closest('.part-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
     </div>`;
     document.getElementById('partsList').insertAdjacentHTML('beforeend', html);
+}
+
+function onWarehousePartSelect(sel) {
+    var row = sel.closest('.part-row');
+    var opt = sel.options[sel.selectedIndex];
+    var nameInput = row.querySelector('[name="part_name"]');
+    var spnInput = row.querySelector('[name="part_number"]');
+    var infoSpan = row.querySelector('.stock-info');
+    if (opt.value) {
+        nameInput.value = opt.dataset.name || '';
+        spnInput.value = opt.dataset.spn || '';
+        var qty = parseFloat(opt.dataset.qty) || 0;
+        var unit = opt.dataset.unit || '';
+        if (qty <= 0) {
+            infoSpan.innerHTML = '<span style="color:#e74c3c;font-weight:bold">⚠ 0 ' + unit + '</span>';
+        } else {
+            infoSpan.textContent = qty + ' ' + unit;
+        }
+    } else {
+        infoSpan.textContent = '';
+    }
 }
 
 function addComponent() {
