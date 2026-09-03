@@ -4340,14 +4340,19 @@ def responsible_edit(resp_id):
         c.work_phone = request.form.get('work_phone', '')
         c.email = request.form.get('email', '')
         # Update username
-        new_username = request.form.get('username', '').strip()
-        if new_username != (c.username or ''):
+        new_username = request.form.get('username', '').strip() or None
+        old_username = c.username or None
+        if new_username != old_username:
             if new_username:
-                existing = Verantwoordelijke.query.filter_by(username=new_username).first()
-                if existing and existing.id != c.id:
-                    flash(_('Username already taken'), 'error')
+                existing_v = Verantwoordelijke.query.filter_by(username=new_username).first()
+                if existing_v and existing_v.id != c.id:
+                    flash(_('Username already taken by') + f': {existing_v.naam}', 'error')
                     return redirect(url_for('responsible_edit', resp_id=c.id))
-            c.username = new_username or None
+                existing_u = User.query.filter_by(username=new_username).first()
+                if existing_u:
+                    flash(_('Username already taken by') + f': {existing_u.display_name or existing_u.username}', 'error')
+                    return redirect(url_for('responsible_edit', resp_id=c.id))
+            c.username = new_username
         c.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
         c.access_level = request.form.get('access_level', c.access_level or 'floor')
         c.is_active = 'is_active' in request.form
