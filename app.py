@@ -142,6 +142,15 @@ def before_request():
     g.lang = session.get('lang', 'ru')
     g.LANGUAGES = LANGUAGES
 
+@app.context_processor
+def inject_section_access():
+    """Make user_has_section_access available in all templates"""
+    def has_access(section_key, action='view'):
+        if not current_user.is_authenticated:
+            return False
+        return user_has_section_access(section_key, action)
+    return dict(has_access=has_access)
+
 @app.route('/set_language/<lang>')
 def set_language(lang):
     if lang in LANGUAGES:

@@ -367,69 +367,109 @@
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Production') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             <a href="/" class="sb-item {% if request.endpoint == 'index' %}active{% endif %}"><span class="sb-icon">🏠</span>{{ _('Dashboard') }}</a>
+            {% if has_access('floor') %}
             <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
+            {% endif %}
+            {% if has_access('machines') %}
             <a href="/machines" class="sb-item {% if 'machine' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Machines') }}</a>
+            {% endif %}
+            {% if has_access('equipment') %}
             <a href="/equipment" class="sb-item {% if 'equipment' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Mule Maintenance') }}</a>
+            {% endif %}
+            {% if has_access('tool_wear') %}
             <a href="/tool-wear" class="sb-item {% if 'tool_wear' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>{{ _('Knife Sharpening') }}</a>
+            {% endif %}
+            {% if has_access('electricity') %}
             <a href="/electricity" class="sb-item {% if 'electric' in (request.endpoint or '') or 'cabinet' in (request.endpoint or '') or 'breaker' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚡</span>{{ _('Electricity') }}</a>
+            {% endif %}
+            {% if has_access('maintenance') %}
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
             <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
-            {% if current_user.has_role('admin', 'director', 'technician') %}
+            {% endif %}
+            {% if has_access('cylinders') %}
             <a href="/cylinders" class="sb-item {% if 'cylinder' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas Cylinders') }}</a>
             <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Gas System Repairs') }}</a>
             {% endif %}
+            {% if has_access('faults') %}
             <a href="/faults" class="sb-item {% if 'fault' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚠️</span>{{ _('Faults') }}</a>
-            {% if current_user.has_role('admin', 'director', 'technician') %}
+            {% endif %}
+            {% if has_access('two') %}
             <a href="/two" class="sb-item {% if 'two' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📝</span>TWO</a>
             {% endif %}
             </div>
             
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Communication') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
+            {% if has_access('messages') %}
             <a href="/messages" class="sb-item {% if 'message' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">💬</span>{{ _('Messages') }}</a>
+            {% endif %}
             <a href="/notifications" class="sb-item {% if request.endpoint == 'notifications_list' %}active{% endif %}"><span class="sb-icon">🔔</span>{{ _('Notifications') }}</a>
             </div>
             
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Staff') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
-            {% if current_user.has_role('admin', 'director', 'technician') %}
+            {% if has_access('schedule') %}
             <a href="/schedule" class="sb-item {% if 'schedule' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Schedule') }}</a>
+            {% endif %}
+            {% if has_access('vacations') %}
             <a href="/vacations" class="sb-item {% if 'vacation' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🏖</span>{{ _('Vacations') }}</a>
             {% endif %}
+            {% if has_access('time_tracking') %}
             <a href="/time-tracking" class="sb-item {% if 'time_tracking' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⏱</span>{{ _('Time Tracking') }}</a>
+            {% endif %}
             </div>
             
-            {% if current_user.has_role('admin', 'director', 'technician') %}
+            {% if has_access('orders') or has_access('clients') or has_access('workers') or has_access('invoices') or has_access('contractors') or has_access('warehouse') or has_access('purchase_requests') %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Business') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
+            {% if has_access('orders') %}
             <a href="/orders" class="sb-item {% if 'order' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Orders') }}</a>
-            {% if current_user.has_role('admin', 'director') %}
+            {% endif %}
+            {% if has_access('clients') %}
             <a href="/responsible" class="sb-item {% if 'responsible' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👤</span>{{ _('Responsible') }}</a>
+            {% endif %}
+            {% if has_access('workers') %}
             <a href="/workers" class="sb-item {% if 'worker' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Workers') }}</a>
+            {% endif %}
+            {% if has_access('invoices') %}
             <a href="/invoices" class="sb-item {% if 'invoice' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📄</span>{{ _('Invoices') }}</a>
+            {% endif %}
+            {% if has_access('contractors') %}
             <a href="/contractors" class="sb-item {% if 'contractor' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🏢</span>{{ _('Contractors') }}</a>
             {% endif %}
+            {% if has_access('warehouse') %}
             <a href="/warehouse" class="sb-item {% if 'warehouse' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Warehouse') }}</a>
             <a href="/consumable-reminders" class="sb-item {% if 'consumable_reminders' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔔</span>{{ _('Replacement Reminders') }}</a>
+            {% endif %}
+            {% if has_access('purchase_requests') %}
             <a href="/purchase-requests" class="sb-item {% if 'purchase' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🛒</span>{{ _('Purchase Requests') }}</a>
+            {% endif %}
             </div>
             {% endif %}
             
-            {% if current_user.has_role('admin', 'director', 'technician') %}
+            {% if has_access('reports') or has_access('statistics') %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Analytics') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
+            {% if has_access('reports') %}
             <a href="/reports" class="sb-item {% if request.endpoint in ['reports', 'report_period', 'report_worker'] %}active{% endif %}"><span class="sb-icon">📊</span>{{ _('Reports') }}</a>
-            <a href="/stats/faults" class="sb-item {% if 'stats' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📈</span>{{ _('Statistics') }}</a>
             <a href="/work-report" class="sb-item {% if 'work_report' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Report') }}</a>
             <a href="/archive" class="sb-item {% if 'archive' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Archive') }}</a>
+            {% endif %}
+            {% if has_access('statistics') %}
+            <a href="/stats/faults" class="sb-item {% if 'stats' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📈</span>{{ _('Statistics') }}</a>
+            {% endif %}
             </div>
             {% endif %}
             
-            {% if current_user.has_role('admin') %}
+            {% if has_access('settings') or has_access('users') %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('System') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
+            {% if has_access('settings') %}
             <a href="/settings" class="sb-item {% if request.endpoint == 'settings' %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Settings') }}</a>
+            {% endif %}
+            {% if has_access('users') %}
             <a href="/users" class="sb-item {% if 'user' in (request.endpoint or '') and 'profile' not in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👥</span>{{ _('Users') }}</a>
+            {% endif %}
             <a href="/qr/scan" class="sb-item {% if 'qr' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📷</span>QR</a>
             </div>
             {% endif %}
