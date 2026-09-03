@@ -83,6 +83,12 @@
         <div class="form-group">
             <label>{{ _('Assigned Sections') }} ({{ _('Цеха') }})</label>
             <div style="padding:12px;background:#f8f9fa;border-radius:8px">
+                <div style="display:flex;gap:8px;margin-bottom:8px">
+                    <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#3498db;cursor:pointer">
+                        <input type="checkbox" onchange="this.closest('.form-group').querySelectorAll('input[name=sections]').forEach(cb=>cb.checked=this.checked)">
+                        {{ _('Select All') }}
+                    </label>
+                </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
                     {% for s in sections %}
                     <label style="display:flex;align-items:center;gap:8px;font-size:14px">

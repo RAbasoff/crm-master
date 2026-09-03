@@ -4222,12 +4222,40 @@ def responsible_assign_sections(resp_id):
 @role_required('admin', 'director')
 def responsible_quick_edit(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
-    c.naam = request.form.get('naam', c.naam).strip()
-    c.position = request.form.get('position', '').strip()
+    # Update name from first_name field (inline form sends just first_name)
+    first_name = request.form.get('first_name', '').strip()
+    if first_name:
+        # Preserve last name if exists
+        parts = (c.naam or '').split(' ', 1)
+        last_name = parts[1] if len(parts) > 1 else ''
+        c.naam = f"{first_name} {last_name}".strip()
+    c.position = request.form.get('position', '').strip() or c.position
     c.telefoon = request.form.get('telefoon', '').strip()
     c.internal_phone = request.form.get('internal_phone', '').strip()
     c.work_phone = request.form.get('work_phone', '').strip()
     c.email = request.form.get('email', '').strip()
+    # Update username
+    new_username = request.form.get('username', '').strip()
+    if new_username != (c.username or ''):
+        if new_username:
+            existing = Verantwoordelijke.query.filter_by(username=new_username).first()
+            if existing and existing.id != c.id:
+                flash(_('Username already taken'), 'error')
+                return redirect(url_for('responsible_list'))
+        c.username = new_username or None
+    # Update access level
+    if request.form.get('access_level'):
+        c.access_level = request.form.get('access_level')
+    # Update active status
+    c.is_active = 'is_active' in request.form
+    # Update password if provided
+    password = request.form.get('password', '').strip()
+    if password:
+        confirm = request.form.get('confirm_password', '')
+        if password != confirm:
+            flash(_('Passwords do not match'), 'error')
+            return redirect(url_for('responsible_list'))
+        c.set_password(password)
     db.session.commit()
     flash(_('Responsible person updated'), 'success')
     return redirect(url_for('responsible_list'))

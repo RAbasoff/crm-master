@@ -3,9 +3,12 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ _('Responsible persons') }}</h1>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
         <a href="/responsible/phonebook" class="btn btn-sm" style="background:#27ae60;color:white">📞 {{ _('Phone Directory') }}</a>
         <a href="/responsible/groups" class="btn btn-sm btn-ghost">👥 {{ _('Groups') }}</a>
+        <button class="btn btn-sm" style="background:#3498db;color:white" onclick="printList()">🖨️ {{ _('Print') }}</button>
+        <button class="btn btn-sm" style="background:#e67e22;color:white" onclick="exportPDF()">📄 PDF</button>
         <button class="btn btn-primary" onclick="document.getElementById('addPersonModal').style.display='flex'">+ {{ _('Add Person') }}</button>
     </div>
 </div>
@@ -60,7 +63,7 @@
 
         <!-- EXPANDED -->
         <div id="person-{{ c.id }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f0f2f5">
-            <form method="POST" action="/responsible/{{ c.id }}/edit">
+            <form method="POST" action="/responsible/{{ c.id }}/quick-edit">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <!-- LOGIN + PASSWORD -->
@@ -185,7 +188,7 @@
         </div>
 
         <div id="person-{{ c.id }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f0f2f5">
-            <form method="POST" action="/responsible/{{ c.id }}/edit">
+            <form method="POST" action="/responsible/{{ c.id }}/quick-edit">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div style="background:#f0f7ff;padding:10px 12px;border-radius:8px;margin-bottom:12px">
                     <div style="font-size:12px;font-weight:600;color:#3498db;margin-bottom:8px">🔐 {{ _('Login Access') }}</div>
@@ -342,5 +345,35 @@ function filterPersons(query) {
 document.querySelectorAll('[id$="Modal"]').forEach(m => {
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
 });
+
+function printList() {
+    // Expand all persons for printing
+    document.querySelectorAll('[id^="person-"]').forEach(el => el.style.display = 'block');
+    window.print();
+}
+
+function exportPDF() {
+    // Build a clean table for PDF
+    var cards = document.querySelectorAll('.person-card');
+    var rows = '';
+    cards.forEach(function(card) {
+        if (card.style.display === 'none') return;
+        var name = card.querySelector('div[style*="font-weight:700"][style*="font-size:14px"]');
+        var info = card.querySelector('div[style*="font-size:11px"][style*="color:#888"]');
+        var nameText = name ? name.textContent.trim() : '';
+        var infoText = info ? info.textContent.trim() : '';
+        if (nameText) {
+            rows += '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:600">' + nameText + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">' + infoText + '</td></tr>';
+        }
+    });
+    var html = '<html><head><meta charset="utf-8"><title>{{ _("Responsible persons") }}</title>' +
+        '<style>body{font-family:Arial,sans-serif;padding:20px}h1{font-size:20px;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#f0f2f5;padding:8px 10px;text-align:left;font-size:12px;border-bottom:2px solid #ddd}</style></head>' +
+        '<body><h1>{{ _("Responsible persons") }}</h1>' +
+        '<table><tr><th>{{ _("Name") }}</th><th>{{ _("Contact") }}</th></tr>' + rows + '</table>' +
+        '<script>setTimeout(function(){window.print()},300)<\/script></body></html>';
+    var w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+}
 </script>
 {% endblock %}
