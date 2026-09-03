@@ -4235,14 +4235,14 @@ def responsible_quick_edit(resp_id):
     c.work_phone = request.form.get('work_phone', '').strip()
     c.email = request.form.get('email', '').strip()
     # Update username
-    new_username = request.form.get('username', '').strip()
-    if new_username != (c.username or ''):
+    new_username = request.form.get('username', '').strip() or None
+    if new_username != c.username:
         if new_username:
             existing = Verantwoordelijke.query.filter_by(username=new_username).first()
             if existing and existing.id != c.id:
                 flash(_('Username already taken'), 'error')
                 return redirect(url_for('responsible_list'))
-        c.username = new_username or None
+        c.username = new_username
     # Update access level
     if request.form.get('access_level'):
         c.access_level = request.form.get('access_level')
