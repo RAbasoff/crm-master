@@ -118,12 +118,20 @@ def warehouse_list():
 @role_required('admin', 'director', 'technician')
 def warehouse_new():
     if request.method == 'POST':
+        # Parse group_id which comes as "g_123" or "c_123" from the form
+        raw_group = request.form.get('group_id', '')
+        group_id = None
+        contractor_id = None
+        if raw_group.startswith('g_'):
+            group_id = int(raw_group[2:])
+        elif raw_group.startswith('c_'):
+            contractor_id = int(raw_group[2:])
         i = VoorraadItem(
             naam=request.form['naam'],
             description=request.form.get('description', ''),
             categorie=request.form.get('categorie',''),
-            group_id=int(request.form['group_id']) if request.form.get('group_id') else None,
-            contractor_id=int(request.form['contractor_id']) if request.form.get('contractor_id') else None,
+            group_id=group_id,
+            contractor_id=contractor_id,
             supplier_part_number=request.form.get('supplier_part_number','').strip() or None,
             eenheid=request.form.get('eenheid','st'),
             hoeveelheid=float(request.form.get('hoeveelheid',0)),
@@ -155,8 +163,16 @@ def warehouse_edit(item_id):
         item.naam = request.form['naam']
         item.description = request.form.get('description', '')
         item.categorie = request.form.get('categorie','')
-        item.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
-        item.contractor_id = int(request.form['contractor_id']) if request.form.get('contractor_id') else None
+        raw_group = request.form.get('group_id', '')
+        if raw_group.startswith('g_'):
+            item.group_id = int(raw_group[2:])
+            item.contractor_id = None
+        elif raw_group.startswith('c_'):
+            item.group_id = None
+            item.contractor_id = int(raw_group[2:])
+        else:
+            item.group_id = None
+            item.contractor_id = None
         item.supplier_part_number = request.form.get('supplier_part_number','').strip() or None
         item.eenheid = request.form.get('eenheid','st')
         item.hoeveelheid = float(request.form.get('hoeveelheid',0))
