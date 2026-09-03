@@ -27,7 +27,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
                     UserActivityLog, SystemLog,
-                    EquipmentMaintenance, EquipmentPart, EquipmentPartOrder,
+                    EquipmentMaintenance, EquipmentPart, EquipmentComponent, EquipmentPartOrder,
                     WarehouseReservation, SupplierPrice)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
