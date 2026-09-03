@@ -1513,13 +1513,26 @@ def maintenance_calendar():
                 'status': pl.status
             })
 
-    # Get overdue items (before this month)
+    # Get overdue items (before today) — skip if there's a maintenance record after the due date
     overdue = []
     for p in parts:
         if p.next_replacement and p.next_replacement < today:
-            overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
+            # Check if replacement was done after the due date
+            done_after = PartMaintenanceLog.query.filter(
+                PartMaintenanceLog.part_id == p.id,
+                PartMaintenanceLog.action.in_(['replaced', 'maintenance']),
+                PartMaintenanceLog.date >= datetime.combine(p.next_replacement, datetime.min.time())
+            ).first()
+            if not done_after:
+                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
         if p.next_maintenance and p.next_maintenance < today:
-            overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
+            done_after = PartMaintenanceLog.query.filter(
+                PartMaintenanceLog.part_id == p.id,
+                PartMaintenanceLog.action.in_(['replaced', 'maintenance']),
+                PartMaintenanceLog.date >= datetime.combine(p.next_maintenance, datetime.min.time())
+            ).first()
+            if not done_after:
+                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
     
     # Navigation
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
