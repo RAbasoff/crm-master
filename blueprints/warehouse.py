@@ -488,6 +488,36 @@ def warehouse_search_report():
         f_group=group_id, report_mode=report_mode)
 
 
+# ── QUICK QTY EDIT ──────────────────────────────────────────
+
+@bp.route('/api/qty', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def warehouse_qty_update():
+    from flask import jsonify
+    data = request.get_json()
+    item_id = data.get('item_id')
+    qty = float(data.get('quantity', 0))
+    item = VoorraadItem.query.get(item_id)
+    if not item:
+        return jsonify({'error': 'Not found'}), 404
+    old_qty = item.hoeveelheid
+    item.hoeveelheid = qty
+    # Log movement
+    diff = qty - old_qty
+    if diff != 0:
+        m = VoorraadMutatie(
+            item_id=item_id,
+            type='inkomend' if diff > 0 else 'uitgaand',
+            hoeveelheid=abs(diff),
+            opmerking=f'Quick edit: {old_qty} → {qty}',
+            user_id=current_user.id
+        )
+        db.session.add(m)
+    db.session.commit()
+    return jsonify({'ok': True, 'min_warning': qty <= item.minimum})
+
+
 # ── LABELS ──────────────────────────────────────────────────
 
 @bp.route('/labels')

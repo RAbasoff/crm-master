@@ -4,6 +4,7 @@
 <div class="page-header">
     <h1>{{ _('Warehouse') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
         <button class="btn btn-sm" style="background:#3498db;color:white" onclick="toggleWhScanner()">📷 {{ _('Scan') }}</button>
         <a href="/warehouse/movements" class="btn btn-sm" style="background:#2c3e50;color:white">📋 {{ _('Movements') }}</a>
         <a href="/warehouse/report" class="btn btn-sm" style="background:#3498db;color:white">🔍 {{ _('Search & Reports') }}</a>
@@ -64,7 +65,10 @@
             <td style="font-size:11px">{% if i.consumable_subtype %}{{ i.consumable_subtype }}{% elif i.volume %}{{ i.volume }}{% else %}—{% endif %}</td>
             <td>{% if i.group %}<a href="/warehouse?group={{ i.group.id }}" style="color:#3498db">{{ i.group.name }}</a>{% else %}—{% endif %}</td>
             <td>{% if i.locatie %}📍 {{ i.locatie }}{% else %}—{% endif %}</td>
-            <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ i.hoeveelheid }}</td>
+            <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">
+                <span id="qty-display-{{ i.id }}">{{ i.hoeveelheid }}</span>
+                <button class="btn btn-sm" style="background:#f0f2f5;padding:2px 6px;font-size:11px;margin-left:4px" onclick="editQty({{ i.id }})" title="{{ _('Edit quantity') }}">✏️</button>
+            </td>
             <td>{{ i.eenheid }}</td>
             <td>€{{ "%.2f"|format(i.prijs) }}</td>
             <td style="white-space:nowrap">
@@ -225,4 +229,42 @@ function startWhScan() {
 }
 </script>
 <style>#whScanRegion{border:2px solid #3498db;border-radius:12px;overflow:hidden}#whScanRegion video{border-radius:10px}</style>
+<script>
+function editQty(id) {
+    const span = document.getElementById('qty-display-' + id);
+    const current = span.textContent.trim();
+    if (span.querySelector('input')) return;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.1';
+    input.value = current;
+    input.style.cssText = 'width:70px;padding:4px;border:2px solid #5b9cf6;border-radius:6px;font-size:13px;font-weight:bold';
+    span.innerHTML = '';
+    span.appendChild(input);
+    input.focus();
+    input.select();
+    function save() {
+        const val = parseFloat(input.value);
+        if (isNaN(val)) { span.textContent = current; return; }
+        csrfFetch('/api/warehouse/qty', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({item_id: id, quantity: val})
+        }).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.ok) {
+                span.textContent = val;
+                if (d.min_warning) span.style.color = '#e74c3c';
+            } else {
+                span.textContent = current;
+                alert(d.error || 'Error');
+            }
+        }).catch(function() { span.textContent = current; });
+    }
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') span.textContent = current;
+    });
+    input.addEventListener('blur', save);
+}
+</script>
 {% endblock %}
