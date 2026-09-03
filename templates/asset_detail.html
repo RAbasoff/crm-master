@@ -5,33 +5,32 @@
     <h1>🏭 {{ eq.name }}</h1>
     <div style="display:flex;gap:8px">
         <a href="/assets/{{ eq.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        <button class="btn btn-sm" style="background:#2c3e50;color:white" onclick="showQR()">QR</button>
         <a href="/assets" class="btn" style="background:#eee">{{ _('Back') }}</a>
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <!-- Основная информация -->
-    <div class="card">
-        <h2>{{ _('General Information') }}</h2>
-        <table style="width:100%;font-size:13px">
-            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Type') }}</td><td style="font-weight:600">{{ eq.equipment_type or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Category') }}</td><td>{{ eq.category or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Manufacturer') }}</td><td>{{ eq.manufacturer or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Model') }}</td><td>{{ eq.model_name or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Serial Number') }}</td><td style="font-family:monospace">{{ eq.serial_number or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Inventory Number') }}</td><td style="font-family:monospace">{{ eq.inventory_number or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Year') }}</td><td>{{ eq.year_of_manufacture or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Country') }}</td><td>{{ eq.country_of_origin or '—' }}</td></tr>
-        </table>
+<!-- QR MODAL -->
+<div id="qrModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:320px;width:90%;text-align:center">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:16px">{{ eq.name }}</h2>
+            <button onclick="document.getElementById('qrModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div id="qrContainer" style="margin:16px 0"></div>
+        <div style="font-size:12px;color:#888;margin-bottom:8px">
+            {% if eq.serial_number %}SN: {{ eq.serial_number }}<br>{% endif %}
+            {% if eq.inventory_number %}INV: {{ eq.inventory_number }}{% endif %}
+        </div>
+        <button onclick="printQR()" class="btn btn-sm" style="background:#3498db;color:white">🖨️ {{ _('Print') }}</button>
     </div>
+</div>
 
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <!-- Фото и статус -->
     <div class="card">
-        <h2>{{ _('Photo & Status') }}</h2>
         {% if eq.photo %}
         <img src="/static/uploads/{{ eq.photo }}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:12px">
-        {% else %}
-        <div style="width:100%;height:150px;background:#e8ecf1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:12px">🏭</div>
         {% endif %}
         <div style="display:flex;gap:12px;flex-wrap:wrap">
             <div><span style="color:#888;font-size:12px">{{ _('Status') }}</span><br><span class="badge badge-{% if eq.status=='active' %}active{% elif eq.status=='broken' %}critical{% elif eq.status=='maintenance' %}high{% else %}open{% endif %}" style="font-size:13px">{{ eq.status }}</span></div>
@@ -39,109 +38,202 @@
         </div>
     </div>
 
-    <!-- Технические характеристики -->
+    <!-- Основная информация -->
     <div class="card">
-        <h2>{{ _('Technical Specifications') }}</h2>
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('General Information') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
         <table style="width:100%;font-size:13px">
-            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Voltage') }}</td><td>{{ eq.voltage or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Power') }}</td><td>{{ eq.power or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Current') }}</td><td>{{ eq.current_rating or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Frequency') }}</td><td>{{ eq.frequency or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Weight') }}</td><td>{{ eq.weight or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Dimensions') }}</td><td>{{ eq.dimensions or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Capacity') }}</td><td>{{ eq.capacity or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Pressure') }}</td><td>{{ eq.pressure or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Temp. Range') }}</td><td>{{ eq.temperature_range or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('IP Rating') }}</td><td>{{ eq.ip_rating or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Material') }}</td><td>{{ eq.material or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Color') }}</td><td>{{ eq.color or '—' }}</td></tr>
+            {% set fields = [
+                (_('Type'), eq.equipment_type),
+                (_('Category'), eq.category),
+                (_('Manufacturer'), eq.manufacturer),
+                (_('Model'), eq.model_name),
+                (_('Serial Number'), eq.serial_number),
+                (_('Inventory Number'), eq.inventory_number),
+                (_('Year'), eq.year_of_manufacture),
+                (_('Country'), eq.country_of_origin)
+            ] %}
+            {% for label, val in fields %}
+            {% if val %}<tr><td style="color:#888;padding:4px 0;width:40%">{{ label }}</td><td style="font-weight:{{ '600' if label==_('Type') else '400' }};{{ 'font-family:monospace' if label in [_('Serial Number'),_('Inventory Number')] else '' }}">{{ val }}</td></tr>{% endif %}
+            {% endfor %}
         </table>
+        </div>
     </div>
+
+    <!-- Технические характеристики -->
+    {% set tech_fields = [
+        (_('Voltage'), eq.voltage), (_('Power'), eq.power), (_('Current'), eq.current_rating),
+        (_('Frequency'), eq.frequency), (_('Weight'), eq.weight), (_('Dimensions'), eq.dimensions),
+        (_('Capacity'), eq.capacity), (_('Pressure'), eq.pressure), (_('Temp. Range'), eq.temperature_range),
+        (_('IP Rating'), eq.ip_rating), (_('Material'), eq.material), (_('Color'), eq.color)
+    ] %}
+    {% set tech_has = [] %}
+    {% for label, val in tech_fields %}{% if val %}{% if tech_has.append(1) %}{% endif %}{% endif %}{% endfor %}
+    {% if tech_has %}
+    <div class="card">
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Technical Specifications') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
+        <table style="width:100%;font-size:13px">
+            {% for label, val in tech_fields %}
+            {% if val %}<tr><td style="color:#888;padding:4px 0;width:40%">{{ label }}</td><td>{{ val }}</td></tr>{% endif %}
+            {% endfor %}
+        </table>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Покупка и гарантия -->
+    {% set purchase_fields = [
+        (_('Purchase Date'), eq.purchase_date.strftime('%d-%m-%Y') if eq.purchase_date else none),
+        (_('Price'), ('%.2f'|format(eq.purchase_price|float) ~ ' ' ~ (eq.currency or 'EUR')) if eq.purchase_price else none),
+        (_('Supplier'), eq.supplier), (_('Invoice'), eq.invoice_number),
+        (_('Warranty Start'), eq.warranty_start.strftime('%d-%m-%Y') if eq.warranty_start else none),
+        (_('Warranty End'), eq.warranty_end.strftime('%d-%m-%Y') if eq.warranty_end else none),
+        (_('Warranty Notes'), eq.warranty_notes)
+    ] %}
+    {% set purchase_has = [] %}
+    {% for label, val in purchase_fields %}{% if val %}{% if purchase_has.append(1) %}{% endif %}{% endif %}{% endfor %}
+    {% if purchase_has %}
     <div class="card">
-        <h2>{{ _('Purchase & Warranty') }}</h2>
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Purchase & Warranty') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
         <table style="width:100%;font-size:13px">
-            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Purchase Date') }}</td><td>{{ eq.purchase_date.strftime('%d-%m-%Y') if eq.purchase_date else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Price') }}</td><td style="font-weight:600">{{ '%.2f'|format(eq.purchase_price|float) if eq.purchase_price else '—' }} {{ eq.currency or 'EUR' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Supplier') }}</td><td>{{ eq.supplier or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Invoice') }}</td><td>{{ eq.invoice_number or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Warranty Start') }}</td><td>{{ eq.warranty_start.strftime('%d-%m-%Y') if eq.warranty_start else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Warranty End') }}</td><td>{{ eq.warranty_end.strftime('%d-%m-%Y') if eq.warranty_end else '—' }}</td></tr>
-            {% if eq.warranty_notes %}<tr><td style="color:#888;padding:6px 0">{{ _('Warranty Notes') }}</td><td>{{ eq.warranty_notes }}</td></tr>{% endif %}
+            {% for label, val in purchase_fields %}
+            {% if val %}<tr><td style="color:#888;padding:4px 0;width:40%">{{ label }}</td><td{% if label==_('Price') %} style="font-weight:600"{% endif %}>{{ val }}</td></tr>{% endif %}
+            {% endfor %}
         </table>
+        </div>
     </div>
+    {% endif %}
 
     <!-- Расположение -->
+    {% set loc_fields = [
+        (_('Section'), eq.section.name if eq.section else none),
+        (_('Location'), eq.installation_location), (_('Building'), eq.building),
+        (_('Floor'), eq.floor_level), (_('Room'), eq.room)
+    ] %}
+    {% set loc_has = [] %}
+    {% for label, val in loc_fields %}{% if val %}{% if loc_has.append(1) %}{% endif %}{% endif %}{% endfor %}
+    {% if loc_has %}
     <div class="card">
-        <h2>{{ _('Location') }}</h2>
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Location') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
         <table style="width:100%;font-size:13px">
-            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Section') }}</td><td>{{ eq.section.name if eq.section else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Location') }}</td><td>{{ eq.installation_location or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Building') }}</td><td>{{ eq.building or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Floor') }}</td><td>{{ eq.floor_level or '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Room') }}</td><td>{{ eq.room or '—' }}</td></tr>
+            {% for label, val in loc_fields %}
+            {% if val %}<tr><td style="color:#888;padding:4px 0;width:40%">{{ label }}</td><td>{{ val }}</td></tr>{% endif %}
+            {% endfor %}
         </table>
+        </div>
     </div>
+    {% endif %}
 
     <!-- Ответственные -->
+    {% set resp_fields = [
+        (_('Responsible Person'), eq.responsible_person.naam if eq.responsible_person else none),
+        (_('Responsible User'), (eq.responsible_user.display_name or eq.responsible_user.username) if eq.responsible_user else none),
+        (_('Contractor'), eq.contractor_rel.company_name if eq.contractor_rel else none)
+    ] %}
+    {% set resp_has = [] %}
+    {% for label, val in resp_fields %}{% if val %}{% if resp_has.append(1) %}{% endif %}{% endif %}{% endfor %}
+    {% if resp_has %}
     <div class="card">
-        <h2>{{ _('Responsible') }}</h2>
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Responsible') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
         <table style="width:100%;font-size:13px">
-            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Responsible Person') }}</td><td>{{ eq.responsible_person.naam if eq.responsible_person else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Responsible User') }}</td><td>{{ eq.responsible_user.display_name or eq.responsible_user.username if eq.responsible_user else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Contractor') }}</td><td>{{ eq.contractor_rel.company_name if eq.contractor_rel else '—' }}</td></tr>
+            {% for label, val in resp_fields %}
+            {% if val %}<tr><td style="color:#888;padding:4px 0;width:40%">{{ label }}</td><td>{{ val }}</td></tr>{% endif %}
+            {% endfor %}
         </table>
+        </div>
     </div>
+    {% endif %}
 
     <!-- Обслуживание -->
-    <div class="card">
-        <h2>{{ _('Maintenance') }}</h2>
-        <table style="width:100%;font-size:13px">
-            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Last Service') }}</td><td>{{ eq.last_service_date.strftime('%d-%m-%Y') if eq.last_service_date else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Next Service') }}</td><td>{{ eq.next_service_date.strftime('%d-%m-%Y') if eq.next_service_date else '—' }}</td></tr>
-            <tr><td style="color:#888;padding:6px 0">{{ _('Interval (days)') }}</td><td>{{ eq.service_interval_days or '—' }}</td></tr>
-            {% if eq.maintenance_notes %}<tr><td style="color:#888;padding:6px 0">{{ _('Notes') }}</td><td>{{ eq.maintenance_notes }}</td></tr>{% endif %}
+    <div class="card" style="grid-column:1/-1">
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Maintenance & Service') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
+        <table style="width:100%;font-size:13px;margin-bottom:16px">
+            {% set maint_fields = [
+                (_('Last Service'), eq.last_service_date.strftime('%d-%m-%Y') if eq.last_service_date else none),
+                (_('Next Service'), eq.next_service_date.strftime('%d-%m-%Y') if eq.next_service_date else none),
+                (_('Interval (days)'), eq.service_interval_days),
+                (_('Notes'), eq.maintenance_notes)
+            ] %}
+            {% for label, val in maint_fields %}
+            {% if val %}<tr><td style="color:#888;padding:4px 0;width:20%">{{ label }}</td><td>{{ val }}</td></tr>{% endif %}
+            {% endfor %}
         </table>
 
-        <!-- Добавить запись обслуживания -->
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #eee">
-            <h3 style="font-size:14px;margin-bottom:10px">{{ _('Add Service Record') }}</h3>
+        <!-- Tabs: Обслуживание / Ремонт / Замена -->
+        <div style="display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid #e8ecf1;padding-bottom:0">
+            <button class="svc-tab active" onclick="switchSvcTab(this,'tab-maintenance')" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid #5b9cf6;margin-bottom:-2px;color:#5b9cf6">🔧 {{ _('Maintenance') }}</button>
+            <button class="svc-tab" onclick="switchSvcTab(this,'tab-repair')" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;color:#888">🔩 {{ _('Repair') }}</button>
+            <button class="svc-tab" onclick="switchSvcTab(this,'tab-replacement')" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;color:#888">🔄 {{ _('Replacement') }}</button>
+        </div>
+
+        <!-- Maintenance form -->
+        <div id="tab-maintenance" class="svc-panel">
             <form method="POST" action="/assets/{{ eq.id }}/service">
+                <input type="hidden" name="service_type" value="maintenance">
                 <div class="form-row">
-                    <div class="form-group"><label>{{ _('Type') }}</label>
-                        <select name="service_type">
-                            <option value="maintenance">{{ _('Maintenance') }}</option>
-                            <option value="repair">{{ _('Repair') }}</option>
-                            <option value="inspection">{{ _('Inspection') }}</option>
-                            <option value="calibration">{{ _('Calibration') }}</option>
-                        </select>
-                    </div>
                     <div class="form-group"><label>{{ _('Date') }}</label><input type="date" name="date" value="{{ now.strftime('%Y-%m-%d') if now else '' }}"></div>
-                </div>
-                <div class="form-group"><label>{{ _('Description') }}</label><textarea name="description" rows="2"></textarea></div>
-                <div class="form-row">
                     <div class="form-group"><label>{{ _('Cost') }}</label><input type="number" name="cost" step="0.01" value="0"></div>
                     <div class="form-group"><label>{{ _('Next Date') }}</label><input type="date" name="next_date"></div>
                 </div>
+                <div class="form-group"><label>{{ _('Description') }}</label><textarea name="description" rows="2" placeholder="{{ _('What was done...') }}"></textarea></div>
                 <div class="form-group"><label>{{ _('Notes') }}</label><input type="text" name="notes"></div>
-                <button type="submit" class="btn btn-sm btn-primary">{{ _('Add Record') }}</button>
+                <button type="submit" class="btn btn-sm btn-primary">{{ _('Add Maintenance Record') }}</button>
             </form>
+        </div>
+
+        <!-- Repair form -->
+        <div id="tab-repair" class="svc-panel" style="display:none">
+            <form method="POST" action="/assets/{{ eq.id }}/service">
+                <input type="hidden" name="service_type" value="repair">
+                <div class="form-row">
+                    <div class="form-group"><label>{{ _('Date') }}</label><input type="date" name="date" value="{{ now.strftime('%Y-%m-%d') if now else '' }}"></div>
+                    <div class="form-group"><label>{{ _('Cost') }}</label><input type="number" name="cost" step="0.01" value="0"></div>
+                    <div class="form-group"><label>{{ _('Next Date') }}</label><input type="date" name="next_date"></div>
+                </div>
+                <div class="form-group"><label>{{ _('What broke') }}</label><textarea name="description" rows="2" placeholder="{{ _('Fault description...') }}"></textarea></div>
+                <div class="form-group"><label>{{ _('What was done') }}</label><input type="text" name="notes" placeholder="{{ _('Repair details...') }}"></div>
+                <button type="submit" class="btn btn-sm" style="background:#e67e22;color:white">{{ _('Add Repair Record') }}</button>
+            </form>
+        </div>
+
+        <!-- Replacement form -->
+        <div id="tab-replacement" class="svc-panel" style="display:none">
+            <form method="POST" action="/assets/{{ eq.id }}/service">
+                <input type="hidden" name="service_type" value="replacement">
+                <div class="form-row">
+                    <div class="form-group"><label>{{ _('Date') }}</label><input type="date" name="date" value="{{ now.strftime('%Y-%m-%d') if now else '' }}"></div>
+                    <div class="form-group"><label>{{ _('Cost') }}</label><input type="number" name="cost" step="0.01" value="0"></div>
+                </div>
+                <div class="form-group"><label>{{ _('What was replaced') }}</label><textarea name="description" rows="2" placeholder="{{ _('Part/component replaced...') }}"></textarea></div>
+                <div class="form-group"><label>{{ _('Notes') }}</label><input type="text" name="notes"></div>
+                <button type="submit" class="btn btn-sm" style="background:#9b59b6;color:white">{{ _('Add Replacement Record') }}</button>
+            </form>
+        </div>
         </div>
     </div>
 
     <!-- Описание и заметки -->
+    {% if eq.description or eq.notes or eq.tags %}
     <div class="card" style="grid-column:1/-1">
-        <h2>{{ _('Description & Notes') }}</h2>
-        {% if eq.description %}<p style="margin-bottom:12px">{{ eq.description }}</p>{% endif %}
-        {% if eq.notes %}<p style="color:#666">{{ eq.notes }}</p>{% endif %}
-        {% if eq.tags %}<p style="margin-top:8px;font-size:12px;color:#888">{{ _('Tags') }}: {{ eq.tags }}</p>{% endif %}
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Description & Notes') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
+            {% if eq.description %}<p style="margin-bottom:12px">{{ eq.description }}</p>{% endif %}
+            {% if eq.notes %}<p style="color:#666">{{ eq.notes }}</p>{% endif %}
+            {% if eq.tags %}<p style="margin-top:8px;font-size:12px;color:#888">{{ _('Tags') }}: {{ eq.tags }}</p>{% endif %}
+        </div>
     </div>
+    {% endif %}
 
     <!-- Документы -->
+    {% if eq.manual_file or eq.certificate_file or eq.documents %}
     <div class="card" style="grid-column:1/-1">
-        <h2>{{ _('Documents') }}</h2>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Documents') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body" style="display:flex;gap:12px;flex-wrap:wrap">
             {% if eq.manual_file %}<a href="/static/uploads/{{ eq.manual_file }}" target="_blank" class="btn btn-sm" style="background:#e3f2fd">📄 {{ _('Manual') }}</a>{% endif %}
             {% if eq.certificate_file %}<a href="/static/uploads/{{ eq.certificate_file }}" target="_blank" class="btn btn-sm" style="background:#e8f5e9">📜 {{ _('Certificate') }}</a>{% endif %}
             {% for doc in eq.documents %}
@@ -149,17 +241,19 @@
             {% endfor %}
         </div>
     </div>
+    {% endif %}
 
     <!-- История обслуживания -->
     {% if eq.service_logs %}
     <div class="card" style="grid-column:1/-1">
-        <h2>{{ _('Service History') }}</h2>
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Service History') }} ({{ eq.service_logs|length }}) <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
         <div class="table-wrap"><table>
             <tr><th>{{ _('Date') }}</th><th>{{ _('Type') }}</th><th>{{ _('Description') }}</th><th>{{ _('Performer') }}</th><th>{{ _('Cost') }}</th><th>{{ _('Next') }}</th></tr>
             {% for log in eq.service_logs %}
             <tr>
                 <td>{{ log.date.strftime('%d-%m-%Y') }}</td>
-                <td><span class="badge badge-open">{{ log.service_type }}</span></td>
+                <td><span class="badge badge-{% if log.service_type=='repair' %}high{% elif log.service_type=='replacement' %}critical{% else %}open{% endif %}">{{ log.service_type }}</span></td>
                 <td>{{ log.description or '—' }}</td>
                 <td>{{ log.performer.display_name if log.performer else '—' }}</td>
                 <td>{{ '%.2f'|format(log.cost|float) if log.cost else '0.00' }}</td>
@@ -167,7 +261,58 @@
             </tr>
             {% endfor %}
         </table></div>
+        </div>
     </div>
     {% endif %}
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+// QR
+function showQR() {
+    document.getElementById('qrContainer').innerHTML = '';
+    new QRCode(document.getElementById('qrContainer'), {
+        text: window.location.href,
+        width: 200, height: 200,
+        colorDark: '#1a1a2e', colorLight: '#ffffff'
+    });
+    document.getElementById('qrModal').style.display = 'flex';
+}
+function printQR() {
+    const svg = document.getElementById('qrContainer').querySelector('canvas');
+    if (!svg) return;
+    const img = svg.toDataURL('image/png');
+    const w = window.open('', '_blank');
+    w.document.write('<html><body style="text-align:center;font-family:sans-serif"><h3>{{ eq.name }}</h3><img src="' + img + '" style="width:200px"><p style="font-size:12px;color:#888">{% if eq.serial_number %}SN: {{ eq.serial_number }}{% endif %}{% if eq.inventory_number %} | INV: {{ eq.inventory_number }}{% endif %}</p><script>setTimeout(function(){window.print();window.close()},500)<\/script></body></html>');
+    w.document.close();
+}
+document.getElementById('qrModal').addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+
+// Collapsible sections
+function toggleSection(h2) {
+    const body = h2.nextElementSibling;
+    const arrow = h2.querySelector('span');
+    if (body.style.display === 'none') {
+        body.style.display = '';
+        if (arrow) arrow.textContent = '▼';
+    } else {
+        body.style.display = 'none';
+        if (arrow) arrow.textContent = '▶';
+    }
+}
+
+// Service tabs
+function switchSvcTab(btn, panelId) {
+    document.querySelectorAll('.svc-tab').forEach(function(t) {
+        t.style.borderBottomColor = 'transparent';
+        t.style.color = '#888';
+        t.classList.remove('active');
+    });
+    btn.style.borderBottomColor = '#5b9cf6';
+    btn.style.color = '#5b9cf6';
+    btn.classList.add('active');
+    document.querySelectorAll('.svc-panel').forEach(function(p) { p.style.display = 'none'; });
+    document.getElementById(panelId).style.display = 'block';
+}
+</script>
 {% endblock %}
