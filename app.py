@@ -211,7 +211,9 @@ def internal_error(e):
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_file(os.path.join(app.static_folder, 'icon-192.png'), mimetype='image/png')
+    response = send_file(os.path.join(app.static_folder, 'icon-192.png'), mimetype='image/png')
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
 
 # ============================================================
 # ROUTES — AUTH
