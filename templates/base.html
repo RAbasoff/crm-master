@@ -381,7 +381,7 @@
             <a href="/tool-wear" class="sb-item {% if 'tool_wear' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>{{ _('Knife Sharpening') }}</a>
             {% endif %}
             {% if has_access('machines') %}
-            <a href="/assets" class="sb-item {% if 'asset' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>{{ _('Equipment') }}</a>
+            <a href="/assets" class="sb-item {% if 'asset' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>{{ _('Other Devices') }}</a>
             {% endif %}
             {% if has_access('electricity') %}
             <a href="/electricity" class="sb-item {% if 'electric' in (request.endpoint or '') or 'cabinet' in (request.endpoint or '') or 'breaker' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚡</span>{{ _('Electricity') }}</a>
