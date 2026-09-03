@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta
 import os, io, json
 import qrcode
+from sqlalchemy import func, case
 
 from config import Config, LANGUAGES, SECTION_KEYS
 from models import (db, User, UserSectionAccess, FactorySection, Machine, MachinePart,
@@ -207,6 +208,10 @@ def internal_error(e):
         return jsonify(error='Internal server error'), 500
     flash(_('An error occurred. Please try again.'), 'error')
     return redirect(url_for('index'))
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_file(os.path.join(app.static_folder, 'icon-192.png'), mimetype='image/png')
 
 # ============================================================
 # ROUTES — AUTH
@@ -1699,15 +1704,20 @@ def api_maintenance_plans():
 def api_maintenance_reminders():
     today = datetime.utcnow().date()
     soon = today + timedelta(days=14)
-    
-    if current_user.has_role('admin', 'director', 'technician'):
-        parts = MachinePart.query.all()
-    else:
+
+    # Filter at DB level: only parts with upcoming dates
+    part_q = MachinePart.query.filter(
+        db.or_(
+            MachinePart.next_replacement <= soon,
+            MachinePart.next_maintenance <= soon
+        )
+    )
+    if not current_user.has_role('admin', 'director', 'technician'):
         machine_ids = [m.id for m in current_user.assigned_machines]
-        parts = MachinePart.query.filter(MachinePart.machine_id.in_(machine_ids)).all()
-    
+        part_q = part_q.filter(MachinePart.machine_id.in_(machine_ids))
+
     reminders = []
-    for p in parts:
+    for p in part_q.all():
         if p.next_replacement and p.next_replacement <= soon:
             days_left = (p.next_replacement - today).days
             reminders.append({
@@ -1724,24 +1734,23 @@ def api_maintenance_reminders():
                 'date': p.next_maintenance.isoformat(),
                 'days_left': days_left, 'overdue': days_left < 0
             })
-    
-    # Add consumable replacement reminders (filters, oils, etc.)
+
     consumables = VoorraadItem.query.filter(
         VoorraadItem.consumable_type.isnot(None),
         VoorraadItem.consumable_type != '',
-        VoorraadItem.next_replacement.isnot(None)
+        VoorraadItem.next_replacement.isnot(None),
+        VoorraadItem.next_replacement <= soon
     ).all()
     for c in consumables:
-        if c.next_replacement and c.next_replacement <= soon:
-            days_left = (c.next_replacement - today).days
-            reminders.append({
-                'type': 'consumable', 'part': c.naam, 'machine': c.compatible_machines or '—',
-                'machine_id': None, 'part_id': c.id,
-                'date': c.next_replacement.isoformat(),
-                'days_left': days_left, 'overdue': days_left < 0,
-                'consumable_type': c.consumable_type, 'volume': c.volume or ''
-            })
-    
+        days_left = (c.next_replacement - today).days
+        reminders.append({
+            'type': 'consumable', 'part': c.naam, 'machine': c.compatible_machines or '—',
+            'machine_id': None, 'part_id': c.id,
+            'date': c.next_replacement.isoformat(),
+            'days_left': days_left, 'overdue': days_left < 0,
+            'consumable_type': c.consumable_type, 'volume': c.volume or ''
+        })
+
     reminders.sort(key=lambda r: r['date'])
     return jsonify(reminders)
 
@@ -3609,15 +3618,21 @@ def index():
         dashboard_stats['high'] = FaultReport.query.filter_by(priority='high').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
         dashboard_stats['critical'] = FaultReport.query.filter_by(priority='critical').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
         
-        # Top machines with faults
-        all_machines = Machine.query.all()
+        # Top machines with faults (single aggregated query)
+        machine_stats = db.session.query(
+            FaultReport.machine_id,
+            func.count().label('fault_count'),
+            func.sum(case((FaultReport.status.in_(['open', 'accepted', 'in_progress']), 1), else_=0)).label('open_count'),
+            func.sum(case((FaultReport.priority == 'critical', 1), else_=0)).label('critical_count'),
+        ).group_by(FaultReport.machine_id).all()
+        machine_map = {m.id: m for m in Machine.query.filter(Machine.id.in_([s.machine_id for s in machine_stats])).all()}
         top_machines = []
-        for m in all_machines:
-            fc = FaultReport.query.filter_by(machine_id=m.id).count()
-            if fc > 0:
-                m.fault_count = fc
-                m.open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
-                m.critical_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
+        for s in machine_stats:
+            m = machine_map.get(s.machine_id)
+            if m:
+                m.fault_count = s.fault_count
+                m.open_count = int(s.open_count or 0)
+                m.critical_count = int(s.critical_count or 0)
                 top_machines.append(m)
         top_machines.sort(key=lambda x: x.fault_count, reverse=True)
         dashboard_stats['top_machines'] = top_machines
@@ -4722,11 +4737,15 @@ def api_machine_faults(machine_id):
     """Return faults and stats for a machine (used by floor plan)"""
     m = Machine.query.get_or_404(machine_id)
     faults = FaultReport.query.filter_by(machine_id=m.id).order_by(FaultReport.created_at.desc()).limit(10).all()
-    total = FaultReport.query.filter_by(machine_id=m.id).count()
-    open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
-    resolved = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status == 'resolved').count()
-    critical = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
-    
+
+    # Single aggregated query for stats
+    stats = db.session.query(
+        func.count().label('total'),
+        func.sum(case((FaultReport.status.in_(['open', 'accepted', 'in_progress']), 1), else_=0)).label('open'),
+        func.sum(case((FaultReport.status == 'resolved', 1), else_=0)).label('resolved'),
+        func.sum(case((FaultReport.priority == 'critical', 1), else_=0)).label('critical'),
+    ).filter(FaultReport.machine_id == m.id).first()
+
     faults_data = [{
         'id': f.id,
         'title': f.title or '',
@@ -4734,14 +4753,35 @@ def api_machine_faults(machine_id):
         'priority': f.priority or '',
         'date': f.created_at.strftime('%d-%m-%Y'),
     } for f in faults]
-    
+
     return jsonify({
-        'total': total,
-        'open': open_count,
-        'resolved': resolved,
-        'critical': critical,
+        'total': stats.total if stats else 0,
+        'open': int(stats.open or 0) if stats else 0,
+        'resolved': int(stats.resolved or 0) if stats else 0,
+        'critical': int(stats.critical or 0) if stats else 0,
         'faults': faults_data
     })
+
+@app.route('/api/machines/faults-batch')
+@login_required
+def api_machines_faults_batch():
+    """Return fault stats for all machines in one query (replaces N+1 calls on floor plan)."""
+    stats = db.session.query(
+        FaultReport.machine_id,
+        func.count().label('total'),
+        func.sum(case((FaultReport.status.in_(['open', 'accepted', 'in_progress']), 1), else_=0)).label('open'),
+        func.sum(case((FaultReport.status == 'resolved', 1), else_=0)).label('resolved'),
+        func.sum(case((FaultReport.priority == 'critical', 1), else_=0)).label('critical'),
+    ).group_by(FaultReport.machine_id).all()
+    result = {}
+    for row in stats:
+        result[str(row.machine_id)] = {
+            'total': row.total,
+            'open': int(row.open or 0),
+            'resolved': int(row.resolved or 0),
+            'critical': int(row.critical or 0),
+        }
+    return jsonify(result)
 
 @app.route('/api/machines/<int:machine_id>/qr')
 @login_required
@@ -5950,7 +5990,15 @@ def tool_wear_reset(tool_id):
 def api_tool_wear_warnings():
     """Return tools with wear >= 80% for popup warning."""
     today = datetime.utcnow().date()
-    all_tools = ToolWear.query.all()
+    # Pre-filter: only tools that could possibly have wear >= 80%
+    # Max cycle is typically < 365 days, so last_replaced older than 292 days (365*0.8) or missing
+    cutoff = today - timedelta(days=365)
+    all_tools = ToolWear.query.filter(
+        db.or_(
+            ToolWear.last_replaced.is_(None),
+            ToolWear.last_replaced <= cutoff
+        )
+    ).all()
     warnings = []
     for t in all_tools:
         cycle = t.cycle_days or 14

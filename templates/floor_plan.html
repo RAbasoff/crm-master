@@ -713,18 +713,22 @@ function closeMachineInfo() {
     }
 }
 
-// Load fault status for all machines on the map
+// Load fault status for all machines on the map (single batch request)
 function loadMachineFaultStatus() {
     const markers = document.querySelectorAll('.machine-marker[data-id]');
-    markers.forEach(marker => {
-        const id = marker.dataset.id;
-        fetch(`/api/machine/${id}/faults`)
-            .then(r => r.json())
-            .then(d => {
+    if (!markers.length) return;
+
+    fetch('/api/machines/faults-batch')
+        .then(r => r.json())
+        .then(data => {
+            markers.forEach(marker => {
+                const id = marker.dataset.id;
+                const d = data[id] || { total: 0, open: 0, resolved: 0, critical: 0 };
+
                 // Remove old badge
                 const oldBadge = marker.querySelector('.fault-badge');
                 if (oldBadge) oldBadge.remove();
-                
+
                 if (d.critical > 0) {
                     marker.dataset.faultStatus = 'critical';
                     const badge = document.createElement('div');
@@ -742,11 +746,11 @@ function loadMachineFaultStatus() {
                 } else {
                     marker.dataset.faultStatus = 'ok';
                 }
-            })
-            .catch(() => {
-                marker.dataset.faultStatus = 'ok';
             });
-    });
+        })
+        .catch(() => {
+            markers.forEach(marker => { marker.dataset.faultStatus = 'ok'; });
+        });
 }
 
 // Load on page load
