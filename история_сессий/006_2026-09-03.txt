@@ -1,0 +1,34 @@
+Сессия 006 — 03.09.2026
+Проект: CRM Мастерская
+
+============================================================
+
+ЗАДАЧА: Детальные допуски пользователей
+
+ПРОБЛЕМА: Sidebar показывает/скрывает пункты по РОЛИ, а не по доступу к разделам.
+Нужно: связать SECTION_KEYS с sidebar, чтобы каждый пользователь видел только разрешённые разделы.
+
+ТЕКУЩИЕ SECTION_KEYS (25 штук):
+machines, warehouse, orders, clients, workers, faults,
+messages, reports, schedule, time_tracking, vacations,
+cylinders, maintenance, purchase_requests, users, sections, floor,
+invoices, contractors, two, audit_log, settings, statistics,
+equipment, consumables
+
+ПОЛЬЗОВАТЕЛИ:
+- admin: full access
+- aristidis (technician): partial — machines, warehouse, orders, faults, messages, reports, cylinders, maintenance, floor
+- user: limited — ничего
+- director: partial — machines, faults
+- maico (technician): partial — machines, orders, faults, messages, reports, cylinders, maintenance, floor
+- filip (technician): partial — machines, warehouse, orders, faults, messages, cylinders, maintenance, floor
+- ruslan (technician): full — всё
+
+ДИНЫ НЕТ В БАЗЕ — нужно создать или найти.
+
+ПЛАН:
+1. Обновить sidebar в base.html — проверять user_has_section_access() для каждого пункта
+2. Добавить новые ключи если нужно: equipment, electricity, maintenance_calendar, tool_wear
+3. Создать пользователя Дина с нужными допусками
+
+============================================================

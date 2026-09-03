@@ -1,0 +1,67 @@
+Сессия 005 — 02.09.2026
+Проект: CRM Мастерская + VEMAG (отложено)
+
+============================================================
+
+ВЫПОЛНЕННЫЕ ДЕЙСТВИЯ
+
+1. Анализ VEMAG (отложено)
+   - Проанализированы 7 фото шильдиков
+   - Определено оборудование: HP30E, FM 250, MMP 220, 208 S...
+   - Ждём фото электрического шкафа и экрана
+
+2. Blueprint electricity — выделен из app.py
+   - 10 маршрутов, ~170 строк
+   - blueprints/electricity.py
+   - Шаблоны не потребовали изменений
+
+3. Blueprint monteurs — выделен из app.py
+   - 2 маршрута, ~55 строк
+   - blueprints/monteurs.py
+
+4. Blueprint contractors — выделен из app.py
+   - 7 маршрутов, ~120 строк
+   - blueprints/contractors.py
+
+5. Blueprint warehouse — выделен из app.py
+   - 21 маршрут, ~480 строк
+   - blueprints/warehouse.py
+
+6. Blueprint faults — выделен из app.py
+   - 12 маршрутов, ~430 строк
+   - blueprints/faults.py
+   - add_work_report() перенесена в utils.py
+
+7. Смена логина/пароля для пользователей и мастеров
+   - /profile — каждый пользователь меняет свой логин, телефон, пароль (с подтверждением)
+   - /users — админ меняет логин/пароль через модальное окно (был readonly)
+   - /users/<id> — админ меняет логин/пароль в карточке пользователя
+   - /monteurs — админ меняет логин/пароль мастеров
+
+8. Смена логина/пароля для ответственных лиц
+   - Добавлено поле username в модель Verantwoordelijke (client table)
+   - Миграция: ALTER TABLE client ADD COLUMN username VARCHAR(80)
+   - Форма /responsible/<id>/edit — поля username, password, confirm_password
+   - Исправлена ошибка SQLite UNIQUE constraint
+
+9. Исправления
+   - requirements.txt: Pillow>=10.4.0 (Python 3.14 compatibility)
+   - Render.com сайт не работает (сервис удалён/приостановлен)
+   - Основной сайт на PythonAnywhere: rabasoff.pythonanywhere.com
+
+============================================================
+
+ИТОГО СЕССИИ:
+- 5 blueprints выделены (52 маршрута, ~1255 строк)
+- app.py: 7343 → ~6360 строк
+- Смена логина/пароля для всех ролей
+- Username для ответственных лиц
+
+============================================================
+
+СТАТУС: Завершено
+
+СЛЕДУЮЩИЕ ШАГИ:
+- Продолжить выделение blueprints: maintenance, two, reports, settings, api
+- VEMAG: ждём фото шкафа и экрана
+- Проверить работу сайта на PythonAnywhere после обновления
