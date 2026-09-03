@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Equipment') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏭 {{ _('Equipment') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/assets/new" class="btn btn-primary">+ {{ _('Add Equipment') }}</a>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+    <div class="stat-card"><div class="number">{{ items|length }}</div><div class="label">{{ _('Total') }}</div></div>
+    <div class="stat-card"><div class="number">{{ items|selectattr('status','equalto','active')|list|length }}</div><div class="label">{{ _('Active') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ items|selectattr('status','equalto','broken')|list|length }}</div><div class="label">{{ _('Broken') }}</div></div>
+    <div class="stat-card"><div class="number">{{ items|selectattr('status','equalto','maintenance')|list|length }}</div><div class="label">{{ _('Maintenance') }}</div></div>
+</div>
+
+<!-- FILTERS -->
+<div class="card" style="padding:12px 16px;margin-bottom:16px">
+    <form method="GET" action="/assets" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;font-weight:600">{{ _('Status') }}:</label>
+        <select name="status" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+            <option value="">{{ _('All') }}</option>
+            <option value="active" {% if status=='active' %}selected{% endif %}>{{ _('Active') }}</option>
+            <option value="maintenance" {% if status=='maintenance' %}selected{% endif %}>{{ _('Maintenance') }}</option>
+            <option value="broken" {% if status=='broken' %}selected{% endif %}>{{ _('Broken') }}</option>
+            <option value="retired" {% if status=='retired' %}selected{% endif %}>{{ _('Retired') }}</option>
+            <option value="disposed" {% if status=='disposed' %}selected{% endif %}>{{ _('Disposed') }}</option>
+        </select>
+        <label style="font-size:12px;font-weight:600">{{ _('Category') }}:</label>
+        <select name="category" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+            <option value="">{{ _('All') }}</option>
+            {% for c in categories %}
+            <option value="{{ c }}" {% if category==c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">{{ _('Filter') }}</button>
+        {% if status or category %}<a href="/assets" class="btn btn-sm" style="background:#eee">{{ _('Clear') }}</a>{% endif %}
+    </form>
+</div>
+
+<!-- TABLE -->
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Photo') }}</th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Manufacturer') }}</th>
+            <th>{{ _('Model') }}</th>
+            <th>{{ _('Serial') }}</th>
+            <th>{{ _('Section') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Condition') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for eq in items %}
+        <tr>
+            <td>{% if eq.photo %}<img src="/static/uploads/{{ eq.photo }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{% else %}<div style="width:40px;height:40px;background:#e8ecf1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>{% endif %}</td>
+            <td><a href="/assets/{{ eq.id }}" style="font-weight:600;color:#2c3e50;text-decoration:none">{{ eq.name }}</a></td>
+            <td style="font-size:12px">{{ eq.equipment_type or '—' }}</td>
+            <td style="font-size:12px">{{ eq.manufacturer or '—' }}</td>
+            <td style="font-size:12px">{{ eq.model_name or '—' }}</td>
+            <td style="font-size:12px;color:#888">{{ eq.serial_number or '—' }}</td>
+            <td style="font-size:12px">{{ eq.section.name if eq.section else '—' }}</td>
+            <td><span class="badge badge-{% if eq.status=='active' %}active{% elif eq.status=='broken' %}critical{% elif eq.status=='maintenance' %}high{% else %}open{% endif %}">{{ eq.status }}</span></td>
+            <td><span class="badge badge-{% if eq.condition=='excellent' %}active{% elif eq.condition=='good' %}active{% elif eq.condition=='fair' %}high{% else %}critical{% endif %}">{{ eq.condition }}</span></td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <a href="/assets/{{ eq.id }}" class="btn btn-sm" style="font-size:11px;background:#eee">{{ _('View') }}</a>
+                    <a href="/assets/{{ eq.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

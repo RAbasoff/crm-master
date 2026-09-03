@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Equipment') if eq else _('New Equipment') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Edit Equipment') if eq else _('New Equipment') }}</h1>
+    <a href="/assets" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+</div>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <!-- Основная информация -->
+        <h2 style="font-size:15px;margin-bottom:14px;color:#1a1a2e;border-bottom:2px solid #5b9cf6;padding-bottom:8px">{{ _('General Information') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="name" value="{{ eq.name if eq else '' }}" required placeholder="CNC-01, Press-02..."></div>
+            <div class="form-group"><label>{{ _('Type') }}</label><input type="text" name="equipment_type" value="{{ eq.equipment_type if eq and eq.equipment_type else '' }}" placeholder="{{ _('CNC, Press, Lathe...') }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Category') }}</label>
+                <select name="category">
+                    <option value="">{{ _('Select') }}</option>
+                    <option value="electrical" {% if eq and eq.category=='electrical' %}selected{% endif %}>{{ _('Electrical') }}</option>
+                    <option value="mechanical" {% if eq and eq.category=='mechanical' %}selected{% endif %}>{{ _('Mechanical') }}</option>
+                    <option value="pneumatic" {% if eq and eq.category=='pneumatic' %}selected{% endif %}>{{ _('Pneumatic') }}</option>
+                    <option value="hydraulic" {% if eq and eq.category=='hydraulic' %}selected{% endif %}>{{ _('Hydraulic') }}</option>
+                    <option value="other" {% if eq and eq.category=='other' %}selected{% endif %}>{{ _('Other') }}</option>
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Manufacturer') }}</label><input type="text" name="manufacturer" value="{{ eq.manufacturer if eq and eq.manufacturer else '' }}" placeholder="Trumpf, Amada..."></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Model') }}</label><input type="text" name="model_name" value="{{ eq.model_name if eq and eq.model_name else '' }}"></div>
+            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial_number" value="{{ eq.serial_number if eq and eq.serial_number else '' }}" placeholder="SN-12345"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Inventory Number') }}</label><input type="text" name="inventory_number" value="{{ eq.inventory_number if eq and eq.inventory_number else '' }}"></div>
+            <div class="form-group"><label>{{ _('Year of Manufacture') }}</label><input type="number" name="year_of_manufacture" value="{{ eq.year_of_manufacture if eq and eq.year_of_manufacture else '' }}" min="1900" max="2099"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Country of Origin') }}</label><input type="text" name="country_of_origin" value="{{ eq.country_of_origin if eq and eq.country_of_origin else '' }}" placeholder="Germany, Japan..."></div>
+
+        <!-- Технические характеристики -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #27ae60;padding-bottom:8px">{{ _('Technical Specifications') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Voltage') }}</label><input type="text" name="voltage" value="{{ eq.voltage if eq and eq.voltage else '' }}" placeholder="220V, 380V, 24V DC"></div>
+            <div class="form-group"><label>{{ _('Power') }}</label><input type="text" name="power" value="{{ eq.power if eq and eq.power else '' }}" placeholder="1.5 kW, 3 HP"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Current Rating') }}</label><input type="text" name="current_rating" value="{{ eq.current_rating if eq and eq.current_rating else '' }}" placeholder="16A, 32A"></div>
+            <div class="form-group"><label>{{ _('Frequency') }}</label><input type="text" name="frequency" value="{{ eq.frequency if eq and eq.frequency else '' }}" placeholder="50Hz, 60Hz"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Weight') }}</label><input type="text" name="weight" value="{{ eq.weight if eq and eq.weight else '' }}" placeholder="500 kg"></div>
+            <div class="form-group"><label>{{ _('Dimensions') }}</label><input type="text" name="dimensions" value="{{ eq.dimensions if eq and eq.dimensions else '' }}" placeholder="LxWxH mm"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Capacity') }}</label><input type="text" name="capacity" value="{{ eq.capacity if eq and eq.capacity else '' }}" placeholder="100 pcs/hour"></div>
+            <div class="form-group"><label>{{ _('Pressure') }}</label><input type="text" name="pressure" value="{{ eq.pressure if eq and eq.pressure else '' }}" placeholder="6 bar"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Temperature Range') }}</label><input type="text" name="temperature_range" value="{{ eq.temperature_range if eq and eq.temperature_range else '' }}" placeholder="-10°C to +50°C"></div>
+            <div class="form-group"><label>{{ _('IP Rating') }}</label><input type="text" name="ip_rating" value="{{ eq.ip_rating if eq and eq.ip_rating else '' }}" placeholder="IP65"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Material') }}</label><input type="text" name="material" value="{{ eq.material if eq and eq.material else '' }}" placeholder="Steel, Aluminum..."></div>
+            <div class="form-group"><label>{{ _('Color') }}</label><input type="text" name="color" value="{{ eq.color if eq and eq.color else '' }}"></div>
+        </div>
+
+        <!-- Покупка и гарантия -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #f39c12;padding-bottom:8px">{{ _('Purchase & Warranty') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Purchase Date') }}</label><input type="date" name="purchase_date" value="{{ eq.purchase_date.strftime('%Y-%m-%d') if eq and eq.purchase_date else '' }}"></div>
+            <div class="form-group"><label>{{ _('Price') }}</label><input type="number" name="purchase_price" step="0.01" value="{{ eq.purchase_price if eq and eq.purchase_price else '' }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Currency') }}</label>
+                <select name="currency">
+                    <option value="EUR" {% if eq and eq.currency=='EUR' %}selected{% endif %}>EUR</option>
+                    <option value="USD" {% if eq and eq.currency=='USD' %}selected{% endif %}>USD</option>
+                    <option value="RUB" {% if eq and eq.currency=='RUB' %}selected{% endif %}>RUB</option>
+                    <option value="PLN" {% if eq and eq.currency=='PLN' %}selected{% endif %}>PLN</option>
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Supplier') }}</label><input type="text" name="supplier" value="{{ eq.supplier if eq and eq.supplier else '' }}"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Invoice Number') }}</label><input type="text" name="invoice_number" value="{{ eq.invoice_number if eq and eq.invoice_number else '' }}"></div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Warranty Start') }}</label><input type="date" name="warranty_start" value="{{ eq.warranty_start.strftime('%Y-%m-%d') if eq and eq.warranty_start else '' }}"></div>
+            <div class="form-group"><label>{{ _('Warranty End') }}</label><input type="date" name="warranty_end" value="{{ eq.warranty_end.strftime('%Y-%m-%d') if eq and eq.warranty_end else '' }}"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Warranty Notes') }}</label><textarea name="warranty_notes" rows="2">{{ eq.warranty_notes if eq and eq.warranty_notes else '' }}</textarea></div>
+
+        <!-- Расположение -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #9b59b6;padding-bottom:8px">{{ _('Location') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Section') }}</label>
+                <select name="section_id">
+                    <option value="">{{ _('Select Section') }}</option>
+                    {% for s in sections %}
+                    <option value="{{ s.id }}" {% if eq and eq.section_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Installation Location') }}</label><input type="text" name="installation_location" value="{{ eq.installation_location if eq and eq.installation_location else '' }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Building') }}</label><input type="text" name="building" value="{{ eq.building if eq and eq.building else '' }}"></div>
+            <div class="form-group"><label>{{ _('Floor') }}</label><input type="text" name="floor_level" value="{{ eq.floor_level if eq and eq.floor_level else '' }}"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Room') }}</label><input type="text" name="room" value="{{ eq.room if eq and eq.room else '' }}"></div>
+
+        <!-- Статус и ответственные -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #e74c3c;padding-bottom:8px">{{ _('Status & Responsible') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Status') }}</label>
+                <select name="status">
+                    <option value="active" {% if eq and eq.status=='active' %}selected{% endif %}>{{ _('Active') }}</option>
+                    <option value="maintenance" {% if eq and eq.status=='maintenance' %}selected{% endif %}>{{ _('Maintenance') }}</option>
+                    <option value="broken" {% if eq and eq.status=='broken' %}selected{% endif %}>{{ _('Broken') }}</option>
+                    <option value="retired" {% if eq and eq.status=='retired' %}selected{% endif %}>{{ _('Retired') }}</option>
+                    <option value="disposed" {% if eq and eq.status=='disposed' %}selected{% endif %}>{{ _('Disposed') }}</option>
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Condition') }}</label>
+                <select name="condition">
+                    <option value="excellent" {% if eq and eq.condition=='excellent' %}selected{% endif %}>{{ _('Excellent') }}</option>
+                    <option value="good" {% if eq and eq.condition=='good' %}selected{% endif %}>{{ _('Good') }}</option>
+                    <option value="fair" {% if eq and eq.condition=='fair' %}selected{% endif %}>{{ _('Fair') }}</option>
+                    <option value="poor" {% if eq and eq.condition=='poor' %}selected{% endif %}>{{ _('Poor') }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Responsible Person') }}</label>
+                <select name="responsible_person_id">
+                    <option value="">{{ _('Select') }}</option>
+                    {% for p in verantwoordelijken %}
+                    <option value="{{ p.id }}" {% if eq and eq.responsible_person_id == p.id %}selected{% endif %}>{{ p.naam }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>{{ _('Responsible User') }}</label>
+                <select name="responsible_user_id">
+                    <option value="">{{ _('Select') }}</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if eq and eq.responsible_user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group"><label>{{ _('Contractor') }}</label>
+            <select name="contractor_id">
+                <option value="">{{ _('Select') }}</option>
+                {% for c in contractors %}
+                <option value="{{ c.id }}" {% if eq and eq.contractor_id == c.id %}selected{% endif %}>{{ c.company_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Обслуживание -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #3498db;padding-bottom:8px">{{ _('Maintenance Schedule') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Last Service Date') }}</label><input type="date" name="last_service_date" value="{{ eq.last_service_date.strftime('%Y-%m-%d') if eq and eq.last_service_date else '' }}"></div>
+            <div class="form-group"><label>{{ _('Next Service Date') }}</label><input type="date" name="next_service_date" value="{{ eq.next_service_date.strftime('%Y-%m-%d') if eq and eq.next_service_date else '' }}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Service Interval (days)') }}</label><input type="number" name="service_interval_days" value="{{ eq.service_interval_days if eq and eq.service_interval_days else '' }}" min="1"></div>
+            <div class="form-group"><label>{{ _('Maintenance Notes') }}</label><input type="text" name="maintenance_notes" value="{{ eq.maintenance_notes if eq and eq.maintenance_notes else '' }}"></div>
+        </div>
+
+        <!-- Файлы -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #1abc9c;padding-bottom:8px">{{ _('Files') }}</h2>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Photo') }}</label><input type="file" name="photo" accept="image/*"></div>
+            <div class="form-group"><label>{{ _('Manual') }}</label><input type="file" name="manual_file" accept=".pdf,.doc,.docx"></div>
+        </div>
+        <div class="form-group"><label>{{ _('Certificate') }}</label><input type="file" name="certificate_file" accept=".pdf,.doc,.docx,.jpg,.png"></div>
+
+        <!-- Описание -->
+        <h2 style="font-size:15px;margin:24px 0 14px;color:#1a1a2e;border-bottom:2px solid #95a5a6;padding-bottom:8px">{{ _('Description') }}</h2>
+        <div class="form-group"><label>{{ _('Description') }}</label><textarea name="description" rows="3">{{ eq.description if eq and eq.description else '' }}</textarea></div>
+        <div class="form-group"><label>{{ _('Notes') }}</label><textarea name="notes" rows="2">{{ eq.notes if eq and eq.notes else '' }}</textarea></div>
+        <div class="form-group"><label>{{ _('Tags') }}</label><input type="text" name="tags" value="{{ eq.tags if eq and eq.tags else '' }}" placeholder="{{ _('comma separated') }}"></div>
+
+        <div style="display:flex;gap:8px;margin-top:20px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/assets" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

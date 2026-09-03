@@ -1063,3 +1063,108 @@ class EquipmentPartOrder(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     delivered_at = db.Column(db.DateTime)
     creator = db.relationship('User', foreign_keys=[created_by])
+
+# ============================================================
+# EQUIPMENT MODEL (Оборудование)
+# ============================================================
+
+class Equipment(db.Model):
+    __tablename__ = 'equipment'
+    id = db.Column(db.Integer, primary_key=True)
+    # Основная информация
+    name = db.Column(db.String(200), nullable=False)
+    equipment_type = db.Column(db.String(100))  # тип: насос, компрессор, вентилятор...
+    category = db.Column(db.String(50))  # категория: электрическое, механическое, pneumatic...
+    manufacturer = db.Column(db.String(200))
+    model_name = db.Column(db.String(200))
+    serial_number = db.Column(db.String(100))
+    inventory_number = db.Column(db.String(100))  # инвентарный номер
+    year_of_manufacture = db.Column(db.Integer)
+    country_of_origin = db.Column(db.String(100))
+
+    # Технические характеристики
+    voltage = db.Column(db.String(50))  # напряжение: 220V, 380V, 24V DC
+    power = db.Column(db.String(50))  # мощность: 1.5 kW, 3 HP
+    current_rating = db.Column(db.String(50))  # номинальный ток
+    frequency = db.Column(db.String(50))  # частота: 50Hz, 60Hz
+    weight = db.Column(db.String(50))  # вес
+    dimensions = db.Column(db.String(200))  # габариты: LxWxH
+    capacity = db.Column(db.String(100))  # производительность
+    pressure = db.Column(db.String(50))  # давление
+    temperature_range = db.Column(db.String(100))  # рабочий диапазон температур
+    ip_rating = db.Column(db.String(20))  # степень защиты: IP65, IP54
+    material = db.Column(db.String(100))  # материал корпуса
+    color = db.Column(db.String(50))  # цвет
+
+    # Покупка и гарантия
+    purchase_date = db.Column(db.Date)
+    purchase_price = db.Column(Numeric(12, 2))
+    currency = db.Column(db.String(10), default='EUR')
+    supplier = db.Column(db.String(200))
+    invoice_number = db.Column(db.String(100))
+    warranty_start = db.Column(db.Date)
+    warranty_end = db.Column(db.Date)
+    warranty_notes = db.Column(db.Text)
+
+    # Расположение
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'))
+    installation_location = db.Column(db.String(300))
+    building = db.Column(db.String(100))
+    floor_level = db.Column(db.String(50))
+    room = db.Column(db.String(100))
+
+    # Статус и ответственные
+    status = db.Column(db.String(20), default='active', index=True)  # active, maintenance, broken, retired, disposed
+    condition = db.Column(db.String(20), default='good')  # excellent, good, fair, poor
+    responsible_person_id = db.Column(db.Integer, db.ForeignKey('client.id'))
+    responsible_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))
+
+    # Обслуживание
+    last_service_date = db.Column(db.Date)
+    next_service_date = db.Column(db.Date)
+    service_interval_days = db.Column(db.Integer)
+    maintenance_notes = db.Column(db.Text)
+
+    # Файлы
+    photo = db.Column(db.String(300))
+    manual_file = db.Column(db.String(300))  # файл инструкции
+    certificate_file = db.Column(db.String(300))  # сертификат
+
+    # Описание
+    description = db.Column(db.Text)
+    notes = db.Column(db.Text)
+    tags = db.Column(db.String(500))  # теги через запятую
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Связи
+    section = db.relationship('FactorySection', backref='equipment_items')
+    responsible_person = db.relationship('Verantwoordelijke', foreign_keys=[responsible_person_id])
+    responsible_user = db.relationship('User', foreign_keys=[responsible_user_id])
+    contractor_rel = db.relationship('Contractor', foreign_keys=[contractor_id])
+    documents = db.relationship('EquipmentDocument', backref='equipment', lazy=True, cascade='all, delete-orphan')
+    service_logs = db.relationship('EquipmentServiceLog', backref='equipment', lazy=True, order_by='EquipmentServiceLog.date.desc()', cascade='all, delete-orphan')
+
+class EquipmentDocument(db.Model):
+    __tablename__ = 'equipment_document'
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    filename = db.Column(db.String(300), nullable=False)
+    original_name = db.Column(db.String(300))
+    doc_type = db.Column(db.String(50))  # manual, certificate, warranty, photo, other
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class EquipmentServiceLog(db.Model):
+    __tablename__ = 'equipment_service_log'
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    service_type = db.Column(db.String(50))  # maintenance, repair, inspection, calibration
+    description = db.Column(db.Text)
+    performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    cost = db.Column(Numeric(10, 2), default=0)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    next_date = db.Column(db.Date)
+    notes = db.Column(db.Text)
+    performer = db.relationship('User', foreign_keys=[performed_by])

@@ -372,10 +372,11 @@
             <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
             {% endif %}
             {% if has_access('machines') %}
-            <a href="/machines" class="sb-item {% if 'machine' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Machines') }}</a>
+            <a href="/machines" class="sb-item {% if request.endpoint == 'machines_list' %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Machines') }}</a>
+            <a href="/assets" class="sb-item {% if 'asset' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>{{ _('Equipment') }}</a>
             {% endif %}
             {% if has_access('equipment') %}
-            <a href="/equipment" class="sb-item {% if 'equipment' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Mule Maintenance') }}</a>
+            <a href="/equipment" class="sb-item {% if request.endpoint == 'equipment_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Mule Maintenance') }}</a>
             {% endif %}
             {% if has_access('tool_wear') %}
             <a href="/tool-wear" class="sb-item {% if 'tool_wear' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>{{ _('Knife Sharpening') }}</a>
