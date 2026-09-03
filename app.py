@@ -239,9 +239,9 @@ def login():
                 if parsed.netloc and parsed.netloc != request.host:
                     next_url = None
             return redirect(next_url or url_for('index'))
-        # Try Verantwoordelijke by email or naam
+        # Try Verantwoordelijke by username, email or naam
         person = Verantwoordelijke.query.filter(
-            (Verantwoordelijke.email == username) | (Verantwoordelijke.naam == username)
+            (Verantwoordelijke.username == username) | (Verantwoordelijke.email == username) | (Verantwoordelijke.naam == username)
         ).first()
         if person and person.check_password(password) and person.is_active:
             auth = ResponsibleAuth(person)

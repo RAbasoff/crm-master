@@ -40,7 +40,9 @@
     </table></div>
 </div>
 {% endif %}
-<div class="filters">
+<div class="filters" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input type="text" id="whSearch" placeholder="🔍 {{ _('Search by name...') }}" oninput="filterWarehouse(this.value)"
+        style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:200px">
     <select onchange="location.href='/warehouse?categorie='+this.value">
         <option value="">{{ _('All') }} {{ _('Category') }}</option>
         {% for c in categories %}
@@ -53,12 +55,13 @@
         <option value="{{ g.id }}" {% if group_filter==g.id %}selected{% endif %}>{{ g.name }}{% if g.manufacturer %} ({{ g.manufacturer }}){% endif %}</option>
         {% endfor %}
     </select>
+    <span id="whSearchCount" style="font-size:12px;color:#888"></span>
 </div>
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
         <tr><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Type') }}</th><th>{{ _('Group') }}</th><th>{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
         {% for i in items %}
-        <tr>
+        <tr class="wh-row" data-name="{{ i.naam|lower }}">
             <td>{{ i.naam }}{% if i.consumable_type %} <span style="font-size:10px;background:#e8f5e9;padding:1px 4px;border-radius:3px">{{ i.consumable_type }}</span>{% endif %}</td>
             <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
             <td>{{ i.categorie or '—' }}</td>
@@ -78,6 +81,9 @@
                 <button class="btn btn-sm" style="background:#7f8c8d;color:white;padding:4px 6px" title="Barcode" onclick="showBarcode('{{ i.id }}', '{{ i.naam }}', '{{ i.supplier_part_number or '' }}')">|||</button>
                 <a href="/warehouse/labels?ids={{ i.id }}" class="btn btn-sm" style="background:#8e44ad;color:white;padding:4px 6px" title="Print label" target="_blank">🏷️</a>
                 <a href="/warehouse/{{ i.id }}/prices" class="btn btn-sm" style="background:#f39c12;color:white;padding:4px 6px" title="{{ _('Supplier Prices') }}">💰</a>
+                <form method="POST" action="/warehouse/{{ i.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ i.naam }}?')">
+                    <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 6px" title="{{ _('Delete') }}">🗑</button>
+                </form>
             </td>
         </tr>
         <tr id="mv-{{ i.id }}" style="display:none; background:#f8f9fa">
@@ -265,6 +271,25 @@ function editQty(id) {
         if (e.key === 'Escape') span.textContent = current;
     });
     input.addEventListener('blur', save);
+}
+
+function filterWarehouse(query) {
+    const q = query.toLowerCase().trim();
+    const rows = document.querySelectorAll('.wh-row');
+    let visible = 0;
+    rows.forEach(function(row) {
+        const name = row.dataset.name || '';
+        const match = !q || name.includes(q);
+        row.style.display = match ? '' : 'none';
+        // Also hide the movement row next to it
+        const next = row.nextElementSibling;
+        if (next && next.id && next.id.startsWith('mv-')) {
+            next.style.display = 'none';
+        }
+        if (match) visible++;
+    });
+    const countEl = document.getElementById('whSearchCount');
+    countEl.textContent = q ? (visible + ' {{ _("found") }}') : '';
 }
 </script>
 {% endblock %}
