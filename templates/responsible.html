@@ -10,121 +10,237 @@
     </div>
 </div>
 
-<div class="filters">
-    <select onchange="location.href='/responsible?group='+this.value">
-        <option value="">{{ _('All') }} {{ _('Groups') }}</option>
-        {% for g in groups %}
-        <option value="{{ g.id }}" {% if group_filter==g.id %}selected{% endif %}>{{ g.name }} ({{ g.members|length }})</option>
-        {% endfor %}
-    </select>
-</div>
+{% set group_colors = ['#3498db', '#e67e22', '#27ae60', '#9b59b6', '#e74c3c', '#1abc9c', '#f39c12', '#34495e'] %}
 
-{% for c in verantwoordelijken %}
-<div class="card" style="padding:14px 18px;margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:14px;cursor:pointer" onclick="togglePerson({{ c.id }})">
-        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#5b9cf6,#3b7dd8);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:17px;flex-shrink:0">
-            {{ (c.naam or '?')[0]|upper }}
-        </div>
-        <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:15px;color:#1a1a2e">{{ c.naam }}</div>
-            <div style="font-size:12px;color:#888;margin-top:2px">
-                {% if c.position %}{{ c.position }} · {% endif %}
-                {% if c.telefoon %}📞 {{ c.telefoon }}{% endif %}
-                {% if c.work_phone %} · 🏢 {{ c.work_phone }}{% endif %}
-                {% if c.internal_phone %} · ☎️ {{ c.internal_phone }}{% endif %}
-                {% if c.email %} · ✉️ {{ c.email }}{% endif %}
-            </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-            {% if c.resp_sections %}
-            <span class="badge badge-active" style="font-size:11px">{{ c.resp_sections|length }} {{ _('sections') }}</span>
-            {% endif %}
-            {% if c.resp_group %}
-            <span class="badge badge-purple" style="font-size:11px">{{ c.resp_group.name }}</span>
-            {% endif %}
-            <form method="POST" action="/responsible/{{ c.id }}/delete" style="display:inline" onclick="event.stopPropagation()" onsubmit="return confirm('{{ _('Delete') }} {{ c.naam }}?')">
-                <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:11px">🗑</button>
-            </form>
-            <span id="arrow-{{ c.id }}" style="font-size:11px;color:#999;transition:transform 0.2s">▶</span>
+<!-- GROUPED BY ACCESS GROUP -->
+{% for group in groups %}
+{% set members = verantwoordelijken | selectattr('group_id', 'equalto', group.id) | list %}
+{% if members %}
+<div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:{{ group_colors[loop.index0 % group_colors|length] }}15;border-left:4px solid {{ group_colors[loop.index0 % group_colors|length] }};border-radius:0 8px 8px 0">
+        <span style="font-size:18px">👥</span>
+        <div>
+            <div style="font-weight:700;font-size:15px;color:#1a1a2e">{{ group.name }}</div>
+            <div style="font-size:12px;color:#888">{{ group.description or '' }} · {{ members|length }} {{ _('persons') }} · {{ _('Access') }}: {{ group.access_level }}</div>
         </div>
     </div>
 
-    <!-- Expandable content -->
-    <div id="person-{{ c.id }}" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #f0f2f5">
-        <!-- Sections -->
-        <div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <h3 style="margin:0;font-size:13px;color:#555;text-transform:uppercase;letter-spacing:0.5px">{{ _('Departments') }}</h3>
-                <button class="btn btn-sm btn-ghost" onclick="openSectionModal({{ c.id }})" style="font-size:11px">+ {{ _('Add') }}</button>
+    {% for c in members %}
+    <div class="card" style="padding:12px 16px;margin-bottom:6px;border-left:3px solid {{ group_colors[loop.parent.loop.index0 % group_colors|length] }}">
+        <!-- HEADER -->
+        <div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="togglePerson({{ c.id }})">
+            <div style="width:38px;height:38px;border-radius:50%;background:{{ group_colors[loop.parent.loop.index0 % group_colors|length] }};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0">
+                {{ (c.naam or '?')[0]|upper }}
             </div>
-            {% if c.resp_sections %}
-            <div style="display:flex;flex-direction:column;gap:8px">
-                {% for section in c.resp_sections %}
-                <div style="padding:10px 14px;background:#f8f9fc;border-radius:10px;border-left:3px solid {{ section.color or '#5b9cf6' }}" data-section-id="{{ section.id }}">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                        <span style="font-weight:700;font-size:14px;color:#1a1a2e">{{ section.name }}</span>
-                        {% if section.description %}
-                        <span style="font-size:12px;color:#888">{{ section.description }}</span>
-                        {% endif %}
-                        <span style="font-size:12px;color:#888;margin-left:auto">{{ section.machines|length }} {{ _('machines') }}</span>
-                        <button class="btn btn-sm btn-ghost" onclick="openMachineModal({{ section.id }},'{{ section.name }}')" style="font-size:11px;padding:4px 8px">+ ⚙️</button>
-                        <span style="color:#ccc;cursor:pointer;font-size:16px" onclick="removeSection({{ c.id }},{{ section.id }})">✕</span>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px">{{ c.naam }}</div>
+                <div style="font-size:11px;color:#888">
+                    {% if c.position %}{{ c.position }} · {% endif %}
+                    {% if c.telefoon %}📞 {{ c.telefoon }}{% endif %}
+                    {% if c.email %} · ✉️ {{ c.email }}{% endif %}
+                    {% if c.username %} · 🔐 @{{ c.username }}{% endif %}
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                {% if c.resp_sections %}<span class="badge badge-active" style="font-size:10px">{{ c.resp_sections|length }} {{ _('sections') }}</span>{% endif %}
+                {% if c.password_hash %}<span style="font-size:11px;color:#27ae60" title="{{ _('Can login') }}">🔐</span>{% else %}<span style="font-size:11px;color:#ccc" title="{{ _('No login') }}">🔓</span>{% endif %}
+                {% if not c.is_active %}<span class="badge badge-offline" style="font-size:10px">{{ _('Inactive') }}</span>{% endif %}
+                <span id="arrow-{{ c.id }}" style="font-size:11px;color:#999;transition:transform 0.2s">▶</span>
+            </div>
+        </div>
+
+        <!-- EXPANDED -->
+        <div id="person-{{ c.id }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f0f2f5">
+            <form method="POST" action="/responsible/{{ c.id }}/edit">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- LOGIN + PASSWORD -->
+                <div style="background:#f0f7ff;padding:10px 12px;border-radius:8px;margin-bottom:12px">
+                    <div style="font-size:12px;font-weight:600;color:#3498db;margin-bottom:8px">🔐 {{ _('Login Access') }}</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                        <div>
+                            <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Username') }}</label>
+                            <input type="text" name="username" value="{{ c.username or '' }}" placeholder="{{ _('e.g. john.doe') }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Password') }}</label>
+                            <input type="password" name="password" placeholder="{{ _('Keep current') }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Confirm') }}</label>
+                            <input type="password" name="confirm_password" placeholder="{{ _('Repeat') }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                        </div>
                     </div>
-                    {% if section.machines %}
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        {% for m in section.machines %}
-                        <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:white;border:1px solid #e8ecf1;border-radius:8px;font-size:13px">
-                            <span style="font-size:14px">⚙️</span>
-                            <a href="/machines/{{ m.id }}" style="color:#333;text-decoration:none;font-weight:600">{{ m.name }}</a>
-                            <span style="color:#bbb;cursor:pointer;font-size:12px" onclick="removeMachine({{ section.id }}, {{ m.id }})">✕</span>
+                    <div style="display:flex;gap:12px;margin-top:8px;align-items:center">
+                        <label style="font-size:12px;display:flex;align-items:center;gap:4px">
+                            <input type="checkbox" name="is_active" {% if c.is_active %}checked{% endif %}> {{ _('Active') }}
+                        </label>
+                        <div>
+                            <label style="font-size:11px;color:#888">{{ _('Access Level') }}</label>
+                            <select name="access_level" style="padding:4px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                                <option value="floor" {% if c.access_level == 'floor' %}selected{% endif %}>{{ _('Floor only') }}</option>
+                                <option value="full" {% if c.access_level == 'full' %}selected{% endif %}>{{ _('Full map') }}</option>
+                                <option value="limited" {% if c.access_level == 'limited' %}selected{% endif %}>{{ _('Limited') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTACT INFO -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Name') }}</label>
+                        <input type="text" name="first_name" value="{{ c.naam.split(' ')[0] if c.naam else '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Phone') }}</label>
+                        <input type="text" name="telefoon" value="{{ c.telefoon or '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Internal') }}</label>
+                        <input type="text" name="internal_phone" value="{{ c.internal_phone or '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Email') }}</label>
+                        <input type="email" name="email" value="{{ c.email or '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                </div>
+
+                <!-- SECTIONS -->
+                {% if c.resp_sections %}
+                <div style="margin-bottom:12px">
+                    <div style="font-size:11px;color:#888;margin-bottom:6px">{{ _('Departments') }}:</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px">
+                        {% for section in c.resp_sections %}
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:{{ section.color or '#5b9cf6' }}22;border:1px solid {{ section.color or '#5b9cf6' }}44;border-radius:12px;font-size:11px">
+                            <span style="width:6px;height:6px;border-radius:50%;background:{{ section.color or '#5b9cf6' }}"></span>
+                            {{ section.name }}
                         </span>
                         {% endfor %}
                     </div>
-                    {% else %}
-                    <div style="font-size:12px;color:#999">{{ _('No machines') }}</div>
-                    {% endif %}
                 </div>
-                {% endfor %}
+                {% endif %}
+
+                <!-- ACTIONS -->
+                <div style="display:flex;gap:8px;justify-content:space-between">
+                    <div>
+                        <a href="/responsible/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;font-size:11px">✏️ {{ _('Full Edit') }}</a>
+                        <form method="POST" action="/responsible/{{ c.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ c.naam }}?')">
+                            <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
+                        </form>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span id="save-status-{{ c.id }}" style="font-size:12px;color:#27ae60;display:none">✓ {{ _('Saved') }}</span>
+                        <button type="submit" class="btn btn-sm btn-primary" style="font-size:12px">💾 {{ _('Save') }}</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- UNGROUPED -->
+{% set ungrouped = verantwoordelijken | selectattr('group_id', 'none') | list %}
+{% if ungrouped %}
+<div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:#95a5a615;border-left:4px solid #95a5a6;border-radius:0 8px 8px 0">
+        <span style="font-size:18px">👤</span>
+        <div>
+            <div style="font-weight:700;font-size:15px;color:#1a1a2e">{{ _('Without Group') }}</div>
+            <div style="font-size:12px;color:#888">{{ ungrouped|length }} {{ _('persons') }}</div>
+        </div>
+    </div>
+
+    {% for c in ungrouped %}
+    <div class="card" style="padding:12px 16px;margin-bottom:6px;border-left:3px solid #95a5a6">
+        <div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="togglePerson({{ c.id }})">
+            <div style="width:38px;height:38px;border-radius:50%;background:#95a5a6;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0">
+                {{ (c.naam or '?')[0]|upper }}
             </div>
-            {% else %}
-            <div style="font-size:12px;color:#999;padding:8px 0">{{ _('No departments') }}</div>
-            {% endif %}
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px">{{ c.naam }}</div>
+                <div style="font-size:11px;color:#888">
+                    {% if c.position %}{{ c.position }} · {% endif %}
+                    {% if c.telefoon %}📞 {{ c.telefoon }}{% endif %}
+                    {% if c.email %} · ✉️ {{ c.email }}{% endif %}
+                    {% if c.username %} · 🔐 @{{ c.username }}{% endif %}
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                {% if c.password_hash %}<span style="font-size:11px;color:#27ae60">🔐</span>{% else %}<span style="font-size:11px;color:#ccc">🔓</span>{% endif %}
+                <span id="arrow-{{ c.id }}" style="font-size:11px;color:#999;transition:transform 0.2s">▶</span>
+            </div>
         </div>
 
-        <!-- Edit form -->
-        <form onsubmit="savePerson(event, {{ c.id }})" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-            <div style="flex:1;min-width:140px">
-                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Name') }}</label>
-                <input type="text" name="naam" value="{{ c.naam or '' }}" required style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
-            </div>
-            <div style="flex:1;min-width:120px">
-                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Position') }}</label>
-                <input type="text" name="position" value="{{ c.position or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
-            </div>
-            <div style="flex:1;min-width:120px">
-                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Phone') }}</label>
-                <input type="text" name="telefoon" value="{{ c.telefoon or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
-            </div>
-            <div style="flex:1;min-width:100px">
-                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Internal') }}</label>
-                <input type="text" name="internal_phone" value="{{ c.internal_phone or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
-            </div>
-            <div style="flex:1;min-width:100px">
-                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Work') }}</label>
-                <input type="text" name="work_phone" value="{{ c.work_phone or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
-            </div>
-            <div style="flex:1;min-width:140px">
-                <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">{{ _('Email') }}</label>
-                <input type="email" name="email" value="{{ c.email or '' }}" style="width:100%;padding:8px 10px;border:1px solid #dde1e8;border-radius:8px;font-size:13px">
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-                <button type="submit" class="btn btn-sm btn-primary" style="height:36px">{{ _('Save') }}</button>
-                <span id="save-status-{{ c.id }}" style="font-size:12px;color:#27ae60;display:none">✓</span>
-            </div>
-        </form>
+        <div id="person-{{ c.id }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f0f2f5">
+            <form method="POST" action="/responsible/{{ c.id }}/edit">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="background:#f0f7ff;padding:10px 12px;border-radius:8px;margin-bottom:12px">
+                    <div style="font-size:12px;font-weight:600;color:#3498db;margin-bottom:8px">🔐 {{ _('Login Access') }}</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                        <div>
+                            <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Username') }}</label>
+                            <input type="text" name="username" value="{{ c.username or '' }}" placeholder="{{ _('e.g. john.doe') }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Password') }}</label>
+                            <input type="password" name="password" placeholder="{{ _('Keep current') }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Confirm') }}</label>
+                            <input type="password" name="confirm_password" placeholder="{{ _('Repeat') }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:8px;align-items:center">
+                        <label style="font-size:12px;display:flex;align-items:center;gap:4px">
+                            <input type="checkbox" name="is_active" {% if c.is_active %}checked{% endif %}> {{ _('Active') }}
+                        </label>
+                        <div>
+                            <label style="font-size:11px;color:#888">{{ _('Access Level') }}</label>
+                            <select name="access_level" style="padding:4px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                                <option value="floor" {% if c.access_level == 'floor' %}selected{% endif %}>{{ _('Floor only') }}</option>
+                                <option value="full" {% if c.access_level == 'full' %}selected{% endif %}>{{ _('Full map') }}</option>
+                                <option value="limited" {% if c.access_level == 'limited' %}selected{% endif %}>{{ _('Limited') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Name') }}</label>
+                        <input type="text" name="first_name" value="{{ c.naam.split(' ')[0] if c.naam else '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Phone') }}</label>
+                        <input type="text" name="telefoon" value="{{ c.telefoon or '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Internal') }}</label>
+                        <input type="text" name="internal_phone" value="{{ c.internal_phone or '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#888;display:block;margin-bottom:3px">{{ _('Email') }}</label>
+                        <input type="email" name="email" value="{{ c.email or '' }}" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #dde1e8;border-radius:6px">
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:space-between">
+                    <div>
+                        <a href="/responsible/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;font-size:11px">✏️ {{ _('Full Edit') }}</a>
+                        <form method="POST" action="/responsible/{{ c.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ c.naam }}?')">
+                            <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
+                        </form>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary" style="font-size:12px">💾 {{ _('Save') }}</button>
+                </div>
+            </form>
+        </div>
     </div>
+    {% endfor %}
 </div>
-{% endfor %}
+{% endif %}
 
 {% if not verantwoordelijken %}
 <div class="card">
@@ -135,57 +251,34 @@
 </div>
 {% endif %}
 
-<!-- SECTION ASSIGN MODAL -->
-<div id="sectionModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
-    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="margin:0;font-size:16px">{{ _('Assign Department') }}</h2>
-            <button onclick="document.getElementById('sectionModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
-        </div>
-        <div id="sectionCheckboxes" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
-            {% for s in all_sections %}
-            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e8ecf1;border-radius:8px;cursor:pointer">
-                <input type="checkbox" value="{{ s.id }}" style="width:auto;padding:0">
-                <div style="width:8px;height:8px;border-radius:50%;background:{{ s.color or '#5b9cf6' }}"></div>
-                <div>
-                    <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
-                    <div style="font-size:11px;color:#888">{{ s.machines|length }} {{ _('machines') }}</div>
-                </div>
-            </label>
-            {% endfor %}
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-            <button type="button" class="btn btn-ghost" onclick="document.getElementById('sectionModal').style.display='none'">{{ _('Cancel') }}</button>
-            <button type="button" class="btn btn-primary" onclick="saveSections()">{{ _('Save') }}</button>
-        </div>
-    </div>
-</div>
-
 <!-- ADD PERSON MODAL -->
 <div id="addPersonModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
-    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:90%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 style="margin:0;font-size:16px">{{ _('Add Person') }}</h2>
             <button onclick="document.getElementById('addPersonModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
         </div>
         <form method="POST" action="/responsible/quick-add">
-            <div class="form-group">
-                <label>{{ _('Name') }}</label>
-                <input type="text" name="naam" required placeholder="{{ _('Full name') }}">
-            </div>
-            <div class="form-group">
-                <label>{{ _('Position') }}</label>
-                <input type="text" name="position" placeholder="{{ _('Job title') }}">
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Name') }} *</label><input type="text" name="naam" required></div>
+                <div class="form-group"><label>{{ _('Position') }}</label><input type="text" name="position"></div>
             </div>
             <div class="form-row">
-                <div class="form-group">
-                    <label>{{ _('Phone') }}</label>
-                    <input type="text" name="telefoon">
-                </div>
-                <div class="form-group">
-                    <label>{{ _('Email') }}</label>
-                    <input type="email" name="email">
-                </div>
+                <div class="form-group"><label>{{ _('Phone') }}</label><input type="text" name="telefoon"></div>
+                <div class="form-group"><label>{{ _('Email') }}</label><input type="email" name="email"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>{{ _('Username') }}</label><input type="text" name="username" placeholder="{{ _('Login') }}"></div>
+                <div class="form-group"><label>{{ _('Password') }}</label><input type="password" name="password"></div>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Group') }}</label>
+                <select name="group_id">
+                    <option value="">{{ _('No group') }}</option>
+                    {% for g in groups %}
+                    <option value="{{ g.id }}">{{ g.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
                 <button type="button" class="btn btn-ghost" onclick="document.getElementById('addPersonModal').style.display='none'">{{ _('Cancel') }}</button>
@@ -195,33 +288,7 @@
     </div>
 </div>
 
-<!-- MACHINE ASSIGN MODAL -->
-<div id="machineModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
-    <div style="background:white;border-radius:16px;padding:24px;max-width:440px;width:90%">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 id="machineModalTitle" style="margin:0;font-size:16px">{{ _('Add Machine') }}</h2>
-            <button onclick="document.getElementById('machineModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
-        </div>
-        <div class="form-group">
-            <label>{{ _('Select Machines') }}</label>
-            <select id="machineSelect" multiple style="width:100%;height:200px">
-                {% for m in all_machines %}
-                <option value="{{ m.id }}">{{ m.name }} {% if m.serial_number %}({{ m.serial_number }}){% endif %}</option>
-                {% endfor %}
-            </select>
-            <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-            <button type="button" class="btn btn-ghost" onclick="document.getElementById('machineModal').style.display='none'">{{ _('Cancel') }}</button>
-            <button type="button" class="btn btn-primary" onclick="saveMachine()">{{ _('Add') }}</button>
-        </div>
-    </div>
-</div>
-
 <script>
-let currentPersonId = null;
-let currentSectionId = null;
-
 function togglePerson(id) {
     const el = document.getElementById('person-' + id);
     const arrow = document.getElementById('arrow-' + id);
@@ -232,85 +299,6 @@ function togglePerson(id) {
         el.style.display = 'none';
         arrow.style.transform = '';
     }
-}
-
-function openSectionModal(personId) {
-    currentPersonId = personId;
-    const personCard = document.getElementById('person-' + personId);
-    const assignedIds = [];
-    personCard.querySelectorAll('[data-section-id]').forEach(el => {
-        assignedIds.push(el.dataset.sectionId);
-    });
-    document.querySelectorAll('#sectionCheckboxes input[type="checkbox"]').forEach(cb => {
-        cb.checked = assignedIds.includes(cb.value);
-    });
-    document.getElementById('sectionModal').style.display = 'flex';
-}
-
-function saveSections() {
-    const checked = [...document.querySelectorAll('#sectionCheckboxes input:checked')].map(cb => parseInt(cb.value));
-    csrfFetch('/responsible/' + currentPersonId + '/assign-sections', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({section_ids: checked})
-    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
-}
-
-function removeSection(personId, sectionId) {
-    if (!confirm('{{ _("Remove department?") }}')) return;
-    const personCard = document.getElementById('person-' + personId);
-    const sections = [];
-    personCard.querySelectorAll('[data-section-id]').forEach(el => {
-        const sid = parseInt(el.dataset.sectionId);
-        if (sid !== sectionId) sections.push(sid);
-    });
-    csrfFetch('/responsible/' + personId + '/assign-sections', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({section_ids: sections})
-    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
-}
-
-function openMachineModal(sectionId, sectionName) {
-    currentSectionId = sectionId;
-    document.getElementById('machineModalTitle').textContent = '{{ _("Add Machine") }}: ' + sectionName;
-    document.getElementById('machineModal').style.display = 'flex';
-}
-
-function saveMachine() {
-    const sel = document.getElementById('machineSelect');
-    const ids = [...sel.selectedOptions].map(o => parseInt(o.value));
-    if (!ids.length) return;
-    csrfFetch('/sections/' + currentSectionId + '/assign-machine', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({machine_ids: ids})
-    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
-}
-
-function removeMachine(sectionId, machineId) {
-    if (!confirm('{{ _("Remove machine?") }}')) return;
-    csrfFetch('/sections/' + sectionId + '/remove-machine/' + machineId, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'}
-    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
-}
-
-function savePerson(e, personId) {
-    e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    const status = document.getElementById('save-status-' + personId);
-    csrfFetch('/responsible/' + personId + '/quick-edit', {
-        method: 'POST',
-        body: formData
-    }).then(r => {
-        if (r.ok) {
-            status.style.display = 'inline';
-            status.textContent = '✓ {{ _("Saved") }}';
-            setTimeout(() => { status.style.display = 'none'; }, 2000);
-        }
-    });
 }
 
 document.querySelectorAll('[id$="Modal"]').forEach(m => {

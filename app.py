@@ -3981,8 +3981,13 @@ def responsible_quick_add():
             naam=naam,
             position=request.form.get('position', '').strip(),
             telefoon=request.form.get('telefoon', '').strip(),
-            email=request.form.get('email', '').strip()
+            email=request.form.get('email', '').strip(),
+            username=request.form.get('username', '').strip() or None,
+            group_id=int(request.form['group_id']) if request.form.get('group_id') else None
         )
+        password = request.form.get('password', '').strip()
+        if password:
+            c.set_password(password)
         db.session.add(c)
         db.session.commit()
         flash(_('Responsible person added'), 'success')
