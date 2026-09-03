@@ -320,6 +320,7 @@ class ResponsibleAuth(UserMixin):
         self.display_name = person.naam
         self.role = 'responsible'
         self.is_active_user = person.is_active
+        self.access_level = person.access_level or 'floor'
 
     @property
     def person(self):
