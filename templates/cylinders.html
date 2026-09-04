@@ -108,17 +108,21 @@
                 <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
                 <text x="150" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">{{ _('Group') }} 2</text>
 
-                <!-- Cylinder LEFT (Group 1) - clickable -->
-                <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="left" style="cursor:pointer" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
-                <text x="45" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold" class="cyl-svg-click" data-gas="nitrogen" data-position="left" style="cursor:pointer">N₂</text>
-                <text x="45" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-left-label" style="cursor:pointer">—</text>
-                <text x="45" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-left-status">—</text>
+                <!-- Cylinder LEFT (Group 1) -->
+                <g style="cursor:pointer" onclick="cylClick('n2','left')">
+                    <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="left" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
+                    <text x="45" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold">N₂</text>
+                    <text x="45" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-left-label">—</text>
+                    <text x="45" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-left-status">—</text>
+                </g>
 
-                <!-- Cylinder RIGHT (Group 2) - clickable -->
-                <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="right" style="cursor:pointer" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
-                <text x="155" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold" class="cyl-svg-click" data-gas="nitrogen" data-position="right" style="cursor:pointer">N₂</text>
-                <text x="155" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-right-label" style="cursor:pointer">—</text>
-                <text x="155" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-right-status">—</text>
+                <!-- Cylinder RIGHT (Group 2) -->
+                <g style="cursor:pointer" onclick="cylClick('n2','right')">
+                    <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="right" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
+                    <text x="155" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold">N₂</text>
+                    <text x="155" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-right-label">—</text>
+                    <text x="155" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-right-status">—</text>
+                </g>
 
                 <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
                 <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
@@ -194,17 +198,21 @@
                 <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
                 <text x="150" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">{{ _('Group') }} 2</text>
 
-                <!-- Cylinder LEFT (Group 1) - clickable -->
-                <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="left" style="cursor:pointer" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
-                <text x="45" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold" class="cyl-svg-click" data-gas="co2" data-position="left" style="cursor:pointer">CO₂</text>
-                <text x="45" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-left-label" style="cursor:pointer">—</text>
-                <text x="45" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-left-status">—</text>
+                <!-- Cylinder LEFT (Group 1) -->
+                <g style="cursor:pointer" onclick="cylClick('co2','left')">
+                    <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="left" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+                    <text x="45" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CO₂</text>
+                    <text x="45" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-left-label">—</text>
+                    <text x="45" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-left-status">—</text>
+                </g>
 
-                <!-- Cylinder RIGHT (Group 2) - clickable -->
-                <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="right" style="cursor:pointer" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
-                <text x="155" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold" class="cyl-svg-click" data-gas="co2" data-position="right" style="cursor:pointer">CO₂</text>
-                <text x="155" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-right-label" style="cursor:pointer">—</text>
-                <text x="155" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-right-status">—</text>
+                <!-- Cylinder RIGHT (Group 2) -->
+                <g style="cursor:pointer" onclick="cylClick('co2','right')">
+                    <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="right" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+                    <text x="155" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CO₂</text>
+                    <text x="155" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-right-label">—</text>
+                    <text x="155" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-right-status">—</text>
+                </g>
 
                 <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
                 <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
@@ -392,6 +400,8 @@ function updateActiveCylinders() {
         // Store IDs for click
         n2lRect.dataset.cylId = n2l ? n2l.id : '';
         n2rRect.dataset.cylId = n2r ? n2r.id : '';
+        n2LeftId = n2l ? n2l.id : null;
+        n2RightId = n2r ? n2r.id : null;
         
         // CO2
         const co2l = d.co2_left;
@@ -408,10 +418,29 @@ function updateActiveCylinders() {
         
         co2lRect.dataset.cylId = co2l ? co2l.id : '';
         co2rRect.dataset.cylId = co2r ? co2r.id : '';
+        co2LeftId = co2l ? co2l.id : null;
+        co2RightId = co2r ? co2r.id : null;
     });
 }
 updateActiveCylinders();
 setInterval(updateActiveCylinders, 30000);
+
+// Global cylinder IDs (set by updateActiveCylinders)
+var n2LeftId = null, n2RightId = null, co2LeftId = null, co2RightId = null;
+
+function cylClick(gas, position) {
+    var id, num;
+    if (gas === 'n2') {
+        id = position === 'left' ? n2LeftId : n2RightId;
+        var label = document.querySelector('.n2-' + position + '-label');
+        num = label ? label.textContent : '';
+    } else {
+        id = position === 'left' ? co2LeftId : co2RightId;
+        var label = document.querySelector('.co2-' + position + '-label');
+        num = label ? label.textContent : '';
+    }
+    openReplace(id, gas === 'n2' ? 'nitrogen' : 'co2', num, position);
+}
 
 // === REPLACE MODAL ===
 const aN2 = [{% for c in available_n2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
