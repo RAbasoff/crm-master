@@ -148,7 +148,7 @@ def warehouse_new():
         )
         db.session.add(i); db.session.commit()
         flash(_('Item added') + f': {i.naam}', 'success')
-        return redirect(url_for('warehouse.warehouse_list'))
+        return redirect(url_for('warehouse.warehouse_list', new_qr=i.id))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
     contractors = Contractor.query.order_by(Contractor.company_name).all()
     return render_template('warehouse_form.html', item=None, groups=groups, contractors=contractors)

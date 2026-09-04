@@ -56,12 +56,14 @@
         {% endfor %}
     </select>
     <span id="whSearchCount" style="font-size:12px;color:#888"></span>
+    <button class="btn btn-sm" style="background:#2c3e50;color:white;margin-left:auto" onclick="printSelectedQR()">🖨️ {{ _('Print QR Selected') }}</button>
 </div>
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Type') }}</th><th>{{ _('Group') }}</th><th>{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
+        <tr><th style="width:30px"><input type="checkbox" id="selectAllQR" onclick="toggleAllQR(this)"></th><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Type') }}</th><th>{{ _('Group') }}</th><th>{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
         {% for i in items %}
         <tr class="wh-row" data-name="{{ i.naam|lower }}">
+            <td><input type="checkbox" class="qr-check" data-id="{{ i.id }}" data-name="{{ i.naam }}" data-spn="{{ i.supplier_part_number or '' }}"></td>
             <td>{{ i.naam }}{% if i.consumable_type %} <span style="font-size:10px;background:#e8f5e9;padding:1px 4px;border-radius:3px">{{ i.consumable_type }}</span>{% endif %}</td>
             <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
             <td>{{ i.categorie or '—' }}</td>
@@ -291,5 +293,67 @@ function filterWarehouse(query) {
     const countEl = document.getElementById('whSearchCount');
     countEl.textContent = q ? (visible + ' {{ _("found") }}') : '';
 }
+
+// Show QR print modal after adding new item
+var newQrId = new URLSearchParams(window.location.search).get('new_qr');
+if (newQrId) {
+    var modal = document.getElementById('newQrModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('newQrContainer').innerHTML = '';
+        new QRCode(document.getElementById('newQrContainer'), {
+            text: window.location.origin + '/warehouse/' + newQrId + '/edit',
+            width: 180, height: 180,
+            colorDark: '#1a1a2e', colorLight: '#ffffff'
+        });
+        // Clean URL
+        window.history.replaceState({}, '', '/warehouse');
+    }
+}
+
+function printNewQr() {
+    var canvas = document.getElementById('newQrContainer').querySelector('canvas');
+    if (!canvas) return;
+    var img = canvas.toDataURL('image/png');
+    var name = document.getElementById('newQrName').textContent;
+    var w = window.open('', '_blank');
+    w.document.write('<html><body style="text-align:center;font-family:sans-serif"><h3>' + name + '</h3><img src="' + img + '" style="width:180px"><script>setTimeout(function(){window.print();window.close()},300)<\/script></body></html>');
+    w.document.close();
+}
+
+function toggleAllQR(master) {
+    document.querySelectorAll('.qr-check').forEach(function(cb) {
+        var row = cb.closest('.wh-row');
+        if (row && row.style.display !== 'none') cb.checked = master.checked;
+    });
+}
+
+function printSelectedQR() {
+    var checked = document.querySelectorAll('.qr-check:checked');
+    if (!checked.length) { alert('{{ _("Select items first") }}'); return; }
+    var ids = [];
+    checked.forEach(function(cb) { ids.push(cb.dataset.id); });
+    window.open('/warehouse/labels?ids=' + ids.join(','), '_blank');
+}
 </script>
+
+<!-- New QR Modal -->
+{% if request.args.get('new_qr') %}
+{% set new_item_id = request.args.get('new_qr')|int %}
+{% set new_item = items|selectattr('id','equalto',new_item_id)|first %}
+{% if new_item %}
+<div id="newQrModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:320px;width:90%;text-align:center">
+        <h2 style="margin:0 0 8px;font-size:16px">✅ {{ _('Item added!') }}</h2>
+        <p id="newQrName" style="font-weight:600;margin-bottom:12px">{{ new_item.naam }}</p>
+        <div id="newQrContainer" style="margin:12px 0"></div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+            <button onclick="printNewQr()" class="btn btn-sm" style="background:#3498db;color:white">🖨️ {{ _('Print QR') }}</button>
+            <button onclick="document.getElementById('newQrModal').style.display='none'" class="btn btn-sm" style="background:#eee">{{ _('Later') }}</button>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+{% endif %}
+{% endif %}
 {% endblock %}
