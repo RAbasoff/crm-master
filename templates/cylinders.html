@@ -366,7 +366,7 @@ function openReplaceFromModal() { closeStatusModal(); openReplace(statusCylId, s
 
 function setCylStatus(newStatus) {
     if (!statusCylId) return;
-    csrfFetch('/cylinders/status', {
+    csrfFetch('/gas-system/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({cylinder_id: statusCylId, status: newStatus, notes: document.getElementById('statusNotes').value})
@@ -378,7 +378,7 @@ function setCylStatus(newStatus) {
 
 // === LOAD ACTIVE CYLINDERS INTO SVG ===
 function updateActiveCylinders() {
-    csrfFetch('/cylinders/api/active').then(r => r.json()).then(d => {
+    csrfFetch('/gas-system/api/active').then(r => r.json()).then(d => {
         // N2 left (Group 1) - first in_use
         const n2l = d.n2_left;
         const n2r = d.n2_right;
@@ -479,7 +479,7 @@ function submitReplace() {
     var num = document.getElementById('newCylNumber').value.trim();
     if (!sid && !num) { alert('Select or enter number'); return; }
     var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    fetch('/cylinders/replace', {
+    fetch('/gas-system/replace', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
         body: JSON.stringify({cylinder_id: rId, new_cylinder_id: sid ? parseInt(sid) : null, new_number: num, gas_type: rGas, notes: document.getElementById('newCylNotes').value})
@@ -603,7 +603,7 @@ document.addEventListener('contextmenu', function(e) {
     e.preventDefault();
     const cid = parseInt(el.dataset.cid);
     if (!cid || !confirm('Reset to OK?')) return;
-    csrfFetch('/cylinders/component/' + cid + '/update', {
+    csrfFetch('/gas-system/component/' + cid + '/update', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: 'ok', notes: ''})
@@ -682,7 +682,7 @@ function saveComp() {
     const btn = document.getElementById('saveCompBtn');
     btn.disabled = true;
     btn.textContent = '...';
-    csrfFetch('/cylinders/component/' + currentCompId + '/update', {
+    csrfFetch('/gas-system/component/' + currentCompId + '/update', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: status, notes: notes})

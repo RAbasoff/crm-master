@@ -2204,7 +2204,7 @@ def enforce_cylinder_limit(gas_type):
         )
         db.session.add(log)
 
-@app.route('/cylinders')
+@app.route('/gas-system')
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinders_dashboard():
@@ -2303,7 +2303,7 @@ def cylinders_dashboard():
         n2_components=n2_components, co2_components=co2_components,
         n2_comp_data=n2_comp_data, co2_comp_data=co2_comp_data)
 
-@app.route('/cylinders/status', methods=['POST'])
+@app.route('/gas-system/status', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_status_change():
@@ -2336,7 +2336,7 @@ def cylinder_status_change():
     add_work_report(f'🔴 Баллон {gas_label} #{cyl.cylinder_number}: {old_status} → {new_status}')
     return jsonify({'ok': True})
 
-@app.route('/cylinders/api/active')
+@app.route('/gas-system/api/active')
 @login_required
 def cylinders_active_api():
     """Return currently installed cylinders for schematic display (left/right). Only in_use."""
@@ -2353,7 +2353,7 @@ def cylinders_active_api():
         'co2_right': cyl_info(co2_cylinders[1]) if len(co2_cylinders) > 1 else None,
     })
 
-@app.route('/cylinders/component/<int:comp_id>/update', methods=['POST'])
+@app.route('/gas-system/component/<int:comp_id>/update', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_component_update(comp_id):
@@ -2377,7 +2377,7 @@ def cylinder_component_update(comp_id):
     db.session.commit()
     return jsonify({'ok': True, 'status': comp.status})
 
-@app.route('/cylinders/replace', methods=['POST'])
+@app.route('/gas-system/replace', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_replace():
@@ -2443,7 +2443,7 @@ def cylinder_replace():
     add_work_report(f'🔀 Замена баллона {gas_label}: {old_number or "—"} → {new_number}')
     return jsonify({'ok': True})
 
-@app.route('/cylinders/order', methods=['POST'])
+@app.route('/gas-system/order', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_order():
@@ -2463,7 +2463,7 @@ def cylinder_order():
     flash(_('Cylinder order created'), 'success')
     return redirect(url_for('cylinders_dashboard'))
 
-@app.route('/cylinders/order/<int:order_id>/status', methods=['POST'])
+@app.route('/gas-system/order/<int:order_id>/status', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
 def cylinder_order_status(order_id):
