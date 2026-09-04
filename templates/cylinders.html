@@ -169,7 +169,8 @@ function loadData() {
     fetch('/gas-system/api/page-data').then(function(r) { return r.json(); }).then(function(d) {
         pageData = d;
         renderStats(d.stats, d.count_n2, d.count_co2, d.count_n2_all, d.count_co2_all);
-        renderCylinders(d);
+        renderActiveCyl('n2ActiveCyls', d.n2_active, 'nitrogen');
+        renderActiveCyl('co2ActiveCyls', d.co2_active, 'co2');
         renderSystem('n2System', d.n2_components, 'nitrogen');
         renderSystem('co2System', d.co2_components, 'co2');
         renderOrders(d.orders);
@@ -203,9 +204,6 @@ function renderStats(s, cN2, cCO2, cN2all, cCO2all) {
     html += '<div id="co2ActiveCyls" style="display:flex;gap:8px;margin-bottom:14px;justify-content:center"></div>';
     html += '<div style="border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#888;text-align:center">Click cylinder for details</div>';
     document.getElementById('cylStats').innerHTML = html;
-    // Render active cylinder SVGs
-    renderActiveCyl('n2ActiveCyls', d.n2_active, 'nitrogen');
-    renderActiveCyl('co2ActiveCyls', d.co2_active, 'co2');
 }
 
 function renderActiveCyl(containerId, cyls, gas) {
