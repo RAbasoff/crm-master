@@ -601,6 +601,11 @@
             if (e.key === 'Escape') closeSidebar();
         });
         
+        // Register service worker (only static assets, no HTML caching)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+        }
+        
         // CSRF helper for fetch POST requests
         function csrfFetch(url, opts = {}) {
             if (opts.method && opts.method.toUpperCase() !== 'GET') {
