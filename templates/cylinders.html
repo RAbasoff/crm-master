@@ -413,20 +413,6 @@ function updateActiveCylinders() {
 updateActiveCylinders();
 setInterval(updateActiveCylinders, 30000);
 
-// === CLICK CYLINDER IN SVG TO REPLACE ===
-document.querySelectorAll('.cyl-svg-click').forEach(el => {
-    el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const gas = this.dataset.gas;
-        const position = this.dataset.position;
-        const cylId = this.dataset.cylId;
-        const num = gas === 'nitrogen' 
-            ? document.querySelector(`.n2-${position}-label`).textContent 
-            : document.querySelector(`.co2-${position}-label`).textContent;
-        openReplace(cylId ? parseInt(cylId) : null, gas, num, position);
-    });
-});
-
 // === REPLACE MODAL ===
 const aN2 = [{% for c in available_n2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
 const aCO2 = [{% for c in available_co2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
@@ -622,11 +608,24 @@ function openCompModal(id) {
 }
 
 function svgClick(event) {
-    const el = event.target.closest('[data-cid]');
-    if (!el) return;
-    const id = parseInt(el.dataset.cid);
-    if (!id || isNaN(id)) return;
-    openCompModal(id);
+    // Handle component clicks
+    const compEl = event.target.closest('[data-cid]');
+    if (compEl) {
+        const id = parseInt(compEl.dataset.cid);
+        if (id && !isNaN(id)) { openCompModal(id); return; }
+    }
+    // Handle cylinder clicks in gas system SVG
+    const cylEl = event.target.closest('.cyl-svg-click');
+    if (cylEl) {
+        const gas = cylEl.dataset.gas;
+        const position = cylEl.dataset.position;
+        const cylId = cylEl.dataset.cylId;
+        const num = gas === 'nitrogen' 
+            ? document.querySelector('.n2-' + position + '-label').textContent 
+            : document.querySelector('.co2-' + position + '-label').textContent;
+        openReplace(cylId ? parseInt(cylId) : null, gas, num, position);
+        return;
+    }
 }
 
 function saveComp() {
