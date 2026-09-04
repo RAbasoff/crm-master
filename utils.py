@@ -11,7 +11,8 @@ SECTION_KEYS = [
     'machines', 'warehouse', 'orders', 'clients', 'workers', 'faults',
     'messages', 'reports', 'schedule', 'time_tracking', 'vacations',
     'cylinders', 'maintenance', 'purchase_requests', 'users', 'sections', 'floor',
-    'invoices', 'contractors', 'two', 'audit_log', 'quality'
+    'invoices', 'contractors', 'two', 'audit_log', 'settings', 'statistics',
+    'equipment', 'consumables', 'electricity', 'tool_wear'
 ]
 
 # Role hierarchy: admin > moderator > director > technician > user
