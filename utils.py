@@ -452,6 +452,7 @@ def run_migrations():
             notes TEXT,
             updated_at DATETIME
         )"""),
+        ("equipment_part.warehouse_item_id", "ALTER TABLE equipment_part ADD COLUMN warehouse_item_id INTEGER REFERENCES warehouse_item(id)"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
