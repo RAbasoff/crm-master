@@ -422,8 +422,10 @@ function updateActiveCylinders() {
         co2RightId = co2r ? co2r.id : null;
     });
 }
-updateActiveCylinders();
-setInterval(updateActiveCylinders, 30000);
+document.addEventListener('DOMContentLoaded', function() {
+    updateActiveCylinders();
+    setInterval(updateActiveCylinders, 30000);
+});
 
 // Global cylinder IDs (set by updateActiveCylinders)
 var n2LeftId = null, n2RightId = null, co2LeftId = null, co2RightId = null;
@@ -445,7 +447,7 @@ function cylClick(gas, position) {
 // === REPLACE MODAL ===
 const aN2 = [{% for c in available_n2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
 const aCO2 = [{% for c in available_co2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
-let rId = null, rGas = null, rPosition = '';
+var rId = null, rGas = null, rPosition = '';
 
 function openReplace(id, gas, num, position) {
     rId = id; rGas = gas; rPosition = position || '';
@@ -593,7 +595,7 @@ document.addEventListener('contextmenu', function(e) {
 });
 </script>
 <script>
-const allComps = {{ n2_json|tojson }}.concat({{ co2_json|tojson }});
+var allComps = ({{ n2_json }}).concat({{ co2_json }});
 const statusColors = {
     ok:      {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'},
     warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'},
