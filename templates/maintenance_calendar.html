@@ -11,11 +11,13 @@
     </div>
 </div>
 
-<!-- Reminders / Overdue -->
+<!-- Reminders / Overdue (collapsed by default) -->
 {% if overdue|length > 0 %}
 <div class="card" style="border-left:4px solid #e74c3c;background:#fff5f5">
-    <h2 style="color:#e74c3c;margin-bottom:12px">⚠️ {{ _('Overdue') }} ({{ overdue|length }})</h2>
-    <div class="table-wrap"><table>
+    <h2 style="color:#e74c3c;margin:0;cursor:pointer;display:flex;align-items:center;gap:8px" onclick="var t=this.nextElementSibling;t.style.display=t.style.display==='none'?'block':'none';this.querySelector('span').textContent=t.style.display==='none'?'▶':'▼'">
+        <span style="font-size:11px">▶</span> ⚠️ {{ _('Overdue') }} ({{ overdue|length }})
+    </h2>
+    <div class="table-wrap" style="display:none"><table>
         <tr><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Due Date') }}</th><th>{{ _('Days Overdue') }}</th><th></th></tr>
         {% for item in overdue %}
         <tr>
@@ -76,7 +78,7 @@
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}/parts{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.type == 'plan' %}{% if ev.status == 'completed' %}#95a5a6{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %}{% elif ev.type == 'replacement' %}{% if ev.overdue %}#c0392b{% else %}#e67e22{% endif %}{% elif ev.type == 'maintenance' %}{% if ev.overdue %}#c0392b{% else %}#f39c12{% endif %}{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}/parts{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' or ev.done %}#666{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.type == 'plan' %}{% if ev.status == 'completed' %}#d5dbdb{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %}{% elif ev.done %}#d5dbdb{% elif ev.type == 'replacement' %}{% if ev.overdue %}#c0392b{% else %}#e67e22{% endif %}{% elif ev.type == 'maintenance' %}{% if ev.overdue %}#c0392b{% else %}#f39c12{% endif %}{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
                                 {% if ev.type == 'plan' %}📋{% elif ev.type == 'replacement' %}🔄{% elif ev.type == 'maintenance' %}🔧{% else %}⚙️{% endif %} {{ ev.part[:15] }}
                             </a>
                             {% endfor %}
