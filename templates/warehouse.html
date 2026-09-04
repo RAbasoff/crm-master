@@ -66,7 +66,7 @@
             <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
             <td>{{ i.categorie or '—' }}</td>
             <td style="font-size:11px">{% if i.consumable_subtype %}{{ i.consumable_subtype }}{% elif i.volume %}{{ i.volume }}{% else %}—{% endif %}</td>
-            <td>{% if i.group %}<a href="/warehouse?group={{ i.group.id }}" style="color:#3498db">{{ i.group.name }}</a>{% else %}—{% endif %}</td>
+            <td>{% if i.group %}<a href="/warehouse?group={{ i.group.id }}" style="color:#3498db">{{ i.group.name }}</a>{% elif i.contractor %}<span style="color:#e67e22">📦 {{ i.contractor.company_name }}</span>{% else %}—{% endif %}</td>
             <td>{% if i.locatie %}📍 {{ i.locatie }}{% else %}—{% endif %}</td>
             <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">
                 <span id="qty-display-{{ i.id }}">{{ i.hoeveelheid }}</span>
