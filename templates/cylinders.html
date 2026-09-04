@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Gas Cylinders') }} — CRM{% endblock %}
 {% block content %}
+<script>
+// Force unregister service worker to prevent stale cache
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(reg) { reg.unregister(); });
+    });
+}
+</script>
 <div class="page-header">
     <h1>🔴 {{ _('Gas Cylinders') }}</h1>
     <div style="display:flex;gap:8px">
