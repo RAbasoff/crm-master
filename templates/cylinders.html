@@ -1,14 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Gas Cylinders') }} — CRM{% endblock %}
 {% block content %}
-<script>
-// Force unregister service worker to prevent stale cache
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(regs) {
-        regs.forEach(function(reg) { reg.unregister(); });
-    });
-}
-</script>
 <div class="page-header">
     <h1>🔴 {{ _('Gas Cylinders') }}</h1>
     <div style="display:flex;gap:8px">
@@ -18,14 +10,7 @@ if ('serviceWorker' in navigator) {
     </div>
 </div>
 
-{% if warnings %}
-{% for w in warnings %}
-<div class="alert alert-error" style="display:flex;align-items:center;gap:12px;border-left:4px solid #e74c3c">
-    <span style="font-size:24px">⚠️</span>
-    <div><strong>{{ _('Low stock') }}: {{ w.gas }}</strong> — {{ w.remaining }} {{ _('cylinders remaining') }}</div>
-</div>
-{% endfor %}
-{% endif %}
+<div id="warnings"></div>
 
 <!-- MAIN LAYOUT -->
 <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
@@ -33,58 +18,7 @@ if ('serviceWorker' in navigator) {
 <!-- LEFT: CYLINDER STATUS -->
 <div class="card" style="padding:16px">
     <h2 style="margin-bottom:12px;text-align:center;font-size:14px">📊 {{ _('Cylinder Status') }}</h2>
-    
-    <!-- N2 Cylinders with images -->
-    <h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N₂ {{ _('Nitrogen') }} ({{ count_n2 }}/{{ count_n2_all }})</h3>
-    <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
-        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_full }}</b> {{ _('Full') }}</span>
-        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_in_use }}</b> {{ _('In use') }}</span>
-        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_empty }}</b> {{ _('Empty') }}</span>
-        {% if stats.n2_leak > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#9b59b6;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_leak }}</b> {{ _('Leak') }}</span>{% endif %}
-        {% if stats.n2_faulty > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#566573;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_faulty }}</b> {{ _('Faulty') }}</span>{% endif %}
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
-        {% for cyl in n2_active %}
-        <div style="text-align:center;cursor:pointer" onclick="{% if cyl %}openStatusModal({{ cyl.id }}, '{{ cyl.cylinder_number }}', 'nitrogen', '{{ cyl.status }}'){% else %}showStats('nitrogen'){% endif %}">
-            <svg width="50" height="80" viewBox="0 0 75 120">
-                <defs><linearGradient id="sn2{{ loop.index }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="{% if cyl and cyl.status=='full' %}#2ecc71{% elif cyl and cyl.status=='in_use' %}#f1c40f{% else %}#e74c3c{% endif %}"/><stop offset="100%" stop-color="{% if cyl and cyl.status=='full' %}#27ae60{% elif cyl and cyl.status=='in_use' %}#f39c12{% else %}#c0392b{% endif %}"/></linearGradient></defs>
-                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
-                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
-                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sn2{{ loop.index }})" stroke="{% if cyl and cyl.status=='full' %}#1e8449{% elif cyl and cyl.status=='in_use' %}#d68910{% else %}#a93226{% endif %}" stroke-width="2"/>
-                <text x="37" y="60" text-anchor="middle" fill="white" font-size="16" font-weight="bold">N₂</text>
-                <text x="37" y="78" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">{% if cyl %}{{ cyl.cylinder_number[:8] }}{% else %}—{% endif %}</text>
-                <text x="37" y="93" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">{% if cyl %}{% if cyl.status=='full' %}FULL{% elif cyl.status=='in_use' %}USE{% else %}EMPTY{% endif %}{% else %}—{% endif %}</text>
-            </svg>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- CO2 Cylinders with images -->
-    <h3 style="color:#e67e22;margin-bottom:6px;font-size:13px;text-align:center">CO₂ {{ _('Carbon dioxide') }} ({{ count_co2 }}/{{ count_co2_all }})</h3>
-    <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
-        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_full }}</b> {{ _('Full') }}</span>
-        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_in_use }}</b> {{ _('In use') }}</span>
-        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_empty }}</b> {{ _('Empty') }}</span>
-        {% if stats.co2_leak > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#9b59b6;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_leak }}</b> {{ _('Leak') }}</span>{% endif %}
-        {% if stats.co2_faulty > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#566573;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_faulty }}</b> {{ _('Faulty') }}</span>{% endif %}
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
-        {% for cyl in co2_active %}
-        <div style="text-align:center;cursor:pointer" onclick="{% if cyl %}openStatusModal({{ cyl.id }}, '{{ cyl.cylinder_number }}', 'co2', '{{ cyl.status }}'){% else %}showStats('co2'){% endif %}">
-            <svg width="50" height="80" viewBox="0 0 75 120">
-                <defs><linearGradient id="sco2{{ loop.index }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="{% if cyl and cyl.status=='full' %}#2ecc71{% elif cyl and cyl.status=='in_use' %}#f1c40f{% else %}#e74c3c{% endif %}"/><stop offset="100%" stop-color="{% if cyl and cyl.status=='full' %}#27ae60{% elif cyl and cyl.status=='in_use' %}#f39c12{% else %}#c0392b{% endif %}"/></linearGradient></defs>
-                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
-                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
-                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sco2{{ loop.index }})" stroke="{% if cyl and cyl.status=='full' %}#1e8449{% elif cyl and cyl.status=='in_use' %}#d68910{% else %}#a93226{% endif %}" stroke-width="2"/>
-                <text x="37" y="57" text-anchor="middle" fill="white" font-size="13" font-weight="bold">CO₂</text>
-                <text x="37" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">{% if cyl %}{{ cyl.cylinder_number[:8] }}{% else %}—{% endif %}</text>
-                <text x="37" y="90" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">{% if cyl %}{% if cyl.status=='full' %}FULL{% elif cyl.status=='in_use' %}USE{% else %}EMPTY{% endif %}{% else %}—{% endif %}</text>
-            </svg>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div style="border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#888;text-align:center">{{ _('Click cylinder for details') }}</div>
+    <div id="cylStats"></div>
 </div>
 
 <!-- STATS MODAL -->
@@ -92,7 +26,7 @@ if ('serviceWorker' in navigator) {
     <div style="background:white;border-radius:16px;padding:24px;max-width:350px;width:90%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 id="statsTitle" style="margin:0;font-size:16px"></h2>
-            <button onclick="document.getElementById('statsModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+            <button onclick="document.getElementById('statsModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">&#10005;</button>
         </div>
         <div id="statsContent" style="font-size:14px;line-height:2"></div>
     </div>
@@ -102,184 +36,8 @@ if ('serviceWorker' in navigator) {
 <div class="card" style="padding:16px">
     <h2 style="margin-bottom:12px;text-align:center;font-size:14px">🔧 {{ _('Gas System') }}</h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <!-- N2 SYSTEM -->
-        <div>
-            <h3 style="color:#3498db;font-size:12px;margin-bottom:8px;text-align:center">N₂ {{ _('Nitrogen') }}</h3>
-            {% set n2h = n2_components|selectattr('component_type','equalto','heater')|list %}
-            {% set n2m = n2_components|selectattr('component_type','equalto','manometer')|list %}
-            {% set n2v = n2_components|selectattr('component_type','equalto','valve')|list %}
-            {% set n2s = n2_components|selectattr('component_type','equalto','shut_off')|list %}
-            <svg width="100%" height="380" viewBox="0 0 200 380" onclick="svgClick(event)">
-                <!-- Group frames -->
-                <rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
-                <text x="50" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">{{ _('Group') }} 1</text>
-                <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
-                <text x="150" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">{{ _('Group') }} 2</text>
-
-                <!-- Cylinder LEFT (Group 1) -->
-                <g style="cursor:pointer" onclick="cylClick('n2','left')">
-                    <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="left" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
-                    <text x="45" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold">N₂</text>
-                    <text x="45" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-left-label">—</text>
-                    <text x="45" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-left-status">—</text>
-                </g>
-
-                <!-- Cylinder RIGHT (Group 2) -->
-                <g style="cursor:pointer" onclick="cylClick('n2','right')">
-                    <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="right" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
-                    <text x="155" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold">N₂</text>
-                    <text x="155" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-right-label">—</text>
-                    <text x="155" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-right-status">—</text>
-                </g>
-
-                <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
-                <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
-
-                <!-- Heater 1 -->
-                <rect x="17" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ n2h[0].id if n2h|length > 0 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
-                <path d="M27,240 Q32,235 37,240 Q42,245 47,240 Q52,235 57,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-                <text x="45" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 1</text>
-                <text x="45" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ n2h[0].id if n2h|length > 0 }}" class="comp-txt">OK</text>
-
-                <!-- Heater 2 -->
-                <rect x="127" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ n2h[1].id if n2h|length > 1 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
-                <path d="M137,240 Q142,235 147,240 Q152,245 157,240 Q162,235 167,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-                <text x="155" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 2</text>
-                <text x="155" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ n2h[1].id if n2h|length > 1 }}" class="comp-txt">OK</text>
-
-                <line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>
-                <line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>
-                <line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>
-                <line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>
-
-                <!-- Switch -->
-                <rect x="77" y="192" rx="3" ry="3" width="46" height="16" data-cid="{{ n2s[0].id if n2s|length > 0 }}" class="comp-click" fill="#f39c12" stroke="#d68910" stroke-width="1.2"/>
-                <circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/>
-                <circle cx="110" cy="200" r="4" fill="#d68910"/>
-
-                <line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>
-
-                <!-- Valve -->
-                <rect x="78" y="148" rx="4" ry="4" width="44" height="20" data-cid="{{ n2v[0].id if n2v|length > 0 }}" class="comp-click" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
-                <line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>
-                <rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>
-                <text x="100" y="162" text-anchor="middle" fill="white" font-size="6" data-cid="{{ n2v[0].id if n2v|length > 0 }}" class="comp-txt">OK</text>
-
-                <!-- Manometers -->
-                <circle cx="60" cy="118" r="16" data-cid="{{ n2m[0].id if n2m|length > 0 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
-                <circle cx="60" cy="118" r="11" fill="white" stroke="#bbb"/>
-                <line x1="60" y1="118" x2="70" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
-                <circle cx="60" cy="118" r="2" fill="#333"/>
-                <text x="60" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ n2m[0].id if n2m|length > 0 }}" class="comp-txt">OK</text>
-
-                <circle cx="140" cy="118" r="16" data-cid="{{ n2m[1].id if n2m|length > 1 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
-                <circle cx="140" cy="118" r="11" fill="white" stroke="#bbb"/>
-                <line x1="140" y1="118" x2="150" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
-                <circle cx="140" cy="118" r="2" fill="#333"/>
-                <text x="140" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ n2m[1].id if n2m|length > 1 }}" class="comp-txt">OK</text>
-
-                <line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>
-                <line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>
-                <line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>
-
-                <rect x="55" y="72" rx="4" ry="4" width="90" height="22" data-cid="{{ n2s[0].id if n2s|length > 0 }}" class="comp-click" fill="#555" stroke="#333" stroke-width="1.2"/>
-                <circle cx="80" cy="83" r="6" fill="#27ae60"/>
-                <circle cx="120" cy="83" r="6" fill="#95a5a6"/>
-                <line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>
-
-                <line x1="100" y1="72" x2="100" y2="52" stroke="#3498db" stroke-width="3"/>
-                <polygon points="100,48 94,58 106,58" fill="#3498db"/>
-                <text x="100" y="45" text-anchor="middle" fill="#3498db" font-size="10" font-weight="bold">OUT</text>
-            </svg>
-        </div>
-
-        <!-- CO2 SYSTEM -->
-        <div>
-            <h3 style="color:#e67e22;font-size:12px;margin-bottom:8px;text-align:center">CO₂ {{ _('Carbon dioxide') }}</h3>
-            {% set co2h = co2_components|selectattr('component_type','equalto','heater')|list %}
-            {% set co2m = co2_components|selectattr('component_type','equalto','manometer')|list %}
-            {% set co2v = co2_components|selectattr('component_type','equalto','valve')|list %}
-            {% set co2s = co2_components|selectattr('component_type','equalto','shut_off')|list %}
-            <svg width="100%" height="380" viewBox="0 0 200 380" onclick="svgClick(event)">
-                <rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
-                <text x="50" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">{{ _('Group') }} 1</text>
-                <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
-                <text x="150" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">{{ _('Group') }} 2</text>
-
-                <!-- Cylinder LEFT (Group 1) -->
-                <g style="cursor:pointer" onclick="cylClick('co2','left')">
-                    <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="left" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
-                    <text x="45" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CO₂</text>
-                    <text x="45" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-left-label">—</text>
-                    <text x="45" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-left-status">—</text>
-                </g>
-
-                <!-- Cylinder RIGHT (Group 2) -->
-                <g style="cursor:pointer" onclick="cylClick('co2','right')">
-                    <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="right" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
-                    <text x="155" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CO₂</text>
-                    <text x="155" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-right-label">—</text>
-                    <text x="155" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-right-status">—</text>
-                </g>
-
-                <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
-                <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
-
-                <rect x="17" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ co2h[0].id if co2h|length > 0 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
-                <path d="M27,240 Q32,235 37,240 Q42,245 47,240 Q52,235 57,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-                <text x="45" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 1</text>
-                <text x="45" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ co2h[0].id if co2h|length > 0 }}" class="comp-txt">OK</text>
-
-                <rect x="127" y="225" rx="6" ry="6" width="56" height="38" data-cid="{{ co2h[1].id if co2h|length > 1 }}" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
-                <path d="M137,240 Q142,235 147,240 Q152,245 157,240 Q162,235 167,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-                <text x="155" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 2</text>
-                <text x="155" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="{{ co2h[1].id if co2h|length > 1 }}" class="comp-txt">OK</text>
-
-                <line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>
-                <line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>
-                <line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>
-                <line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>
-
-                <!-- Switch -->
-                <rect x="77" y="192" rx="3" ry="3" width="46" height="16" data-cid="{{ co2s[0].id if co2s|length > 0 }}" class="comp-click" fill="#f39c12" stroke="#d68910" stroke-width="1.2"/>
-                <circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/>
-                <circle cx="110" cy="200" r="4" fill="#d68910"/>
-
-                <line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>
-
-                <!-- Valve -->
-                <rect x="78" y="148" rx="4" ry="4" width="44" height="20" data-cid="{{ co2v[0].id if co2v|length > 0 }}" class="comp-click" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
-                <line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>
-                <rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>
-                <text x="100" y="162" text-anchor="middle" fill="white" font-size="6" data-cid="{{ co2v[0].id if co2v|length > 0 }}" class="comp-txt">OK</text>
-
-                <!-- Manometers -->
-                <circle cx="60" cy="118" r="16" data-cid="{{ co2m[0].id if co2m|length > 0 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
-                <circle cx="60" cy="118" r="11" fill="white" stroke="#bbb"/>
-                <line x1="60" y1="118" x2="70" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
-                <circle cx="60" cy="118" r="2" fill="#333"/>
-                <text x="60" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ co2m[0].id if co2m|length > 0 }}" class="comp-txt">OK</text>
-
-                <circle cx="140" cy="118" r="16" data-cid="{{ co2m[1].id if co2m|length > 1 }}" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
-                <circle cx="140" cy="118" r="11" fill="white" stroke="#bbb"/>
-                <line x1="140" y1="118" x2="150" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
-                <circle cx="140" cy="118" r="2" fill="#333"/>
-                <text x="140" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="{{ co2m[1].id if co2m|length > 1 }}" class="comp-txt">OK</text>
-
-                <line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>
-                <line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>
-                <line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>
-
-                <rect x="55" y="72" rx="4" ry="4" width="90" height="22" data-cid="{{ co2s[0].id if co2s|length > 0 }}" class="comp-click" fill="#555" stroke="#333" stroke-width="1.2"/>
-                <circle cx="80" cy="83" r="6" fill="#27ae60"/>
-                <circle cx="120" cy="83" r="6" fill="#95a5a6"/>
-                <line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>
-
-                <line x1="100" y1="72" x2="100" y2="52" stroke="#e67e22" stroke-width="3"/>
-                <polygon points="100,48 94,58 106,58" fill="#e67e22"/>
-                <text x="100" y="45" text-anchor="middle" fill="#e67e22" font-size="10" font-weight="bold">OUT</text>
-            </svg>
-        </div>
+        <div id="n2System"></div>
+        <div id="co2System"></div>
     </div>
     <p style="text-align:center;color:#888;font-size:10px">🔵 {{ _('Heater') }} | ⭕ {{ _('Manometer') }} | 🟢 {{ _('Valve') }} | 🟡 {{ _('Switch') }} | {{ _('Click cylinder to replace') }}</p>
 </div>
@@ -288,30 +46,30 @@ if ('serviceWorker' in navigator) {
 
 <!-- ORDERS + HISTORY -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-    <div class="card"><h2 style="margin-bottom:12px">{{ _('Orders') }}</h2>{% if orders %}<div class="table-wrap"><table><tr><th>{{ _('Date') }}</th><th>Gas</th><th>Qty</th><th>{{ _('Status') }}</th><th>{{ _('Delivered') }}</th></tr>{% for o in orders %}<tr><td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td><td>{% if o.gas_type=='nitrogen' %}N₂{% else %}CO₂{% endif %}</td><td>{{ o.quantity }}</td><td><span class="badge badge-{{ o.status }}">{{ o.status }}</span>{% if current_user.has_role('admin','technician') and o.status in ('pending','ordered') %}<form method="POST" action="/cylinders/order/{{ o.id }}/status" style="display:inline"><select name="status" onchange="if(this.value==='delivered'){openDeliver({{ o.id }},{{ o.quantity }},'{{ o.gas_type }}')}else{this.form.submit()}" style="font-size:11px;padding:2px"><option value="">{{ _('Change') }}</option><option value="ordered">{{ _('Ordered') }}</option><option value="delivered">{{ _('Delivered') }}</option><option value="cancelled">{{ _('Cancelled') }}</option></select></form>{% endif %}</td><td>{{ o.delivered_at.strftime('%d-%m-%Y') if o.delivered_at else '—' }}</td></tr>{% endfor %}</table></div>{% else %}<p style="color:#888;text-align:center">{{ _('No orders') }}</p>{% endif %}</div>
-    <div class="card"><h2 style="margin-bottom:12px">{{ _('History') }}</h2>{% if recent_logs %}<div style="max-height:200px;overflow-y:auto">{% for log in recent_logs %}<div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">{{ log.date.strftime('%d-%m %H:%M') }}</span> <b>{{ log.action }}</b>{% if log.new_cylinder_number %} {{ log.new_cylinder_number }}{% endif %}</div>{% endfor %}</div>{% else %}<p style="color:#888;text-align:center">{{ _('No history') }}</p>{% endif %}</div>
+    <div class="card" id="ordersCard"><h2 style="margin-bottom:12px">{{ _('Orders') }}</h2></div>
+    <div class="card" id="historyCard"><h2 style="margin-bottom:12px">{{ _('History') }}</h2></div>
 </div>
 
-<div class="card" style="margin-top:16px"><h2 style="margin-bottom:12px">{{ _('All Cylinders') }}</h2><div class="table-wrap"><table><tr><th>{{ _('Number') }}</th><th>Gas</th><th>{{ _('Status') }}</th><th>{{ _('Received') }}</th><th>{{ _('Installed') }}</th></tr>{% for c in all_cylinders %}<tr><td><b>{{ c.cylinder_number }}</b></td><td>{% if c.gas_type=='nitrogen' %}N₂{% else %}CO₂{% endif %}</td><td><span class="badge badge-{% if c.status=='full' %}active{% elif c.status=='in_use' %}high{% elif c.status=='leak' %}purple{% elif c.status=='faulty' %}broken{% else %}broken{% endif %}">{{ c.status }}</span></td><td>{{ c.received_at.strftime('%d-%m-%Y') if c.received_at else '—' }}</td><td>{{ c.installed_at.strftime('%d-%m-%Y') if c.installed_at else '—' }}</td></tr>{% endfor %}</table></div></div>
+<div class="card" style="margin-top:16px" id="allCylCard"><h2 style="margin-bottom:12px">{{ _('All Cylinders') }}</h2></div>
 
 <!-- MODALS -->
 <div id="statusModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
     <div style="background:white;border-radius:16px;padding:24px;max-width:380px;width:90%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 id="statusTitle" style="margin:0"></h2>
-            <button onclick="closeStatusModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+            <button onclick="closeModal('statusModal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">&#10005;</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-            <button class="btn" id="btn-full" onclick="setCylStatus('full')" style="background:#27ae60;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Full') }}</button>
-            <button class="btn" id="btn-in_use" onclick="setCylStatus('in_use')" style="background:#f39c12;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('In use') }}</button>
-            <button class="btn" id="btn-empty" onclick="setCylStatus('empty')" style="background:#e74c3c;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Empty') }}</button>
-            <button class="btn" id="btn-leak" onclick="setCylStatus('leak')" style="background:#9b59b6;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Leak') }}</button>
-            <button class="btn" id="btn-faulty" onclick="setCylStatus('faulty')" style="background:#566573;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">{{ _('Faulty') }}</button>
+            <button class="btn" onclick="setCylStatus('full')" style="background:#27ae60;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Full</button>
+            <button class="btn" onclick="setCylStatus('in_use')" style="background:#f39c12;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">In use</button>
+            <button class="btn" onclick="setCylStatus('empty')" style="background:#e74c3c;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Empty</button>
+            <button class="btn" onclick="setCylStatus('leak')" style="background:#9b59b6;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Leak</button>
+            <button class="btn" onclick="setCylStatus('faulty')" style="background:#566573;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Faulty</button>
         </div>
-        <div class="form-group"><label>{{ _('Notes') }}</label><textarea id="statusNotes" rows="2"></textarea></div>
+        <div class="form-group"><label>Notes</label><textarea id="statusNotes" rows="2"></textarea></div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-            <button class="btn" style="background:#eee" onclick="closeStatusModal()">{{ _('Cancel') }}</button>
-            <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReplaceFromModal()">{{ _('Replace') }} ↗</button>
+            <button class="btn" style="background:#eee" onclick="closeModal('statusModal')">Cancel</button>
+            <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReplaceFromStatus()">Replace</button>
         </div>
     </div>
 </div>
@@ -320,383 +78,428 @@ if ('serviceWorker' in navigator) {
     <div style="background:white;border-radius:16px;padding:24px;max-width:400px;width:90%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 id="compTitle" style="margin:0"></h2>
-            <button onclick="document.getElementById('componentModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+            <button onclick="closeModal('componentModal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">&#10005;</button>
         </div>
-        <div class="form-group"><label>{{ _('Status') }}</label>
-            <select id="compStatus">
-                <option value="ok">✅ OK</option>
-                <option value="warning">⚠️ {{ _('Warning') }}</option>
-                <option value="faulty">❌ {{ _('Faulty') }}</option>
-                <option value="replaced">🔄 {{ _('Replaced') }}</option>
-            </select>
+        <div class="form-group"><label>Status</label>
+            <select id="compStatus"><option value="ok">OK</option><option value="warning">Warning</option><option value="faulty">Faulty</option><option value="replaced">Replaced</option></select>
         </div>
-        <div class="form-group"><label>{{ _('Notes') }}</label><textarea id="compNotes" rows="2"></textarea></div>
+        <div class="form-group"><label>Notes</label><textarea id="compNotes" rows="2"></textarea></div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-            <button class="btn" style="background:#eee" onclick="document.getElementById('componentModal').style.display='none'">{{ _('Cancel') }}</button>
-            <button class="btn btn-primary" id="saveCompBtn" onclick="saveComp()">{{ _('Save') }}</button>
+            <button class="btn" style="background:#eee" onclick="closeModal('componentModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveComp()">Save</button>
         </div>
     </div>
 </div>
 
-<div id="replaceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">{{ _('Replace Cylinder') }}</h2><button onclick="closeReplace()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><p style="margin:0 0 12px;color:#666" id="replaceInfo"></p><div class="form-group"><label>{{ _('Select new') }}</label><select id="newCylSelect"><option value="">{{ _('Available') }}</option></select></div><div class="form-group"><label>{{ _('Or enter number') }}</label><input type="text" id="newCylNumber"></div><div class="form-group"><label>{{ _('Notes') }}</label><textarea id="newCylNotes" rows="2"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" style="background:#eee" onclick="closeReplace()">{{ _('Cancel') }}</button><button class="btn btn-primary" onclick="submitReplace()">{{ _('Replace') }}</button></div></div></div>
+<div id="replaceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">Replace Cylinder</h2>
+            <button onclick="closeModal('replaceModal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">&#10005;</button>
+        </div>
+        <p style="margin:0 0 12px;color:#666" id="replaceInfo"></p>
+        <div class="form-group"><label>Select new</label><select id="newCylSelect"><option value="">Available</option></select></div>
+        <div class="form-group"><label>Or enter number</label><input type="text" id="newCylNumber"></div>
+        <div class="form-group"><label>Notes</label><textarea id="newCylNotes" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn" style="background:#eee" onclick="closeModal('replaceModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitReplace()">Replace</button>
+        </div>
+    </div>
+</div>
 
-<div id="deliverModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">{{ _('Deliver') }}</h2><button onclick="closeDeliver()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><p id="deliverInfo" style="margin:0 0 12px;color:#666"></p><form method="POST" id="deliverForm"><input type="hidden" name="status" value="delivered"><div class="form-group"><label>{{ _('Numbers') }}</label><textarea name="cylinder_numbers" id="deliverNumbers" rows="4"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="closeDeliver()">{{ _('Cancel') }}</button><button type="submit" class="btn btn-success">{{ _('Confirm') }}</button></div></form></div></div>
+<div id="deliverModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">Deliver</h2>
+            <button onclick="closeModal('deliverModal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">&#10005;</button>
+        </div>
+        <p id="deliverInfo" style="margin:0 0 12px;color:#666"></p>
+        <form method="POST" id="deliverForm">
+            <input type="hidden" name="status" value="delivered">
+            <div class="form-group"><label>Numbers</label><textarea name="cylinder_numbers" id="deliverNumbers" rows="4"></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button type="button" class="btn" style="background:#eee" onclick="closeModal('deliverModal')">Cancel</button>
+                <button type="submit" class="btn btn-success">Confirm</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-<div id="orderModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">{{ _('Order Cylinders') }}</h2><button onclick="document.getElementById('orderModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><form method="POST" action="/cylinders/order"><div class="form-row"><div class="form-group"><label>Gas</label><select name="gas_type" required><option value="nitrogen">N₂</option><option value="co2">CO₂</option></select></div><div class="form-group"><label>{{ _('Qty') }}</label><input type="number" name="quantity" value="1" min="1"></div></div><div class="form-group"><label>{{ _('Supplier') }}</label><input type="text" name="supplier"></div><div class="form-group"><label>{{ _('Reason') }}</label><textarea name="reason" rows="2"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="document.getElementById('orderModal').style.display='none'">{{ _('Cancel') }}</button><button type="submit" class="btn btn-primary">{{ _('Order') }}</button></div></form></div></div>
+<div id="orderModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">Order Cylinders</h2>
+            <button onclick="closeModal('orderModal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">&#10005;</button>
+        </div>
+        <form method="POST" action="/gas-system/order">
+            <div class="form-row"><div class="form-group"><label>Gas</label><select name="gas_type" required><option value="nitrogen">N2</option><option value="co2">CO2</option></select></div><div class="form-group"><label>Qty</label><input type="number" name="quantity" value="1" min="1"></div></div>
+            <div class="form-group"><label>Supplier</label><input type="text" name="supplier"></div>
+            <div class="form-group"><label>Reason</label><textarea name="reason" rows="2"></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="closeModal('orderModal')">Cancel</button><button type="submit" class="btn btn-primary">Order</button></div>
+        </form>
+    </div>
+</div>
 
-<style>.comp-click{cursor:pointer;transition:filter .15s}.comp-click:hover{filter:brightness(1.2)}.cyl-svg-click:hover{filter:brightness(1.3);stroke-width:3}</style>
+<style>.comp-rect{cursor:pointer;transition:filter .15s}.comp-rect:hover{filter:brightness(1.2)}.cyl-group{cursor:pointer}.cyl-group:hover{filter:brightness(1.3)}</style>
+
 <script>
-// === CYLINDER STATUS CHANGE ===
-let statusCylId = null, statusGas = null, statusCylNum = '';
+// === STATE ===
+var statusCylId = null, statusGas = null, statusCylNum = '';
+var rId = null, rGas = null;
+var currentCompId = null;
+var pageData = null;
 
+// === HELPERS ===
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function getCSRF() { return document.querySelector('meta[name="csrf-token"]').content; }
+function statusColor(s) {
+    if (!s) return '#e74c3c';
+    if (s === 'full') return '#27ae60';
+    if (s === 'in_use') return '#f39c12';
+    if (s === 'empty') return '#e74c3c';
+    if (s === 'leak') return '#9b59b6';
+    if (s === 'faulty') return '#566573';
+    return '#95a5a6';
+}
+
+// === LOAD ALL DATA VIA API ===
+function loadData() {
+    fetch('/gas-system/api/page-data').then(function(r) { return r.json(); }).then(function(d) {
+        pageData = d;
+        renderStats(d.stats, d.count_n2, d.count_co2, d.count_n2_all, d.count_co2_all);
+        renderCylinders(d);
+        renderSystem('n2System', d.n2_components, 'nitrogen');
+        renderSystem('co2System', d.co2_components, 'co2');
+        renderOrders(d.orders);
+        renderHistory(d.recent_logs);
+        renderAllCylinders(d.all_cylinders);
+        renderWarnings(d.warnings);
+        // Low stock flash
+        if (d.stats.n2_full <= 4 && d.stats.n2_full > 0) showLowStock(d.stats.n2_full);
+    });
+}
+
+function renderStats(s, cN2, cCO2, cN2all, cCO2all) {
+    var html = '';
+    html += '<h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N2 Nitrogen (' + cN2 + '/' + cN2all + ')</h3>';
+    html += '<div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">';
+    html += '<span style="font-size:11px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>' + s.n2_full + '</b> Full</span>';
+    html += '<span style="font-size:11px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>' + s.n2_in_use + '</b> In use</span>';
+    html += '<span style="font-size:11px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>' + s.n2_empty + '</b> Empty</span>';
+    if (s.n2_leak > 0) html += '<span style="font-size:11px;background:#9b59b6;color:white;padding:3px 8px;border-radius:10px"><b>' + s.n2_leak + '</b> Leak</span>';
+    if (s.n2_faulty > 0) html += '<span style="font-size:11px;background:#566573;color:white;padding:3px 8px;border-radius:10px"><b>' + s.n2_faulty + '</b> Faulty</span>';
+    html += '</div>';
+    html += '<div id="n2ActiveCyls" style="display:flex;gap:8px;margin-bottom:14px;justify-content:center"></div>';
+    html += '<h3 style="color:#e67e22;margin-bottom:6px;font-size:13px;text-align:center">CO2 Carbon dioxide (' + cCO2 + '/' + cCO2all + ')</h3>';
+    html += '<div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">';
+    html += '<span style="font-size:11px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>' + s.co2_full + '</b> Full</span>';
+    html += '<span style="font-size:11px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>' + s.co2_in_use + '</b> In use</span>';
+    html += '<span style="font-size:11px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>' + s.co2_empty + '</b> Empty</span>';
+    if (s.co2_leak > 0) html += '<span style="font-size:11px;background:#9b59b6;color:white;padding:3px 8px;border-radius:10px"><b>' + s.co2_leak + '</b> Leak</span>';
+    if (s.co2_faulty > 0) html += '<span style="font-size:11px;background:#566573;color:white;padding:3px 8px;border-radius:10px"><b>' + s.co2_faulty + '</b> Faulty</span>';
+    html += '</div>';
+    html += '<div id="co2ActiveCyls" style="display:flex;gap:8px;margin-bottom:14px;justify-content:center"></div>';
+    html += '<div style="border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#888;text-align:center">Click cylinder for details</div>';
+    document.getElementById('cylStats').innerHTML = html;
+    // Render active cylinder SVGs
+    renderActiveCyl('n2ActiveCyls', d.n2_active, 'nitrogen');
+    renderActiveCyl('co2ActiveCyls', d.co2_active, 'co2');
+}
+
+function renderActiveCyl(containerId, cyls, gas) {
+    var c = document.getElementById(containerId);
+    var html = '';
+    for (var i = 0; i < cyls.length; i++) {
+        var cyl = cyls[i];
+        var color = cyl ? statusColor(cyl.status) : '#e74c3c';
+        var label = cyl ? cyl.number.substring(0, 8) : '\u2014';
+        var st = cyl ? cyl.status.toUpperCase() : 'EMPTY';
+        var id = cyl ? cyl.id : 0;
+        html += '<div style="text-align:center;cursor:pointer" onclick="openStatusModal(' + id + ',\'' + esc(label) + '\',\'' + gas + '\',\'' + (cyl ? cyl.status : '') + '\')">';
+        html += '<svg width="50" height="80" viewBox="0 0 75 120">';
+        html += '<rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>';
+        html += '<rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>';
+        html += '<rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="' + color + '" stroke="' + color + '" stroke-width="2"/>';
+        html += '<text x="37" y="60" text-anchor="middle" fill="white" font-size="16" font-weight="bold">' + (gas === 'nitrogen' ? 'N2' : 'CO2') + '</text>';
+        html += '<text x="37" y="78" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">' + esc(label) + '</text>';
+        html += '<text x="37" y="93" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">' + st + '</text>';
+        html += '</svg></div>';
+    }
+    c.innerHTML = html;
+}
+
+function renderSystem(containerId, components, gas) {
+    var c = document.getElementById(containerId);
+    var color = gas === 'nitrogen' ? '#3498db' : '#e67e22';
+    var label = gas === 'nitrogen' ? 'N2 Nitrogen' : 'CO2 Carbon dioxide';
+    var html = '<h3 style="color:' + color + ';font-size:12px;margin-bottom:8px;text-align:center">' + label + '</h3>';
+    // Find components by type
+    var heaters = [], manometers = [], valves = [], shutOffs = [];
+    for (var i = 0; i < components.length; i++) {
+        var comp = components[i];
+        if (comp.type === 'heater') heaters.push(comp);
+        else if (comp.type === 'manometer') manometers.push(comp);
+        else if (comp.type === 'valve') valves.push(comp);
+        else if (comp.type === 'shut_off') shutOffs.push(comp);
+    }
+    var sc = {ok: {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'}, warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'}, faulty: {fill: '#c0392b', circle: '#f8d7da', text: 'FAULT'}, replaced: {fill: '#8e44ad', circle: '#e8daef', text: 'NEW'}};
+    function compColor(comp) { return sc[comp.status || 'ok'] || sc.ok; }
+    html += '<svg width="100%" height="380" viewBox="0 0 200 380">';
+    // Group frames
+    html += '<rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="' + color + '" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>';
+    html += '<rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="' + color + '" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>';
+    // Cylinders
+    html += buildCylSVG(25, 290, gas, 'left', color);
+    html += buildCylSVG(135, 290, gas, 'right', color);
+    // Pipes
+    html += '<line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>';
+    html += '<line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>';
+    // Heaters
+    html += buildCompRect(17, 225, 56, 38, heaters[0], 'HEAT 1');
+    html += buildCompRect(127, 225, 56, 38, heaters[1], 'HEAT 2');
+    html += '<line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>';
+    html += '<line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>';
+    html += '<line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>';
+    html += '<line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>';
+    // Switch
+    if (shutOffs[0]) {
+        var sw = compColor(shutOffs[0]);
+        html += '<rect x="77" y="192" rx="3" ry="3" width="46" height="16" fill="' + sw.fill + '" stroke="#d68910" stroke-width="1.2" class="comp-rect" onclick="openCompModal(' + shutOffs[0].id + ')"/>';
+    }
+    html += '<circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/><circle cx="110" cy="200" r="4" fill="#d68910"/>';
+    html += '<line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>';
+    // Valve
+    if (valves[0]) {
+        var vc = compColor(valves[0]);
+        html += '<rect x="78" y="148" rx="4" ry="4" width="44" height="20" fill="' + vc.fill + '" stroke="#1e8449" stroke-width="1.5" class="comp-rect" onclick="openCompModal(' + valves[0].id + ')"/>';
+        html += '<text x="100" y="162" text-anchor="middle" fill="white" font-size="6">' + vc.text + '</text>';
+    }
+    html += '<line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>';
+    html += '<rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>';
+    // Manometers
+    html += buildManometer(60, 118, manometers[0]);
+    html += buildManometer(140, 118, manometers[1]);
+    html += '<line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>';
+    html += '<line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>';
+    html += '<line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>';
+    // Switch display
+    html += '<rect x="55" y="72" rx="4" ry="4" width="90" height="22" fill="#555" stroke="#333" stroke-width="1.2"/>';
+    html += '<circle cx="80" cy="83" r="6" fill="#27ae60"/><circle cx="120" cy="83" r="6" fill="#95a5a6"/>';
+    html += '<line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>';
+    html += '<line x1="100" y1="72" x2="100" y2="52" stroke="' + color + '" stroke-width="3"/>';
+    html += '<polygon points="100,48 94,58 106,58" fill="' + color + '"/>';
+    html += '<text x="100" y="45" text-anchor="middle" fill="' + color + '" font-size="10" font-weight="bold">OUT</text>';
+    html += '</svg>';
+    c.innerHTML = html;
+}
+
+function buildCylSVG(x, y, gas, pos, color) {
+    var html = '<g class="cyl-group" onclick="cylClick(\'' + gas + '\',\'' + pos + '\')">';
+    html += '<rect x="' + x + '" y="' + y + '" rx="8" ry="8" width="40" height="70" fill="' + color + '" stroke="' + (gas === 'nitrogen' ? '#2471a3' : '#d35400') + '" stroke-width="2"/>';
+    html += '<text x="' + (x + 20) + '" y="' + (y + 35) + '" text-anchor="middle" fill="white" font-size="12" font-weight="bold">' + (gas === 'nitrogen' ? 'N2' : 'CO2') + '</text>';
+    html += '<text x="' + (x + 20) + '" y="' + (y + 50) + '" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7">\u2014</text>';
+    html += '</g>';
+    return html;
+}
+
+function buildCompRect(x, y, w, h, comp, label) {
+    if (!comp) return '';
+    var sc = {ok: {fill: '#2471a3', text: 'OK'}, warning: {fill: '#d68910', text: 'WARN'}, faulty: {fill: '#c0392b', text: 'FAULT'}, replaced: {fill: '#8e44ad', text: 'NEW'}};
+    var s = sc[comp.status || 'ok'] || sc.ok;
+    var html = '<rect x="' + x + '" y="' + y + '" rx="6" ry="6" width="' + w + '" height="' + h + '" fill="' + s.fill + '" stroke="#1a5276" stroke-width="1.5" class="comp-rect" onclick="openCompModal(' + comp.id + ')"/>';
+    html += '<text x="' + (x + w/2) + '" y="' + (y + 29) + '" text-anchor="middle" fill="white" font-size="8" font-weight="bold">' + label + '</text>';
+    html += '<text x="' + (x + w/2) + '" y="' + (y + 36) + '" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6">' + s.text + '</text>';
+    return html;
+}
+
+function buildManometer(cx, cy, comp) {
+    if (!comp) return '';
+    var sc = {ok: {circle: '#ecf0f1', text: 'OK'}, warning: {circle: '#fff3cd', text: 'WARN'}, faulty: {circle: '#f8d7da', text: 'FAULT'}, replaced: {circle: '#e8daef', text: 'NEW'}};
+    var s = sc[comp.status || 'ok'] || sc.ok;
+    var html = '<circle cx="' + cx + '" cy="' + cy + '" r="16" fill="' + s.circle + '" stroke="#34495e" stroke-width="1.2" class="comp-rect" onclick="openCompModal(' + comp.id + ')"/>';
+    html += '<circle cx="' + cx + '" cy="' + cy + '" r="11" fill="white" stroke="#bbb"/>';
+    html += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx+10) + '" y2="' + (cy-8) + '" stroke="#e74c3c" stroke-width="1.2"/>';
+    html += '<circle cx="' + cx + '" cy="' + cy + '" r="2" fill="#333"/>';
+    html += '<text x="' + cx + '" y="' + (cy+22) + '" text-anchor="middle" fill="#555" font-size="6">' + s.text + '</text>';
+    return html;
+}
+
+// === CYLINDER CLICK ===
+function cylClick(gas, position) {
+    if (!pageData) return;
+    var cyl = null;
+    if (gas === 'nitrogen') cyl = position === 'left' ? pageData.n2_active[0] : pageData.n2_active[1];
+    else cyl = position === 'left' ? pageData.co2_active[0] : pageData.co2_active[1];
+    var id = cyl ? cyl.id : null;
+    var num = cyl ? cyl.number : '\u2014';
+    openReplace(id, gas, num, position);
+}
+
+// === STATUS MODAL ===
 function openStatusModal(id, number, gas, currentStatus) {
     if (!id) return;
     statusCylId = id; statusGas = gas; statusCylNum = number;
-    document.getElementById('statusTitle').textContent = (gas === 'nitrogen' ? 'N₂' : 'CO₂') + ' #' + number;
-    ['full','in_use','empty','leak','faulty'].forEach(s => {
-        const btn = document.getElementById('btn-' + s);
-        btn.style.outline = (s === currentStatus) ? '3px solid #333' : 'none';
-        btn.style.opacity = (s === currentStatus) ? '1' : '0.7';
-    });
+    document.getElementById('statusTitle').textContent = (gas === 'nitrogen' ? 'N2' : 'CO2') + ' #' + number;
     document.getElementById('statusNotes').value = '';
     document.getElementById('statusModal').style.display = 'flex';
 }
-function closeStatusModal() { document.getElementById('statusModal').style.display = 'none'; }
-function openReplaceFromModal() { closeStatusModal(); openReplace(statusCylId, statusGas, statusCylNum); }
-
+function openReplaceFromStatus() { closeModal('statusModal'); openReplace(statusCylId, statusGas, statusCylNum); }
 function setCylStatus(newStatus) {
     if (!statusCylId) return;
-    csrfFetch('/gas-system/status', {
+    fetch('/gas-system/status', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
         body: JSON.stringify({cylinder_id: statusCylId, status: newStatus, notes: document.getElementById('statusNotes').value})
-    }).then(r => r.json()).then(d => {
-        if (d.ok) { closeStatusModal(); location.reload(); }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) { closeModal('statusModal'); loadData(); }
         else alert(d.error || 'Error');
-    }).catch(e => alert('Error: ' + e.message));
-}
-
-// === LOAD ACTIVE CYLINDERS INTO SVG ===
-function updateActiveCylinders() {
-    csrfFetch('/gas-system/api/active').then(r => r.json()).then(d => {
-        // N2 left (Group 1) - first in_use
-        const n2l = d.n2_left;
-        const n2r = d.n2_right;
-        document.querySelector('.n2-left-label').textContent = n2l ? n2l.number : '—';
-        document.querySelector('.n2-left-status').textContent = n2l ? n2l.status.toUpperCase() : 'EMPTY';
-        document.querySelector('.n2-right-label').textContent = n2r ? n2r.number : '—';
-        document.querySelector('.n2-right-status').textContent = n2r ? n2r.status.toUpperCase() : 'EMPTY';
-        
-        // Color based on status
-        function getStatusColor(status) {
-            if (!status) return '#e74c3c';
-            switch(status) {
-                case 'full': return '#27ae60';
-                case 'in_use': return '#f39c12';
-                case 'empty': return '#e74c3c';
-                case 'leak': return '#9b59b6';
-                case 'faulty': return '#566573';
-                default: return '#95a5a6';
-            }
-        }
-        
-        const n2lRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="left"]');
-        const n2rRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="right"]');
-        n2lRect.setAttribute('fill', getStatusColor(n2l ? n2l.status : null));
-        n2rRect.setAttribute('fill', getStatusColor(n2r ? n2r.status : null));
-        
-        // Store IDs for click
-        n2lRect.dataset.cylId = n2l ? n2l.id : '';
-        n2rRect.dataset.cylId = n2r ? n2r.id : '';
-        n2LeftId = n2l ? n2l.id : null;
-        n2RightId = n2r ? n2r.id : null;
-        
-        // CO2
-        const co2l = d.co2_left;
-        const co2r = d.co2_right;
-        document.querySelector('.co2-left-label').textContent = co2l ? co2l.number : '—';
-        document.querySelector('.co2-left-status').textContent = co2l ? co2l.status.toUpperCase() : 'EMPTY';
-        document.querySelector('.co2-right-label').textContent = co2r ? co2r.number : '—';
-        document.querySelector('.co2-right-status').textContent = co2r ? co2r.status.toUpperCase() : 'EMPTY';
-        
-        const co2lRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="left"]');
-        const co2rRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="right"]');
-        co2lRect.setAttribute('fill', getStatusColor(co2l ? co2l.status : null));
-        co2rRect.setAttribute('fill', getStatusColor(co2r ? co2r.status : null));
-        
-        co2lRect.dataset.cylId = co2l ? co2l.id : '';
-        co2rRect.dataset.cylId = co2r ? co2r.id : '';
-        co2LeftId = co2l ? co2l.id : null;
-        co2RightId = co2r ? co2r.id : null;
     });
-}
-document.addEventListener('DOMContentLoaded', function() {
-    updateActiveCylinders();
-    setInterval(updateActiveCylinders, 30000);
-});
-
-// Global cylinder IDs (set by updateActiveCylinders)
-var n2LeftId = null, n2RightId = null, co2LeftId = null, co2RightId = null;
-
-function cylClick(gas, position) {
-    var id, num;
-    if (gas === 'n2') {
-        id = position === 'left' ? n2LeftId : n2RightId;
-        var label = document.querySelector('.n2-' + position + '-label');
-        num = label ? label.textContent : '';
-    } else {
-        id = position === 'left' ? co2LeftId : co2RightId;
-        var label = document.querySelector('.co2-' + position + '-label');
-        num = label ? label.textContent : '';
-    }
-    openReplace(id, gas === 'n2' ? 'nitrogen' : 'co2', num, position);
 }
 
 // === REPLACE MODAL ===
-const aN2 = [{% for c in available_n2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
-const aCO2 = [{% for c in available_co2 %}{id:{{ c.id }},n:'{{ c.cylinder_number }}'}{% if not loop.last %},{% endif %}{% endfor %}];
-var rId = null, rGas = null, rPosition = '';
-
 function openReplace(id, gas, num, position) {
-    rId = id; rGas = gas; rPosition = position || '';
-    var gasLabel = gas === 'nitrogen' ? 'N\u2082' : 'CO\u2082';
+    rId = id; rGas = gas;
+    var gasLabel = gas === 'nitrogen' ? 'N2' : 'CO2';
     var posLabel = position === 'left' ? ' (Left)' : position === 'right' ? ' (Right)' : '';
     document.getElementById('replaceInfo').textContent = 'Replace ' + gasLabel + posLabel + ' #' + (num || '\u2014');
     var sel = document.getElementById('newCylSelect');
-    var list = gas === 'nitrogen' ? aN2 : aCO2;
+    var list = gas === 'nitrogen' ? (pageData ? pageData.available_n2 : []) : (pageData ? pageData.available_co2 : []);
     sel.innerHTML = '<option value="">Select</option>';
-    function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
     for (var i = 0; i < list.length; i++) {
-        sel.innerHTML += '<option value="' + parseInt(list[i].id) + '">' + esc(list[i].n) + '</option>';
+        sel.innerHTML += '<option value="' + list[i].id + '">' + esc(list[i].number) + '</option>';
     }
     document.getElementById('newCylNumber').value = '';
     document.getElementById('newCylNotes').value = '';
     document.getElementById('replaceModal').style.display = 'flex';
 }
-function closeReplace() { document.getElementById('replaceModal').style.display = 'none'; }
 function submitReplace() {
     var sid = document.getElementById('newCylSelect').value;
     var num = document.getElementById('newCylNumber').value.trim();
     if (!sid && !num) { alert('Select or enter number'); return; }
-    var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     fetch('/gas-system/replace', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
         body: JSON.stringify({cylinder_id: rId, new_cylinder_id: sid ? parseInt(sid) : null, new_number: num, gas_type: rGas, notes: document.getElementById('newCylNotes').value})
     }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.ok) location.reload();
+        if (d.ok) { closeModal('replaceModal'); loadData(); }
         else alert(d.error || 'Error');
     }).catch(function(e) { alert('Error: ' + e.message); });
 }
 
-function openDeliver(oid, qty, gas) {
-    document.getElementById('deliverInfo').textContent = `${gas === 'nitrogen' ? 'N₂' : 'CO₂'}: ${qty}`;
-    document.getElementById('deliverForm').action = `/cylinders/order/${oid}/status`;
-    document.getElementById('deliverNumbers').value = '';
-    document.getElementById('deliverModal').style.display = 'flex';
-}
-function closeDeliver() { document.getElementById('deliverModal').style.display = 'none'; }
-
-document.querySelectorAll('[id$="Modal"]').forEach(m => {
-    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
-});
-
-// Translation strings
-const T = {
-    nitrogen: '{{ _("Nitrogen") }}',
-    carbonDioxide: '{{ _("Carbon dioxide") }}',
-    full: '{{ _("Full") }}',
-    inUse: '{{ _("In use") }}',
-    empty: '{{ _("Empty") }}',
-    leak: '{{ _("Leak") }}',
-    faulty: '{{ _("Faulty") }}',
-    total: '{{ _("Total") }}',
-    attention: '{{ _("ATTENTION!") }}',
-    remaining: '{{ _("Remaining") }}',
-    fullCylinders: '{{ _("full cylinders N₂") }}',
-    needOrder: '{{ _("NEED TO ORDER!") }}',
-    understood: '{{ _("UNDERSTOOD") }}',
-    replace: '{{ _("Replace") }}',
-    select: '{{ _("Select") }}',
-    enterNumber: '{{ _("Enter number") }}',
-    selectOrEnter: '{{ _("Select or enter number") }}'
-};
-
-// === STATS MODAL ===
-const statsData = {
-    nitrogen: {
-        full: {{ stats.n2_full }},
-        in_use: {{ stats.n2_in_use }},
-        empty: {{ stats.n2_empty }},
-        leak: {{ stats.n2_leak }},
-        faulty: {{ stats.n2_faulty }},
-        total: {{ count_n2 }},
-        total_all: {{ count_n2_all }}
-    },
-    co2: {
-        full: {{ stats.co2_full }},
-        in_use: {{ stats.co2_in_use }},
-        empty: {{ stats.co2_empty }},
-        leak: {{ stats.co2_leak }},
-        faulty: {{ stats.co2_faulty }},
-        total: {{ count_co2 }},
-        total_all: {{ count_co2_all }}
-    }
-};
-
-function showStats(gas) {
-    const d = statsData[gas];
-    const label = gas === 'nitrogen' ? 'N₂ ' + T.nitrogen : 'CO₂ ' + T.carbonDioxide;
-    document.getElementById('statsTitle').textContent = label;
-    document.getElementById('statsContent').innerHTML = 
-        `<div style="display:flex;flex-direction:column;gap:8px">` +
-        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#27ae60;color:white;border-radius:8px"><span>${T.full}:</span><b>${d.full}</b></div>` +
-        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f39c12;color:white;border-radius:8px"><span>${T.inUse}:</span><b>${d.in_use}</b></div>` +
-        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#e74c3c;color:white;border-radius:8px"><span>${T.empty}:</span><b>${d.empty}</b></div>` +
-        (d.leak > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#9b59b6;color:white;border-radius:8px"><span>${T.leak}:</span><b>${d.leak}</b></div>` : '') +
-        (d.faulty > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#566573;color:white;border-radius:8px"><span>${T.faulty}:</span><b>${d.faulty}</b></div>` : '') +
-        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#eee;border-radius:8px;font-weight:600"><span>${T.total}:</span><b>${d.total}</b></div>` +
-        (d.total_all !== d.total ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#ddd;border-radius:8px;font-size:12px"><span>{{ _('All (incl. empty/faulty)') }}:</span><b>${d.total_all}</b></div>` : '') +
-        `</div>`;
-    document.getElementById('statsModal').style.display = 'flex';
-}
-
-// === LOW STOCK WARNING (N2 <= 4) ===
-(function() {
-    const n2Full = {{ stats.n2_full }};
-    if (n2Full <= 4 && n2Full > 0) {
-        const overlay = document.createElement('div');
-        overlay.id = 'lowStockWarning';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
-        overlay.innerHTML = '<div id="flashBox" style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(231,76,60,0.8)">' +
-            '<div style="font-size:64px;margin-bottom:16px">⚠️</div>' +
-            '<div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">' + T.attention + '</div>' +
-            '<div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">' + T.remaining + ' ' + n2Full + ' ' + T.fullCylinders + '</div>' +
-            '<div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">' + T.needOrder + '</div>' +
-            '<button onclick="this.closest(\'#lowStockWarning\').remove()" style="padding:12px 30px;font-size:16px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T.understood + '</button>' +
-            '</div>';
-        document.body.appendChild(overlay);
-        
-        // Flash effect for 5 seconds
-        const box = document.getElementById('flashBox');
-        let flashCount = 0;
-        const flashInterval = setInterval(() => {
-            box.style.background = flashCount % 2 === 0 ? '#000' : '#e74c3c';
-            box.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
-            box.querySelectorAll('div').forEach(d => {
-                if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
-            });
-            flashCount++;
-            if (flashCount >= 10) {
-                clearInterval(flashInterval);
-                box.style.background = '#e74c3c';
-                box.querySelectorAll('div').forEach(d => d.style.color = '#000');
-            }
-        }, 500);
-    }
-})();
-</script>
-<script>
-document.addEventListener('contextmenu', function(e) {
-    const el = e.target.closest('.comp-click[data-cid]');
-    if (!el) return;
-    e.preventDefault();
-    const cid = parseInt(el.dataset.cid);
-    if (!cid || !confirm('Reset to OK?')) return;
-    csrfFetch('/gas-system/component/' + cid + '/update', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({status: 'ok', notes: ''})
-    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
-});
-</script>
-<script>
-var allComps = {{ n2_comp_data|tojson }}.concat({{ co2_comp_data|tojson }});
-const statusColors = {
-    ok:      {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'},
-    warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'},
-    faulty:  {fill: '#c0392b', circle: '#f8d7da', text: 'FAULT'},
-    replaced:{fill: '#8e44ad', circle: '#e8daef', text: 'NEW'}
-};
-const compById = {};
-allComps.forEach(c => { compById[c.id] = c; });
-
-function applyColors() {
-    document.querySelectorAll('.comp-click[data-cid]').forEach(el => {
-        const cid = parseInt(el.dataset.cid);
-        const comp = compById[cid];
-        if (!comp) return;
-        const sc = statusColors[comp.status] || statusColors.ok;
-        const tag = el.tagName.toLowerCase();
-        if (tag === 'rect') el.setAttribute('fill', sc.fill);
-        else if (tag === 'circle') el.setAttribute('fill', sc.circle);
-        el.style.cursor = 'pointer';
-        el.addEventListener('click', function(e) { e.stopPropagation(); openCompModal(cid); });
-    });
-    document.querySelectorAll('.comp-txt[data-cid]').forEach(el => {
-        const cid = parseInt(el.dataset.cid);
-        const comp = compById[cid];
-        if (!comp) return;
-        const sc = statusColors[comp.status] || statusColors.ok;
-        el.textContent = sc.text;
-    });
-}
-applyColors();
-
-let currentCompId = null;
+// === COMPONENT MODAL ===
 function openCompModal(id) {
-    if (!id || isNaN(id)) return;
+    if (!id) return;
     currentCompId = id;
-    const comp = compById[id];
+    var comp = null;
+    if (pageData) {
+        var all = pageData.n2_components.concat(pageData.co2_components);
+        for (var i = 0; i < all.length; i++) { if (all[i].id === id) { comp = all[i]; break; } }
+    }
     document.getElementById('compTitle').textContent = comp ? comp.name : 'Component #' + id;
     document.getElementById('compStatus').value = comp ? (comp.status || 'ok') : 'ok';
     document.getElementById('compNotes').value = '';
     document.getElementById('componentModal').style.display = 'flex';
 }
-
-function svgClick(event) {
-    // Handle component clicks
-    const compEl = event.target.closest('[data-cid]');
-    if (compEl) {
-        const id = parseInt(compEl.dataset.cid);
-        if (id && !isNaN(id)) { openCompModal(id); return; }
-    }
-    // Handle cylinder clicks in gas system SVG
-    const cylEl = event.target.closest('.cyl-svg-click');
-    if (cylEl) {
-        const gas = cylEl.dataset.gas;
-        const position = cylEl.dataset.position;
-        const cylId = cylEl.dataset.cylId;
-        const num = gas === 'nitrogen' 
-            ? document.querySelector('.n2-' + position + '-label').textContent 
-            : document.querySelector('.co2-' + position + '-label').textContent;
-        openReplace(cylId ? parseInt(cylId) : null, gas, num, position);
-        return;
-    }
-}
-
 function saveComp() {
-    if (!currentCompId) { alert('Компонент не выбран'); return; }
-    const status = document.getElementById('compStatus').value;
-    const notes = document.getElementById('compNotes').value;
-    const btn = document.getElementById('saveCompBtn');
-    btn.disabled = true;
-    btn.textContent = '...';
-    csrfFetch('/gas-system/component/' + currentCompId + '/update', {
+    if (!currentCompId) return;
+    fetch('/gas-system/component/' + currentCompId + '/update', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({status: status, notes: notes})
-    }).then(r => {
-        if (!r.ok) throw new Error('Ошибка сервера: ' + r.status);
-        return r.json();
-    }).then(d => {
-        if (d.ok) location.reload();
-        else { alert('Ошибка: ' + (d.error || 'Неизвестная')); btn.disabled = false; btn.textContent = 'Сохранить'; }
-    }).catch(err => {
-        alert('Ошибка: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = 'Сохранить';
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
+        body: JSON.stringify({status: document.getElementById('compStatus').value, notes: document.getElementById('compNotes').value})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) { closeModal('componentModal'); loadData(); }
+        else alert(d.error || 'Error');
     });
 }
+
+// === RENDER TABLES ===
+function renderOrders(orders) {
+    var c = document.getElementById('ordersCard');
+    if (!orders.length) { c.innerHTML += '<p style="color:#888;text-align:center">No orders</p>'; return; }
+    var html = '<div class="table-wrap"><table><tr><th>Date</th><th>Gas</th><th>Qty</th><th>Status</th><th>Delivered</th></tr>';
+    for (var i = 0; i < orders.length; i++) {
+        var o = orders[i];
+        html += '<tr><td>' + o.ordered_at + '</td><td>' + (o.gas_type === 'nitrogen' ? 'N2' : 'CO2') + '</td><td>' + o.quantity + '</td>';
+        html += '<td><span class="badge badge-' + o.status + '">' + o.status + '</span></td>';
+        html += '<td>' + (o.delivered_at || '\u2014') + '</td></tr>';
+    }
+    html += '</table></div>';
+    c.innerHTML += html;
+}
+
+function renderHistory(logs) {
+    var c = document.getElementById('historyCard');
+    if (!logs.length) { c.innerHTML += '<p style="color:#888;text-align:center">No history</p>'; return; }
+    var html = '<div style="max-height:200px;overflow-y:auto">';
+    for (var i = 0; i < logs.length; i++) {
+        var l = logs[i];
+        html += '<div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">' + l.date + '</span> <b>' + l.action + '</b>';
+        if (l.new_cylinder_number) html += ' ' + l.new_cylinder_number;
+        html += '</div>';
+    }
+    html += '</div>';
+    c.innerHTML += html;
+}
+
+function renderAllCylinders(cyls) {
+    var c = document.getElementById('allCylCard');
+    var html = '<div class="table-wrap"><table><tr><th>Number</th><th>Gas</th><th>Status</th><th>Received</th><th>Installed</th></tr>';
+    for (var i = 0; i < cyls.length; i++) {
+        var cyl = cyls[i];
+        html += '<tr><td><b>' + esc(cyl.number) + '</b></td><td>' + (cyl.gas_type === 'nitrogen' ? 'N2' : 'CO2') + '</td>';
+        html += '<td><span class="badge badge-' + (cyl.status === 'full' ? 'active' : cyl.status === 'in_use' ? 'high' : 'broken') + '">' + cyl.status + '</span></td>';
+        html += '<td>' + (cyl.received_at || '\u2014') + '</td><td>' + (cyl.installed_at || '\u2014') + '</td></tr>';
+    }
+    html += '</table></div>';
+    c.innerHTML += html;
+}
+
+function renderWarnings(warnings) {
+    var c = document.getElementById('warnings');
+    var html = '';
+    for (var i = 0; i < warnings.length; i++) {
+        var w = warnings[i];
+        html += '<div class="alert alert-error" style="display:flex;align-items:center;gap:12px;border-left:4px solid #e74c3c"><span style="font-size:24px">&#9888;&#65039;</span><div><strong>Low stock: ' + w.gas + '</strong> \u2014 ' + w.remaining + ' cylinders remaining</div></div>';
+    }
+    c.innerHTML = html;
+}
+
+function showLowStock(n2Full) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+    overlay.innerHTML = '<div style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px"><div style="font-size:64px;margin-bottom:16px">&#9888;&#65039;</div><div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">ATTENTION!</div><div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">Remaining ' + n2Full + ' full cylinders N2</div><div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">NEED TO ORDER!</div><button onclick="this.parentElement.parentElement.remove()" style="padding:12px 30px;font-size:16px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">UNDERSTOOD</button></div>';
+    document.body.appendChild(overlay);
+}
+
+// === INIT ===
+document.addEventListener('DOMContentLoaded', loadData);
+
+// Close modals on click outside
+document.addEventListener('click', function(e) {
+    var modals = ['statusModal', 'componentModal', 'replaceModal', 'deliverModal', 'orderModal', 'statsModal'];
+    for (var i = 0; i < modals.length; i++) {
+        var m = document.getElementById(modals[i]);
+        if (m && e.target === m) m.style.display = 'none';
+    }
+});
+
+// Context menu on components - reset to OK
+document.addEventListener('contextmenu', function(e) {
+    var el = e.target.closest('.comp-rect');
+    if (!el) return;
+    e.preventDefault();
+    var onclick = el.getAttribute('onclick');
+    if (!onclick) return;
+    var match = onclick.match(/openCompModal\((\d+)\)/);
+    if (!match) return;
+    var cid = parseInt(match[1]);
+    if (!cid || !confirm('Reset to OK?')) return;
+    fetch('/gas-system/component/' + cid + '/update', {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
+        body: JSON.stringify({status: 'ok', notes: ''})
+    }).then(function(r) { return r.json(); }).then(function(d) { if (d.ok) loadData(); });
+});
 </script>
 {% endblock %}

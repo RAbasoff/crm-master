@@ -2353,6 +2353,84 @@ def cylinders_active_api():
         'co2_right': cyl_info(co2_cylinders[1]) if len(co2_cylinders) > 1 else None,
     })
 
+@app.route('/gas-system/api/page-data')
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinders_page_data():
+    """Return all data for the gas system page as JSON."""
+    cylinders = GasCylinder.query.order_by(GasCylinder.gas_type, GasCylinder.id).all()
+    
+    def cyl_dict(c):
+        return {'id': c.id, 'number': c.cylinder_number, 'status': c.status, 'gas_type': c.gas_type,
+                'received_at': c.received_at.strftime('%d-%m-%Y') if c.received_at else None,
+                'installed_at': c.installed_at.strftime('%d-%m-%Y') if c.installed_at else None}
+    
+    n2_active = sorted([c for c in cylinders if c.gas_type == 'nitrogen' and c.status == 'in_use'],
+                       key=lambda c: (c.installed_at or datetime.min), reverse=True)[:2]
+    co2_active = sorted([c for c in cylinders if c.gas_type == 'co2' and c.status == 'in_use'],
+                        key=lambda c: (c.installed_at or datetime.min), reverse=True)[:2]
+    while len(n2_active) < 2: n2_active.append(None)
+    while len(co2_active) < 2: co2_active.append(None)
+    
+    stats = {
+        'n2_full': len([c for c in cylinders if c.gas_type == 'nitrogen' and c.status == 'full']),
+        'n2_in_use': len([c for c in cylinders if c.gas_type == 'nitrogen' and c.status == 'in_use']),
+        'n2_empty': len([c for c in cylinders if c.gas_type == 'nitrogen' and c.status == 'empty']),
+        'n2_leak': len([c for c in cylinders if c.gas_type == 'nitrogen' and c.status == 'leak']),
+        'n2_faulty': len([c for c in cylinders if c.gas_type == 'nitrogen' and c.status == 'faulty']),
+        'co2_full': len([c for c in cylinders if c.gas_type == 'co2' and c.status == 'full']),
+        'co2_in_use': len([c for c in cylinders if c.gas_type == 'co2' and c.status == 'in_use']),
+        'co2_empty': len([c for c in cylinders if c.gas_type == 'co2' and c.status == 'empty']),
+        'co2_leak': len([c for c in cylinders if c.gas_type == 'co2' and c.status == 'leak']),
+        'co2_faulty': len([c for c in cylinders if c.gas_type == 'co2' and c.status == 'faulty']),
+    }
+    
+    count_n2 = stats['n2_full'] + stats['n2_in_use']
+    count_co2 = stats['co2_full'] + stats['co2_in_use']
+    count_n2_all = len([c for c in cylinders if c.gas_type == 'nitrogen'])
+    count_co2_all = len([c for c in cylinders if c.gas_type == 'co2'])
+    
+    warnings = []
+    if count_n2 <= 3: warnings.append({'gas': 'N2', 'remaining': count_n2})
+    if count_co2 <= 1: warnings.append({'gas': 'CO2', 'remaining': count_co2})
+    
+    available_n2 = [{'id': c.id, 'number': c.cylinder_number} for c in GasCylinder.query.filter_by(gas_type='nitrogen', status='full').order_by(GasCylinder.cylinder_number).all()]
+    available_co2 = [{'id': c.id, 'number': c.cylinder_number} for c in GasCylinder.query.filter_by(gas_type='co2', status='full').order_by(GasCylinder.cylinder_number).all()]
+    
+    n2_components = GasSystemComponent.query.filter_by(gas_type='nitrogen').order_by(GasSystemComponent.component_type).all()
+    co2_components = GasSystemComponent.query.filter_by(gas_type='co2').order_by(GasSystemComponent.component_type).all()
+    if not n2_components:
+        for ctype, cname in [('valve','Main Valve N2'),('heater','Heater 1 N2'),('heater','Heater 2 N2'),('manometer','Manometer 1 N2'),('manometer','Manometer 2 N2'),('shut_off','Switch N2')]:
+            db.session.add(GasSystemComponent(gas_type='nitrogen', component_type=ctype, name=cname))
+        db.session.commit()
+        n2_components = GasSystemComponent.query.filter_by(gas_type='nitrogen').order_by(GasSystemComponent.id).all()
+    if not co2_components:
+        for ctype, cname in [('valve','Main Valve CO2'),('heater','Heater 1 CO2'),('heater','Heater 2 CO2'),('manometer','Manometer 1 CO2'),('manometer','Manometer 2 CO2'),('shut_off','Switch CO2')]:
+            db.session.add(GasSystemComponent(gas_type='co2', component_type=ctype, name=cname))
+        db.session.commit()
+        co2_components = GasSystemComponent.query.filter_by(gas_type='co2').order_by(GasSystemComponent.id).all()
+    
+    def comp_dict(c):
+        return {'id': c.id, 'type': c.component_type, 'name': c.name, 'status': c.status or 'ok'}
+    
+    orders = CylinderOrder.query.order_by(CylinderOrder.ordered_at.desc()).limit(10).all()
+    recent_logs = CylinderLog.query.order_by(CylinderLog.date.desc()).limit(20).all()
+    
+    return jsonify({
+        'stats': stats,
+        'count_n2': count_n2, 'count_co2': count_co2,
+        'count_n2_all': count_n2_all, 'count_co2_all': count_co2_all,
+        'warnings': warnings,
+        'n2_active': [cyl_dict(c) if c else None for c in n2_active],
+        'co2_active': [cyl_dict(c) if c else None for c in co2_active],
+        'available_n2': available_n2, 'available_co2': available_co2,
+        'n2_components': [comp_dict(c) for c in n2_components],
+        'co2_components': [comp_dict(c) for c in co2_components],
+        'orders': [{'ordered_at': o.ordered_at.strftime('%d-%m-%Y'), 'gas_type': o.gas_type, 'quantity': o.quantity, 'status': o.status, 'delivered_at': o.delivered_at.strftime('%d-%m-%Y') if o.delivered_at else None} for o in orders],
+        'recent_logs': [{'date': l.date.strftime('%d-%m %H:%M'), 'action': l.action, 'new_cylinder_number': l.new_cylinder_number} for l in recent_logs],
+        'all_cylinders': [cyl_dict(c) for c in cylinders],
+    })
+
 @app.route('/gas-system/component/<int:comp_id>/update', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
