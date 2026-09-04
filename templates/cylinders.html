@@ -28,14 +28,16 @@
     
     <!-- N2 Cylinders with images -->
     <h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N₂ {{ _('Nitrogen') }} ({{ count_n2 }}/{{ count_n2_all }})</h3>
-    <div style="display:flex;gap:10px;margin-bottom:6px;justify-content:center">
+    <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_full }}</b> {{ _('Full') }}</span>
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_in_use }}</b> {{ _('In use') }}</span>
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_empty }}</b> {{ _('Empty') }}</span>
+        {% if stats.n2_leak > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#9b59b6;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_leak }}</b> {{ _('Leak') }}</span>{% endif %}
+        {% if stats.n2_faulty > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#566573;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.n2_faulty }}</b> {{ _('Faulty') }}</span>{% endif %}
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
         {% for cyl in n2_active %}
-        <div style="text-align:center;cursor:pointer" onclick="showStats('nitrogen')">
+        <div style="text-align:center;cursor:pointer" onclick="{% if cyl %}openStatusModal({{ cyl.id }}, '{{ cyl.cylinder_number }}', 'nitrogen', '{{ cyl.status }}'){% else %}showStats('nitrogen'){% endif %}">
             <svg width="50" height="80" viewBox="0 0 75 120">
                 <defs><linearGradient id="sn2{{ loop.index }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="{% if cyl and cyl.status=='full' %}#2ecc71{% elif cyl and cyl.status=='in_use' %}#f1c40f{% else %}#e74c3c{% endif %}"/><stop offset="100%" stop-color="{% if cyl and cyl.status=='full' %}#27ae60{% elif cyl and cyl.status=='in_use' %}#f39c12{% else %}#c0392b{% endif %}"/></linearGradient></defs>
                 <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
@@ -55,10 +57,12 @@
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_full }}</b> {{ _('Full') }}</span>
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_in_use }}</b> {{ _('In use') }}</span>
         <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_empty }}</b> {{ _('Empty') }}</span>
+        {% if stats.co2_leak > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#9b59b6;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_leak }}</b> {{ _('Leak') }}</span>{% endif %}
+        {% if stats.co2_faulty > 0 %}<span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#566573;color:white;padding:3px 8px;border-radius:10px"><b>{{ stats.co2_faulty }}</b> {{ _('Faulty') }}</span>{% endif %}
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
         {% for cyl in co2_active %}
-        <div style="text-align:center;cursor:pointer" onclick="showStats('co2')">
+        <div style="text-align:center;cursor:pointer" onclick="{% if cyl %}openStatusModal({{ cyl.id }}, '{{ cyl.cylinder_number }}', 'co2', '{{ cyl.status }}'){% else %}showStats('co2'){% endif %}">
             <svg width="50" height="80" viewBox="0 0 75 120">
                 <defs><linearGradient id="sco2{{ loop.index }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="{% if cyl and cyl.status=='full' %}#2ecc71{% elif cyl and cyl.status=='in_use' %}#f1c40f{% else %}#e74c3c{% endif %}"/><stop offset="100%" stop-color="{% if cyl and cyl.status=='full' %}#27ae60{% elif cyl and cyl.status=='in_use' %}#f39c12{% else %}#c0392b{% endif %}"/></linearGradient></defs>
                 <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
