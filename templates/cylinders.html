@@ -595,7 +595,7 @@ document.addEventListener('contextmenu', function(e) {
 });
 </script>
 <script>
-var allComps = ({{ n2_json }}).concat({{ co2_json }});
+var allComps = ({{ n2_json|safe }}).concat({{ co2_json|safe }});
 const statusColors = {
     ok:      {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'},
     warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'},
