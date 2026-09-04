@@ -2204,6 +2204,7 @@ def enforce_cylinder_limit(gas_type):
         )
         db.session.add(log)
 
+@app.route('/cylinders')
 @app.route('/gas-system')
 @login_required
 @role_required('admin', 'director', 'technician')

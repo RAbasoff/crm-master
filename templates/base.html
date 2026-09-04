@@ -391,7 +391,7 @@
             <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
             {% endif %}
             {% if has_access('cylinders') %}
-            <a href="/gas-system" class="sb-item {% if 'cylinder' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas Cylinders') }}</a>
+            <a href="/cylinders" class="sb-item {% if 'cylinder' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas Cylinders') }}</a>
             <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Gas System Repairs') }}</a>
             {% endif %}
             {% if has_access('faults') %}
