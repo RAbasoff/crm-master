@@ -2286,11 +2286,11 @@ def cylinders_dashboard():
         db.session.commit()
         co2_components = GasSystemComponent.query.filter_by(gas_type='co2').order_by(GasSystemComponent.id).all()
 
-    # Build JSON for JavaScript
+    # Build component data for JavaScript
     def comp_to_dict(c):
         return {'id': c.id, 'type': c.component_type, 'name': c.name, 'status': c.status or 'ok'}
-    n2_json = json.dumps([comp_to_dict(c) for c in n2_components])
-    co2_json = json.dumps([comp_to_dict(c) for c in co2_components])
+    n2_comp_data = [comp_to_dict(c) for c in n2_components]
+    co2_comp_data = [comp_to_dict(c) for c in co2_components]
 
     return render_template('cylinders.html',
         n2_active=n2_active[:2], co2_active=co2_active[:2],
@@ -2301,7 +2301,7 @@ def cylinders_dashboard():
         count_n2_all=count_n2_all, count_co2_all=count_co2_all,
         warnings=warnings,
         n2_components=n2_components, co2_components=co2_components,
-        n2_json=n2_json, co2_json=co2_json)
+        n2_comp_data=n2_comp_data, co2_comp_data=co2_comp_data)
 
 @app.route('/cylinders/status', methods=['POST'])
 @login_required
