@@ -601,17 +601,15 @@
             if (e.key === 'Escape') closeSidebar();
         });
         
-        // Register NEW service worker and purge old caches
+        // Purge ALL service workers and caches (SW removed permanently)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(regs) {
                 regs.forEach(function(reg) { reg.unregister(); });
-            }).then(function() {
-                if ('caches' in window) {
-                    caches.keys().then(function(names) {
-                        names.forEach(function(name) { caches.delete(name); });
-                    });
-                }
-                navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) { caches.delete(name); });
             });
         }
         

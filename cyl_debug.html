@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" href="/static/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ProMaster">
+    <meta name="csrf-token" content="IjRmMzM1YTkxNjZhYzZiOWFlNzVjMzkzYTUwNDkxNjkwMWVmNjQ1NTgi.apqbXA.zSq9skZb2SHFwzN03aSnzFTyaV8">
+    <title>Баллоны с газом — CRM</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html { font-size: 16px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        
+        /* ===== SIDEBAR ===== */
+        .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #0f1629; z-index: 150; display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+        .sidebar-header .logo { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+        .sidebar-header .logo span { color: #5b9cf6; }
+        .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .sb-section { padding: 16px 16px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.75); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: color 0.15s; }
+        .sb-section:hover { color: rgba(255,255,255,0.95); }
+        .sb-section .sb-arrow { font-size: 9px; transition: transform 0.2s; opacity: 0.6; }
+        .sb-section.collapsed .sb-arrow { transform: rotate(-90deg); }
+        .sb-group-items { overflow: hidden; transition: max-height 0.25s ease; }
+        .sb-group-items.collapsed { max-height: 0 !important; }
+        .sb-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: rgba(255,255,255,0.55); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.15s; border-left: 3px solid transparent; cursor: pointer; }
+        .sb-item:hover { color: rgba(255,255,255,0.95); background: rgba(255,255,255,0.1); }
+        .sb-item.active { color: #5b9cf6; background: rgba(91,156,246,0.08); border-left-color: #5b9cf6; }
+        .sb-item .sb-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; opacity: 0.7; }
+        .sb-item.active .sb-icon { opacity: 1; }
+        .sb-item .sb-badge { margin-left: auto; background: #e74c3c; color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; min-width: 18px; text-align: center; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+        .sidebar-footer .sb-user { display: flex; align-items: center; gap: 10px; text-decoration: none; color: rgba(255,255,255,0.7); font-size: 13px; }
+        .sidebar-footer .sb-user:hover { color: #fff; }
+        .sidebar-footer .sb-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #5b9cf6, #3b7dd8); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0; }
+        .sidebar-footer .sb-user-info { flex: 1; min-width: 0; }
+        .sidebar-footer .sb-user-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-footer .sb-user-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+        
+        /* Sidebar overlay for mobile */
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 140; }
+        .sidebar-overlay.open { display: block; }
+        
+        /* ===== TOPBAR ===== */
+        .topbar { background: #fff; color: #333; height: 56px; display: flex; align-items: center; padding: 0 20px; position: sticky; top: 0; z-index: 100; gap: 12px; border-bottom: 1px solid #e8ecf1; margin-left: 240px; }
+        .topbar .sb-toggle { display: none; background: none; border: none; color: #666; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 18px; }
+        .topbar .sb-toggle:hover { background: #f0f2f5; }
+        
+        /* Search bar */
+        .search-wrap { flex: 1; max-width: 420px; position: relative; }
+        .search-wrap input { width: 100%; padding: 9px 14px 9px 36px; border: 1px solid #e0e4ea; border-radius: 10px; font-size: 13px; background: #f5f7fa; color: #333; transition: all 0.2s; }
+        .search-wrap input:focus { border-color: #5b9cf6; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(91,156,246,0.12); }
+        .search-wrap .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #999; }
+        .search-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 0 0 12px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 400px; overflow-y: auto; z-index: 300; border: 1px solid #e0e4ea; border-top: none; }
+        
+        /* Topbar right */
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+        .tb-btn { background: none; border: none; color: #889; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 16px; position: relative; transition: 0.2s; text-decoration: none; display: flex; align-items: center; }
+        .tb-btn:hover { color: #333; background: #f0f2f5; }
+        .tb-btn .badge-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: #e74c3c; border-radius: 50%; display: none; border: 2px solid #fff; }
+        .tb-btn.has-notif .badge-dot { display: block; }
+        .tb-user { color: #555; font-size: 13px; padding: 6px 10px; text-decoration: none; white-space: nowrap; font-weight: 500; }
+        .tb-user:hover { color: #333; }
+        .tb-sep { width: 1px; height: 20px; background: #e0e4ea; margin: 0 6px; }
+        
+        /* Lang pills */
+        .lang-pills { display: flex; gap: 2px; }
+        .lang-pill { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #999; text-decoration: none; transition: 0.15s; }
+        .lang-pill:hover { color: #333; background: #f0f2f5; }
+        .lang-pill.active { color: #5b9cf6; background: rgba(91,156,246,0.1); }
+        
+        /* Dark toggle */
+        .dark-toggle { background: none; border: none; color: #999; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 16px; transition: 0.2s; }
+        .dark-toggle:hover { color: #333; background: #f0f2f5; }
+        
+        /* ===== LAYOUT ===== */
+        .main-wrap { margin-left: 240px; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .card { background: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); border: 1px solid #e8ecf1; }
+        .card h2 { font-size: 15px; margin-bottom: 14px; color: #1a1a2e; font-weight: 700; }
+        
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .stat-card { background: white; border-radius: 14px; padding: 18px 16px; text-align: left; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; position: relative; overflow: hidden; }
+        .stat-card .stat-icon { font-size: 28px; margin-bottom: 10px; opacity: 0.8; }
+        .stat-card .number { font-size: 28px; font-weight: 800; color: #1a1a2e; line-height: 1; }
+        .stat-card .label { font-size: 12px; color: #888; margin-top: 6px; font-weight: 500; }
+        .stat-card .stat-accent { position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 14px 0 60px; opacity: 0.08; }
+        .stat-card.warn .number { color: #e74c3c; }
+        .stat-card.ok .number { color: #27ae60; }
+        
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+        th { background: #f8f9fc; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 1; }
+        tr:hover { background: #f8f9fc; }
+        tr:last-child td { border-bottom: none; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="email"], .form-group input[type="password"], .form-group input[type="date"], .form-group input[type="time"], .form-group input[type="file"], .form-group select, .form-group textarea { 
+            width: 100%; padding: 11px 14px; border: 1px solid #dde1e8; border-radius: 10px; font-size: 14px; 
+            -webkit-appearance: none; appearance: none; background: white; transition: all 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
+            border-color: #5b9cf6; outline: none; box-shadow: 0 0 0 3px rgba(91,156,246,0.12); 
+        }
+        .form-group input[type="checkbox"], .form-group input[type="radio"] {
+            width: auto; padding: 0; border: none; border-radius: 0; font-size: 16px;
+            -webkit-appearance: auto; appearance: auto; background: auto; min-height: auto; min-width: auto;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; min-height: 40px; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: #5b9cf6; color: white; }
+        .btn-primary:hover { background: #4a8be5; box-shadow: 0 4px 12px rgba(91,156,246,0.3); }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #229954; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-sm { padding: 7px 12px; font-size: 12px; min-height: 32px; border-radius: 8px; }
+        .btn-block { display: flex; width: 100%; }
+        .btn-ghost { background: transparent; color: #666; border: 1px solid #dde1e8; }
+        .btn-ghost:hover { background: #f5f7fa; color: #333; }
+        
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-aangenomen { background: #3498db18; color: #3498db; }
+        .badge-diagnose { background: #f39c1218; color: #f39c12; }
+        .badge-behandeling, .badge-in_progress { background: #9b59b618; color: #9b59b6; }
+        .badge-gereed, .badge-resolved { background: #27ae6018; color: #27ae60; }
+        .badge-afgeleverd, .badge-closed { background: #2ecc7118; color: #2ecc71; }
+        .badge-geannuleerd { background: #e74c3c18; color: #e74c3c; }
+        .badge-open { background: #3498db18; color: #3498db; }
+        .badge-accepted { background: #f39c1218; color: #f39c12; }
+        .badge-parts_ordered { background: #8e44ad18; color: #8e44ad; }
+        .badge-waiting_parts { background: #e67e2218; color: #e67e22; }
+        .badge-reopened { background: #9b59b618; color: #9b59b6; }
+        .badge-active { background: #27ae6018; color: #27ae60; }
+        .badge-maintenance { background: #f39c1218; color: #f39c12; }
+        .badge-broken { background: #e74c3c18; color: #e74c3c; }
+        .badge-purple { background: #9b59b618; color: #9b59b6; }
+        .badge-offline { background: #95a5a618; color: #95a5a6; }
+        .badge-low { background: #27ae6018; color: #27ae60; }
+        .badge-normal { background: #3498db18; color: #3498db; }
+        .badge-high { background: #f39c1218; color: #f39c12; }
+        .badge-critical { background: #e74c3c18; color: #e74c3c; }
+        .badge-user { background: #3498db18; color: #3498db; }
+        .badge-technician { background: #f39c1218; color: #f39c12; }
+        .badge-director { background: #9b59b618; color: #9b59b6; }
+        .badge-admin { background: #e74c3c18; color: #e74c3c; }
+        .badge-quality { background: #27ae6018; color: #27ae60; }
+        
+        .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 14px; font-size: 14px; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+        
+        .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .filters select, .filters input { padding: 9px 12px; border: 1px solid #dde1e8; border-radius: 10px; font-size: 13px; flex: 1; min-width: 120px; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .page-header h1 { font-size: 22px; font-weight: 800; color: #1a1a2e; }
+        
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        
+        .floor-plan { position: relative; background: #f8f9fa; border: 2px solid #ddd; border-radius: 12px; min-height: 400px; overflow: hidden; }
+        .floor-plan .machine-marker { position: absolute; width: 60px; height: 60px; transform: translate(-50%, -50%); cursor: pointer; transition: 0.2s; }
+        .floor-plan .machine-marker:hover { transform: translate(-50%, -50%) scale(1.1); z-index: 10; }
+        .floor-plan .machine-icon { width: 100%; height: 100%; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); border: 2px solid #5b9cf6; }
+        .floor-plan .machine-marker.status-broken .machine-icon { border-color: #e74c3c; background: #fff5f5; }
+        .floor-plan .machine-marker.status-maintenance .machine-icon { border-color: #f39c12; background: #fff9f0; }
+        .floor-plan .machine-marker.status-offline .machine-icon { border-color: #95a5a6; background: #f5f5f5; }
+        .floor-plan .machine-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; font-weight: 600; color: #333; margin-top: 4px; text-align: center; }
+        
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+        .photo-grid img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .photo-grid img:hover { transform: scale(1.05); }
+        
+        .msg-list { max-height: 400px; overflow-y: auto; }
+        .msg-item { padding: 12px; border-bottom: 1px solid #f0f2f5; display: flex; gap: 12px; cursor: pointer; transition: 0.15s; }
+        .msg-item:hover { background: #f8f9fc; }
+        .msg-item.unread { background: #f0f7ff; }
+        .msg-item .msg-avatar { width: 40px; height: 40px; border-radius: 50%; background: #5b9cf6; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+        .msg-item .msg-content { flex: 1; min-width: 0; }
+        .msg-item .msg-subject { font-weight: 600; font-size: 14px; }
+        .msg-item .msg-preview { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .msg-item .msg-time { font-size: 11px; color: #999; }
+        
+        /* NOTIF PANEL */
+        .notif-panel { position: fixed; top: 56px; right: 0; width: 360px; max-height: calc(100vh - 56px); background: white; box-shadow: -4px 0 24px rgba(0,0,0,0.1); z-index: 200; display: none; overflow-y: auto; border-left: 1px solid #e8ecf1; }
+        .notif-panel.open { display: block; }
+        .notif-panel .notif-header { padding: 16px; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; align-items: center; }
+        .notif-panel .notif-header span { font-weight: 700; font-size: 14px; }
+        .notif-panel .notif-item { padding: 12px 16px; border-bottom: 1px solid #f5f7fa; cursor: pointer; transition: 0.15s; }
+        .notif-panel .notif-item:hover { background: #f8f9fc; }
+        .notif-panel .notif-item.unread { background: #f0f7ff; border-left: 3px solid #5b9cf6; }
+        .notif-panel .notif-title { font-size: 13px; font-weight: 600; color: #333; }
+        .notif-panel .notif-msg { font-size: 12px; color: #666; margin-top: 3px; }
+        .notif-panel .notif-time { font-size: 11px; color: #999; margin-top: 3px; }
+        
+        /* BOTTOM NAV */
+        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.08); z-index: 100; padding: 4px 0; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+        .bottom-nav-inner { display: flex; justify-content: space-around; }
+        .bottom-nav a { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #999; font-size: 10px; padding: 6px 8px; border-radius: 8px; transition: 0.2s; }
+        .bottom-nav a.active { color: #5b9cf6; }
+        .bottom-nav a .icon { font-size: 20px; margin-bottom: 2px; }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .topbar { margin-left: 0; }
+            .main-wrap { margin-left: 0; }
+            .topbar .sb-toggle { display: flex; }
+        }
+        
+        @media (max-width: 768px) {
+            html { font-size: 15px; }
+            body { padding-bottom: 72px; }
+            .topbar { height: 52px; padding: 0 12px; }
+            .notif-panel { top: 52px; width: 100%; }
+            .container { padding: 12px; }
+            .card { padding: 14px; border-radius: 12px; margin-bottom: 12px; }
+            .form-row { grid-template-columns: 1fr; gap: 10px; }
+            .form-group input, .form-group select, .form-group textarea { padding: 14px; font-size: 16px; }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 12px 10px; border-radius: 10px; }
+            .stat-card .number { font-size: 22px; }
+            .stat-card .label { font-size: 11px; }
+            .btn { padding: 14px 20px; font-size: 15px; min-height: 48px; border-radius: 12px; }
+            .btn-sm { padding: 10px 14px; min-height: 40px; font-size: 13px; }
+            .page-header { flex-direction: column; align-items: stretch; gap: 8px; }
+            .page-header h1 { font-size: 18px; }
+            .page-header .btn { width: 100%; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .filters { flex-direction: column; }
+            .filters select, .filters input { width: 100%; }
+            .bottom-nav { display: flex; }
+            .tb-user { display: none; }
+            .lang-pills { display: none; }
+            .search-wrap { display: none; }
+            .table-wrap { margin: 0 -14px; padding: 0 14px; }
+            table { font-size: 12px; }
+            th, td { padding: 8px 10px; }
+            .badge { font-size: 10px; padding: 2px 6px; }
+            .photo-grid { grid-template-columns: repeat(2, 1fr); }
+            .modal-content { padding: 16px; margin: 10px; }
+        }
+        
+        @media (max-width: 480px) {
+            .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .stat-card .number { font-size: 20px; }
+            .stat-card .label { font-size: 10px; }
+            .container { padding: 10px; }
+            .card { padding: 12px; }
+            .btn { padding: 12px 16px; font-size: 14px; }
+            .form-group label { font-size: 12px; }
+            .page-header h1 { font-size: 16px; }
+        }
+        
+        @media (max-width: 380px) {
+            .stats { grid-template-columns: 1fr; }
+            .stat-card .number { font-size: 18px; }
+        }
+        
+        .table-wrap::-webkit-scrollbar { height: 4px; }
+        .table-wrap::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+        
+        @supports (padding: max(0px)) {
+            .container { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+        }
+        
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 68px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 14px 20px; border-radius: 12px; color: white; font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.15); transform: translateX(120%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-width: 360px; }
+        .toast.show { transform: translateX(0); }
+        .toast-success { background: #27ae60; }
+        .toast-error { background: #e74c3c; }
+        .toast-info { background: #5b9cf6; }
+        .toast-warning { background: #f39c12; }
+        
+        /* Loading Spinner */
+        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Smooth transitions */
+        .card { transition: box-shadow 0.2s; }
+        .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        
+        /* Better table hover */
+        table tr { transition: background 0.15s; }
+        
+        /* Pulse animation for notifications */
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .badge-dot { animation: pulse 2s infinite; }
+        
+        /* ===== DARK MODE ===== */
+        body.dark-mode { background: #0d1117; color: #c9d1d9; }
+        body.dark-mode .topbar { background: #161b22; border-color: #21262d; }
+        body.dark-mode .topbar .sb-toggle { color: #8b949e; }
+        body.dark-mode .topbar .sb-toggle:hover { background: #21262d; }
+        body.dark-mode .search-wrap input { background: #0d1117; border-color: #30363d; color: #c9d1d9; }
+        body.dark-mode .search-wrap input:focus { border-color: #5b9cf6; background: #161b22; }
+        body.dark-mode .tb-btn { color: #8b949e; }
+        body.dark-mode .tb-btn:hover { color: #c9d1d9; background: #21262d; }
+        body.dark-mode .tb-user { color: #8b949e; }
+        body.dark-mode .tb-sep { background: #21262d; }
+        body.dark-mode .lang-pill { color: #8b949e; }
+        body.dark-mode .lang-pill:hover { color: #c9d1d9; background: #21262d; }
+        body.dark-mode .lang-pill.active { color: #5b9cf6; background: rgba(91,156,246,0.15); }
+        body.dark-mode .dark-toggle { color: #8b949e; }
+        body.dark-mode .dark-toggle:hover { color: #c9d1d9; background: #21262d; }
+        body.dark-mode .card { background: #161b22; border-color: #21262d; }
+        body.dark-mode .card h2 { color: #e6edf3; }
+        body.dark-mode .stat-card { background: #161b22; border-color: #21262d; }
+        body.dark-mode .stat-card .number { color: #e6edf3; }
+        body.dark-mode .stat-card .label { color: #8b949e; }
+        body.dark-mode table th { background: #161b22; color: #8b949e; }
+        body.dark-mode table tr:hover { background: #161b22; }
+        body.dark-mode td { border-color: #21262d; }
+        body.dark-mode .form-group input, 
+        body.dark-mode .form-group select, 
+        body.dark-mode .form-group textarea { background: #0d1117; color: #c9d1d9; border-color: #30363d; }
+        body.dark-mode .form-group input:focus,
+        body.dark-mode .form-group select:focus,
+        body.dark-mode .form-group textarea:focus { border-color: #5b9cf6; }
+        body.dark-mode .form-group label { color: #8b949e; }
+        body.dark-mode .notif-panel { background: #161b22; border-color: #21262d; }
+        body.dark-mode .notif-item { border-color: #21262d; }
+        body.dark-mode .notif-item:hover { background: #1c2128; }
+        body.dark-mode .notif-title { color: #e6edf3; }
+        body.dark-mode .notif-msg { color: #8b949e; }
+        body.dark-mode .bottom-nav { background: #161b22; }
+        body.dark-mode .bottom-nav a { color: #8b949e; }
+        body.dark-mode .filters select, body.dark-mode .filters input { background: #0d1117; color: #c9d1d9; border-color: #30363d; }
+        body.dark-mode .btn-ghost { border-color: #30363d; color: #8b949e; }
+        body.dark-mode .btn-ghost:hover { background: #21262d; color: #c9d1d9; }
+        body.dark-mode .page-header h1 { color: #e6edf3; }
+        body.dark-mode .search-dropdown { background: #161b22; border-color: #30363d; }
+        body.dark-mode .tb-btn .badge-dot { border-color: #161b22; }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+    
+    <!-- SIDEBAR OVERLAY (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sb-section" onclick="toggleSbGroup(this)">Производство <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            <a href="/" class="sb-item "><span class="sb-icon">🏠</span>Панель управления</a>
+            
+            <a href="/floor" class="sb-item "><span class="sb-icon">🏭</span>Карта цеха</a>
+            
+            
+            <a href="/machines" class="sb-item "><span class="sb-icon">⚙️</span>Станки</a>
+            
+            
+            <a href="/equipment" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>Mule Maintenance</a>
+            
+            
+            <a href="/tool-wear" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>Knife Sharpening</a>
+            
+            
+            <a href="/assets" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>Other Devices</a>
+            
+            
+            <a href="/electricity" class="sb-item "><span class="sb-icon">⚡</span>Electricity</a>
+            
+            
+            <a href="/maintenance-calendar" class="sb-item "><span class="sb-icon">📅</span>Maint. Calendar</a>
+            <a href="/maintenance-plans" class="sb-item "><span class="sb-icon">📋</span>Maint. Plans</a>
+            
+            
+            <a href="/cylinders" class="sb-item active"><span class="sb-icon">🔴</span>Баллоны с газом</a>
+            <a href="/repairs" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>Gas System Repairs</a>
+            
+            
+            <a href="/faults" class="sb-item "><span class="sb-icon">⚠️</span>Заявки</a>
+            
+            
+            <a href="/two" class="sb-item "><span class="sb-icon">📝</span>TWO</a>
+            
+            </div>
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Связь <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            
+            <a href="/messages" class="sb-item "><span class="sb-icon">💬</span>Сообщения</a>
+            
+            <a href="/notifications" class="sb-item "><span class="sb-icon">🔔</span>Уведомления</a>
+            </div>
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Персонал <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            
+            <a href="/schedule" class="sb-item "><span class="sb-icon">📅</span>График</a>
+            
+            
+            <a href="/vacations" class="sb-item "><span class="sb-icon">🏖</span>Отпуска</a>
+            
+            
+            <a href="/time-tracking" class="sb-item "><span class="sb-icon">⏱</span>Учёт времени</a>
+            
+            </div>
+            
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Бизнес <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            
+            <a href="/orders" class="sb-item "><span class="sb-icon">📋</span>Рабочие ордера</a>
+            
+            
+            <a href="/responsible" class="sb-item "><span class="sb-icon">👤</span>Ответственный</a>
+            
+            
+            <a href="/workers" class="sb-item "><span class="sb-icon">🔧</span>Техническая Служба</a>
+            
+            
+            <a href="/invoices" class="sb-item "><span class="sb-icon">📄</span>Invoices</a>
+            
+            
+            <a href="/contractors" class="sb-item "><span class="sb-icon">🏢</span>Contractors</a>
+            
+            
+            <a href="/warehouse" class="sb-item "><span class="sb-icon">📦</span>Склад</a>
+            <a href="/consumable-reminders" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔔</span>Replacement Reminders</a>
+            
+            
+            <a href="/purchase-requests" class="sb-item " style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🛒</span>Заявки на закупку</a>
+            
+            </div>
+            
+            
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Аналитика <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            
+            <a href="/reports" class="sb-item "><span class="sb-icon">📊</span>Отчёты</a>
+            <a href="/work-report" class="sb-item "><span class="sb-icon">📋</span>Отчёт о работе</a>
+            <a href="/archive" class="sb-item "><span class="sb-icon">📦</span>Archive</a>
+            
+            
+            <a href="/stats/faults" class="sb-item "><span class="sb-icon">📈</span>Статистика</a>
+            
+            </div>
+            
+            
+            
+            <div class="sb-section" onclick="toggleSbGroup(this)">Система <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items">
+            
+            <a href="/settings" class="sb-item "><span class="sb-icon">⚙️</span>Settings</a>
+            
+            
+            <a href="/users" class="sb-item "><span class="sb-icon">👥</span>Пользователи</a>
+            
+            <a href="/qr/scan" class="sb-item "><span class="sb-icon">📷</span>QR</a>
+            </div>
+            
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/profile" class="sb-user">
+                <div class="sb-avatar">A</div>
+                <div class="sb-user-info">
+                    <div class="sb-user-name">Administrator</div>
+                    <div class="sb-user-role">admin</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+    
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <button class="sb-toggle" id="sbToggle" onclick="toggleSidebar()">☰</button>
+        
+        <div class="search-wrap" id="searchBarWrap">
+            <form action="/search" method="GET" style="position:relative">
+                <span class="search-icon">🔍</span>
+                <input type="text" name="q" id="globalSearch" placeholder="Search machines, faults, orders..." autocomplete="off">
+                <div class="search-dropdown" id="searchDropdown"></div>
+            </form>
+        </div>
+        
+        <div class="topbar-right">
+            <div class="lang-pills">
+                
+                    <a href="/set_language/nl" class="lang-pill ">NL</a>
+                
+                    <a href="/set_language/en" class="lang-pill ">EN</a>
+                
+                    <a href="/set_language/ru" class="lang-pill active">RU</a>
+                
+                    <a href="/set_language/pl" class="lang-pill ">PL</a>
+                
+            </div>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="Install App">📲</button>
+            <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
+            <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()">
+                🔔<span class="badge-dot" id="notifDot"></span>
+            </button>
+            <a href="/logout" class="tb-btn" title="Выйти">⏻</a>
+        </div>
+    </div>
+    
+    <!-- NOTIF PANEL -->
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-header">
+            <span>Уведомления</span>
+            <button onclick="markAllRead()" style="background:none;border:none;color:#5b9cf6;cursor:pointer;font-size:12px;font-weight:600">Отметить все прочитанными</button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+    
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <div class="bottom-nav-inner">
+            <a href="/" class=""><span class="icon">🏠</span>Главная</a>
+            <a href="/floor" class=""><span class="icon">🏭</span>Карта</a>
+            <a href="/faults/new" class=""><span class="icon" style="font-size:24px">➕</span>Неисправность</a>
+            <a href="/warehouse" class=""><span class="icon">📦</span>Stock</a>
+            <a href="#" onclick="toggleSidebar();return false" class=""><span class="icon">☰</span>Меню</a>
+        </div>
+    </div>
+    
+    <!-- CONTENT -->
+    <div class="main-wrap">
+        <div class="container">
+            
+                
+            
+            
+<script>
+// Force unregister service worker to prevent stale cache
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(reg) { reg.unregister(); });
+    });
+}
+</script>
+<div class="page-header">
+    <h1>🔴 Баллоны с газом</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/repairs" class="btn btn-sm" style="background:#eee">🔧 Ремонт оборудования</a>
+        <a href="/repairs/stats" class="btn btn-sm" style="background:#eee">📊 Статистика</a>
+        <button class="btn btn-primary" onclick="document.getElementById('orderModal').style.display='flex'">+ Заказать баллоны</button>
+    </div>
+</div>
+
+
+
+<!-- MAIN LAYOUT -->
+<div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
+
+<!-- LEFT: CYLINDER STATUS -->
+<div class="card" style="padding:16px">
+    <h2 style="margin-bottom:12px;text-align:center;font-size:14px">📊 Cylinder Status</h2>
+    
+    <!-- N2 Cylinders with images -->
+    <h3 style="color:#3498db;margin-bottom:6px;font-size:13px;text-align:center">N₂ Азот (7/19)</h3>
+    <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>5</b> Полный</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>2</b> В работе</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>12</b> Пустой</span>
+        
+        
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
+        
+        <div style="text-align:center;cursor:pointer" onclick="openStatusModal(18, 'Z100826', 'nitrogen', 'in_use')">
+            <svg width="50" height="80" viewBox="0 0 75 120">
+                <defs><linearGradient id="sn21" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f1c40f"/><stop offset="100%" stop-color="#f39c12"/></linearGradient></defs>
+                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
+                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
+                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sn21)" stroke="#d68910" stroke-width="2"/>
+                <text x="37" y="60" text-anchor="middle" fill="white" font-size="16" font-weight="bold">N₂</text>
+                <text x="37" y="78" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">Z100826</text>
+                <text x="37" y="93" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">USE</text>
+            </svg>
+        </div>
+        
+        <div style="text-align:center;cursor:pointer" onclick="openStatusModal(21, 'Z170826', 'nitrogen', 'in_use')">
+            <svg width="50" height="80" viewBox="0 0 75 120">
+                <defs><linearGradient id="sn22" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f1c40f"/><stop offset="100%" stop-color="#f39c12"/></linearGradient></defs>
+                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
+                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
+                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sn22)" stroke="#d68910" stroke-width="2"/>
+                <text x="37" y="60" text-anchor="middle" fill="white" font-size="16" font-weight="bold">N₂</text>
+                <text x="37" y="78" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">Z170826</text>
+                <text x="37" y="93" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">USE</text>
+            </svg>
+        </div>
+        
+    </div>
+
+    <!-- CO2 Cylinders with images -->
+    <h3 style="color:#e67e22;margin-bottom:6px;font-size:13px;text-align:center">CO₂ Углекислый газ (3/5)</h3>
+    <div style="display:flex;gap:6px;margin-bottom:6px;justify-content:center;flex-wrap:wrap">
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#27ae60;color:white;padding:3px 8px;border-radius:10px"><b>1</b> Полный</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#f39c12;color:white;padding:3px 8px;border-radius:10px"><b>2</b> В работе</span>
+        <span style="font-size:11px;display:flex;align-items:center;gap:3px;background:#e74c3c;color:white;padding:3px 8px;border-radius:10px"><b>2</b> Пустой</span>
+        
+        
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;justify-content:center">
+        
+        <div style="text-align:center;cursor:pointer" onclick="openStatusModal(12, 'Z170626', 'co2', 'in_use')">
+            <svg width="50" height="80" viewBox="0 0 75 120">
+                <defs><linearGradient id="sco21" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f1c40f"/><stop offset="100%" stop-color="#f39c12"/></linearGradient></defs>
+                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
+                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
+                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sco21)" stroke="#d68910" stroke-width="2"/>
+                <text x="37" y="57" text-anchor="middle" fill="white" font-size="13" font-weight="bold">CO₂</text>
+                <text x="37" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">Z170626</text>
+                <text x="37" y="90" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">USE</text>
+            </svg>
+        </div>
+        
+        <div style="text-align:center;cursor:pointer" onclick="openStatusModal(13, 'Z100626', 'co2', 'in_use')">
+            <svg width="50" height="80" viewBox="0 0 75 120">
+                <defs><linearGradient id="sco22" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f1c40f"/><stop offset="100%" stop-color="#f39c12"/></linearGradient></defs>
+                <rect x="30" y="0" rx="2" ry="2" width="15" height="10" fill="#555"/>
+                <rect x="34" y="0" rx="1" ry="1" width="7" height="6" fill="#777"/>
+                <rect x="8" y="10" rx="12" ry="12" width="59" height="100" fill="url(#sco22)" stroke="#d68910" stroke-width="2"/>
+                <text x="37" y="57" text-anchor="middle" fill="white" font-size="13" font-weight="bold">CO₂</text>
+                <text x="37" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="7">Z100626</text>
+                <text x="37" y="90" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">USE</text>
+            </svg>
+        </div>
+        
+    </div>
+
+    <div style="border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#888;text-align:center">Click cylinder for details</div>
+</div>
+
+<!-- STATS MODAL -->
+<div id="statsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:350px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="statsTitle" style="margin:0;font-size:16px"></h2>
+            <button onclick="document.getElementById('statsModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div id="statsContent" style="font-size:14px;line-height:2"></div>
+    </div>
+</div>
+
+<!-- RIGHT: GAS SYSTEM -->
+<div class="card" style="padding:16px">
+    <h2 style="margin-bottom:12px;text-align:center;font-size:14px">🔧 Gas System</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- N2 SYSTEM -->
+        <div>
+            <h3 style="color:#3498db;font-size:12px;margin-bottom:8px;text-align:center">N₂ Азот</h3>
+            
+            
+            
+            
+            <svg width="100%" height="380" viewBox="0 0 200 380" onclick="svgClick(event)">
+                <!-- Group frames -->
+                <rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="50" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">Group 1</text>
+                <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="150" y="373" text-anchor="middle" fill="#3498db" font-size="8" opacity="0.6">Group 2</text>
+
+                <!-- Cylinder LEFT (Group 1) -->
+                <g style="cursor:pointer" onclick="cylClick('n2','left')">
+                    <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="left" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
+                    <text x="45" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold">N₂</text>
+                    <text x="45" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-left-label">—</text>
+                    <text x="45" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-left-status">—</text>
+                </g>
+
+                <!-- Cylinder RIGHT (Group 2) -->
+                <g style="cursor:pointer" onclick="cylClick('n2','right')">
+                    <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="nitrogen" data-position="right" fill="#3498db" stroke="#2471a3" stroke-width="2"/>
+                    <text x="155" y="325" text-anchor="middle" fill="white" font-size="12" font-weight="bold">N₂</text>
+                    <text x="155" y="340" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="n2-right-label">—</text>
+                    <text x="155" y="353" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="n2-right-status">—</text>
+                </g>
+
+                <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
+                <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
+
+                <!-- Heater 1 -->
+                <rect x="17" y="225" rx="6" ry="6" width="56" height="38" data-cid="3" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M27,240 Q32,235 37,240 Q42,245 47,240 Q52,235 57,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="45" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 1</text>
+                <text x="45" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="3" class="comp-txt">OK</text>
+
+                <!-- Heater 2 -->
+                <rect x="127" y="225" rx="6" ry="6" width="56" height="38" data-cid="11" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M137,240 Q142,235 147,240 Q152,245 157,240 Q162,235 167,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="155" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 2</text>
+                <text x="155" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="11" class="comp-txt">OK</text>
+
+                <line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>
+                <line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>
+
+                <!-- Switch -->
+                <rect x="77" y="192" rx="3" ry="3" width="46" height="16" data-cid="5" class="comp-click" fill="#f39c12" stroke="#d68910" stroke-width="1.2"/>
+                <circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/>
+                <circle cx="110" cy="200" r="4" fill="#d68910"/>
+
+                <line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>
+
+                <!-- Valve -->
+                <rect x="78" y="148" rx="4" ry="4" width="44" height="20" data-cid="1" class="comp-click" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+                <line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>
+                <rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>
+                <text x="100" y="162" text-anchor="middle" fill="white" font-size="6" data-cid="1" class="comp-txt">OK</text>
+
+                <!-- Manometers -->
+                <circle cx="60" cy="118" r="16" data-cid="4" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="60" y1="118" x2="70" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="2" fill="#333"/>
+                <text x="60" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="4" class="comp-txt">OK</text>
+
+                <circle cx="140" cy="118" r="16" data-cid="12" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="140" y1="118" x2="150" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="2" fill="#333"/>
+                <text x="140" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="12" class="comp-txt">OK</text>
+
+                <line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>
+                <line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>
+                <line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>
+
+                <rect x="55" y="72" rx="4" ry="4" width="90" height="22" data-cid="5" class="comp-click" fill="#555" stroke="#333" stroke-width="1.2"/>
+                <circle cx="80" cy="83" r="6" fill="#27ae60"/>
+                <circle cx="120" cy="83" r="6" fill="#95a5a6"/>
+                <line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+                <line x1="100" y1="72" x2="100" y2="52" stroke="#3498db" stroke-width="3"/>
+                <polygon points="100,48 94,58 106,58" fill="#3498db"/>
+                <text x="100" y="45" text-anchor="middle" fill="#3498db" font-size="10" font-weight="bold">OUT</text>
+            </svg>
+        </div>
+
+        <!-- CO2 SYSTEM -->
+        <div>
+            <h3 style="color:#e67e22;font-size:12px;margin-bottom:8px;text-align:center">CO₂ Углекислый газ</h3>
+            
+            
+            
+            
+            <svg width="100%" height="380" viewBox="0 0 200 380" onclick="svgClick(event)">
+                <rect x="2" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="50" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">Group 1</text>
+                <rect x="102" y="195" rx="6" ry="6" width="96" height="175" fill="none" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                <text x="150" y="373" text-anchor="middle" fill="#e67e22" font-size="8" opacity="0.6">Group 2</text>
+
+                <!-- Cylinder LEFT (Group 1) -->
+                <g style="cursor:pointer" onclick="cylClick('co2','left')">
+                    <rect x="25" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="left" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+                    <text x="45" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CO₂</text>
+                    <text x="45" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-left-label">—</text>
+                    <text x="45" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-left-status">—</text>
+                </g>
+
+                <!-- Cylinder RIGHT (Group 2) -->
+                <g style="cursor:pointer" onclick="cylClick('co2','right')">
+                    <rect x="135" y="290" rx="8" ry="8" width="40" height="70" class="cyl-svg-click" data-gas="co2" data-position="right" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+                    <text x="155" y="322" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CO₂</text>
+                    <text x="155" y="337" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="7" class="co2-right-label">—</text>
+                    <text x="155" y="350" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="5" class="co2-right-status">—</text>
+                </g>
+
+                <line x1="45" y1="290" x2="45" y2="265" stroke="#888" stroke-width="3"/>
+                <line x1="155" y1="290" x2="155" y2="265" stroke="#888" stroke-width="3"/>
+
+                <rect x="17" y="225" rx="6" ry="6" width="56" height="38" data-cid="8" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M27,240 Q32,235 37,240 Q42,245 47,240 Q52,235 57,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="45" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 1</text>
+                <text x="45" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="8" class="comp-txt">OK</text>
+
+                <rect x="127" y="225" rx="6" ry="6" width="56" height="38" data-cid="13" class="comp-click" fill="#2471a3" stroke="#1a5276" stroke-width="1.5"/>
+                <path d="M137,240 Q142,235 147,240 Q152,245 157,240 Q162,235 167,240" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                <text x="155" y="254" text-anchor="middle" fill="white" font-size="8" font-weight="bold">HEAT 2</text>
+                <text x="155" y="261" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="6" data-cid="13" class="comp-txt">OK</text>
+
+                <line x1="45" y1="225" x2="45" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="155" y1="225" x2="155" y2="208" stroke="#888" stroke-width="2.5"/>
+                <line x1="45" y1="208" x2="155" y2="208" stroke="#888" stroke-width="3.5"/>
+                <line x1="100" y1="208" x2="100" y2="192" stroke="#888" stroke-width="3"/>
+
+                <!-- Switch -->
+                <rect x="77" y="192" rx="3" ry="3" width="46" height="16" data-cid="10" class="comp-click" fill="#f39c12" stroke="#d68910" stroke-width="1.2"/>
+                <circle cx="90" cy="200" r="4" fill="#fff" stroke="#d68910"/>
+                <circle cx="110" cy="200" r="4" fill="#d68910"/>
+
+                <line x1="100" y1="192" x2="100" y2="168" stroke="#888" stroke-width="3"/>
+
+                <!-- Valve -->
+                <rect x="78" y="148" rx="4" ry="4" width="44" height="20" data-cid="6" class="comp-click" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+                <line x1="100" y1="148" x2="100" y2="138" stroke="#1e8449" stroke-width="2.5"/>
+                <rect x="92" y="130" rx="2" ry="2" width="16" height="9" fill="#1e8449"/>
+                <text x="100" y="162" text-anchor="middle" fill="white" font-size="6" data-cid="6" class="comp-txt">OK</text>
+
+                <!-- Manometers -->
+                <circle cx="60" cy="118" r="16" data-cid="9" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="60" y1="118" x2="70" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="60" cy="118" r="2" fill="#333"/>
+                <text x="60" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="9" class="comp-txt">OK</text>
+
+                <circle cx="140" cy="118" r="16" data-cid="14" class="comp-click" fill="#ecf0f1" stroke="#34495e" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="11" fill="white" stroke="#bbb"/>
+                <line x1="140" y1="118" x2="150" y2="110" stroke="#e74c3c" stroke-width="1.2"/>
+                <circle cx="140" cy="118" r="2" fill="#333"/>
+                <text x="140" y="140" text-anchor="middle" fill="#555" font-size="6" data-cid="14" class="comp-txt">OK</text>
+
+                <line x1="100" y1="138" x2="100" y2="100" stroke="#888" stroke-width="3"/>
+                <line x1="100" y1="100" x2="60" y2="100" stroke="#888" stroke-width="2"/>
+                <line x1="100" y1="100" x2="140" y2="100" stroke="#888" stroke-width="2"/>
+
+                <rect x="55" y="72" rx="4" ry="4" width="90" height="22" data-cid="10" class="comp-click" fill="#555" stroke="#333" stroke-width="1.2"/>
+                <circle cx="80" cy="83" r="6" fill="#27ae60"/>
+                <circle cx="120" cy="83" r="6" fill="#95a5a6"/>
+                <line x1="86" y1="83" x2="114" y2="83" stroke="#aaa" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+                <line x1="100" y1="72" x2="100" y2="52" stroke="#e67e22" stroke-width="3"/>
+                <polygon points="100,48 94,58 106,58" fill="#e67e22"/>
+                <text x="100" y="45" text-anchor="middle" fill="#e67e22" font-size="10" font-weight="bold">OUT</text>
+            </svg>
+        </div>
+    </div>
+    <p style="text-align:center;color:#888;font-size:10px">🔵 Heater | ⭕ Manometer | 🟢 Valve | 🟡 Switch | Click cylinder to replace</p>
+</div>
+
+</div>
+
+<!-- ORDERS + HISTORY -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div class="card"><h2 style="margin-bottom:12px">Заказы</h2><div class="table-wrap"><table><tr><th>Дата</th><th>Gas</th><th>Qty</th><th>Статус</th><th>Выдан</th></tr><tr><td>18-08-2026</td><td>CO₂</td><td>2</td><td><span class="badge badge-delivered">delivered</span></td><td>19-08-2026</td></tr><tr><td>18-08-2026</td><td>N₂</td><td>8</td><td><span class="badge badge-delivered">delivered</span></td><td>19-08-2026</td></tr><tr><td>12-08-2026</td><td>N₂</td><td>2</td><td><span class="badge badge-pending">pending</span><form method="POST" action="/cylinders/order/5/status" style="display:inline"><select name="status" onchange="if(this.value==='delivered'){openDeliver(5,2,'nitrogen')}else{this.form.submit()}" style="font-size:11px;padding:2px"><option value="">Change</option><option value="ordered">Ordered</option><option value="delivered">Выдан</option><option value="cancelled">Отменён</option></select></form></td><td>—</td></tr><tr><td>12-08-2026</td><td>CO₂</td><td>2</td><td><span class="badge badge-delivered">delivered</span></td><td>12-08-2026</td></tr><tr><td>12-08-2026</td><td>N₂</td><td>2</td><td><span class="badge badge-pending">pending</span><form method="POST" action="/cylinders/order/3/status" style="display:inline"><select name="status" onchange="if(this.value==='delivered'){openDeliver(3,2,'nitrogen')}else{this.form.submit()}" style="font-size:11px;padding:2px"><option value="">Change</option><option value="ordered">Ordered</option><option value="delivered">Выдан</option><option value="cancelled">Отменён</option></select></form></td><td>—</td></tr><tr><td>11-08-2026</td><td>N₂</td><td>10</td><td><span class="badge badge-delivered">delivered</span></td><td>12-08-2026</td></tr><tr><td>11-08-2026</td><td>N₂</td><td>2</td><td><span class="badge badge-delivered">delivered</span></td><td>12-08-2026</td></tr></table></div></div>
+    <div class="card"><h2 style="margin-bottom:12px">История</h2><div style="max-height:200px;overflow-y:auto"><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">24-08 13:00</span> <b>auto_empty</b> ID 17 (empty)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">24-08 13:00</span> <b>auto_empty</b> ID 16 (empty)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">24-08 13:00</span> <b>auto_empty</b> ID 15 (empty)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">24-08 13:00</span> <b>auto_empty</b> ID 14 (empty)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">24-08 13:00</span> <b>auto_empty</b> ID 24 (empty)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">24-08 12:43</span> <b>installed</b> Z100826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">23-08 13:15</span> <b>installed</b> Z170626</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">21-08 05:30</span> <b>replaced</b> Z170826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">21-08 05:30</span> <b>installed</b> Z170826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">20-08 09:18</span> <b>status_change</b> Z060826 (full)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">20-08 09:18</span> <b>status_change</b> N2-001 (in_use)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">20-08 09:18</span> <b>replaced</b> Z060826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">20-08 09:18</span> <b>installed</b> Z060826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">19-08 05:09</span> <b>status_change</b> Z100626 (in_use)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">19-08 05:08</span> <b>replaced</b> Z140826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">19-08 05:08</span> <b>installed</b> Z140826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">18-08 12:56</span> <b>status_change</b> N2-001 (full)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">18-08 12:56</span> <b>status_change</b> N2-001 (faulty)</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">18-08 12:45</span> <b>replaced</b> Z050826</div><div style="padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span style="color:#888">18-08 12:45</span> <b>installed</b> Z050826</div></div></div>
+</div>
+
+<div class="card" style="margin-top:16px"><h2 style="margin-bottom:12px">Все баллоны</h2><div class="table-wrap"><table><tr><th>Номер</th><th>Gas</th><th>Статус</th><th>Поступление</th><th>Установлено</th></tr><tr><td><b>CO2-001</b></td><td>CO₂</td><td><span class="badge badge-broken">empty</span></td><td>—</td><td>—</td></tr><tr><td><b>Z170626</b></td><td>CO₂</td><td><span class="badge badge-high">in_use</span></td><td>12-08-2026</td><td>23-08-2026</td></tr><tr><td><b>Z100626</b></td><td>CO₂</td><td><span class="badge badge-high">in_use</span></td><td>12-08-2026</td><td>19-08-2026</td></tr><tr><td><b>Z200726</b></td><td>CO₂</td><td><span class="badge badge-active">full</span></td><td>19-08-2026</td><td>—</td></tr><tr><td><b>Z140826</b></td><td>CO₂</td><td><span class="badge badge-broken">empty</span></td><td>19-08-2026</td><td>—</td></tr><tr><td><b>N2-001</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>—</td><td>—</td></tr><tr><td><b>Z070826</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>—</td><td>—</td></tr><tr><td><b>Z050826</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>Z280726</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>Z040826</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>Z200726</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>Z030826</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>Z220726</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>Z060826</b></td><td>N₂</td><td><span class="badge badge-active">full</span></td><td>12-08-2026</td><td>20-08-2026</td></tr><tr><td><b>Z300726</b></td><td>N₂</td><td><span class="badge badge-active">full</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>TEST-001</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>12-08-2026</td><td>—</td></tr><tr><td><b>230726</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>17-08-2026</td><td>—</td></tr><tr><td><b>Z150726</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>17-08-2026</td><td>—</td></tr><tr><td><b>Z230726</b></td><td>N₂</td><td><span class="badge badge-broken">empty</span></td><td>17-08-2026</td><td>—</td></tr><tr><td><b>Z100826</b></td><td>N₂</td><td><span class="badge badge-high">in_use</span></td><td>19-08-2026</td><td>24-08-2026</td></tr><tr><td><b>Z300626</b></td><td>N₂</td><td><span class="badge badge-active">full</span></td><td>19-08-2026</td><td>—</td></tr><tr><td><b>Z140726</b></td><td>N₂</td><td><span class="badge badge-active">full</span></td><td>19-08-2026</td><td>—</td></tr><tr><td><b>Z170826</b></td><td>N₂</td><td><span class="badge badge-high">in_use</span></td><td>19-08-2026</td><td>21-08-2026</td></tr><tr><td><b>Z??????</b></td><td>N₂</td><td><span class="badge badge-active">full</span></td><td>19-08-2026</td><td>—</td></tr></table></div></div>
+
+<!-- MODALS -->
+<div id="statusModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:380px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="statusTitle" style="margin:0"></h2>
+            <button onclick="closeStatusModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+            <button class="btn" id="btn-full" onclick="setCylStatus('full')" style="background:#27ae60;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Полный</button>
+            <button class="btn" id="btn-in_use" onclick="setCylStatus('in_use')" style="background:#f39c12;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">В работе</button>
+            <button class="btn" id="btn-empty" onclick="setCylStatus('empty')" style="background:#e74c3c;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Пустой</button>
+            <button class="btn" id="btn-leak" onclick="setCylStatus('leak')" style="background:#9b59b6;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Leak</button>
+            <button class="btn" id="btn-faulty" onclick="setCylStatus('faulty')" style="background:#566573;color:white;padding:14px 4px;border-radius:10px;font-size:11px;font-weight:600">Faulty</button>
+        </div>
+        <div class="form-group"><label>Заметки</label><textarea id="statusNotes" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn" style="background:#eee" onclick="closeStatusModal()">Отмена</button>
+            <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReplaceFromModal()">Заменить ↗</button>
+        </div>
+    </div>
+</div>
+
+<div id="componentModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:400px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="compTitle" style="margin:0"></h2>
+            <button onclick="document.getElementById('componentModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div class="form-group"><label>Статус</label>
+            <select id="compStatus">
+                <option value="ok">✅ OK</option>
+                <option value="warning">⚠️ Warning</option>
+                <option value="faulty">❌ Faulty</option>
+                <option value="replaced">🔄 Заменено</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Заметки</label><textarea id="compNotes" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn" style="background:#eee" onclick="document.getElementById('componentModal').style.display='none'">Отмена</button>
+            <button class="btn btn-primary" id="saveCompBtn" onclick="saveComp()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div id="replaceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">Замена баллона</h2><button onclick="closeReplace()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><p style="margin:0 0 12px;color:#666" id="replaceInfo"></p><div class="form-group"><label>Select new</label><select id="newCylSelect"><option value="">Available</option></select></div><div class="form-group"><label>Or enter number</label><input type="text" id="newCylNumber"></div><div class="form-group"><label>Заметки</label><textarea id="newCylNotes" rows="2"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" style="background:#eee" onclick="closeReplace()">Отмена</button><button class="btn btn-primary" onclick="submitReplace()">Заменить</button></div></div></div>
+
+<div id="deliverModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">Deliver</h2><button onclick="closeDeliver()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><p id="deliverInfo" style="margin:0 0 12px;color:#666"></p><form method="POST" id="deliverForm"><input type="hidden" name="status" value="delivered"><div class="form-group"><label>Numbers</label><textarea name="cylinder_numbers" id="deliverNumbers" rows="4"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="closeDeliver()">Отмена</button><button type="submit" class="btn btn-success">Confirm</button></div></form></div></div>
+
+<div id="orderModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">Заказать баллоны</h2><button onclick="document.getElementById('orderModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button></div><form method="POST" action="/cylinders/order"><div class="form-row"><div class="form-group"><label>Gas</label><select name="gas_type" required><option value="nitrogen">N₂</option><option value="co2">CO₂</option></select></div><div class="form-group"><label>Кол-во</label><input type="number" name="quantity" value="1" min="1"></div></div><div class="form-group"><label>Поставщик</label><input type="text" name="supplier"></div><div class="form-group"><label>Причина</label><textarea name="reason" rows="2"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" style="background:#eee" onclick="document.getElementById('orderModal').style.display='none'">Отмена</button><button type="submit" class="btn btn-primary">Заказ</button></div></form></div></div>
+
+<style>.comp-click{cursor:pointer;transition:filter .15s}.comp-click:hover{filter:brightness(1.2)}.cyl-svg-click:hover{filter:brightness(1.3);stroke-width:3}</style>
+<script>
+// === CYLINDER STATUS CHANGE ===
+let statusCylId = null, statusGas = null, statusCylNum = '';
+
+function openStatusModal(id, number, gas, currentStatus) {
+    if (!id) return;
+    statusCylId = id; statusGas = gas; statusCylNum = number;
+    document.getElementById('statusTitle').textContent = (gas === 'nitrogen' ? 'N₂' : 'CO₂') + ' #' + number;
+    ['full','in_use','empty','leak','faulty'].forEach(s => {
+        const btn = document.getElementById('btn-' + s);
+        btn.style.outline = (s === currentStatus) ? '3px solid #333' : 'none';
+        btn.style.opacity = (s === currentStatus) ? '1' : '0.7';
+    });
+    document.getElementById('statusNotes').value = '';
+    document.getElementById('statusModal').style.display = 'flex';
+}
+function closeStatusModal() { document.getElementById('statusModal').style.display = 'none'; }
+function openReplaceFromModal() { closeStatusModal(); openReplace(statusCylId, statusGas, statusCylNum); }
+
+function setCylStatus(newStatus) {
+    if (!statusCylId) return;
+    csrfFetch('/cylinders/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({cylinder_id: statusCylId, status: newStatus, notes: document.getElementById('statusNotes').value})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { closeStatusModal(); location.reload(); }
+        else alert(d.error || 'Error');
+    }).catch(e => alert('Error: ' + e.message));
+}
+
+// === LOAD ACTIVE CYLINDERS INTO SVG ===
+function updateActiveCylinders() {
+    csrfFetch('/cylinders/api/active').then(r => r.json()).then(d => {
+        // N2 left (Group 1) - first in_use
+        const n2l = d.n2_left;
+        const n2r = d.n2_right;
+        document.querySelector('.n2-left-label').textContent = n2l ? n2l.number : '—';
+        document.querySelector('.n2-left-status').textContent = n2l ? n2l.status.toUpperCase() : 'EMPTY';
+        document.querySelector('.n2-right-label').textContent = n2r ? n2r.number : '—';
+        document.querySelector('.n2-right-status').textContent = n2r ? n2r.status.toUpperCase() : 'EMPTY';
+        
+        // Color based on status
+        function getStatusColor(status) {
+            if (!status) return '#e74c3c';
+            switch(status) {
+                case 'full': return '#27ae60';
+                case 'in_use': return '#f39c12';
+                case 'empty': return '#e74c3c';
+                case 'leak': return '#9b59b6';
+                case 'faulty': return '#566573';
+                default: return '#95a5a6';
+            }
+        }
+        
+        const n2lRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="left"]');
+        const n2rRect = document.querySelector('.cyl-svg-click[data-gas="nitrogen"][data-position="right"]');
+        n2lRect.setAttribute('fill', getStatusColor(n2l ? n2l.status : null));
+        n2rRect.setAttribute('fill', getStatusColor(n2r ? n2r.status : null));
+        
+        // Store IDs for click
+        n2lRect.dataset.cylId = n2l ? n2l.id : '';
+        n2rRect.dataset.cylId = n2r ? n2r.id : '';
+        n2LeftId = n2l ? n2l.id : null;
+        n2RightId = n2r ? n2r.id : null;
+        
+        // CO2
+        const co2l = d.co2_left;
+        const co2r = d.co2_right;
+        document.querySelector('.co2-left-label').textContent = co2l ? co2l.number : '—';
+        document.querySelector('.co2-left-status').textContent = co2l ? co2l.status.toUpperCase() : 'EMPTY';
+        document.querySelector('.co2-right-label').textContent = co2r ? co2r.number : '—';
+        document.querySelector('.co2-right-status').textContent = co2r ? co2r.status.toUpperCase() : 'EMPTY';
+        
+        const co2lRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="left"]');
+        const co2rRect = document.querySelector('.cyl-svg-click[data-gas="co2"][data-position="right"]');
+        co2lRect.setAttribute('fill', getStatusColor(co2l ? co2l.status : null));
+        co2rRect.setAttribute('fill', getStatusColor(co2r ? co2r.status : null));
+        
+        co2lRect.dataset.cylId = co2l ? co2l.id : '';
+        co2rRect.dataset.cylId = co2r ? co2r.id : '';
+        co2LeftId = co2l ? co2l.id : null;
+        co2RightId = co2r ? co2r.id : null;
+    });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    updateActiveCylinders();
+    setInterval(updateActiveCylinders, 30000);
+});
+
+// Global cylinder IDs (set by updateActiveCylinders)
+var n2LeftId = null, n2RightId = null, co2LeftId = null, co2RightId = null;
+
+function cylClick(gas, position) {
+    var id, num;
+    if (gas === 'n2') {
+        id = position === 'left' ? n2LeftId : n2RightId;
+        var label = document.querySelector('.n2-' + position + '-label');
+        num = label ? label.textContent : '';
+    } else {
+        id = position === 'left' ? co2LeftId : co2RightId;
+        var label = document.querySelector('.co2-' + position + '-label');
+        num = label ? label.textContent : '';
+    }
+    openReplace(id, gas === 'n2' ? 'nitrogen' : 'co2', num, position);
+}
+
+// === REPLACE MODAL ===
+const aN2 = [{id:10,n:'Z060826'},{id:20,n:'Z140726'},{id:19,n:'Z300626'},{id:11,n:'Z300726'},{id:22,n:'Z??????'}];
+const aCO2 = [{id:23,n:'Z200726'}];
+var rId = null, rGas = null, rPosition = '';
+
+function openReplace(id, gas, num, position) {
+    rId = id; rGas = gas; rPosition = position || '';
+    var gasLabel = gas === 'nitrogen' ? 'N\u2082' : 'CO\u2082';
+    var posLabel = position === 'left' ? ' (Left)' : position === 'right' ? ' (Right)' : '';
+    document.getElementById('replaceInfo').textContent = 'Replace ' + gasLabel + posLabel + ' #' + (num || '\u2014');
+    var sel = document.getElementById('newCylSelect');
+    var list = gas === 'nitrogen' ? aN2 : aCO2;
+    sel.innerHTML = '<option value="">Select</option>';
+    function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+    for (var i = 0; i < list.length; i++) {
+        sel.innerHTML += '<option value="' + parseInt(list[i].id) + '">' + esc(list[i].n) + '</option>';
+    }
+    document.getElementById('newCylNumber').value = '';
+    document.getElementById('newCylNotes').value = '';
+    document.getElementById('replaceModal').style.display = 'flex';
+}
+function closeReplace() { document.getElementById('replaceModal').style.display = 'none'; }
+function submitReplace() {
+    var sid = document.getElementById('newCylSelect').value;
+    var num = document.getElementById('newCylNumber').value.trim();
+    if (!sid && !num) { alert('Select or enter number'); return; }
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    fetch('/cylinders/replace', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        body: JSON.stringify({cylinder_id: rId, new_cylinder_id: sid ? parseInt(sid) : null, new_number: num, gas_type: rGas, notes: document.getElementById('newCylNotes').value})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    }).catch(function(e) { alert('Error: ' + e.message); });
+}
+
+function openDeliver(oid, qty, gas) {
+    document.getElementById('deliverInfo').textContent = `${gas === 'nitrogen' ? 'N₂' : 'CO₂'}: ${qty}`;
+    document.getElementById('deliverForm').action = `/cylinders/order/${oid}/status`;
+    document.getElementById('deliverNumbers').value = '';
+    document.getElementById('deliverModal').style.display = 'flex';
+}
+function closeDeliver() { document.getElementById('deliverModal').style.display = 'none'; }
+
+document.querySelectorAll('[id$="Modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+
+// Translation strings
+const T = {
+    nitrogen: 'Азот',
+    carbonDioxide: 'Углекислый газ',
+    full: 'Полный',
+    inUse: 'В работе',
+    empty: 'Пустой',
+    leak: 'Leak',
+    faulty: 'Faulty',
+    total: 'Итого',
+    attention: 'ATTENTION!',
+    remaining: 'Remaining',
+    fullCylinders: 'full cylinders N₂',
+    needOrder: 'NEED TO ORDER!',
+    understood: 'UNDERSTOOD',
+    replace: 'Заменить',
+    select: 'Select',
+    enterNumber: 'Enter number',
+    selectOrEnter: 'Select or enter number'
+};
+
+// === STATS MODAL ===
+const statsData = {
+    nitrogen: {
+        full: 5,
+        in_use: 2,
+        empty: 12,
+        leak: 0,
+        faulty: 0,
+        total: 7,
+        total_all: 19
+    },
+    co2: {
+        full: 1,
+        in_use: 2,
+        empty: 2,
+        leak: 0,
+        faulty: 0,
+        total: 3,
+        total_all: 5
+    }
+};
+
+function showStats(gas) {
+    const d = statsData[gas];
+    const label = gas === 'nitrogen' ? 'N₂ ' + T.nitrogen : 'CO₂ ' + T.carbonDioxide;
+    document.getElementById('statsTitle').textContent = label;
+    document.getElementById('statsContent').innerHTML = 
+        `<div style="display:flex;flex-direction:column;gap:8px">` +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#27ae60;color:white;border-radius:8px"><span>${T.full}:</span><b>${d.full}</b></div>` +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f39c12;color:white;border-radius:8px"><span>${T.inUse}:</span><b>${d.in_use}</b></div>` +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#e74c3c;color:white;border-radius:8px"><span>${T.empty}:</span><b>${d.empty}</b></div>` +
+        (d.leak > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#9b59b6;color:white;border-radius:8px"><span>${T.leak}:</span><b>${d.leak}</b></div>` : '') +
+        (d.faulty > 0 ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#566573;color:white;border-radius:8px"><span>${T.faulty}:</span><b>${d.faulty}</b></div>` : '') +
+        `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#eee;border-radius:8px;font-weight:600"><span>${T.total}:</span><b>${d.total}</b></div>` +
+        (d.total_all !== d.total ? `<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#ddd;border-radius:8px;font-size:12px"><span>All (incl. empty/faulty):</span><b>${d.total_all}</b></div>` : '') +
+        `</div>`;
+    document.getElementById('statsModal').style.display = 'flex';
+}
+
+// === LOW STOCK WARNING (N2 <= 4) ===
+(function() {
+    const n2Full = 5;
+    if (n2Full <= 4 && n2Full > 0) {
+        const overlay = document.createElement('div');
+        overlay.id = 'lowStockWarning';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+        overlay.innerHTML = '<div id="flashBox" style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(231,76,60,0.8)">' +
+            '<div style="font-size:64px;margin-bottom:16px">⚠️</div>' +
+            '<div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">' + T.attention + '</div>' +
+            '<div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">' + T.remaining + ' ' + n2Full + ' ' + T.fullCylinders + '</div>' +
+            '<div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">' + T.needOrder + '</div>' +
+            '<button onclick="this.closest(\'#lowStockWarning\').remove()" style="padding:12px 30px;font-size:16px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T.understood + '</button>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        
+        // Flash effect for 5 seconds
+        const box = document.getElementById('flashBox');
+        let flashCount = 0;
+        const flashInterval = setInterval(() => {
+            box.style.background = flashCount % 2 === 0 ? '#000' : '#e74c3c';
+            box.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+            box.querySelectorAll('div').forEach(d => {
+                if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+            });
+            flashCount++;
+            if (flashCount >= 10) {
+                clearInterval(flashInterval);
+                box.style.background = '#e74c3c';
+                box.querySelectorAll('div').forEach(d => d.style.color = '#000');
+            }
+        }, 500);
+    }
+})();
+</script>
+<script>
+document.addEventListener('contextmenu', function(e) {
+    const el = e.target.closest('.comp-click[data-cid]');
+    if (!el) return;
+    e.preventDefault();
+    const cid = parseInt(el.dataset.cid);
+    if (!cid || !confirm('Reset to OK?')) return;
+    csrfFetch('/cylinders/component/' + cid + '/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'ok', notes: ''})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+});
+</script>
+<script>
+var allComps = [{"id": 3, "name": "Heater N\u2082", "status": "ok", "type": "heater"}, {"id": 11, "name": "Heater 2 N\u2082", "status": "ok", "type": "heater"}, {"id": 4, "name": "Manometer N\u2082", "status": "ok", "type": "manometer"}, {"id": 12, "name": "Manometer 2 N\u2082", "status": "ok", "type": "manometer"}, {"id": 2, "name": "Pressure Regulator N\u2082", "status": "faulty", "type": "regulator"}, {"id": 5, "name": "Shut-off Valve N\u2082", "status": "ok", "type": "shut_off"}, {"id": 1, "name": "Main Valve N\u2082", "status": "ok", "type": "valve"}].concat([{"id": 8, "name": "Heater CO\u2082", "status": "ok", "type": "heater"}, {"id": 13, "name": "Heater 2 CO\u2082", "status": "ok", "type": "heater"}, {"id": 9, "name": "Manometer CO\u2082", "status": "ok", "type": "manometer"}, {"id": 14, "name": "Manometer 2 CO\u2082", "status": "ok", "type": "manometer"}, {"id": 7, "name": "Pressure Regulator CO\u2082", "status": "ok", "type": "regulator"}, {"id": 10, "name": "Shut-off Valve CO\u2082", "status": "ok", "type": "shut_off"}, {"id": 6, "name": "Main Valve CO\u2082", "status": "ok", "type": "valve"}]);
+const statusColors = {
+    ok:      {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'},
+    warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'},
+    faulty:  {fill: '#c0392b', circle: '#f8d7da', text: 'FAULT'},
+    replaced:{fill: '#8e44ad', circle: '#e8daef', text: 'NEW'}
+};
+const compById = {};
+allComps.forEach(c => { compById[c.id] = c; });
+
+function applyColors() {
+    document.querySelectorAll('.comp-click[data-cid]').forEach(el => {
+        const cid = parseInt(el.dataset.cid);
+        const comp = compById[cid];
+        if (!comp) return;
+        const sc = statusColors[comp.status] || statusColors.ok;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'rect') el.setAttribute('fill', sc.fill);
+        else if (tag === 'circle') el.setAttribute('fill', sc.circle);
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function(e) { e.stopPropagation(); openCompModal(cid); });
+    });
+    document.querySelectorAll('.comp-txt[data-cid]').forEach(el => {
+        const cid = parseInt(el.dataset.cid);
+        const comp = compById[cid];
+        if (!comp) return;
+        const sc = statusColors[comp.status] || statusColors.ok;
+        el.textContent = sc.text;
+    });
+}
+applyColors();
+
+let currentCompId = null;
+function openCompModal(id) {
+    if (!id || isNaN(id)) return;
+    currentCompId = id;
+    const comp = compById[id];
+    document.getElementById('compTitle').textContent = comp ? comp.name : 'Component #' + id;
+    document.getElementById('compStatus').value = comp ? (comp.status || 'ok') : 'ok';
+    document.getElementById('compNotes').value = '';
+    document.getElementById('componentModal').style.display = 'flex';
+}
+
+function svgClick(event) {
+    // Handle component clicks
+    const compEl = event.target.closest('[data-cid]');
+    if (compEl) {
+        const id = parseInt(compEl.dataset.cid);
+        if (id && !isNaN(id)) { openCompModal(id); return; }
+    }
+    // Handle cylinder clicks in gas system SVG
+    const cylEl = event.target.closest('.cyl-svg-click');
+    if (cylEl) {
+        const gas = cylEl.dataset.gas;
+        const position = cylEl.dataset.position;
+        const cylId = cylEl.dataset.cylId;
+        const num = gas === 'nitrogen' 
+            ? document.querySelector('.n2-' + position + '-label').textContent 
+            : document.querySelector('.co2-' + position + '-label').textContent;
+        openReplace(cylId ? parseInt(cylId) : null, gas, num, position);
+        return;
+    }
+}
+
+function saveComp() {
+    if (!currentCompId) { alert('Компонент не выбран'); return; }
+    const status = document.getElementById('compStatus').value;
+    const notes = document.getElementById('compNotes').value;
+    const btn = document.getElementById('saveCompBtn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    csrfFetch('/cylinders/component/' + currentCompId + '/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: status, notes: notes})
+    }).then(r => {
+        if (!r.ok) throw new Error('Ошибка сервера: ' + r.status);
+        return r.json();
+    }).then(d => {
+        if (d.ok) location.reload();
+        else { alert('Ошибка: ' + (d.error || 'Неизвестная')); btn.disabled = false; btn.textContent = 'Сохранить'; }
+    }).catch(err => {
+        alert('Ошибка: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Сохранить';
+    });
+}
+</script>
+
+        </div>
+    </div>
+    
+    <script>
+        // SIDEBAR
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+        
+        // Collapsible sidebar sections
+        function toggleSbGroup(sectionEl) {
+            const items = sectionEl.nextElementSibling;
+            if (!items || !items.classList.contains('sb-group-items')) return;
+            const isCollapsed = items.classList.contains('collapsed');
+            if (isCollapsed) {
+                items.style.maxHeight = items.scrollHeight + 'px';
+                items.classList.remove('collapsed');
+                sectionEl.classList.remove('collapsed');
+                localStorage.removeItem('sb-collapsed-' + sectionEl.textContent.trim());
+            } else {
+                items.style.maxHeight = items.scrollHeight + 'px';
+                requestAnimationFrame(() => {
+                    items.style.maxHeight = '0';
+                    items.classList.add('collapsed');
+                    sectionEl.classList.add('collapsed');
+                    localStorage.setItem('sb-collapsed-' + sectionEl.textContent.trim(), '1');
+                });
+            }
+        }
+        
+        // Restore collapsed state from localStorage
+        document.querySelectorAll('.sb-section').forEach(section => {
+            const key = 'sb-collapsed-' + section.textContent.trim();
+            if (localStorage.getItem(key) === '1') {
+                const items = section.nextElementSibling;
+                if (items && items.classList.contains('sb-group-items')) {
+                    items.style.maxHeight = '0';
+                    items.classList.add('collapsed');
+                    section.classList.add('collapsed');
+                }
+            }
+        });
+        
+        // Close sidebar on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSidebar();
+        });
+        
+        // Register service worker (only static assets, no HTML caching)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+        }
+        
+        // CSRF helper for fetch POST requests
+        function csrfFetch(url, opts = {}) {
+            if (opts.method && opts.method.toUpperCase() !== 'GET') {
+                opts.headers = opts.headers || {};
+                opts.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content;
+            }
+            return fetch(url, opts);
+        }
+
+        // Auto-inject CSRF token into all POST forms
+        (function injectCsrf() {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            function addToken(form) {
+                if ((form.method === 'POST' || form.method === 'post') && !form.querySelector('input[name="csrf_token"]')) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden'; inp.name = 'csrf_token'; inp.value = token;
+                    form.appendChild(inp);
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('form').forEach(addToken);
+                new MutationObserver(mutations => {
+                    mutations.forEach(m => { m.addedNodes.forEach(n => {
+                        if (n.tagName === 'FORM') addToken(n);
+                        if (n.querySelectorAll) n.querySelectorAll('form').forEach(addToken);
+                    });});
+                }).observe(document.body, {childList: true, subtree: true});
+            });
+        })();
+
+        // XSS-safe text escaping for innerHTML
+        function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        // NOTIFICATIONS
+        function toggleNotifications() {
+            document.getElementById('notifPanel').classList.toggle('open');
+            if (document.getElementById('notifPanel').classList.contains('open')) {
+                loadNotifications();
+            }
+        }
+        
+        // Close notif on outside click
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('notifPanel');
+            const notifBtn = document.getElementById('notifBtn');
+            if (panel.classList.contains('open') && !panel.contains(e.target) && !notifBtn.contains(e.target)) {
+                panel.classList.remove('open');
+            }
+        });
+        
+        function loadNotifications() {
+            fetch('/notifications').then(r => r.text()).then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const items = doc.querySelectorAll('.notif-item');
+                const list = document.getElementById('notifList');
+                list.innerHTML = '';
+                if (items.length === 0) {
+                    list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Нет уведомлений</div>';
+                    return;
+                }
+                items.forEach(item => {
+                    list.innerHTML += `<div class="notif-item ${item.classList.contains('unread') ? 'unread' : ''}" onclick="markRead(${item.dataset.id}, '${item.dataset.link}')">
+                        <div class="notif-title">${item.querySelector('.notif-title')?.textContent || ''}</div>
+                        <div class="notif-msg">${item.querySelector('.notif-msg')?.textContent || ''}</div>
+                        <div class="notif-time">${item.querySelector('.notif-time')?.textContent || ''}</div>
+                    </div>`;
+                });
+            });
+        }
+        
+        function updateNotifCount() {
+            fetch('/notifications/unread').then(r => r.json()).then(d => {
+                const btn = document.getElementById('notifBtn');
+                if (d.count > 0) {
+                    btn.classList.add('has-notif');
+                    if (window.lastNotifCount !== undefined && d.count > window.lastNotifCount) {
+                        playNotifSound();
+                    }
+                } else {
+                    btn.classList.remove('has-notif');
+                }
+                window.lastNotifCount = d.count;
+            });
+        }
+        
+        function markRead(id, link) {
+            csrfFetch(`/notifications/${id}/read`, {method: 'POST'}).then(() => {
+                if (link) window.location.href = link;
+                updateNotifCount();
+            });
+        }
+        
+        function markAllRead() {
+            csrfFetch('/notifications/read-all', {method: 'POST'}).then(() => {
+                updateNotifCount();
+                loadNotifications();
+            });
+        }
+        
+        function playNotifSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+                gain.gain.value = 0.15;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.stop(ctx.currentTime + 0.3);
+            } catch(e) {}
+            // Vibrate on mobile for 6 seconds (pattern: vibrate 500ms, pause 200ms, repeat)
+            try {
+                if (navigator.vibrate) {
+                    navigator.vibrate([500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500,200,500]);
+                }
+            } catch(e) {}
+        }
+        
+        updateNotifCount();
+        setInterval(updateNotifCount, 30000);
+        
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+        
+        // PWA Install Prompt
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button if not already installed
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                const installBtn = document.getElementById('installBtn');
+                if (installBtn) installBtn.style.display = 'flex';
+            }
+        });
+        
+        function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(choice => {
+                if (choice.outcome === 'accepted') {
+                    const installBtn = document.getElementById('installBtn');
+                    if (installBtn) installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        }
+        
+        // Hide install button if already installed
+        window.addEventListener('appinstalled', () => {
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) installBtn.style.display = 'none';
+        });
+        
+        // Maintenance reminders
+        function checkMaintenanceReminders() {
+            fetch('/api/maintenance/reminders').then(r => r.json()).then(items => {
+                if (items.length === 0) return;
+                const overdue = items.filter(i => i.overdue);
+                const soon = items.filter(i => !i.overdue);
+                if (overdue.length > 0 || soon.length > 0) {
+                    const btn = document.getElementById('notifBtn');
+                    btn.classList.add('has-notif');
+                    // Add maintenance badge to nav
+                    const navLink = document.querySelector('a[href="/maintenance-calendar"]');
+                    if (navLink && !navLink.querySelector('.maint-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'maint-badge';
+                        badge.style.cssText = 'background:#e74c3c;color:white;font-size:10px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:bold';
+                        badge.textContent = items.length;
+                        navLink.appendChild(badge);
+                    }
+                }
+            }).catch(() => {});
+        }
+        checkMaintenanceReminders();
+        setInterval(checkMaintenanceReminders, 120000);
+        
+        // Global Search
+        const searchInput = document.getElementById('globalSearch');
+        const searchDropdown = document.getElementById('searchDropdown');
+        let searchTimeout;
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const q = this.value.trim();
+                if (q.length < 2) {
+                    searchDropdown.style.display = 'none';
+                    return;
+                }
+                searchTimeout = setTimeout(() => {
+                    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.results.length === 0) {
+                                searchDropdown.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">No results</div>';
+                            } else {
+                                let html = '';
+                                data.results.slice(0, 8).forEach(r => {
+                                    html += `<a href="${esc(r.url)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f0f2f5;text-decoration:none;color:#333;transition:background 0.15s" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                                        <span style="font-size:18px;width:24px;text-align:center">${esc(r.icon)}</span>
+                                        <div style="flex:1;min-width:0">
+                                            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title)}</div>
+                                            <div style="font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.subtitle)}</div>
+                                        </div>
+                                    </a>`;
+                                });
+                                html += `<a href="/search?q=${encodeURIComponent(q)}" style="display:block;padding:12px;text-align:center;color:#5b9cf6;font-size:13px;font-weight:600;text-decoration:none;border-top:1px solid #eee">View all results →</a>`;
+                                searchDropdown.innerHTML = html;
+                            }
+                            searchDropdown.style.display = 'block';
+                        });
+                }, 300);
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                    searchDropdown.style.display = 'none';
+                }
+            });
+            
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim().length >= 2) {
+                    window.location.href = `/search?q=${encodeURIComponent(this.value.trim())}`;
+                }
+            });
+        }
+        
+        // Dark Mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            document.querySelector('.dark-toggle').textContent = isDark ? '☀️' : '🌙';
+        }
+        
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.dark-toggle').textContent = '☀️';
+        }
+        
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const container = document.querySelector('.toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+        
+        // Convert flash messages to toasts
+        document.querySelectorAll('.alert').forEach(alert => {
+            const type = alert.classList.contains('alert-success') ? 'success' : 
+                        alert.classList.contains('alert-error') ? 'error' : 'info';
+            showToast(alert.textContent, type);
+            alert.style.display = 'none';
+        });
+    </script>
+    
+    <!-- Translation strings for JS -->
+    <script>
+    const T_base = {
+        attention: 'ATTENTION!',
+        criticalWear: 'Critical tool wear:',
+        wear: 'wear',
+        lastReplaced: 'Last replaced',
+        needReplace: 'REPLACEMENT NEEDED!',
+        understood: 'UNDERSTOOD',
+        replace: 'REPLACE',
+        remaining: 'Remaining',
+        fullCylinders: 'full cylinders N₂',
+        needOrder: 'NEED TO ORDER!',
+        cylinders: 'Cylinders'
+    };
+    </script>
+    
+    <!-- TOOL WEAR WARNING POPUP (shows after user interaction) -->
+    <script>
+    (function() {
+        let toolWarningShown = false;
+        function showToolWarning() {
+            if (toolWarningShown) return;
+            toolWarningShown = true;
+            fetch('/api/tool-wear/warnings').then(r => r.json()).then(data => {
+                if (!data.warnings || data.warnings.length === 0) return;
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'toolWearWarning';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+                
+                let list = '';
+                data.warnings.forEach(w => {
+                    list += '<div style="padding:8px 16px;background:rgba(0,0,0,0.15);border-radius:8px;margin-bottom:6px">' +
+                        '<div style="font-size:16px;font-weight:700;color:#000">' + w.machine + '</div>' +
+                        '<div style="font-size:14px;color:#111">' + w.tool + ' — ' + T_base.wear + ' ' + w.wear + '%</div>' +
+                        '<div style="font-size:12px;color:#333">' + T_base.lastReplaced + ': ' + w.last_replaced + '</div>' +
+                        '</div>';
+                });
+                
+                overlay.innerHTML = '<div id="toolFlashBox" style="background:#e67e22;padding:40px 50px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(230,126,34,0.8)">' +
+                    '<div style="font-size:64px;margin-bottom:16px">🔪</div>' +
+                    '<div style="font-size:26px;font-weight:900;color:#000;margin-bottom:16px">' + T_base.attention + '</div>' +
+                    '<div style="font-size:14px;font-weight:600;color:#000;margin-bottom:16px">' + T_base.criticalWear + '</div>' +
+                    list +
+                    '<div style="font-size:16px;font-weight:700;color:#000;margin:16px 0 20px">' + T_base.needReplace + '</div>' +
+                    '<div style="display:flex;gap:10px;justify-content:center">' +
+                    '<button onclick="document.getElementById(\'toolWearWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T_base.understood + '</button>' +
+                    '<button onclick="window.location.href=\'/tool-wear\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#f39c12;color:#000;border-radius:10px;cursor:pointer">' + T_base.replace + '</button>' +
+                    '</div></div>';
+                
+                document.body.appendChild(overlay);
+                
+                const box = document.getElementById('toolFlashBox');
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    box.style.background = flashCount % 2 === 0 ? '#000' : '#e67e22';
+                    box.querySelectorAll('div').forEach(d => {
+                        if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+                    });
+                    flashCount++;
+                    if (flashCount >= 10) {
+                        clearInterval(flashInterval);
+                        box.style.background = '#e67e22';
+                        box.querySelectorAll('div').forEach(d => d.style.color = '#000');
+                    }
+                }, 500);
+            }).catch(() => {});
+        }
+        // Show after first user interaction (click/scroll/touch)
+        ['click','scroll','touchstart'].forEach(evt => {
+            document.addEventListener(evt, showToolWarning, {once: true});
+        });
+    })();
+    </script>
+    
+    <!-- CYLINDER LOW STOCK WARNING POPUP (shows after user interaction) -->
+    <script>
+    (function() {
+        let cylWarningShown = false;
+        function showCylWarning() {
+            if (cylWarningShown) return;
+            cylWarningShown = true;
+            fetch('/api/cylinders/status').then(r => r.json()).then(data => {
+                const n2Full = (data.nitrogen || []).filter(c => c.status === 'full').length;
+                if (n2Full > 4) return;
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'cylinderWarning';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+                
+                overlay.innerHTML = '<div id="cylFlashBox" style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(231,76,60,0.8)">' +
+                    '<div style="font-size:64px;margin-bottom:16px">⚠️</div>' +
+                    '<div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">' + T_base.attention + '</div>' +
+                    '<div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">' + T_base.remaining + ' ' + n2Full + ' ' + T_base.fullCylinders + '</div>' +
+                    '<div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">' + T_base.needOrder + '</div>' +
+                    '<div style="display:flex;gap:10px;justify-content:center">' +
+                    '<button onclick="document.getElementById(\'cylinderWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T_base.understood + '</button>' +
+                    '<button onclick="window.location.href=\'/cylinders\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#f39c12;color:#000;border-radius:10px;cursor:pointer">' + T_base.cylinders + '</button>' +
+                    '</div></div>';
+                
+                document.body.appendChild(overlay);
+                
+                const box = document.getElementById('cylFlashBox');
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    box.style.background = flashCount % 2 === 0 ? '#000' : '#e74c3c';
+                    box.querySelectorAll('div').forEach(d => {
+                        if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
+                    });
+                    flashCount++;
+                    if (flashCount >= 10) {
+                        clearInterval(flashInterval);
+                        box.style.background = '#e74c3c';
+                        box.querySelectorAll('div').forEach(d => d.style.color = '#000');
+                    }
+                }, 500);
+            }).catch(() => {});
+        }
+        // Show after first user interaction
+        ['click','scroll','touchstart'].forEach(evt => {
+            document.addEventListener(evt, showCylWarning, {once: true});
+        });
+    })();
+    </script>
+</body>
+</html>

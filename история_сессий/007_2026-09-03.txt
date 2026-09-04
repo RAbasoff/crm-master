@@ -1,0 +1,95 @@
+Сессия 007 — 03.09.2026
+Проект: CRM Мастерская
+
+============================================================
+
+ЗАДАЧА: Исправление ошибок 502/499 из access log
+
+ПРОБЛЕМА: Сайт rabasoff.pythonanywhere.com периодически падал с 502 Bad Gateway
+и 499 Client Closed. Пользователи видели ошибки при навигации.
+
+АНАЛИЗ ЛОГА (rabasoff.pythonanywhere.com.access.log):
+- 502 Bad Gateway: 3 раза на /notifications/unread
+  · 31/08 11:58 — со страницы machines/19/edit
+  · 31/08 12:45 — со страницы /
+  · 02/09 17:30 — со страницы responsible/2/edit
+- 499 Client Closed: 4 раза (таймаут, response-time 2.5-3.5 сек)
+  · 31/08 11:18 — 6 запросов одновременно (favicon, tool-wear, notifications, reminders, manifest, cylinders)
+  · 01/09 18:54 — /machines
+  · 02/09 17:30 — /
+  · 03/09 03:05 — /
+- /favicon.ico → 302 на login (нет роута, браузер запрашивает автоматически)
+
+КОРНЕВАЯ ПРИЧИНА: PythonAnywhere free tier — один worker.
+Floor plan генерировал 30+ одновременных fetch('/api/machine/{id}/faults')
++ maintenance reminders загружал ВСЕ записи MachinePart
++ tool-wear warnings загружал ВСЕ записи ToolWear
+= worker зависал → следующие запросы получали 502.
+
+============================================================
+
+ИСПРАВЛЕНИЯ (3 файла, commit c67b50e):
+
+1. app.py — новый batch endpoint
+   - /api/machines/faults-batch — один GROUP BY запрос вместо 30+ индивидуальных
+   - Возвращает {machine_id: {total, open, resolved, critical}} для всех машин
+
+2. app.py — оптимизация /api/maintenance/reminders
+   - Было: MachinePart.query.all() — загружает ВСЕ записи
+   - Стало: фильтр на уровне БД: next_replacement <= soon OR next_maintenance <= soon
+   - Аналогично для consumables: VoorraadItem.next_replacement <= soon
+
+3. app.py — оптимизация /api/tool-wear/warnings
+   - Было: ToolWear.query.all() — загружает ВСЕ записи
+   - Стало: фильтр last_replaced IS NULL OR last_replaced <= 365 дней назад
+
+4. app.py — оптимизация /api/machine/{id}/faults
+   - Было: 5 отдельных запросов (list + count + open + resolved + critical)
+   - Стало: 2 запроса (list + агрегированные stats через GROUP BY)
+
+5. app.py — оптимизация главной страницы (index)
+   - Было: N+1 — для каждой машины 3 запроса (fault_count, open_count, critical_count)
+   - Стало: один агрегированный GROUP BY запрос
+
+6. app.py — добавлен /favicon.ico роут
+   - serve static/icon-192.png вместо 302 redirect на login
+
+7. templates/base.html — добавлен <link rel="icon" href="/static/icon-192.png">
+
+8. templates/floor_plan.html — loadMachineFaultStatus() переделан
+   - Было: forEach(marker => fetch('/api/machine/${id}/faults')) — 30+ запросов
+   - Стало: один fetch('/api/machines/faults-batch') + распределение по маркерам
+
+============================================================
+
+СТАТУС: закоммичено (c67b50e), запушено в GitHub.
+ДЕПЛОЙ: нужно git pull + Reload на PythonAnywhere.
+
+ПРОВЕРКА ПОСЛЕ ДЕПЛОЯ:
+- /favicon.ico → 200 (иконка PNG) ✅ было 302 на login
+- /api/machines/faults-batch → требует авторизации (корректно) ✅
+- Логин страница загружается ✅
+- Изменения задеплоены, сайт работает
+
+ОЖИДАЕМЫЙ ЭФФЕКТ:
+- Floor plan: 1 запрос вместо 30+ → нет таймаутов
+- /api/maintenance/reminders: фильтр в БД → быстрый ответ
+- /api/tool-wear/warnings: фильтр в БД → быстрый ответ
+- /favicon.ico: 200 вместо 302 → нет лишних редиректов
+- 502/499 ошибки должны прекратиться
+
+============================================================
+
+ДОПОЛНИТЕЛЬНО: Mule Maintenance не сохраняется
+
+ПРОБЛЕМА: Форма /equipment/new и /equipment/edit не сохраняла данные.
+При POST запросе сервер падал с NameError → db.session.rollback() → ничего не записывалось.
+
+ПРИЧИНА: В app.py не был импортирован EquipmentComponent из models.py.
+Строка 30: EquipmentMaintenance, EquipmentPart, EquipmentPartOrder
+EquipmentComponent отсутствовал в импорте, но использовался в equipment_new() и equipment_edit().
+
+ИСПРАВЛЕНИЕ (commit 6346d14):
+- Добавлен EquipmentComponent в импорт на строке 30
+- Было: EquipmentMaintenance, EquipmentPart, EquipmentPartOrder,
+- Стало: EquipmentMaintenance, EquipmentPart, EquipmentComponent, EquipmentPartOrder,
