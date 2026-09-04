@@ -451,26 +451,34 @@ var rId = null, rGas = null, rPosition = '';
 
 function openReplace(id, gas, num, position) {
     rId = id; rGas = gas; rPosition = position || '';
-    const posLabel = position === 'left' ? ' ({{ _("Left") }})' : position === 'right' ? ' ({{ _("Right") }})' : '';
-    document.getElementById('replaceInfo').textContent = `{{ _("Replace") }} ${gas === 'nitrogen' ? 'N₂' : 'CO₂'}${posLabel} #${num || '—'}`;
-    const sel = document.getElementById('newCylSelect');
-    const list = gas === 'nitrogen' ? aN2 : aCO2;
-    sel.innerHTML = '<option value="">' + T.select + '</option>';
-    function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
-    list.forEach(c => { sel.innerHTML += `<option value="${parseInt(c.id)}">${esc(c.n)}</option>`; });
+    var gasLabel = gas === 'nitrogen' ? 'N\u2082' : 'CO\u2082';
+    var posLabel = position === 'left' ? ' (Left)' : position === 'right' ? ' (Right)' : '';
+    document.getElementById('replaceInfo').textContent = 'Replace ' + gasLabel + posLabel + ' #' + (num || '\u2014');
+    var sel = document.getElementById('newCylSelect');
+    var list = gas === 'nitrogen' ? aN2 : aCO2;
+    sel.innerHTML = '<option value="">Select</option>';
+    function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+    for (var i = 0; i < list.length; i++) {
+        sel.innerHTML += '<option value="' + parseInt(list[i].id) + '">' + esc(list[i].n) + '</option>';
+    }
     document.getElementById('newCylNumber').value = '';
     document.getElementById('newCylNotes').value = '';
     document.getElementById('replaceModal').style.display = 'flex';
 }
 function closeReplace() { document.getElementById('replaceModal').style.display = 'none'; }
 function submitReplace() {
-    const sid = document.getElementById('newCylSelect').value;
-    const num = document.getElementById('newCylNumber').value.trim();
-    if (!sid && !num) { alert(T.selectOrEnter); return; }
-    csrfFetch('/cylinders/replace', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+    var sid = document.getElementById('newCylSelect').value;
+    var num = document.getElementById('newCylNumber').value.trim();
+    if (!sid && !num) { alert('Select or enter number'); return; }
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    fetch('/cylinders/replace', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
         body: JSON.stringify({cylinder_id: rId, new_cylinder_id: sid ? parseInt(sid) : null, new_number: num, gas_type: rGas, notes: document.getElementById('newCylNotes').value})
-    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); else alert(d.error); });
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    }).catch(function(e) { alert('Error: ' + e.message); });
 }
 
 function openDeliver(oid, qty, gas) {
@@ -595,7 +603,8 @@ document.addEventListener('contextmenu', function(e) {
 });
 </script>
 <script>
-var allComps = ({{ n2_json|safe }}).concat({{ co2_json|safe }});
+var allComps;
+try { allComps = ({{ n2_json|safe }}).concat({{ co2_json|safe }}); } catch(e) { allComps = []; }
 const statusColors = {
     ok:      {fill: '#2471a3', circle: '#ecf0f1', text: 'OK'},
     warning: {fill: '#d68910', circle: '#fff3cd', text: 'WARN'},
