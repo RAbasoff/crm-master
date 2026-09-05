@@ -268,7 +268,11 @@
 (function() {
     var el = document.getElementById('printCalGrid');
     if (!el) return;
-    var evts = {{ events | tojson }};
+    var evts = [
+    {% for ev in events %}
+    {"date":"{{ ev.date.strftime('%Y-%m-%d') }}","type":"{{ ev.type }}","part":{{ ev.part | tojson }},"machine":{{ ev.machine | tojson }},"overdue":{{ 'true' if ev.overdue else 'false' }},"recurring":{{ 'true' if ev.recurring else 'false' }}}{% if not loop.last %},{% endif %}
+    {% endfor %}
+    ];
     var todayStr = '{{ today.strftime("%Y-%m-%d") }}';
     if (!evts.length) { el.innerHTML = '<p>No events</p>'; return; }
 
