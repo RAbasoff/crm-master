@@ -30,6 +30,16 @@
         {% if plan.actual_start %}<p><strong>{{ _('Actual Start') }}:</strong> {{ plan.actual_start.strftime('%d-%m-%Y') }}</p>{% endif %}
         {% if plan.actual_end %}<p><strong>{{ _('Actual End') }}:</strong> {{ plan.actual_end.strftime('%d-%m-%Y') }}</p>{% endif %}
         {% if plan.next_maintenance %}<p><strong>{{ _('Next Maintenance') }}:</strong> {{ plan.next_maintenance.strftime('%d-%m-%Y') }}</p>{% endif %}
+        {% if plan.recurrence_type %}
+        <p><strong>🔁 {{ _('Recurring') }}:</strong>
+            {% if plan.recurrence_type == 'weekly' %}{{ _('Every Week') }}
+            {% elif plan.recurrence_type == 'monthly' %}{{ _('Every Month') }}
+            {% elif plan.recurrence_type == 'quarterly' %}{{ _('Every Quarter') }}
+            {% elif plan.recurrence_type == 'half_year' %}{{ _('Every Half Year') }}
+            {% elif plan.recurrence_type == 'yearly' %}{{ _('Every Year') }}{% endif %}
+            {% if plan.recurrence_end %} — {{ _('until') }} {{ plan.recurrence_end.strftime('%d-%m-%Y') }}{% endif %}
+        </p>
+        {% endif %}
         <p><strong>{{ _('Created') }}:</strong> {{ plan.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
     </div>
 

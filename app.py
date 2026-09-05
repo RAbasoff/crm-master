@@ -1519,7 +1519,58 @@ def maintenance_calendar():
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
     for pl in plans:
-        if pl.planned_start and range_start <= pl.planned_start < range_end:
+        if not pl.planned_start:
+            continue
+        # Generate recurring dates if recurrence is set
+        if pl.recurrence_type:
+            rd = pl.planned_start
+            end_bound = min(range_end, pl.recurrence_end) if pl.recurrence_end else range_end
+            while rd < end_bound:
+                if range_start <= rd < end_bound:
+                    events.append({
+                        'date': rd, 'type': 'plan',
+                        'part': pl.title[:40], 'machine': pl.machine.name,
+                        'machine_id': pl.machine_id, 'part_id': None,
+                        'category': pl.maintenance_type,
+                        'overdue': rd < today and pl.status not in ('completed', 'cancelled'),
+                        'plan_id': pl.id, 'status': pl.status,
+                        'recurring': True
+                    })
+                # Next occurrence
+                if pl.recurrence_type == 'weekly':
+                    rd += timedelta(days=7)
+                elif pl.recurrence_type == 'monthly':
+                    if rd.month == 12:
+                        rd = rd.replace(year=rd.year + 1, month=1)
+                    else:
+                        try:
+                            rd = rd.replace(month=rd.month + 1)
+                        except ValueError:
+                            rd = rd.replace(month=rd.month + 1, day=28)
+                elif pl.recurrence_type == 'quarterly':
+                    m = rd.month + 3
+                    y = rd.year + (m - 1) // 12
+                    m = ((m - 1) % 12) + 1
+                    try:
+                        rd = rd.replace(year=y, month=m)
+                    except ValueError:
+                        rd = rd.replace(year=y, month=m, day=28)
+                elif pl.recurrence_type == 'half_year':
+                    m = rd.month + 6
+                    y = rd.year + (m - 1) // 12
+                    m = ((m - 1) % 12) + 1
+                    try:
+                        rd = rd.replace(year=y, month=m)
+                    except ValueError:
+                        rd = rd.replace(year=y, month=m, day=28)
+                elif pl.recurrence_type == 'yearly':
+                    try:
+                        rd = rd.replace(year=rd.year + 1)
+                    except ValueError:
+                        rd = rd.replace(year=rd.year + 1, day=28)
+                else:
+                    break
+        elif range_start <= pl.planned_start < range_end:
             events.append({
                 'date': pl.planned_start, 'type': 'plan',
                 'part': pl.title[:40], 'machine': pl.machine.name,
@@ -1641,7 +1692,34 @@ def maintenance_calendar_pdf():
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
     for pl in plans:
-        if pl.planned_start and range_start <= pl.planned_start < range_end:
+        if not pl.planned_start:
+            continue
+        if pl.recurrence_type:
+            rd = pl.planned_start
+            end_bound = min(range_end, pl.recurrence_end) if pl.recurrence_end else range_end
+            while rd < end_bound:
+                if range_start <= rd < end_bound:
+                    events.append({'date': rd, 'type': 'plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'category': pl.maintenance_type, 'overdue': rd < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
+                if pl.recurrence_type == 'weekly':
+                    rd += timedelta(days=7)
+                elif pl.recurrence_type == 'monthly':
+                    if rd.month == 12: rd = rd.replace(year=rd.year+1, month=1)
+                    else:
+                        try: rd = rd.replace(month=rd.month+1)
+                        except ValueError: rd = rd.replace(month=rd.month+1, day=28)
+                elif pl.recurrence_type == 'quarterly':
+                    m = rd.month + 3; y = rd.year + (m-1)//12; m = ((m-1)%12)+1
+                    try: rd = rd.replace(year=y, month=m)
+                    except ValueError: rd = rd.replace(year=y, month=m, day=28)
+                elif pl.recurrence_type == 'half_year':
+                    m = rd.month + 6; y = rd.year + (m-1)//12; m = ((m-1)%12)+1
+                    try: rd = rd.replace(year=y, month=m)
+                    except ValueError: rd = rd.replace(year=y, month=m, day=28)
+                elif pl.recurrence_type == 'yearly':
+                    try: rd = rd.replace(year=rd.year+1)
+                    except ValueError: rd = rd.replace(year=rd.year+1, day=28)
+                else: break
+        elif range_start <= pl.planned_start < range_end:
             events.append({'date': pl.planned_start, 'type': 'plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'category': pl.maintenance_type, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
 
     events.sort(key=lambda e: e['date'])
@@ -1840,6 +1918,8 @@ def maintenance_plan_new():
             cost=float(request.form.get('cost', 0)),
             report=request.form.get('report', ''),
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
+            recurrence_type=request.form.get('recurrence_type') or None,
+            recurrence_end=datetime.strptime(request.form['recurrence_end'], '%Y-%m-%d').date() if request.form.get('recurrence_end') else None,
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
@@ -1915,6 +1995,8 @@ def maintenance_plan_edit(plan_id):
         p.cost = float(request.form.get('cost', 0))
         p.report = request.form.get('report', '')
         p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None
+        p.recurrence_type = request.form.get('recurrence_type') or None
+        p.recurrence_end = datetime.strptime(request.form['recurrence_end'], '%Y-%m-%d').date() if request.form.get('recurrence_end') else None
         p.notes = request.form.get('notes', '')
         if 'offer_file' in request.files and request.files['offer_file'].filename:
             fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
@@ -1925,6 +2007,40 @@ def maintenance_plan_edit(plan_id):
             request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
             p.work_act_file = fn
         db.session.commit()
+        # Auto-create next occurrence for recurring plans
+        if p.status == 'completed' and p.recurrence_type:
+            nd = p.planned_start
+            if p.recurrence_type == 'weekly':
+                nd += timedelta(days=7)
+            elif p.recurrence_type == 'monthly':
+                if nd.month == 12: nd = nd.replace(year=nd.year+1, month=1)
+                else:
+                    try: nd = nd.replace(month=nd.month+1)
+                    except ValueError: nd = nd.replace(month=nd.month+1, day=28)
+            elif p.recurrence_type == 'quarterly':
+                m = nd.month + 3; y = nd.year + (m-1)//12; m = ((m-1)%12)+1
+                try: nd = nd.replace(year=y, month=m)
+                except ValueError: nd = nd.replace(year=y, month=m, day=28)
+            elif p.recurrence_type == 'half_year':
+                m = nd.month + 6; y = nd.year + (m-1)//12; m = ((m-1)%12)+1
+                try: nd = nd.replace(year=y, month=m)
+                except ValueError: nd = nd.replace(year=y, month=m, day=28)
+            elif p.recurrence_type == 'yearly':
+                try: nd = nd.replace(year=nd.year+1)
+                except ValueError: nd = nd.replace(year=nd.year+1, day=28)
+            if not p.recurrence_end or nd <= p.recurrence_end:
+                new_plan = MaintenancePlan(
+                    machine_id=p.machine_id, title=p.title, description=p.description,
+                    maintenance_type=p.maintenance_type, status='planned',
+                    planned_start=nd, is_external=p.is_external,
+                    company_name=p.company_name, company_contact=p.company_contact,
+                    company_person=p.company_person, worker_id=p.worker_id,
+                    recurrence_type=p.recurrence_type, recurrence_end=p.recurrence_end,
+                    created_by=current_user.id
+                )
+                db.session.add(new_plan)
+                db.session.commit()
+                flash(_('Next recurring plan created for') + f' {nd.strftime("%d-%m-%Y")}', 'info')
         flash(_('Maintenance plan updated'), 'success')
         return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()

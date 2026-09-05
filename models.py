@@ -212,6 +212,8 @@ class MaintenancePlan(db.Model):
     report = db.Column(db.Text)
     work_act_file = db.Column(db.String(300))
     next_maintenance = db.Column(db.Date)
+    recurrence_type = db.Column(db.String(20))  # weekly, monthly, quarterly, half_year, yearly
+    recurrence_end = db.Column(db.Date)
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
