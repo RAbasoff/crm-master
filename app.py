@@ -1434,51 +1434,15 @@ def electricity_schematic():
 @login_required
 def maintenance_calendar():
     today = datetime.utcnow().date()
-    period = request.args.get('period', 'month')
     month = request.args.get('month', today.strftime('%Y-%m'))
-    
-    # Calculate date range based on period
-    if period == 'day':
-        range_start = today
-        range_end = today + timedelta(days=1)
-        period_label = today.strftime('%d %B %Y')
-    elif period == 'week':
-        range_start = today - timedelta(days=today.weekday())  # Monday
-        range_end = range_start + timedelta(days=7)
-        period_label = f"{range_start.strftime('%d %b')} — {(range_end - timedelta(days=1)).strftime('%d %b %Y')}"
-    elif period == 'month':
-        year, mon = map(int, month.split('-'))
-        range_start = datetime(year, mon, 1).date()
-        if mon == 12:
-            range_end = datetime(year + 1, 1, 1).date()
-        else:
-            range_end = datetime(year, mon + 1, 1).date()
-        period_label = range_start.strftime('%B %Y')
-    elif period == 'quarter':
-        q = (today.month - 1) // 3
-        range_start = datetime(today.year, q * 3 + 1, 1).date()
-        range_end = datetime(today.year, q * 3 + 4, 1).date() if q < 3 else datetime(today.year + 1, 1, 1).date()
-        period_label = f"Q{q+1} {today.year}"
-    elif period == 'half_year':
-        if today.month <= 6:
-            range_start = datetime(today.year, 1, 1).date()
-            range_end = datetime(today.year, 7, 1).date()
-            period_label = f"H1 {today.year}"
-        else:
-            range_start = datetime(today.year, 7, 1).date()
-            range_end = datetime(today.year + 1, 1, 1).date()
-            period_label = f"H2 {today.year}"
-    elif period == 'year':
-        range_start = datetime(today.year, 1, 1).date()
-        range_end = datetime(today.year + 1, 1, 1).date()
-        period_label = str(today.year)
+    year, mon = map(int, month.split('-'))
+    month_start = datetime(year, mon, 1).date()
+    if mon == 12:
+        month_end = datetime(year + 1, 1, 1).date()
     else:
-        year, mon = map(int, month.split('-'))
-        range_start = datetime(year, mon, 1).date()
-        range_end = datetime(year, mon + 1, 1).date() if mon < 12 else datetime(year + 1, 1, 1).date()
-        period_label = range_start.strftime('%B %Y')
+        month_end = datetime(year, mon + 1, 1).date()
     
-    # Get all parts with upcoming maintenance/replacement
+    # Get all parts with upcoming maintenance/replacement (eagerly load machine)
     from sqlalchemy.orm import joinedload
     if current_user.has_role('admin', 'director', 'technician'):
         parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
@@ -1489,27 +1453,40 @@ def maintenance_calendar():
     # Build calendar events
     events = []
     for p in parts:
-        if p.next_replacement and range_start <= p.next_replacement < range_end:
+        if p.next_replacement and month_start <= p.next_replacement < month_end:
             events.append({
-                'date': p.next_replacement, 'type': 'replacement',
-                'part': p.name, 'machine': p.machine.name,
-                'machine_id': p.machine_id, 'part_id': p.id,
-                'category': p.category, 'overdue': p.next_replacement < today
+                'date': p.next_replacement,
+                'type': 'replacement',
+                'part': p.name,
+                'machine': p.machine.name,
+                'machine_id': p.machine_id,
+                'part_id': p.id,
+                'category': p.category,
+                'overdue': p.next_replacement < today
             })
-        if p.next_maintenance and range_start <= p.next_maintenance < range_end:
+        if p.next_maintenance and month_start <= p.next_maintenance < month_end:
             events.append({
-                'date': p.next_maintenance, 'type': 'maintenance',
-                'part': p.name, 'machine': p.machine.name,
-                'machine_id': p.machine_id, 'part_id': p.id,
-                'category': p.category, 'overdue': p.next_maintenance < today
+                'date': p.next_maintenance,
+                'type': 'maintenance',
+                'part': p.name,
+                'machine': p.machine.name,
+                'machine_id': p.machine_id,
+                'part_id': p.id,
+                'category': p.category,
+                'overdue': p.next_maintenance < today
             })
+        # Also check maintenance records
         for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
-            if mr.next_maintenance and range_start <= mr.next_maintenance.date() < range_end:
+            if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
                 events.append({
-                    'date': mr.next_maintenance.date(), 'type': 'machine_maintenance',
-                    'part': mr.description[:40], 'machine': p.machine.name,
-                    'machine_id': p.machine_id, 'part_id': None,
-                    'category': mr.maintenance_type, 'overdue': mr.next_maintenance.date() < today
+                    'date': mr.next_maintenance.date(),
+                    'type': 'machine_maintenance',
+                    'part': mr.description[:40],
+                    'machine': p.machine.name,
+                    'machine_id': p.machine_id,
+                    'part_id': None,
+                    'category': mr.maintenance_type,
+                    'overdue': mr.next_maintenance.date() < today
                 })
     
     # Add maintenance plans
@@ -1519,71 +1496,25 @@ def maintenance_calendar():
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
     for pl in plans:
-        if not pl.planned_start:
-            continue
-        # Generate recurring dates if recurrence is set
-        if pl.recurrence_type:
-            rd = pl.planned_start
-            end_bound = min(range_end, pl.recurrence_end) if pl.recurrence_end else range_end
-            while rd < end_bound:
-                if range_start <= rd < end_bound:
-                    events.append({
-                        'date': rd, 'type': 'plan',
-                        'part': pl.title[:40], 'machine': pl.machine.name,
-                        'machine_id': pl.machine_id, 'part_id': None,
-                        'category': pl.maintenance_type,
-                        'overdue': rd < today and pl.status not in ('completed', 'cancelled'),
-                        'plan_id': pl.id, 'status': pl.status,
-                        'recurring': True
-                    })
-                # Next occurrence
-                if pl.recurrence_type == 'weekly':
-                    rd += timedelta(days=7)
-                elif pl.recurrence_type == 'monthly':
-                    if rd.month == 12:
-                        rd = rd.replace(year=rd.year + 1, month=1)
-                    else:
-                        try:
-                            rd = rd.replace(month=rd.month + 1)
-                        except ValueError:
-                            rd = rd.replace(month=rd.month + 1, day=28)
-                elif pl.recurrence_type == 'quarterly':
-                    m = rd.month + 3
-                    y = rd.year + (m - 1) // 12
-                    m = ((m - 1) % 12) + 1
-                    try:
-                        rd = rd.replace(year=y, month=m)
-                    except ValueError:
-                        rd = rd.replace(year=y, month=m, day=28)
-                elif pl.recurrence_type == 'half_year':
-                    m = rd.month + 6
-                    y = rd.year + (m - 1) // 12
-                    m = ((m - 1) % 12) + 1
-                    try:
-                        rd = rd.replace(year=y, month=m)
-                    except ValueError:
-                        rd = rd.replace(year=y, month=m, day=28)
-                elif pl.recurrence_type == 'yearly':
-                    try:
-                        rd = rd.replace(year=rd.year + 1)
-                    except ValueError:
-                        rd = rd.replace(year=rd.year + 1, day=28)
-                else:
-                    break
-        elif range_start <= pl.planned_start < range_end:
+        if pl.planned_start and month_start <= pl.planned_start < month_end:
             events.append({
-                'date': pl.planned_start, 'type': 'plan',
-                'part': pl.title[:40], 'machine': pl.machine.name,
-                'machine_id': pl.machine_id, 'part_id': None,
+                'date': pl.planned_start,
+                'type': 'plan',
+                'part': pl.title[:40],
+                'machine': pl.machine.name,
+                'machine_id': pl.machine_id,
+                'part_id': None,
                 'category': pl.maintenance_type,
                 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'),
-                'plan_id': pl.id, 'status': pl.status
+                'plan_id': pl.id,
+                'status': pl.status
             })
 
-    # Overdue items
+    # Get overdue items (before today) — skip if there's a maintenance record after the due date
     overdue = []
     for p in parts:
         if p.next_replacement and p.next_replacement < today:
+            # Check if replacement was done after the due date
             done_after = PartMaintenanceLog.query.filter(
                 PartMaintenanceLog.part_id == p.id,
                 PartMaintenanceLog.action.in_(['replaced', 'maintenance']),
@@ -1600,286 +1531,16 @@ def maintenance_calendar():
             if not done_after:
                 overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
     
-    # Navigation for month view
-    year, mon = map(int, month.split('-'))
-    month_start = datetime(year, mon, 1).date()
-    month_end = datetime(year, mon + 1, 1).date() if mon < 12 else datetime(year + 1, 1, 1).date()
+    # Navigation
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
     next_month = month_end.strftime('%Y-%m')
     
-    events.sort(key=lambda e: e['date'])
-    
-    # Stats for report
-    stats = {
-        'total': len(events),
-        'overdue': len([e for e in events if e['overdue']]),
-        'today': len([e for e in events if e['date'] == today]),
-        'upcoming': len([e for e in events if e['date'] > today and not e['overdue']]),
-        'replacements': len([e for e in events if e['type'] == 'replacement']),
-        'maintenance': len([e for e in events if e['type'] in ('maintenance', 'machine_maintenance')]),
-        'plans': len([e for e in events if e['type'] == 'plan']),
-    }
-    
     return render_template('maintenance_calendar.html',
-        period=period, period_label=period_label,
-        range_start=range_start, range_end=range_end,
         month=month, month_start=month_start, month_end=month_end,
-        events=events, overdue=overdue, today=today,
+        events=sorted(events, key=lambda e: e['date']),
+        overdue=overdue, today=today,
         prev_month=prev_month, next_month=next_month,
-        stats=stats, timedelta=timedelta)
-
-@app.route('/maintenance-calendar/pdf')
-@login_required
-def maintenance_calendar_pdf():
-    from fpdf import FPDF
-    today = datetime.utcnow().date()
-    period = request.args.get('period', 'month')
-    month = request.args.get('month', today.strftime('%Y-%m'))
-
-    # Calculate date range (same logic as calendar route)
-    if period == 'day':
-        range_start = today; range_end = today + timedelta(days=1)
-        period_label = today.strftime('%d %B %Y')
-    elif period == 'week':
-        range_start = today - timedelta(days=today.weekday())
-        range_end = range_start + timedelta(days=7)
-        period_label = f"{range_start.strftime('%d %b')} - {(range_end - timedelta(days=1)).strftime('%d %b %Y')}"
-    elif period == 'month':
-        year, mon = map(int, month.split('-'))
-        range_start = datetime(year, mon, 1).date()
-        range_end = datetime(year + (1 if mon == 12 else 0), 1 if mon == 12 else mon + 1, 1).date()
-        period_label = range_start.strftime('%B %Y')
-    elif period == 'quarter':
-        q = (today.month - 1) // 3
-        range_start = datetime(today.year, q * 3 + 1, 1).date()
-        range_end = datetime(today.year, q * 3 + 4, 1).date() if q < 3 else datetime(today.year + 1, 1, 1).date()
-        period_label = f"Q{q+1} {today.year}"
-    elif period == 'half_year':
-        if today.month <= 6:
-            range_start = datetime(today.year, 1, 1).date()
-            range_end = datetime(today.year, 7, 1).date()
-            period_label = f"H1 {today.year}"
-        else:
-            range_start = datetime(today.year, 7, 1).date()
-            range_end = datetime(today.year + 1, 1, 1).date()
-            period_label = f"H2 {today.year}"
-    else:
-        range_start = datetime(today.year, 1, 1).date()
-        range_end = datetime(today.year + 1, 1, 1).date()
-        period_label = str(today.year)
-
-    # Collect events (same logic)
-    from sqlalchemy.orm import joinedload
-    if current_user.has_role('admin', 'director', 'technician'):
-        parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
-    else:
-        machine_ids = [m.id for m in current_user.assigned_machines]
-        parts = MachinePart.query.options(joinedload(MachinePart.machine)).filter(MachinePart.machine_id.in_(machine_ids)).all()
-
-    events = []
-    for p in parts:
-        if p.next_replacement and range_start <= p.next_replacement < range_end:
-            events.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'category': p.category, 'overdue': p.next_replacement < today})
-        if p.next_maintenance and range_start <= p.next_maintenance < range_end:
-            events.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'category': p.category, 'overdue': p.next_maintenance < today})
-        for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
-            if mr.next_maintenance and range_start <= mr.next_maintenance.date() < range_end:
-                events.append({'date': mr.next_maintenance.date(), 'type': 'machine_maintenance', 'part': mr.description[:40], 'machine': p.machine.name, 'category': mr.maintenance_type, 'overdue': mr.next_maintenance.date() < today})
-
-    if current_user.has_role('admin', 'director', 'technician'):
-        plans = MaintenancePlan.query.all()
-    else:
-        plan_machine_ids = [m.id for m in current_user.assigned_machines]
-        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
-    for pl in plans:
-        if not pl.planned_start:
-            continue
-        if pl.recurrence_type:
-            rd = pl.planned_start
-            end_bound = min(range_end, pl.recurrence_end) if pl.recurrence_end else range_end
-            while rd < end_bound:
-                if range_start <= rd < end_bound:
-                    events.append({'date': rd, 'type': 'plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'category': pl.maintenance_type, 'overdue': rd < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
-                if pl.recurrence_type == 'weekly':
-                    rd += timedelta(days=7)
-                elif pl.recurrence_type == 'monthly':
-                    if rd.month == 12: rd = rd.replace(year=rd.year+1, month=1)
-                    else:
-                        try: rd = rd.replace(month=rd.month+1)
-                        except ValueError: rd = rd.replace(month=rd.month+1, day=28)
-                elif pl.recurrence_type == 'quarterly':
-                    m = rd.month + 3; y = rd.year + (m-1)//12; m = ((m-1)%12)+1
-                    try: rd = rd.replace(year=y, month=m)
-                    except ValueError: rd = rd.replace(year=y, month=m, day=28)
-                elif pl.recurrence_type == 'half_year':
-                    m = rd.month + 6; y = rd.year + (m-1)//12; m = ((m-1)%12)+1
-                    try: rd = rd.replace(year=y, month=m)
-                    except ValueError: rd = rd.replace(year=y, month=m, day=28)
-                elif pl.recurrence_type == 'yearly':
-                    try: rd = rd.replace(year=rd.year+1)
-                    except ValueError: rd = rd.replace(year=rd.year+1, day=28)
-                else: break
-        elif range_start <= pl.planned_start < range_end:
-            events.append({'date': pl.planned_start, 'type': 'plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'category': pl.maintenance_type, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
-
-    events.sort(key=lambda e: e['date'])
-
-    # Build PDF
-    class PDF(FPDF):
-        def header(self):
-            self.set_font('Helvetica', 'B', 14)
-            self.cell(0, 10, f'Maintenance Calendar - {period_label}', align='C', new_x='LMARGIN', new_y='NEXT')
-            self.set_font('Helvetica', '', 8)
-            self.cell(0, 5, f'Generated: {today.strftime("%d-%m-%Y %H:%M")} | Period: {period}', align='C', new_x='LMARGIN', new_y='NEXT')
-            self.ln(3)
-
-        def footer(self):
-            self.set_y(-15)
-            self.set_font('Helvetica', 'I', 8)
-            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
-
-    pdf = PDF(orientation='L', format='A4')
-    pdf.alias_nb_pages()
-    pdf.set_auto_page_break(auto=True, margin=20)
-    pdf.add_page()
-
-    # Stats
-    total = len(events)
-    overdue_count = len([e for e in events if e['overdue']])
-    today_count = len([e for e in events if e['date'] == today])
-    upcoming_count = len([e for e in events if e['date'] > today and not e['overdue']])
-
-    pdf.set_font('Helvetica', 'B', 10)
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(50, 8, f'Total: {total}', border=1, fill=True, align='C')
-    pdf.set_fill_color(255, 230, 230)
-    pdf.cell(50, 8, f'Overdue: {overdue_count}', border=1, fill=True, align='C')
-    pdf.set_fill_color(255, 243, 224)
-    pdf.cell(50, 8, f'Today: {today_count}', border=1, fill=True, align='C')
-    pdf.set_fill_color(232, 245, 233)
-    pdf.cell(50, 8, f'Upcoming: {upcoming_count}', border=1, fill=True, align='C')
-    pdf.ln(12)
-
-    if not events:
-        pdf.set_font('Helvetica', '', 11)
-        pdf.cell(0, 10, 'No events for this period.', align='C')
-    else:
-        # Table header
-        pdf.set_font('Helvetica', 'B', 9)
-        pdf.set_fill_color(26, 26, 46)
-        pdf.set_text_color(255, 255, 255)
-        cols = [('Date', 28), ('Day', 18), ('Machine', 55), ('Part', 60), ('Type', 32), ('Category', 40), ('Status', 30)]
-        for name, w in cols:
-            pdf.cell(w, 7, name, border=1, fill=True, align='C')
-        pdf.ln()
-        pdf.set_text_color(0, 0, 0)
-
-        # Table rows
-        pdf.set_font('Helvetica', '', 8)
-        for i, ev in enumerate(events):
-            if pdf.get_y() > 180:
-                pdf.add_page()
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_fill_color(26, 26, 46)
-                pdf.set_text_color(255, 255, 255)
-                for name, w in cols:
-                    pdf.cell(w, 7, name, border=1, fill=True, align='C')
-                pdf.ln()
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font('Helvetica', '', 8)
-
-            if ev['overdue']:
-                pdf.set_fill_color(255, 235, 235)
-            elif ev['date'] == today:
-                pdf.set_fill_color(255, 243, 224)
-            else:
-                pdf.set_fill_color(255, 255, 255) if i % 2 == 0 else pdf.set_fill_color(248, 249, 250)
-
-            type_label = {'replacement': 'Replacement', 'maintenance': 'Maintenance', 'machine_maintenance': 'Maintenance', 'plan': 'Plan'}.get(ev['type'], ev['type'])
-            status_label = 'OVERDUE' if ev['overdue'] else ('TODAY' if ev['date'] == today else 'Scheduled')
-
-            pdf.cell(28, 6, ev['date'].strftime('%d-%m-%Y'), border=1, fill=True)
-            pdf.cell(18, 6, ev['date'].strftime('%a'), border=1, fill=True, align='C')
-            pdf.cell(55, 6, ev['machine'][:28], border=1, fill=True)
-            pdf.cell(60, 6, ev['part'][:30], border=1, fill=True)
-            pdf.cell(32, 6, type_label, border=1, fill=True, align='C')
-            pdf.cell(40, 6, (ev.get('category') or '-')[:20], border=1, fill=True)
-            pdf.cell(30, 6, status_label, border=1, fill=True, align='C')
-            pdf.ln()
-
-    # Calendar grid for month view
-    if period == 'month':
-        pdf.add_page()
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 10, f'Calendar Grid - {period_label}', align='C', new_x='LMARGIN', new_y='NEXT')
-        pdf.ln(3)
-
-        year_m, mon_m = map(int, month.split('-'))
-        ms = datetime(year_m, mon_m, 1).date()
-        me = datetime(year_m + (1 if mon_m == 12 else 0), 1 if mon_m == 12 else mon_m + 1, 1).date()
-        days_in = (me - ms).days
-        start_wd = ms.weekday()
-
-        col_w = 38
-        row_h = 28
-        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        pdf.set_font('Helvetica', 'B', 8)
-        pdf.set_fill_color(26, 26, 46)
-        pdf.set_text_color(255, 255, 255)
-        for d in days:
-            pdf.cell(col_w, 7, d, border=1, fill=True, align='C')
-        pdf.ln()
-        pdf.set_text_color(0, 0, 0)
-
-        day_num = 1
-        started = False
-        for _ in range(6):
-            if day_num > days_in:
-                break
-            x_start = pdf.get_x()
-            for dow in range(7):
-                if not started and dow == start_wd:
-                    started = True
-                if started and day_num <= days_in:
-                    cell_date = datetime(year_m, mon_m, day_num).date()
-                    day_ev = [e for e in events if e['date'] == cell_date]
-
-                    if cell_date == today:
-                        pdf.set_fill_color(232, 244, 253)
-                    elif dow >= 5:
-                        pdf.set_fill_color(248, 249, 250)
-                    else:
-                        pdf.set_fill_color(255, 255, 255)
-
-                    x = pdf.get_x()
-                    y = pdf.get_y()
-                    pdf.rect(x, y, col_w, row_h, style='DF' if cell_date == today or dow >= 5 else 'D')
-
-                    pdf.set_xy(x + 1, y + 1)
-                    pdf.set_font('Helvetica', 'B', 8)
-                    pdf.cell(10, 4, str(day_num))
-                    pdf.set_font('Helvetica', '', 6)
-                    for ev in day_ev[:3]:
-                        pdf.set_xy(x + 1, pdf.get_y() + 4)
-                        label = ev['part'][:18]
-                        if ev['overdue']:
-                            pdf.set_text_color(200, 0, 0)
-                        pdf.cell(col_w - 2, 3, label)
-                        pdf.set_text_color(0, 0, 0)
-
-                    pdf.set_xy(x + col_w, y)
-                    day_num += 1
-                else:
-                    pdf.cell(col_w, row_h, '', border=1)
-            pdf.ln(row_h)
-
-    output = pdf.output()
-    return send_file(
-        io.BytesIO(output),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'maintenance_calendar_{period}_{today.strftime("%Y%m%d")}.pdf'
-    )
+        timedelta=timedelta)
 
 # ============================================================
 # ROUTES — MAINTENANCE PLANS
@@ -1918,8 +1579,6 @@ def maintenance_plan_new():
             cost=float(request.form.get('cost', 0)),
             report=request.form.get('report', ''),
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
-            recurrence_type=request.form.get('recurrence_type') or None,
-            recurrence_end=datetime.strptime(request.form['recurrence_end'], '%Y-%m-%d').date() if request.form.get('recurrence_end') else None,
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
@@ -1995,8 +1654,6 @@ def maintenance_plan_edit(plan_id):
         p.cost = float(request.form.get('cost', 0))
         p.report = request.form.get('report', '')
         p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None
-        p.recurrence_type = request.form.get('recurrence_type') or None
-        p.recurrence_end = datetime.strptime(request.form['recurrence_end'], '%Y-%m-%d').date() if request.form.get('recurrence_end') else None
         p.notes = request.form.get('notes', '')
         if 'offer_file' in request.files and request.files['offer_file'].filename:
             fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
@@ -2007,40 +1664,6 @@ def maintenance_plan_edit(plan_id):
             request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
             p.work_act_file = fn
         db.session.commit()
-        # Auto-create next occurrence for recurring plans
-        if p.status == 'completed' and p.recurrence_type:
-            nd = p.planned_start
-            if p.recurrence_type == 'weekly':
-                nd += timedelta(days=7)
-            elif p.recurrence_type == 'monthly':
-                if nd.month == 12: nd = nd.replace(year=nd.year+1, month=1)
-                else:
-                    try: nd = nd.replace(month=nd.month+1)
-                    except ValueError: nd = nd.replace(month=nd.month+1, day=28)
-            elif p.recurrence_type == 'quarterly':
-                m = nd.month + 3; y = nd.year + (m-1)//12; m = ((m-1)%12)+1
-                try: nd = nd.replace(year=y, month=m)
-                except ValueError: nd = nd.replace(year=y, month=m, day=28)
-            elif p.recurrence_type == 'half_year':
-                m = nd.month + 6; y = nd.year + (m-1)//12; m = ((m-1)%12)+1
-                try: nd = nd.replace(year=y, month=m)
-                except ValueError: nd = nd.replace(year=y, month=m, day=28)
-            elif p.recurrence_type == 'yearly':
-                try: nd = nd.replace(year=nd.year+1)
-                except ValueError: nd = nd.replace(year=nd.year+1, day=28)
-            if not p.recurrence_end or nd <= p.recurrence_end:
-                new_plan = MaintenancePlan(
-                    machine_id=p.machine_id, title=p.title, description=p.description,
-                    maintenance_type=p.maintenance_type, status='planned',
-                    planned_start=nd, is_external=p.is_external,
-                    company_name=p.company_name, company_contact=p.company_contact,
-                    company_person=p.company_person, worker_id=p.worker_id,
-                    recurrence_type=p.recurrence_type, recurrence_end=p.recurrence_end,
-                    created_by=current_user.id
-                )
-                db.session.add(new_plan)
-                db.session.commit()
-                flash(_('Next recurring plan created for') + f' {nd.strftime("%d-%m-%Y")}', 'info')
         flash(_('Maintenance plan updated'), 'success')
         return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()

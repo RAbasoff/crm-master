@@ -80,28 +80,6 @@
             </div>
         </div>
 
-        <div class="card" style="background:#f0fff0;margin:16px 0;padding:16px">
-            <h3 style="font-size:14px;margin-bottom:12px">🔁 {{ _('Recurring Schedule') }}</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>{{ _('Repeat') }}</label>
-                    <select name="recurrence_type" id="recurrenceType" onchange="toggleRecurrence()">
-                        <option value="" {% if not plan or not plan.recurrence_type %}selected{% endif %}>{{ _('None (one-time)') }}</option>
-                        <option value="weekly" {% if plan and plan.recurrence_type == 'weekly' %}selected{% endif %}>{{ _('Every Week') }}</option>
-                        <option value="monthly" {% if plan and plan.recurrence_type == 'monthly' %}selected{% endif %}>{{ _('Every Month') }}</option>
-                        <option value="quarterly" {% if plan and plan.recurrence_type == 'quarterly' %}selected{% endif %}>{{ _('Every Quarter') }}</option>
-                        <option value="half_year" {% if plan and plan.recurrence_type == 'half_year' %}selected{% endif %}>{{ _('Every Half Year') }}</option>
-                        <option value="yearly" {% if plan and plan.recurrence_type == 'yearly' %}selected{% endif %}>{{ _('Every Year') }}</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>{{ _('Repeat Until') }}</label>
-                    <input type="date" name="recurrence_end" id="recurrenceEnd" value="{{ plan.recurrence_end.strftime('%Y-%m-%d') if plan and plan.recurrence_end else '' }}">
-                </div>
-            </div>
-            <small style="color:#888">{{ _('When a recurring plan is completed, the next occurrence is automatically created based on the schedule.') }}</small>
-        </div>
-
         <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">{{ _('Executor') }}</h3>
             <div class="form-group">
@@ -213,12 +191,5 @@ function toggleTwoOption() {
         }
     }
 }
-
-function toggleRecurrence() {
-    var t = document.getElementById('recurrenceType').value;
-    document.getElementById('recurrenceEnd').disabled = !t;
-    if (!t) document.getElementById('recurrenceEnd').value = '';
-}
-document.addEventListener('DOMContentLoaded', toggleRecurrence);
 </script>
 {% endblock %}
