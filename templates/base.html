@@ -390,9 +390,8 @@
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
             <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
             {% endif %}
-            {% if has_access('cylinders') %}
-            <a href="/cylinders" class="sb-item {% if 'cylinder' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas Cylinders') }}</a>
-            <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Gas System Repairs') }}</a>
+            {% if has_access('equipment') %}
+            <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Equipment Repairs') }}</a>
             {% endif %}
             {% if has_access('faults') %}
             <a href="/faults" class="sb-item {% if 'fault' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚠️</span>{{ _('Faults') }}</a>
@@ -908,9 +907,7 @@
         understood: '{{ _("UNDERSTOOD") }}',
         replace: '{{ _("REPLACE") }}',
         remaining: '{{ _("Remaining") }}',
-        fullCylinders: '{{ _("full cylinders N₂") }}',
-        needOrder: '{{ _("NEED TO ORDER!") }}',
-        cylinders: '{{ _("Cylinders") }}'
+        needOrder: '{{ _("NEED TO ORDER!") }}'
     };
     </script>
     
@@ -973,54 +970,5 @@
     })();
     </script>
     
-    <!-- CYLINDER LOW STOCK WARNING POPUP (shows after user interaction) -->
-    <script>
-    (function() {
-        let cylWarningShown = false;
-        function showCylWarning() {
-            if (cylWarningShown) return;
-            cylWarningShown = true;
-            fetch('/api/cylinders/status').then(r => r.json()).then(data => {
-                const n2Full = (data.nitrogen || []).filter(c => c.status === 'full').length;
-                if (n2Full > 4) return;
-                
-                const overlay = document.createElement('div');
-                overlay.id = 'cylinderWarning';
-                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
-                
-                overlay.innerHTML = '<div id="cylFlashBox" style="background:#e74c3c;padding:40px 60px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(231,76,60,0.8)">' +
-                    '<div style="font-size:64px;margin-bottom:16px">⚠️</div>' +
-                    '<div style="font-size:28px;font-weight:900;color:#000;margin-bottom:12px">' + T_base.attention + '</div>' +
-                    '<div style="font-size:22px;font-weight:700;color:#000;margin-bottom:8px">' + T_base.remaining + ' ' + n2Full + ' ' + T_base.fullCylinders + '</div>' +
-                    '<div style="font-size:18px;font-weight:600;color:#111;margin-bottom:20px">' + T_base.needOrder + '</div>' +
-                    '<div style="display:flex;gap:10px;justify-content:center">' +
-                    '<button onclick="document.getElementById(\'cylinderWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;border-radius:10px;cursor:pointer">' + T_base.understood + '</button>' +
-                    '<button onclick="window.location.href=\'/cylinders\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#f39c12;color:#000;border-radius:10px;cursor:pointer">' + T_base.cylinders + '</button>' +
-                    '</div></div>';
-                
-                document.body.appendChild(overlay);
-                
-                const box = document.getElementById('cylFlashBox');
-                let flashCount = 0;
-                const flashInterval = setInterval(() => {
-                    box.style.background = flashCount % 2 === 0 ? '#000' : '#e74c3c';
-                    box.querySelectorAll('div').forEach(d => {
-                        if (!d.querySelector('button')) d.style.color = flashCount % 2 === 0 ? '#fff' : '#000';
-                    });
-                    flashCount++;
-                    if (flashCount >= 10) {
-                        clearInterval(flashInterval);
-                        box.style.background = '#e74c3c';
-                        box.querySelectorAll('div').forEach(d => d.style.color = '#000');
-                    }
-                }, 500);
-            }).catch(() => {});
-        }
-        // Show after first user interaction
-        ['click','scroll','touchstart'].forEach(evt => {
-            document.addEventListener(evt, showCylWarning, {once: true});
-        });
-    })();
-    </script>
 </body>
 </html>

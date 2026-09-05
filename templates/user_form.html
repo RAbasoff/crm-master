@@ -24,7 +24,7 @@
                         ('admin', _('Admin'), _('Full access: settings, users, all modules')),
                         ('moderator', _('Moderator'), _('All modules, no system changes')),
                         ('director', _('Director'), _('All modules except settings and user management')),
-                        ('technician', _('Technician'), _('Machines, faults, warehouse, TWO, cylinders')),
+                        ('technician', _('Technician'), _('Machines, faults, warehouse, TWO')),
                         ('user', _('User'), _('View only, create fault reports'))
                     ] %}
                     <option value="{{ r }}" {% if user and user.role==r %}selected{% endif %}>{{ label }} — {{ desc }}</option>
@@ -55,7 +55,7 @@
                         'clients': _('Responsible persons'), 'workers': _('Workers'), 'faults': _('Faults'),
                         'messages': _('Messages'), 'reports': _('Reports'), 'schedule': _('Schedule'),
                         'time_tracking': _('Time Tracking'), 'vacations': _('Vacations'),
-                        'cylinders': _('Gas Cylinders'), 'maintenance': _('Maintenance'),
+                        'maintenance': _('Maintenance'),
                         'purchase_requests': _('Purchase Requests'), 'users': _('Users'),
                         'sections': _('Sections'), 'floor': _('Floor Plan'),
                         'invoices': _('Invoices'), 'contractors': _('Contractors'),

@@ -66,8 +66,6 @@
                     <td>
                         {% if l.entity_type == 'purchase_request' %}
                             🛒 {{ _('Request') }}
-                        {% elif l.entity_type == 'cylinder' %}
-                            🔴 {{ _('Cylinder') }}
                         {% elif l.entity_type == 'fault' %}
                             ⚠️ {{ _('Fault') }}
                         {% elif l.entity_type == 'work_report' %}
