@@ -1577,6 +1577,232 @@ def maintenance_calendar():
         prev_month=prev_month, next_month=next_month,
         stats=stats, timedelta=timedelta)
 
+@app.route('/maintenance-calendar/pdf')
+@login_required
+def maintenance_calendar_pdf():
+    from fpdf import FPDF
+    today = datetime.utcnow().date()
+    period = request.args.get('period', 'month')
+    month = request.args.get('month', today.strftime('%Y-%m'))
+
+    # Calculate date range (same logic as calendar route)
+    if period == 'day':
+        range_start = today; range_end = today + timedelta(days=1)
+        period_label = today.strftime('%d %B %Y')
+    elif period == 'week':
+        range_start = today - timedelta(days=today.weekday())
+        range_end = range_start + timedelta(days=7)
+        period_label = f"{range_start.strftime('%d %b')} - {(range_end - timedelta(days=1)).strftime('%d %b %Y')}"
+    elif period == 'month':
+        year, mon = map(int, month.split('-'))
+        range_start = datetime(year, mon, 1).date()
+        range_end = datetime(year + (1 if mon == 12 else 0), 1 if mon == 12 else mon + 1, 1).date()
+        period_label = range_start.strftime('%B %Y')
+    elif period == 'quarter':
+        q = (today.month - 1) // 3
+        range_start = datetime(today.year, q * 3 + 1, 1).date()
+        range_end = datetime(today.year, q * 3 + 4, 1).date() if q < 3 else datetime(today.year + 1, 1, 1).date()
+        period_label = f"Q{q+1} {today.year}"
+    elif period == 'half_year':
+        if today.month <= 6:
+            range_start = datetime(today.year, 1, 1).date()
+            range_end = datetime(today.year, 7, 1).date()
+            period_label = f"H1 {today.year}"
+        else:
+            range_start = datetime(today.year, 7, 1).date()
+            range_end = datetime(today.year + 1, 1, 1).date()
+            period_label = f"H2 {today.year}"
+    else:
+        range_start = datetime(today.year, 1, 1).date()
+        range_end = datetime(today.year + 1, 1, 1).date()
+        period_label = str(today.year)
+
+    # Collect events (same logic)
+    from sqlalchemy.orm import joinedload
+    if current_user.has_role('admin', 'director', 'technician'):
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).filter(MachinePart.machine_id.in_(machine_ids)).all()
+
+    events = []
+    for p in parts:
+        if p.next_replacement and range_start <= p.next_replacement < range_end:
+            events.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'category': p.category, 'overdue': p.next_replacement < today})
+        if p.next_maintenance and range_start <= p.next_maintenance < range_end:
+            events.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'category': p.category, 'overdue': p.next_maintenance < today})
+        for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
+            if mr.next_maintenance and range_start <= mr.next_maintenance.date() < range_end:
+                events.append({'date': mr.next_maintenance.date(), 'type': 'machine_maintenance', 'part': mr.description[:40], 'machine': p.machine.name, 'category': mr.maintenance_type, 'overdue': mr.next_maintenance.date() < today})
+
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.all()
+    else:
+        plan_machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
+    for pl in plans:
+        if pl.planned_start and range_start <= pl.planned_start < range_end:
+            events.append({'date': pl.planned_start, 'type': 'plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'category': pl.maintenance_type, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
+
+    events.sort(key=lambda e: e['date'])
+
+    # Build PDF
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 14)
+            self.cell(0, 10, f'Maintenance Calendar - {period_label}', align='C', new_x='LMARGIN', new_y='NEXT')
+            self.set_font('Helvetica', '', 8)
+            self.cell(0, 5, f'Generated: {today.strftime("%d-%m-%Y %H:%M")} | Period: {period}', align='C', new_x='LMARGIN', new_y='NEXT')
+            self.ln(3)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Helvetica', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
+
+    pdf = PDF(orientation='L', format='A4')
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # Stats
+    total = len(events)
+    overdue_count = len([e for e in events if e['overdue']])
+    today_count = len([e for e in events if e['date'] == today])
+    upcoming_count = len([e for e in events if e['date'] > today and not e['overdue']])
+
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(50, 8, f'Total: {total}', border=1, fill=True, align='C')
+    pdf.set_fill_color(255, 230, 230)
+    pdf.cell(50, 8, f'Overdue: {overdue_count}', border=1, fill=True, align='C')
+    pdf.set_fill_color(255, 243, 224)
+    pdf.cell(50, 8, f'Today: {today_count}', border=1, fill=True, align='C')
+    pdf.set_fill_color(232, 245, 233)
+    pdf.cell(50, 8, f'Upcoming: {upcoming_count}', border=1, fill=True, align='C')
+    pdf.ln(12)
+
+    if not events:
+        pdf.set_font('Helvetica', '', 11)
+        pdf.cell(0, 10, 'No events for this period.', align='C')
+    else:
+        # Table header
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_fill_color(26, 26, 46)
+        pdf.set_text_color(255, 255, 255)
+        cols = [('Date', 28), ('Day', 18), ('Machine', 55), ('Part', 60), ('Type', 32), ('Category', 40), ('Status', 30)]
+        for name, w in cols:
+            pdf.cell(w, 7, name, border=1, fill=True, align='C')
+        pdf.ln()
+        pdf.set_text_color(0, 0, 0)
+
+        # Table rows
+        pdf.set_font('Helvetica', '', 8)
+        for i, ev in enumerate(events):
+            if pdf.get_y() > 180:
+                pdf.add_page()
+                pdf.set_font('Helvetica', 'B', 9)
+                pdf.set_fill_color(26, 26, 46)
+                pdf.set_text_color(255, 255, 255)
+                for name, w in cols:
+                    pdf.cell(w, 7, name, border=1, fill=True, align='C')
+                pdf.ln()
+                pdf.set_text_color(0, 0, 0)
+                pdf.set_font('Helvetica', '', 8)
+
+            if ev['overdue']:
+                pdf.set_fill_color(255, 235, 235)
+            elif ev['date'] == today:
+                pdf.set_fill_color(255, 243, 224)
+            else:
+                pdf.set_fill_color(255, 255, 255) if i % 2 == 0 else pdf.set_fill_color(248, 249, 250)
+
+            type_label = {'replacement': 'Replacement', 'maintenance': 'Maintenance', 'machine_maintenance': 'Maintenance', 'plan': 'Plan'}.get(ev['type'], ev['type'])
+            status_label = 'OVERDUE' if ev['overdue'] else ('TODAY' if ev['date'] == today else 'Scheduled')
+
+            pdf.cell(28, 6, ev['date'].strftime('%d-%m-%Y'), border=1, fill=True)
+            pdf.cell(18, 6, ev['date'].strftime('%a'), border=1, fill=True, align='C')
+            pdf.cell(55, 6, ev['machine'][:28], border=1, fill=True)
+            pdf.cell(60, 6, ev['part'][:30], border=1, fill=True)
+            pdf.cell(32, 6, type_label, border=1, fill=True, align='C')
+            pdf.cell(40, 6, (ev.get('category') or '-')[:20], border=1, fill=True)
+            pdf.cell(30, 6, status_label, border=1, fill=True, align='C')
+            pdf.ln()
+
+    # Calendar grid for month view
+    if period == 'month':
+        pdf.add_page()
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 10, f'Calendar Grid - {period_label}', align='C', new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(3)
+
+        year_m, mon_m = map(int, month.split('-'))
+        ms = datetime(year_m, mon_m, 1).date()
+        me = datetime(year_m + (1 if mon_m == 12 else 0), 1 if mon_m == 12 else mon_m + 1, 1).date()
+        days_in = (me - ms).days
+        start_wd = ms.weekday()
+
+        col_w = 38
+        row_h = 28
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        pdf.set_font('Helvetica', 'B', 8)
+        pdf.set_fill_color(26, 26, 46)
+        pdf.set_text_color(255, 255, 255)
+        for d in days:
+            pdf.cell(col_w, 7, d, border=1, fill=True, align='C')
+        pdf.ln()
+        pdf.set_text_color(0, 0, 0)
+
+        day_num = 1
+        started = False
+        for _ in range(6):
+            if day_num > days_in:
+                break
+            x_start = pdf.get_x()
+            for dow in range(7):
+                if not started and dow == start_wd:
+                    started = True
+                if started and day_num <= days_in:
+                    cell_date = datetime(year_m, mon_m, day_num).date()
+                    day_ev = [e for e in events if e['date'] == cell_date]
+
+                    if cell_date == today:
+                        pdf.set_fill_color(232, 244, 253)
+                    elif dow >= 5:
+                        pdf.set_fill_color(248, 249, 250)
+                    else:
+                        pdf.set_fill_color(255, 255, 255)
+
+                    x = pdf.get_x()
+                    y = pdf.get_y()
+                    pdf.rect(x, y, col_w, row_h, style='DF' if cell_date == today or dow >= 5 else 'D')
+
+                    pdf.set_xy(x + 1, y + 1)
+                    pdf.set_font('Helvetica', 'B', 8)
+                    pdf.cell(10, 4, str(day_num))
+                    pdf.set_font('Helvetica', '', 6)
+                    for ev in day_ev[:3]:
+                        pdf.set_xy(x + 1, pdf.get_y() + 4)
+                        label = ev['part'][:18]
+                        if ev['overdue']:
+                            pdf.set_text_color(200, 0, 0)
+                        pdf.cell(col_w - 2, 3, label)
+                        pdf.set_text_color(0, 0, 0)
+
+                    pdf.set_xy(x + col_w, y)
+                    day_num += 1
+                else:
+                    pdf.cell(col_w, row_h, '', border=1)
+            pdf.ln(row_h)
+
+    output = pdf.output()
+    return send_file(
+        io.BytesIO(output),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'maintenance_calendar_{period}_{today.strftime("%Y%m%d")}.pdf'
+    )
+
 # ============================================================
 # ROUTES — MAINTENANCE PLANS
 # ============================================================

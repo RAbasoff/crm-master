@@ -9,20 +9,36 @@
     .page-header { margin-bottom: 10px; }
     table { font-size: 10px; }
     .badge { border: 1px solid #333; }
+    .print-only { display: block !important; }
+    .screen-list { display: none !important; }
 }
+.print-only { display: none; }
 .period-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 12px; font-weight: 500; transition: all .15s; }
 .period-btn:hover { background: #f0f0f0; }
 .period-btn.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
 .stat-box { text-align:center; padding:10px 8px; border-radius:8px; }
 .stat-num { font-size:22px; font-weight:700; }
 .stat-label { font-size:10px; color:#666; margin-top:2px; }
+.cal-grid { width:100%; border-collapse:collapse; table-layout:fixed; }
+.cal-grid th { padding:8px; text-align:center; font-size:11px; background:#1a1a2e; color:white; }
+.cal-grid td { vertical-align:top; height:80px; padding:4px 6px; border:1px solid #eee; font-size:10px; }
+.cal-grid .day-num { font-weight:700; font-size:12px; margin-bottom:3px; }
+.cal-grid .ev-item { display:block; padding:2px 4px; margin-bottom:2px; border-radius:3px; color:white; font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-grid .ev-overdue { background:#c0392b; }
+.cal-grid .ev-today { background:#f39c12; }
+.cal-grid .ev-replacement { background:#e67e22; }
+.cal-grid .ev-maintenance { background:#f39c12; }
+.cal-grid .ev-plan { background:#9b59b6; }
+.cal-grid .ev-ok { background:#3498db; }
+.cal-grid .today-cell { background:#e8f4fd; }
+.cal-grid .weekend-cell { background:#f8f9fa; }
 </style>
 
 <div class="page-header">
     <h1>📅 {{ _('Maintenance Calendar') }}</h1>
     <div class="no-print" style="display:flex;gap:6px;align-items:center">
         <button onclick="window.print()" class="btn btn-sm" style="background:#eee" title="{{ _('Print') }}">🖨️ {{ _('Print') }}</button>
-        <button onclick="exportPDF()" class="btn btn-sm" style="background:#2ecc71;color:white" title="{{ _('Save PDF') }}">📄 PDF</button>
+        <a href="/maintenance-calendar/pdf?period={{ period }}{% if month %}&month={{ month }}{% endif %}" class="btn btn-sm" style="background:#2ecc71;color:white" title="{{ _('Save PDF') }}">📄 PDF</a>
     </div>
 </div>
 
@@ -165,7 +181,7 @@
 
 {% else %}
 <!-- LIST VIEW (day/week/quarter/half_year/year) -->
-<div class="card">
+<div class="card screen-list">
     <h2>📋 {{ _('Events') }} ({{ events|length }})</h2>
     {% if events %}
     <div class="table-wrap"><table>
@@ -200,6 +216,12 @@
     {% else %}
     <p style="color:#888;text-align:center;padding:20px">{{ _('No events for this period') }}</p>
     {% endif %}
+</div>
+
+<!-- PRINT-ONLY CALENDAR GRID -->
+<div class="print-only">
+    <h2 style="margin:10px 0">📅 {{ period_label }}</h2>
+    <div id="printCalGrid"></div>
 </div>
 {% endif %}
 
@@ -242,8 +264,70 @@
 {% endif %}
 
 <script>
-function exportPDF() {
-    window.print();
-}
+// Generate print-only calendar grid for non-month views
+(function() {
+    var el = document.getElementById('printCalGrid');
+    if (!el) return;
+    var evts = {{ events | tojson }};
+    var todayStr = '{{ today.strftime("%Y-%m-%d") }}';
+    if (!evts.length) { el.innerHTML = '<p>No events</p>'; return; }
+
+    // Find month range from events
+    var dates = evts.map(function(e) { return e.date; }).sort();
+    var first = new Date(dates[0]);
+    var last = new Date(dates[dates.length - 1]);
+    var y = first.getFullYear(), m = first.getMonth();
+    var y2 = last.getFullYear(), m2 = last.getMonth();
+
+    var html = '';
+    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    for (var yy = y; yy <= y2; yy++) {
+        var mStart = (yy === y) ? m : 0;
+        var mEnd = (yy === y2) ? m2 : 11;
+        for (var mm = mStart; mm <= mEnd; mm++) {
+            var ms = new Date(yy, mm, 1);
+            var me2 = new Date(yy, mm + 1, 0);
+            var dim = me2.getDate();
+            var swd = ms.getDay() === 0 ? 6 : ms.getDay() - 1;
+
+            html += '<h3 style="margin:16px 0 8px;font-size:14px">' + months[mm] + ' ' + yy + '</h3>';
+            html += '<table class="cal-grid"><thead><tr>';
+            for (var d = 0; d < 7; d++) html += '<th' + (d >= 5 ? ' style="background:#16213e"' : '') + '>' + days[d] + '</th>';
+            html += '</tr></thead><tbody><tr>';
+
+            var dn = 1, started = false;
+            for (var w = 0; w < 6; w++) {
+                if (dn > dim) break;
+                for (var dow = 0; dow < 7; dow++) {
+                    if (!started && dow === swd) started = true;
+                    if (started && dn <= dim) {
+                        var ds = yy + '-' + String(mm+1).padStart(2,'0') + '-' + String(dn).padStart(2,'0');
+                        var cls = '';
+                        if (ds === todayStr) cls = 'today-cell';
+                        else if (dow >= 5) cls = 'weekend-cell';
+                        html += '<td class="' + cls + '"><div class="day-num">' + dn + '</div>';
+                        var dayEvts = evts.filter(function(e) { return e.date === ds; });
+                        for (var ei = 0; ei < Math.min(dayEvts.length, 3); ei++) {
+                            var ev = dayEvts[ei];
+                            var ec = ev.overdue ? 'ev-overdue' : (ev.type === 'replacement' ? 'ev-replacement' : (ev.type === 'plan' ? 'ev-plan' : 'ev-ok'));
+                            html += '<span class="ev-item ' + ec + '">' + ev.part.substring(0, 15) + '</span>';
+                        }
+                        if (dayEvts.length > 3) html += '<span style="font-size:8px;color:#888">+' + (dayEvts.length - 3) + '</span>';
+                        html += '</td>';
+                        dn++;
+                    } else {
+                        html += '<td style="background:#fafafa"></td>';
+                    }
+                }
+                html += '</tr>';
+                if (dn > dim) break;
+            }
+            html += '</tbody></table>';
+        }
+    }
+    el.innerHTML = html;
+})();
 </script>
 {% endblock %}
