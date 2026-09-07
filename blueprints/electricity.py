@@ -14,14 +14,13 @@ bp = Blueprint('electricity', __name__, url_prefix='/electricity')
 
 
 @bp.before_request
-@login_required
 def check_electricity_access():
     """Temporary lockdown — admin only while maintenance is in progress."""
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
     if not current_user.has_role('admin'):
-        # Allow API/JSON requests to get a proper error
-        if request.is_json or request.path.startswith('/electricity/breaker'):
+        if request.is_json:
             return jsonify({'error': 'Access temporarily restricted'}), 403
-        # For page requests, render the lockdown page
         return render_template('electricity_locked.html'), 403
 
 
