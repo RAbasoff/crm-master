@@ -509,8 +509,8 @@
             <div class="tb-sep"></div>
             <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="{{ _('Install App') }}">📲</button>
             <button class="dark-toggle" onclick="toggleDarkMode()" title="{{ _('Toggle dark mode') }}">🌙</button>
-            <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()">
-                🔔<span class="badge-dot" id="notifDot"></span>
+            <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()" style="position:relative">
+                🔔<span id="notifCount" style="display:none;position:absolute;top:2px;right:2px;background:#e74c3c;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;padding:0 4px;border:2px solid white"></span>
             </button>
             <a href="/logout" class="tb-btn" title="{{ _('Logout') }}">⏻</a>
         </div>
@@ -686,13 +686,17 @@
         function updateNotifCount() {
             fetch('/notifications/unread').then(r => r.json()).then(d => {
                 const btn = document.getElementById('notifBtn');
+                const countEl = document.getElementById('notifCount');
                 if (d.count > 0) {
                     btn.classList.add('has-notif');
+                    countEl.textContent = d.count > 99 ? '99+' : d.count;
+                    countEl.style.display = 'block';
                     if (window.lastNotifCount !== undefined && d.count > window.lastNotifCount) {
                         playNotifSound();
                     }
                 } else {
                     btn.classList.remove('has-notif');
+                    countEl.style.display = 'none';
                 }
                 window.lastNotifCount = d.count;
             });
