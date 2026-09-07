@@ -1486,6 +1486,16 @@ def electricity_schematic():
 @app.route('/maintenance-calendar')
 @login_required
 def maintenance_calendar():
+    try:
+        return _maintenance_calendar_inner()
+    except Exception as e:
+        import traceback
+        print(f'ERROR in maintenance_calendar: {e}')
+        traceback.print_exc()
+        flash(f'Calendar error: {e}', 'error')
+        return redirect(url_for('index'))
+
+def _maintenance_calendar_inner():
     today = datetime.utcnow().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
