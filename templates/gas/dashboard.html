@@ -48,10 +48,9 @@
             <h3 style="color:#3498db;margin-bottom:16px">N₂ Nitrogen</h3>
             <div style="display:flex;gap:24px;justify-content:center">
                 {% for cyl in n2_cylinders[:2] %}
-                <div class="cylinder-card" id="cyl-{{ cyl.id }}" data-id="{{ cyl.id }}" data-gas="nitrogen"
-                     style="cursor:pointer;transition:all 0.2s"
-                     onclick="showCylinderMenu({{ cyl.id }}, '{{ cyl.gas_type }}', '{{ cyl.cylinder_number }}', '{{ cyl.status }}')">
-                    <div class="cylinder-visual" style="position:relative;width:100px;height:200px;margin:0 auto 12px">
+                <div class="cylinder-card" id="cyl-{{ cyl.id }}" data-id="{{ cyl.id }}" data-gas="nitrogen" data-type="{{ cyl.gas_type }}" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                     style="cursor:pointer;transition:all 0.2s">
+                    <div class="cylinder-visual" style="pointer-events:none;position:relative;width:100px;height:200px;margin:0 auto 12px">
                         <!-- Cylinder body -->
                         <div style="position:absolute;bottom:20px;left:25px;width:50px;height:140px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status == 'full' %}#3498db{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#e74c3c{% else %}#95a5a6{% endif %};background:linear-gradient(to top, {% if cyl.status == 'full' %}#3498db{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#e74c3c{% else %}#95a5a6{% endif %}33, transparent)">
                         </div>
@@ -83,10 +82,9 @@
             <h3 style="color:#e74c3c;margin-bottom:16px">CO₂ Carbon Dioxide</h3>
             <div style="display:flex;gap:24px;justify-content:center">
                 {% for cyl in co2_cylinders[:2] %}
-                <div class="cylinder-card" id="cyl-{{ cyl.id }}" data-id="{{ cyl.id }}" data-gas="co2"
-                     style="cursor:pointer;transition:all 0.2s"
-                     onclick="showCylinderMenu({{ cyl.id }}, '{{ cyl.gas_type }}', '{{ cyl.cylinder_number }}', '{{ cyl.status }}')">
-                    <div class="cylinder-visual" style="position:relative;width:100px;height:200px;margin:0 auto 12px">
+                <div class="cylinder-card" id="cyl-{{ cyl.id }}" data-id="{{ cyl.id }}" data-gas="co2" data-type="{{ cyl.gas_type }}" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                     style="cursor:pointer;transition:all 0.2s">
+                    <div class="cylinder-visual" style="pointer-events:none;position:relative;width:100px;height:200px;margin:0 auto 12px">
                         <div style="position:absolute;bottom:20px;left:25px;width:50px;height:140px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status == 'full' %}#e74c3c{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#95a5a6{% else %}#95a5a6{% endif %};background:linear-gradient(to top, {% if cyl.status == 'full' %}#e74c3c{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#95a5a6{% else %}#95a5a6{% endif %}33, transparent)">
                         </div>
                         <div style="position:absolute;top:25px;left:40px;width:20px;height:25px;background:#888;border-radius:3px 3px 0 0"></div>
@@ -176,6 +174,19 @@
 
 <script>
 var currentCylId = null;
+
+// Event delegation — works on all cylinder cards including dynamically added ones
+document.addEventListener('click', function(e) {
+    var card = e.target.closest('.cylinder-card');
+    if (!card) return;
+    var id = card.dataset.id;
+    var gas = card.dataset.type;
+    var num = card.dataset.num;
+    var status = card.dataset.status;
+    if (id && gas && num) {
+        showCylinderMenu(parseInt(id), gas, num, status);
+    }
+});
 
 function showCylinderMenu(id, gas, number, status) {
     currentCylId = id;
