@@ -1732,6 +1732,10 @@ def maintenance_plan_edit(plan_id):
                 new_date = base + timedelta(days=1)
             elif rec == 'weekly':
                 new_date = base + timedelta(weeks=1)
+            elif rec == 'biweekly':
+                new_date = base + timedelta(weeks=2)
+            elif rec == 'triweekly':
+                new_date = base + timedelta(weeks=3)
             elif rec == 'monthly':
                 new_date = base.replace(year=base.year + (1 if base.month == 12 else 0),
                                          month=(base.month % 12) + 1)

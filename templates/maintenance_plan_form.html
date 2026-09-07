@@ -83,7 +83,7 @@
                     <label>{{ _('Recurrence') }}</label>
                     <select name="recurrence">
                         <option value="">{{ _('— None —') }}</option>
-                        {% for val, label in [('daily', _('Daily')), ('weekly', _('Weekly')), ('monthly', _('Monthly')), ('quarterly', _('Quarterly')), ('semiannual', _('Semiannual')), ('yearly', _('Yearly'))] %}
+                        {% for val, label in [('daily', _('Daily')), ('weekly', _('Weekly')), ('biweekly', _('Every 2 weeks')), ('triweekly', _('Every 3 weeks')), ('monthly', _('Monthly')), ('quarterly', _('Quarterly')), ('semiannual', _('Semiannual')), ('yearly', _('Yearly'))] %}
                         <option value="{{ val }}" {% if plan and plan.recurrence == val %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
