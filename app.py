@@ -1579,6 +1579,7 @@ def maintenance_plan_new():
             cost=float(request.form.get('cost', 0)),
             report=request.form.get('report', ''),
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
+            recurrence=request.form.get('recurrence', '') or None,
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
@@ -1654,6 +1655,8 @@ def maintenance_plan_edit(plan_id):
         p.cost = float(request.form.get('cost', 0))
         p.report = request.form.get('report', '')
         p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None
+        old_status = p.status
+        p.recurrence = request.form.get('recurrence', '') or None
         p.notes = request.form.get('notes', '')
         if 'offer_file' in request.files and request.files['offer_file'].filename:
             fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
@@ -1664,7 +1667,55 @@ def maintenance_plan_edit(plan_id):
             request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
             p.work_act_file = fn
         db.session.commit()
-        flash(_('Maintenance plan updated'), 'success')
+
+        # Auto-create next recurring plan on completion
+        if p.status == 'completed' and old_status != 'completed' and p.recurrence and p.recurrence != 'none':
+            base = p.actual_end or p.planned_start
+            rec = p.recurrence
+            if rec == 'weekly':
+                new_date = base + timedelta(weeks=1)
+            elif rec == 'biweekly':
+                new_date = base + timedelta(weeks=2)
+            elif rec == 'monthly':
+                try:
+                    new_date = base.replace(year=base.year + (1 if base.month == 12 else 0), month=(base.month % 12) + 1)
+                except ValueError:
+                    new_date = base.replace(year=base.year + (1 if base.month == 12 else 0), month=(base.month % 12) + 1, day=28)
+            elif rec == 'quarterly':
+                m = base.month + 3
+                y = base.year + (1 if m > 12 else 0)
+                m = ((m - 1) % 12) + 1
+                try:
+                    new_date = base.replace(year=y, month=m)
+                except ValueError:
+                    new_date = base.replace(year=y, month=m, day=28)
+            elif rec == 'yearly':
+                try:
+                    new_date = base.replace(year=base.year + 1)
+                except ValueError:
+                    new_date = base.replace(year=base.year + 1, day=28)
+            else:
+                new_date = None
+
+            if new_date:
+                new_plan = MaintenancePlan(
+                    machine_id=p.machine_id,
+                    title=p.title,
+                    description=p.description,
+                    maintenance_type=p.maintenance_type,
+                    status='planned',
+                    planned_start=new_date,
+                    recurrence=p.recurrence,
+                    created_by=current_user.id
+                )
+                db.session.add(new_plan)
+                db.session.commit()
+                flash(_('Maintenance plan updated') + f'. {_("Next")}: {new_date.strftime("%d-%m-%Y")}', 'success')
+            else:
+                flash(_('Maintenance plan updated'), 'success')
+        else:
+            flash(_('Maintenance plan updated'), 'success')
+
         return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
