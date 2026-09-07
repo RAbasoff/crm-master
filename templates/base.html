@@ -387,8 +387,10 @@
             <a href="/electricity" class="sb-item {% if 'electric' in (request.endpoint or '') or 'cabinet' in (request.endpoint or '') or 'breaker' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚡</span>{{ _('Electricity') }}</a>
             {% endif %}
             {% if has_access('maintenance') %}
-            <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
-            <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
+            <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}" onclick="document.getElementById('maintSub').classList.toggle('collapsed');return true;"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }} <span style="margin-left:auto;font-size:9px;opacity:0.5">▶</span></a>
+            <div id="maintSub" class="sb-group-items collapsed">
+                <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📋</span>{{ _('Maint. Plans') }}</a>
+            </div>
             {% endif %}
             {% if has_access('equipment') %}
             <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Equipment Repairs') }}</a>
@@ -450,7 +452,7 @@
             </div>
             {% endif %}
             
-            {% if has_access('reports') or has_access('statistics') %}
+            {% if has_access('reports') or has_access('statistics') or current_user.role == 'director' %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Analytics') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             {% if has_access('reports') %}
@@ -464,7 +466,7 @@
             </div>
             {% endif %}
             
-            {% if has_access('settings') or has_access('users') %}
+            {% if current_user.role == 'admin' %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('System') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             {% if has_access('settings') %}
