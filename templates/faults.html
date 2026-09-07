@@ -25,12 +25,13 @@
 {% if faults %}
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-        <tr><th>#</th><th>{{ _('Title') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Technician') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
+        <tr><th>#</th><th>{{ _('Title') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Reporter') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Technician') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
         {% for f in faults if f.status not in ['resolved', 'closed'] %}
         <tr>
             <td><a href="/faults/{{ f.id }}">{{ f.id }}</a></td>
             <td><strong>{{ f.title }}</strong></td>
             <td>{{ f.machine.name }}</td>
+            <td>{% if f.reporter %}{{ f.reporter.display_name or f.reporter.username }}{% else %}—{% endif %}</td>
             <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
             <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
             <td>{% if f.assigned_technicians %}{% for t in f.assigned_technicians %}{{ t.display_name or t.username }}{% if t.worker_profile and t.worker_profile.specialisatie %} <small style="color:#888">({{ t.worker_profile.specialisatie }})</small>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% elif f.technician %}{{ f.technician.display_name or f.technician.username }}{% if f.technician.worker_profile and f.technician.worker_profile.specialisatie %} <small style="color:#888">({{ f.technician.worker_profile.specialisatie }})</small>{% endif %}{% else %}—{% endif %}</td>
@@ -43,6 +44,7 @@
             <td><a href="/faults/{{ f.id }}" style="color:#8fad9a">{{ f.id }}</a></td>
             <td><span style="color:#7a9a82">{{ f.title }}</span></td>
             <td style="color:#8fad9a">{{ f.machine.name }}</td>
+            <td style="color:#8fad9a">{% if f.reporter %}{{ f.reporter.display_name or f.reporter.username }}{% else %}—{% endif %}</td>
             <td><span class="badge" style="background:#d5e8d4;color:#8fad9a">{{ f.priority }}</span></td>
             <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ f.status }}</span></td>
             <td style="color:#8fad9a">{% if f.assigned_technicians %}{% for t in f.assigned_technicians %}{{ t.display_name or t.username }}{% if not loop.last %}, {% endif %}{% endfor %}{% elif f.technician %}{{ f.technician.display_name or f.technician.username }}{% else %}—{% endif %}</td>

@@ -3,11 +3,16 @@
 {% block content %}
 <div class="page-header">
     <h1>📅 {{ _('Maintenance Calendar') }}</h1>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <a href="/maintenance-calendar?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
         <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
+        <div style="margin-left:12px;display:flex;gap:6px">
+            <button onclick="printCalendar()" class="btn btn-sm" style="background:#27ae60;color:white" title="{{ _('Print') }}">🖨 {{ _('Print') }}</button>
+            <a href="/maintenance-calendar/export?month={{ month }}&format=csv" class="btn btn-sm" style="background:#3498db;color:white" title="CSV">📄 CSV</a>
+            <button onclick="exportPDF()" class="btn btn-sm" style="background:#e74c3c;color:white" title="PDF">📑 PDF</button>
+        </div>
     </div>
 </div>
 
@@ -129,4 +134,80 @@
     <p style="color:#888;text-align:center;padding:20px">{{ _('No events this month') }}</p>
     {% endif %}
 </div>
+
+<!-- Print / Export -->
+<div id="printArea" style="display:none">
+    <div id="printContent"></div>
+</div>
+
+<style>
+@media print {
+    body * { visibility: hidden !important; }
+    #printContent, #printContent * { visibility: visible !important; }
+    #printContent {
+        position: absolute; left: 0; top: 0; width: 100%;
+        display: block !important; padding: 10px;
+    }
+    #printContent table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+    #printContent th { background: #333 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #printContent td { border: 1px solid #ccc; height: 80px; vertical-align: top; padding: 4px; font-size: 10px; }
+    #printContent .pe { display: block; font-size: 9px; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; color: white; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #printContent .ph { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+    #printContent .pl { margin-top: 10px; font-size: 10px; display: flex; gap: 16px; flex-wrap: wrap; }
+    #printContent .pl span { display: inline-flex; align-items: center; gap: 4px; }
+    #printContent .pl .dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+}
+</style>
+
+<script>
+function buildPrintHTML() {
+    const month = '{{ month_start.strftime("%B %Y") }}';
+    let html = '<div class="ph">{{ _("Maintenance Calendar") }} — ' + month + '</div>';
+    html += '<table><thead><tr>';
+    const days = ['{{ _("Mon") }}','{{ _("Tue") }}','{{ _("Wed") }}','{{ _("Thu") }}','{{ _("Fri") }}','{{ _("Sat") }}','{{ _("Sun") }}'];
+    days.forEach(d => html += '<th style="padding:8px;text-align:center;font-size:11px">' + d + '</th>');
+    html += '</tr></thead><tbody>';
+
+    const calTable = document.querySelector('.card table');
+    if (calTable) {
+        const rows = calTable.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            html += '<tr>';
+            row.querySelectorAll('td').forEach(cell => {
+                const bg = cell.style.background || '';
+                let cellHTML = '';
+                const dayDiv = cell.querySelector('div');
+                if (dayDiv) cellHTML += '<div style="font-size:12px;font-weight:600;margin-bottom:4px">' + dayDiv.textContent.trim() + '</div>';
+                cell.querySelectorAll('a').forEach(a => {
+                    const abg = a.style.background || '#3498db';
+                    const acol = a.style.color || 'white';
+                    cellHTML += '<span class="pe" style="background:' + abg + ';color:' + acol + '">' + a.textContent.trim() + '</span>';
+                });
+                const style = 'vertical-align:top;height:80px;padding:4px 6px;border:1px solid #ddd;' + (bg ? 'background:' + bg + ';' : '');
+                html += '<td style="' + style + '">' + cellHTML + '</td>';
+            });
+            html += '</tr>';
+        });
+    }
+    html += '</tbody></table>';
+    html += '<div class="pl">';
+    html += '<span><span class="dot" style="background:#9b59b6"></span> {{ _("Plan") }}</span>';
+    html += '<span><span class="dot" style="background:#e67e22"></span> {{ _("Replacement") }}</span>';
+    html += '<span><span class="dot" style="background:#f39c12"></span> {{ _("Maintenance") }}</span>';
+    html += '<span><span class="dot" style="background:#c0392b"></span> {{ _("Overdue") }}</span>';
+    html += '<span><span class="dot" style="background:#d5dbdb"></span> {{ _("Completed") }}</span>';
+    html += '</div>';
+    return html;
+}
+
+function printCalendar() {
+    document.getElementById('printContent').innerHTML = buildPrintHTML();
+    window.print();
+}
+
+function exportPDF() {
+    document.getElementById('printContent').innerHTML = buildPrintHTML();
+    window.print();
+}
+</script>
 {% endblock %}

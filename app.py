@@ -1542,6 +1542,61 @@ def maintenance_calendar():
         prev_month=prev_month, next_month=next_month,
         timedelta=timedelta)
 
+
+@app.route('/maintenance-calendar/export')
+@login_required
+def maintenance_calendar_export():
+    import csv, io
+    from flask import Response
+    today = datetime.utcnow().date()
+    month = request.args.get('month', today.strftime('%Y-%m'))
+    fmt = request.args.get('format', 'csv')
+    year, mon = map(int, month.split('-'))
+    month_start = datetime(year, mon, 1).date()
+    if mon == 12:
+        month_end = datetime(year + 1, 1, 1).date()
+    else:
+        month_end = datetime(year, mon + 1, 1).date()
+
+    # Collect events (same logic as calendar)
+    from sqlalchemy.orm import joinedload
+    if current_user.has_role('admin', 'director', 'technician'):
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).filter(MachinePart.machine_id.in_(machine_ids)).all()
+
+    events = []
+    for p in parts:
+        if p.next_replacement and month_start <= p.next_replacement < month_end:
+            events.append({'date': p.next_replacement, 'type': 'Replacement', 'part': p.name, 'machine': p.machine.name, 'overdue': p.next_replacement < today})
+        if p.next_maintenance and month_start <= p.next_maintenance < month_end:
+            events.append({'date': p.next_maintenance, 'type': 'Maintenance', 'part': p.name, 'machine': p.machine.name, 'overdue': p.next_maintenance < today})
+
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.all()
+    else:
+        plan_machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
+    for pl in plans:
+        if pl.planned_start and month_start <= pl.planned_start < month_end:
+            events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title, 'machine': pl.machine.name, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled')})
+
+    events.sort(key=lambda e: e['date'])
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(['Date', 'Machine', 'Part', 'Type', 'Overdue'])
+    for ev in events:
+        writer.writerow([ev['date'].strftime('%d-%m-%Y'), ev['machine'], ev['part'], ev['type'], 'Yes' if ev['overdue'] else ''])
+
+    return Response(
+        '\ufeff' + output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment;filename=maintenance_{month}.csv'}
+    )
+
+
 # ============================================================
 # ROUTES — MAINTENANCE PLANS
 # ============================================================

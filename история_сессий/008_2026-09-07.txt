@@ -1,0 +1,70 @@
+Сессия 008 — 07.09.2026
+Проект: CRM Мастерская
+
+============================================================
+
+ЗАДАЧА 1: Исправление отображения заявителя в заявках о неисправностях
+
+ПРОБЛЕМА: Админ/техник не видит кто подал заявку — поле "Заявитель" пустое.
+
+ПРИЧИНА: В модели FaultReport (models.py) были поля FK:
+  - reporter_id → ForeignKey('user.id')
+  - technician_id → ForeignKey('user.id')
+НО не было relationship для них:
+  - reporter = relationship('User', foreign_keys=[reporter_id])
+  - technician = relationship('User', foreign_keys=[technician_id])
+
+Шаблоны использовали fault.reporter.display_name — AttributeError или None.
+
+ИСПРАВЛЕНИЯ:
+
+1. models.py — добавлены связи:
+   reporter = db.relationship('User', foreign_keys=[reporter_id], backref='reported_faults')
+   technician = db.relationship('User', foreign_keys=[technician_id], backref='primary_faults')
+
+2. templates/faults.html — добавлена колонка "Reporter" в таблицу заявок:
+   - Для активных заявок: {{ f.reporter.display_name or f.reporter.username }}
+   - Для закрытых/решённых: аналогично (серым цветом)
+   - Колонка расположена между "Machine" и "Priority"
+
+3. templates/fault_detail.html — строка 95 уже корректна:
+   {{ fault.reporter.display_name or fault.reporter.username }}
+   (теперь работает благодаря добавленному relationship)
+
+============================================================
+
+ЗАДАЧА 2: Экспорт и печать календаря обслуживания
+
+ПРОБЛЕМА: Нет экспорта в PDF, CSV и печати календаря обслуживания.
+
+ДОБАВЛЕНО:
+
+1. templates/maintenance_calendar.html — кнопки в заголовке:
+   - 🖨 Print — открывает диалог печати (только сетка календаря)
+   - 📄 CSV — скачивает CSV-файл с событиями месяца
+   - 👺 PDF — через Print → "Сохранить как PDF"
+
+2. templates/maintenance_calendar.html — print CSS (@media print):
+   - Скрывает всё кроме #printContent
+   - buildPrintHTML() — формирует чистую таблицу:
+     · Заголовок "Maintenance Calendar — Month Year"
+     · Сетка 7 дней × N недель
+     · События как цветные полоски (как в вебе)
+     · Легенда цветов внизу
+   - Печатается ТОЛЬКО сетка с датами и информацией
+
+3. app.py — новый маршрут /maintenance-calendar/export:
+   - ?format=csv — генерирует CSV (;-разделитель, BOM для Excel)
+   - Колонки: Date, Machine, Part, Type, Overdue
+   - Файл: maintenance_YYYY-MM.csv
+   - Фильтр по ролям (как в календаре)
+
+============================================================
+
+СТАТУС: Исправления внесены, требуется деплой.
+
+ФАЙЛЫ:
+- models.py (line ~597) — добавлены reporter/technician relationships
+- templates/faults.html — колонка Reporter в таблице
+- templates/maintenance_calendar.html — кнопки Print/CSV/PDF + print CSS
+- app.py (line ~1545) — маршрут /maintenance-calendar/export
