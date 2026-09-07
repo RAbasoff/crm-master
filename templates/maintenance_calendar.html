@@ -1,13 +1,32 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Maintenance Calendar') }} — CRM{% endblock %}
 {% block content %}
+<style>
+    @media print {
+        .sidebar, .topbar, .page-header > div, .card:last-child, .no-print { display: none !important; }
+        .page-header h1 { font-size: 18px; margin-bottom: 8px; }
+        body { background: white !important; }
+        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+        a { color: #333 !important; text-decoration: none !important; }
+        table { page-break-inside: avoid; }
+        .print-legend { display: flex !important; }
+    }
+    .print-legend { display: none; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: #f9f9f9; border-top: 1px solid #eee; font-size: 11px; }
+    .print-legend .legend-item { display: flex; align-items: center; gap: 6px; }
+    .print-legend .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+</style>
 <div class="page-header">
     <h1>📅 {{ _('Maintenance Calendar') }}</h1>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <a href="/maintenance-calendar?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
         <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
+        <div style="margin-left:16px;display:flex;gap:6px">
+            <button onclick="window.print()" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer">🖨️ {{ _('Print') }}</button>
+            <a href="/maintenance-calendar/export?month={{ month_start.strftime('%Y-%m') }}" class="btn btn-sm" style="background:#27ae60;color:white">📄 PDF</a>
+            <a href="/maintenance-calendar/export?month={{ month_start.strftime('%Y-%m') }}&format=csv" class="btn btn-sm" style="background:#8e44ad;color:white">📊 CSV</a>
+        </div>
     </div>
 </div>
 
@@ -78,7 +97,7 @@
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' or ev.done %}#666{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.type == 'plan' %}{% if ev.status == 'completed' %}#d5dbdb{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %}{% elif ev.done %}#d5dbdb{% elif ev.type == 'replacement' %}{% if ev.overdue %}#c0392b{% else %}#e67e22{% endif %}{% elif ev.type == 'maintenance' %}{% if ev.overdue %}#c0392b{% else %}#f39c12{% endif %}{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' %}#4a7a4a{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.status == 'completed' %}#b8deb8{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}
                             </a>
                             {% endfor %}
@@ -93,6 +112,15 @@
             {% endfor %}
         </tbody>
     </table>
+    <!-- Legend (visible only in print) -->
+    <div class="print-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div> {{ _('Plan') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f39c12"></div> {{ _('In Progress') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#b8deb8"></div> {{ _('Completed') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div> {{ _('Overdue') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div> {{ _('Replacement') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div> {{ _('Other') }}</div>
+    </div>
 </div>
 
 <!-- Upcoming Events List -->

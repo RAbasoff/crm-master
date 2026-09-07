@@ -1590,6 +1590,101 @@ def maintenance_calendar():
         prev_month=prev_month, next_month=next_month,
         timedelta=timedelta)
 
+
+@app.route('/maintenance-calendar/export')
+@login_required
+def maintenance_calendar_export():
+    import csv, io
+    today = datetime.utcnow().date()
+    month = request.args.get('month', today.strftime('%Y-%m'))
+    fmt = request.args.get('format', 'csv')
+    year, mon = map(int, month.split('-'))
+    month_start = datetime(year, mon, 1).date()
+    if mon == 12:
+        month_end = datetime(year + 1, 1, 1).date()
+    else:
+        month_end = datetime(year, mon + 1, 1).date()
+
+    # Collect events (same logic as calendar view)
+    from sqlalchemy.orm import joinedload
+    if current_user.has_role('admin', 'director', 'technician'):
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).filter(MachinePart.machine_id.in_(machine_ids)).all()
+
+    events = []
+    for p in parts:
+        if p.next_replacement and month_start <= p.next_replacement < month_end:
+            events.append({'date': p.next_replacement, 'type': 'Replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'overdue': p.next_replacement < today})
+        if p.next_maintenance and month_start <= p.next_maintenance < month_end:
+            events.append({'date': p.next_maintenance, 'type': 'Maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'overdue': p.next_maintenance < today})
+        for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
+            if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
+                events.append({'date': mr.next_maintenance.date(), 'type': 'Machine Maintenance', 'part': mr.description[:40], 'machine': p.machine.name, 'machine_id': p.machine_id, 'overdue': mr.next_maintenance.date() < today})
+
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.all()
+    else:
+        plan_machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
+    for pl in plans:
+        if not pl.planned_start:
+            continue
+        if month_start <= pl.planned_start < month_end:
+            events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'machine_id': pl.machine_id, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
+        if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
+            d = pl.planned_start
+            limit = month_end + timedelta(days=1)
+            for _ in range(200):
+                if d >= limit:
+                    break
+                if d >= month_start and d != pl.planned_start:
+                    events.append({'date': d, 'type': 'Plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'machine_id': pl.machine_id, 'overdue': d < today, 'status': pl.status})
+                if pl.recurrence == 'weekly':
+                    d += timedelta(weeks=1)
+                elif pl.recurrence == 'biweekly':
+                    d += timedelta(weeks=2)
+                elif pl.recurrence == 'monthly':
+                    try:
+                        d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1)
+                    except ValueError:
+                        d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1, day=28)
+                elif pl.recurrence == 'quarterly':
+                    m = d.month + 3
+                    y = d.year + (1 if m > 12 else 0)
+                    m = ((m - 1) % 12) + 1
+                    try:
+                        d = d.replace(year=y, month=m)
+                    except ValueError:
+                        d = d.replace(year=y, month=m, day=28)
+                elif pl.recurrence == 'yearly':
+                    try:
+                        d = d.replace(year=d.year + 1)
+                    except ValueError:
+                        d = d.replace(year=d.year + 1, day=28)
+                else:
+                    break
+
+    events.sort(key=lambda e: e['date'])
+
+    if fmt == 'csv':
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Date', 'Machine', 'Part', 'Type', 'Status', 'Overdue'])
+        for ev in events:
+            status = ev.get('status', 'overdue' if ev.get('overdue') else 'scheduled')
+            writer.writerow([ev['date'].strftime('%Y-%m-%d'), ev['machine'], ev['part'], ev['type'], status, 'Yes' if ev.get('overdue') else 'No'])
+        output.seek(0)
+        return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
+                         mimetype='text/csv', as_attachment=True,
+                         download_name=f'calendar_{month}.csv')
+
+    # Default: print-friendly HTML (can be saved as PDF via browser)
+    return render_template('maintenance_calendar_print.html',
+        month_start=month_start, month_end=month_end, events=events, today=today,
+        overdue=[e for e in events if e.get('overdue')], timedelta=timedelta)
+
 # ============================================================
 # ROUTES — MAINTENANCE PLANS
 # ============================================================
