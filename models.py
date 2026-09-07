@@ -208,6 +208,7 @@ class MaintenancePlan(db.Model):
     offer_file = db.Column(db.String(300))
     worker_id = db.Column(db.Integer, db.ForeignKey('worker.id'))
     responsible_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    responsible_person_id = db.Column(db.Integer, db.ForeignKey('client.id'))
     parts_used = db.Column(db.Text)
     cost = db.Column(Numeric(10, 2), default=0)
     report = db.Column(db.Text)
@@ -220,6 +221,7 @@ class MaintenancePlan(db.Model):
     machine = db.relationship('Machine', backref='maintenance_plans')
     worker = db.relationship('Monteur', backref='maintenance_plans')
     responsible_user = db.relationship('User', foreign_keys=[responsible_user_id])
+    responsible_person = db.relationship('Verantwoordelijke', foreign_keys=[responsible_person_id])
     creator = db.relationship('User', foreign_keys=[created_by])
 
 class MachineSparePart(db.Model):

@@ -95,14 +95,23 @@
         <div class="card" style="background:#fff8e1;margin:16px 0;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">{{ _('Responsible person') }}</h3>
             <div class="form-group">
-                <label>{{ _('Notify about recurring maintenance') }}</label>
-                <select name="responsible_user_id">
+                <label>{{ _('Responsible for machine (Verantwoordelijke)') }}</label>
+                <select name="responsible_person_id">
                     <option value="">{{ _('— Not assigned —') }}</option>
-                    {% for u in users %}
-                    <option value="{{ u.id }}" {% if plan and plan.responsible_user_id == u.id %}selected{% endif %}>👤 {{ u.display_name or u.username }}{% if u.worker_profile and u.worker_profile.specialisatie %} — {{ u.worker_profile.specialisatie }}{% endif %}</option>
+                    {% for p in responsible_persons %}
+                    <option value="{{ p.id }}" {% if plan and plan.responsible_person_id == p.id %}selected{% endif %}>👤 {{ p.naam }}{% if p.position %} — {{ p.position }}{% endif %}{% if p.telefoon %} 📞{{ p.telefoon }}{% endif %}</option>
                     {% endfor %}
                 </select>
-                <small style="color:#888">{{ _('This person will receive notifications about upcoming and overdue maintenance') }}</small>
+            </div>
+            <div class="form-group">
+                <label>{{ _('System user for notifications') }}</label>
+                <select name="responsible_user_id">
+                    <option value="">{{ _('— Auto-detect —') }}</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if plan and plan.responsible_user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+                    {% endfor %}
+                </select>
+                <small style="color:#888">{{ _('If not set, notifications go to responsible person or machine owner') }}</small>
             </div>
         </div>
 

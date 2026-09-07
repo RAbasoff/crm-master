@@ -1610,23 +1610,40 @@ def maintenance_calendar():
     # Send reminders for upcoming plans (within 3 days) to responsible persons
     recurring_active = MaintenancePlan.query.filter(
         MaintenancePlan.status.in_(['planned', 'in_progress']),
-        MaintenancePlan.responsible_user_id.isnot(None),
         MaintenancePlan.recurrence.isnot(None),
         MaintenancePlan.recurrence != '',
         MaintenancePlan.recurrence != 'none'
     ).all()
+    def _get_notify_user_id(plan):
+        """Определяет user_id для уведомления: responsible_user → responsible_person → machine owner."""
+        if plan.responsible_user_id:
+            return plan.responsible_user_id
+        if plan.responsible_person_id:
+            person = Verantwoordelijke.query.get(plan.responsible_person_id)
+            if person:
+                linked = User.query.filter_by(display_name=person.naam).first()
+                if linked:
+                    return linked.id
+        machine = Machine.query.get(plan.machine_id)
+        if machine and machine.responsible_user_id:
+            return machine.responsible_user_id
+        return None
+
     for pl in recurring_active:
+        notify_uid = _get_notify_user_id(pl)
+        if not notify_uid:
+            continue
         rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence, today, today + timedelta(days=3))
         for rd in rec_dates:
             existing = Notification.query.filter_by(
-                user_id=pl.responsible_user_id,
+                user_id=notify_uid,
                 link=url_for('maintenance_plan_detail', plan_id=pl.id)
             ).filter(Notification.created_at >= datetime.utcnow() - timedelta(hours=24)).first()
             if not existing:
                 days_left = (rd - today).days
                 machine = Machine.query.get(pl.machine_id)
                 create_notification(
-                    pl.responsible_user_id,
+                    notify_uid,
                     _('Maintenance reminder'),
                     f"{machine.name}: {pl.title} — {_('in')} {days_left} {_('days')} ({rd.strftime('%d-%m-%Y')})",
                     'warning',
@@ -1770,6 +1787,7 @@ def maintenance_plan_new():
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
             recurrence=request.form.get('recurrence', '') or None,
             responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
+            responsible_person_id=int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None,
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
@@ -1814,7 +1832,9 @@ def maintenance_plan_new():
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
     users = User.query.filter_by(is_active_user=True).order_by(User.display_name).all()
-    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, users=users)
+    resp_ids = [m.responsible_person_id for m in Machine.query.filter(Machine.responsible_person_id.isnot(None)).all()]
+    responsible_persons = Verantwoordelijke.query.filter(Verantwoordelijke.id.in_(resp_ids)).order_by(Verantwoordelijke.naam).all() if resp_ids else []
+    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, users=users, responsible_persons=responsible_persons)
 
 @app.route('/maintenance-plans/<int:plan_id>')
 @login_required
@@ -1843,6 +1863,7 @@ def maintenance_plan_edit(plan_id):
         p.company_person = request.form.get('company_person', '')
         p.worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
         p.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
+        p.responsible_person_id = int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None
         p.parts_used = request.form.get('parts_used', '[]')
         p.cost = float(request.form.get('cost', 0))
         p.report = request.form.get('report', '')
@@ -1898,6 +1919,7 @@ def maintenance_plan_edit(plan_id):
                     description=p.description,
                     maintenance_type=p.maintenance_type,
                     responsible_user_id=p.responsible_user_id,
+                    responsible_person_id=p.responsible_person_id,
                     status='planned',
                     planned_start=new_date,
                     recurrence=p.recurrence,
@@ -1907,10 +1929,21 @@ def maintenance_plan_edit(plan_id):
                 db.session.commit()
 
                 # Notify responsible person
-                if p.responsible_user_id:
+                notify_uid = p.responsible_user_id
+                if not notify_uid and p.responsible_person_id:
+                    person = Verantwoordelijke.query.get(p.responsible_person_id)
+                    if person:
+                        linked = User.query.filter_by(display_name=person.naam).first()
+                        if linked:
+                            notify_uid = linked.id
+                if not notify_uid:
+                    machine = Machine.query.get(p.machine_id)
+                    if machine and machine.responsible_user_id:
+                        notify_uid = machine.responsible_user_id
+                if notify_uid:
                     machine = Machine.query.get(p.machine_id)
                     create_notification(
-                        p.responsible_user_id,
+                        notify_uid,
                         _('Scheduled maintenance created'),
                         f"{machine.name}: {p.title} — {new_date.strftime('%d-%m-%Y')}",
                         'warning',
@@ -1927,7 +1960,9 @@ def maintenance_plan_edit(plan_id):
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
     users = User.query.filter_by(is_active_user=True).order_by(User.display_name).all()
-    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, users=users)
+    resp_ids = [m.responsible_person_id for m in Machine.query.filter(Machine.responsible_person_id.isnot(None)).all()]
+    responsible_persons = Verantwoordelijke.query.filter(Verantwoordelijke.id.in_(resp_ids)).order_by(Verantwoordelijke.naam).all() if resp_ids else []
+    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, users=users, responsible_persons=responsible_persons)
 
 @app.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])
 @login_required
