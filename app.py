@@ -1534,7 +1534,30 @@ def maintenance_calendar():
     # Navigation
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
     next_month = month_end.strftime('%Y-%m')
-    
+
+    # Send reminders for upcoming plans (within 3 days) to responsible persons
+    upcoming = MaintenancePlan.query.filter(
+        MaintenancePlan.status == 'planned',
+        MaintenancePlan.responsible_user_id.isnot(None),
+        MaintenancePlan.planned_start >= today,
+        MaintenancePlan.planned_start <= today + timedelta(days=3)
+    ).all()
+    for pl in upcoming:
+        existing = Notification.query.filter_by(
+            user_id=pl.responsible_user_id,
+            link=url_for('maintenance_plan_detail', plan_id=pl.id)
+        ).filter(Notification.created_at >= datetime.utcnow() - timedelta(hours=24)).first()
+        if not existing:
+            days_left = (pl.planned_start - today).days
+            machine = Machine.query.get(pl.machine_id)
+            create_notification(
+                pl.responsible_user_id,
+                _('Maintenance reminder'),
+                f"{machine.name}: {pl.title} — {_('in')} {days_left} {_('days')}",
+                'warning',
+                url_for('maintenance_plan_detail', plan_id=pl.id)
+            )
+
     return render_template('maintenance_calendar.html',
         month=month, month_start=month_start, month_end=month_end,
         events=sorted(events, key=lambda e: e['date']),
@@ -1635,6 +1658,7 @@ def maintenance_plan_new():
             report=request.form.get('report', ''),
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
             recurrence=request.form.get('recurrence', '') or None,
+            responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
@@ -1678,7 +1702,8 @@ def maintenance_plan_new():
         return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers)
+    users = User.query.filter_by(is_active_user=True).order_by(User.display_name).all()
+    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, users=users)
 
 @app.route('/maintenance-plans/<int:plan_id>')
 @login_required
@@ -1706,6 +1731,7 @@ def maintenance_plan_edit(plan_id):
         p.company_contact = request.form.get('company_contact', '')
         p.company_person = request.form.get('company_person', '')
         p.worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
+        p.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
         p.parts_used = request.form.get('parts_used', '[]')
         p.cost = float(request.form.get('cost', 0))
         p.report = request.form.get('report', '')
@@ -1760,6 +1786,7 @@ def maintenance_plan_edit(plan_id):
                     title=p.title,
                     description=p.description,
                     maintenance_type=p.maintenance_type,
+                    responsible_user_id=p.responsible_user_id,
                     status='planned',
                     planned_start=new_date,
                     recurrence=p.recurrence,
@@ -1767,6 +1794,18 @@ def maintenance_plan_edit(plan_id):
                 )
                 db.session.add(new_plan)
                 db.session.commit()
+
+                # Notify responsible person
+                if p.responsible_user_id:
+                    machine = Machine.query.get(p.machine_id)
+                    create_notification(
+                        p.responsible_user_id,
+                        _('Scheduled maintenance created'),
+                        f"{machine.name}: {p.title} — {new_date.strftime('%d-%m-%Y')}",
+                        'warning',
+                        url_for('maintenance_plan_detail', plan_id=new_plan.id)
+                    )
+
                 flash(_('Maintenance plan updated') + f'. {_("Next")}: {new_date.strftime("%d-%m-%Y")}', 'success')
             else:
                 flash(_('Maintenance plan updated'), 'success')
@@ -1776,7 +1815,8 @@ def maintenance_plan_edit(plan_id):
         return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers)
+    users = User.query.filter_by(is_active_user=True).order_by(User.display_name).all()
+    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, users=users)
 
 @app.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])
 @login_required

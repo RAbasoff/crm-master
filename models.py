@@ -207,17 +207,19 @@ class MaintenancePlan(db.Model):
     company_person = db.Column(db.String(200))
     offer_file = db.Column(db.String(300))
     worker_id = db.Column(db.Integer, db.ForeignKey('worker.id'))
+    responsible_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     parts_used = db.Column(db.Text)
     cost = db.Column(Numeric(10, 2), default=0)
     report = db.Column(db.Text)
     work_act_file = db.Column(db.String(300))
     next_maintenance = db.Column(db.Date)
-    recurrence = db.Column(db.String(20))  # none, daily, weekly, monthly, quarterly, semiannual, yearly
+    recurrence = db.Column(db.String(20))  # none, daily, weekly, biweekly, triweekly, monthly, quarterly, semiannual, yearly
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     machine = db.relationship('Machine', backref='maintenance_plans')
     worker = db.relationship('Monteur', backref='maintenance_plans')
+    responsible_user = db.relationship('User', foreign_keys=[responsible_user_id])
     creator = db.relationship('User', foreign_keys=[created_by])
 
 class MachineSparePart(db.Model):
