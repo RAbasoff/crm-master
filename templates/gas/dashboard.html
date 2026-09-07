@@ -205,16 +205,18 @@ function closeCylinderMenu() {
 
 function setCylinderStatus(status) {
     if (!currentCylId) return;
-    fetch('/gas/cylinders/' + currentCylId + '/status', {
+    csrfFetch('/gas/cylinders/' + currentCylId + '/status', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: status})
     })
-    .then(r => r.json())
-    .then(d => {
+    .then(function(r) {
+        if (!r.ok) {
+            return r.text().then(function(t) { throw new Error(t); });
+        }
+        return r.json();
+    })
+    .then(function(d) {
         if (d.ok) {
             closeCylinderMenu();
             location.reload();
@@ -222,7 +224,9 @@ function setCylinderStatus(status) {
             alert(d.error || 'Error');
         }
     })
-    .catch(e => alert('Error: ' + e.message));
+    .catch(function(e) {
+        alert('Error: ' + e.message);
+    });
 }
 
 // Close menu on outside click
