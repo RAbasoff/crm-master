@@ -63,6 +63,59 @@ from flask_login import LoginManager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+
+def _calc_recurrence_dates(start, rec, range_start, range_end):
+    """Вычисляет все даты периодического события в диапазоне."""
+    dates = []
+    if not rec or rec == 'none':
+        return dates
+    d = start
+    limit = range_end + timedelta(days=1)
+    max_iter = 200
+    i = 0
+    while d < limit and i < max_iter:
+        if d >= range_start:
+            dates.append(d)
+        if rec == 'daily':
+            d += timedelta(days=1)
+        elif rec == 'weekly':
+            d += timedelta(weeks=1)
+        elif rec == 'biweekly':
+            d += timedelta(weeks=2)
+        elif rec == 'triweekly':
+            d += timedelta(weeks=3)
+        elif rec == 'monthly':
+            try:
+                d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1)
+            except ValueError:
+                d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1, day=28)
+        elif rec == 'quarterly':
+            m = d.month + 3
+            y = d.year + (1 if m > 12 else 0)
+            m = ((m - 1) % 12) + 1
+            try:
+                d = d.replace(year=y, month=m)
+            except ValueError:
+                d = d.replace(year=y, month=m, day=28)
+        elif rec == 'semiannual':
+            m = d.month + 6
+            y = d.year + (1 if m > 12 else 0)
+            m = ((m - 1) % 12) + 1
+            try:
+                d = d.replace(year=y, month=m)
+            except ValueError:
+                d = d.replace(year=y, month=m, day=28)
+        elif rec == 'yearly':
+            try:
+                d = d.replace(year=d.year + 1)
+            except ValueError:
+                d = d.replace(year=d.year + 1, day=28)
+        else:
+            break
+        i += 1
+    return dates
+
+
 # ============================================================
 # IMPROVEMENTS: Backup, Email, Cost Tracking
 # ============================================================
@@ -1495,57 +1548,6 @@ def maintenance_calendar():
     else:
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
-    def _recurrence_dates(start, rec, range_start, range_end):
-        """Вычисляет все даты периодического события в диапазоне."""
-        dates = []
-        if not rec or rec == 'none':
-            return dates
-        d = start
-        limit = range_end + timedelta(days=1)
-        max_iter = 200
-        i = 0
-        while d < limit and i < max_iter:
-            if d >= range_start:
-                dates.append(d)
-            if rec == 'daily':
-                d += timedelta(days=1)
-            elif rec == 'weekly':
-                d += timedelta(weeks=1)
-            elif rec == 'biweekly':
-                d += timedelta(weeks=2)
-            elif rec == 'triweekly':
-                d += timedelta(weeks=3)
-            elif rec == 'monthly':
-                try:
-                    d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1)
-                except ValueError:
-                    d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1, day=28)
-            elif rec == 'quarterly':
-                m = d.month + 3
-                y = d.year + (1 if m > 12 else 0)
-                m = ((m - 1) % 12) + 1
-                try:
-                    d = d.replace(year=y, month=m)
-                except ValueError:
-                    d = d.replace(year=y, month=m, day=28)
-            elif rec == 'semiannual':
-                m = d.month + 6
-                y = d.year + (1 if m > 12 else 0)
-                m = ((m - 1) % 12) + 1
-                try:
-                    d = d.replace(year=y, month=m)
-                except ValueError:
-                    d = d.replace(year=y, month=m, day=28)
-            elif rec == 'yearly':
-                try:
-                    d = d.replace(year=d.year + 1)
-                except ValueError:
-                    d = d.replace(year=d.year + 1, day=28)
-            else:
-                break
-            i += 1
-        return dates
-
     for pl in plans:
         if not pl.planned_start:
             continue
@@ -1565,7 +1567,7 @@ def maintenance_calendar():
             })
         # Периодические повторения (виртуальные события)
         if pl.recurrence_type and pl.recurrence_type != 'none' and pl.status not in ('completed', 'cancelled'):
-            rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence_type, month_start, month_end)
+            rec_dates = _calc_recurrence_dates(pl.planned_start, pl.recurrence_type, month_start, month_end)
             for rd in rec_dates:
                 if rd == pl.planned_start:
                     continue  # уже добавлено
@@ -1633,7 +1635,7 @@ def maintenance_calendar():
         notify_uid = _get_notify_user_id(pl)
         if not notify_uid:
             continue
-        rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence_type, today, today + timedelta(days=3))
+        rec_dates = _calc_recurrence_dates(pl.planned_start, pl.recurrence_type, today, today + timedelta(days=3))
         for rd in rec_dates:
             existing = Notification.query.filter_by(
                 user_id=notify_uid,
@@ -1693,43 +1695,13 @@ def maintenance_calendar_export():
     else:
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
-    def _rec_dates(start, rec, rs, re):
-        dates = []
-        if not rec or rec == 'none':
-            return dates
-        d = start; limit = re + timedelta(days=1); i = 0
-        while d < limit and i < 200:
-            if d >= rs:
-                dates.append(d)
-            if rec == 'daily': d += timedelta(days=1)
-            elif rec == 'weekly': d += timedelta(weeks=1)
-            elif rec == 'biweekly': d += timedelta(weeks=2)
-            elif rec == 'triweekly': d += timedelta(weeks=3)
-            elif rec == 'monthly':
-                try: d = d.replace(year=d.year+(1 if d.month==12 else 0), month=(d.month%12)+1)
-                except: d = d.replace(year=d.year+(1 if d.month==12 else 0), month=(d.month%12)+1, day=28)
-            elif rec == 'quarterly':
-                m=d.month+3; y=d.year+(1 if m>12 else 0); m=((m-1)%12)+1
-                try: d=d.replace(year=y,month=m)
-                except: d=d.replace(year=y,month=m,day=28)
-            elif rec == 'semiannual':
-                m=d.month+6; y=d.year+(1 if m>12 else 0); m=((m-1)%12)+1
-                try: d=d.replace(year=y,month=m)
-                except: d=d.replace(year=y,month=m,day=28)
-            elif rec == 'yearly':
-                try: d=d.replace(year=d.year+1)
-                except: d=d.replace(year=d.year+1,day=28)
-            else: break
-            i += 1
-        return dates
-
     for pl in plans:
         if not pl.planned_start:
             continue
         if month_start <= pl.planned_start < month_end:
             events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title, 'machine': pl.machine.name, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled')})
         if pl.recurrence_type and pl.recurrence_type != 'none' and pl.status not in ('completed', 'cancelled'):
-            for rd in _rec_dates(pl.planned_start, pl.recurrence_type, month_start, month_end):
+            for rd in _calc_recurrence_dates(pl.planned_start, pl.recurrence_type, month_start, month_end):
                 if rd != pl.planned_start:
                     events.append({'date': rd, 'type': 'Plan (recurring)', 'part': pl.title, 'machine': pl.machine.name, 'overdue': rd < today})
 
