@@ -1739,16 +1739,6 @@ def maintenance_plans_list():
 @login_required
 @role_required('admin', 'technician')
 def maintenance_plan_new():
-    try:
-        return _maintenance_plan_new_inner()
-    except Exception as e:
-        import traceback
-        print(f'ERROR in maintenance_plan_new: {e}')
-        traceback.print_exc()
-        flash(f'Plan error: {e}', 'error')
-        return redirect(url_for('maintenance_plans_list'))
-
-def _maintenance_plan_new_inner():
     if request.method == 'POST':
         p = MaintenancePlan(
             machine_id=int(request.form['machine_id']),
