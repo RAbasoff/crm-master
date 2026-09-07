@@ -1737,18 +1737,35 @@ def maintenance_calendar_export():
 @app.route('/maintenance-plans')
 @login_required
 def maintenance_plans_list():
-    if current_user.has_role('admin', 'director', 'technician'):
-        plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()
-    else:
-        machine_ids = [m.id for m in current_user.assigned_machines]
-        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()
-    machines = Machine.query.order_by(Machine.name).all()
-    return render_template('maintenance_plans.html', plans=plans, machines=machines)
+    try:
+        if current_user.has_role('admin', 'director', 'technician'):
+            plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()
+        else:
+            machine_ids = [m.id for m in current_user.assigned_machines]
+            plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()
+        machines = Machine.query.order_by(Machine.name).all()
+        return render_template('maintenance_plans.html', plans=plans, machines=machines)
+    except Exception as e:
+        import traceback
+        print(f'ERROR in maintenance_plans_list: {e}')
+        traceback.print_exc()
+        flash(f'Plans error: {e}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/maintenance-plans/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'technician')
 def maintenance_plan_new():
+    try:
+        return _maintenance_plan_new_inner()
+    except Exception as e:
+        import traceback
+        print(f'ERROR in maintenance_plan_new: {e}')
+        traceback.print_exc()
+        flash(f'Plan error: {e}', 'error')
+        return redirect(url_for('maintenance_plans_list'))
+
+def _maintenance_plan_new_inner():
     if request.method == 'POST':
         p = MaintenancePlan(
             machine_id=int(request.form['machine_id']),
