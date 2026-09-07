@@ -1608,27 +1608,30 @@ def maintenance_calendar():
     next_month = month_end.strftime('%Y-%m')
 
     # Send reminders for upcoming plans (within 3 days) to responsible persons
-    upcoming = MaintenancePlan.query.filter(
-        MaintenancePlan.status == 'planned',
+    recurring_active = MaintenancePlan.query.filter(
+        MaintenancePlan.status.in_(['planned', 'in_progress']),
         MaintenancePlan.responsible_user_id.isnot(None),
-        MaintenancePlan.planned_start >= today,
-        MaintenancePlan.planned_start <= today + timedelta(days=3)
+        MaintenancePlan.recurrence.isnot(None),
+        MaintenancePlan.recurrence != '',
+        MaintenancePlan.recurrence != 'none'
     ).all()
-    for pl in upcoming:
-        existing = Notification.query.filter_by(
-            user_id=pl.responsible_user_id,
-            link=url_for('maintenance_plan_detail', plan_id=pl.id)
-        ).filter(Notification.created_at >= datetime.utcnow() - timedelta(hours=24)).first()
-        if not existing:
-            days_left = (pl.planned_start - today).days
-            machine = Machine.query.get(pl.machine_id)
-            create_notification(
-                pl.responsible_user_id,
-                _('Maintenance reminder'),
-                f"{machine.name}: {pl.title} — {_('in')} {days_left} {_('days')}",
-                'warning',
-                url_for('maintenance_plan_detail', plan_id=pl.id)
-            )
+    for pl in recurring_active:
+        rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence, today, today + timedelta(days=3))
+        for rd in rec_dates:
+            existing = Notification.query.filter_by(
+                user_id=pl.responsible_user_id,
+                link=url_for('maintenance_plan_detail', plan_id=pl.id)
+            ).filter(Notification.created_at >= datetime.utcnow() - timedelta(hours=24)).first()
+            if not existing:
+                days_left = (rd - today).days
+                machine = Machine.query.get(pl.machine_id)
+                create_notification(
+                    pl.responsible_user_id,
+                    _('Maintenance reminder'),
+                    f"{machine.name}: {pl.title} — {_('in')} {days_left} {_('days')} ({rd.strftime('%d-%m-%Y')})",
+                    'warning',
+                    url_for('maintenance_plan_detail', plan_id=pl.id)
+                )
 
     return render_template('maintenance_calendar.html',
         month=month, month_start=month_start, month_end=month_end,
@@ -1673,9 +1676,45 @@ def maintenance_calendar_export():
     else:
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
+    def _rec_dates(start, rec, rs, re):
+        dates = []
+        if not rec or rec == 'none':
+            return dates
+        d = start; limit = re + timedelta(days=1); i = 0
+        while d < limit and i < 200:
+            if d >= rs:
+                dates.append(d)
+            if rec == 'daily': d += timedelta(days=1)
+            elif rec == 'weekly': d += timedelta(weeks=1)
+            elif rec == 'biweekly': d += timedelta(weeks=2)
+            elif rec == 'triweekly': d += timedelta(weeks=3)
+            elif rec == 'monthly':
+                try: d = d.replace(year=d.year+(1 if d.month==12 else 0), month=(d.month%12)+1)
+                except: d = d.replace(year=d.year+(1 if d.month==12 else 0), month=(d.month%12)+1, day=28)
+            elif rec == 'quarterly':
+                m=d.month+3; y=d.year+(1 if m>12 else 0); m=((m-1)%12)+1
+                try: d=d.replace(year=y,month=m)
+                except: d=d.replace(year=y,month=m,day=28)
+            elif rec == 'semiannual':
+                m=d.month+6; y=d.year+(1 if m>12 else 0); m=((m-1)%12)+1
+                try: d=d.replace(year=y,month=m)
+                except: d=d.replace(year=y,month=m,day=28)
+            elif rec == 'yearly':
+                try: d=d.replace(year=d.year+1)
+                except: d=d.replace(year=d.year+1,day=28)
+            else: break
+            i += 1
+        return dates
+
     for pl in plans:
-        if pl.planned_start and month_start <= pl.planned_start < month_end:
+        if not pl.planned_start:
+            continue
+        if month_start <= pl.planned_start < month_end:
             events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title, 'machine': pl.machine.name, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled')})
+        if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
+            for rd in _rec_dates(pl.planned_start, pl.recurrence, month_start, month_end):
+                if rd != pl.planned_start:
+                    events.append({'date': rd, 'type': 'Plan (recurring)', 'part': pl.title, 'machine': pl.machine.name, 'overdue': rd < today})
 
     events.sort(key=lambda e: e['date'])
 
