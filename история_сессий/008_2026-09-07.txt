@@ -223,3 +223,50 @@
 - app.py (edit): сохранение + автосоздание при завершении
 - Календарь: виртуальные события для повторений
 - Событие календаря: имя станка + название (ev.machine[:6] + ev.part[:10])
+
+============================================================
+
+ЗАДАЧА 12: Цвета календаря + Print/PDF/CSV
+
+ИСПРАВЛЕНИЯ (800e693):
+
+1. templates/maintenance_calendar.html:
+   - Completed: #d5dbdb (серый) → #b8deb8 (мягко-салатовый), текст #4a7a4a
+   - Overdue: #c0392b (красный) — без изменений
+   - Кнопки: 🖨️ Print, 📄 PDF, 📊 CSV
+   - @media print CSS: скрывает sidebar/topbar, печатает только сетку + легенду
+   - Легенда цветов (видна только при печати)
+   - Исправлен ev.done (не существовало в event dict)
+
+2. templates/maintenance_calendar_print.html — НОВЫЙ:
+   - Print-friendly HTML для PDF/печати
+   - Полная таблица календаря + список всех событий
+   - Легенда цветов
+   - Кнопка "Print / Save as PDF"
+
+3. app.py:
+   - /maintenance-calendar/export — экспорт
+   - ?format=csv → CSV (BOM для Excel)
+   - По умолчанию → print-friendly HTML
+   - Исправлены month_end и timedelta в render_template
+
+ФАЙЛЫ:
+- app.py — export route
+- templates/maintenance_calendar.html — colors, buttons, print CSS
+- templates/maintenance_calendar_print.html — print template (NEW)
+
+============================================================
+
+СТАТУС СЕССИИ: Все задачи выполнены.
+
+ДЕПЛОЙ:
+- Коммит: 800e693
+- Пуш: origin/master
+- PythonAnywhere: git pull origin master → Web → Reload
+
+СЛЕДУЮЩИЕ ШАГИ:
+- Пользователь проверит календарь на PythonAnywhere
+- Среда 10:00 — напоминание про защиту от копирования (лицензия + домен)
+
+============================================================
+Сессия завершена: 07.09.2026
