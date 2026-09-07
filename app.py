@@ -1486,16 +1486,6 @@ def electricity_schematic():
 @app.route('/maintenance-calendar')
 @login_required
 def maintenance_calendar():
-    try:
-        return _maintenance_calendar_inner()
-    except Exception as e:
-        import traceback
-        print(f'ERROR in maintenance_calendar: {e}')
-        traceback.print_exc()
-        flash(f'Calendar error: {e}', 'error')
-        return redirect(url_for('index'))
-
-def _maintenance_calendar_inner():
     today = datetime.utcnow().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
@@ -1737,20 +1727,13 @@ def maintenance_calendar_export():
 @app.route('/maintenance-plans')
 @login_required
 def maintenance_plans_list():
-    try:
-        if current_user.has_role('admin', 'director', 'technician'):
-            plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()
-        else:
-            machine_ids = [m.id for m in current_user.assigned_machines]
-            plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()
-        machines = Machine.query.order_by(Machine.name).all()
-        return render_template('maintenance_plans.html', plans=plans, machines=machines)
-    except Exception as e:
-        import traceback
-        print(f'ERROR in maintenance_plans_list: {e}')
-        traceback.print_exc()
-        flash(f'Plans error: {e}', 'error')
-        return redirect(url_for('index'))
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('maintenance_plans.html', plans=plans, machines=machines)
 
 @app.route('/maintenance-plans/new', methods=['GET', 'POST'])
 @login_required
