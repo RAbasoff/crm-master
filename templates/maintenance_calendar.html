@@ -22,8 +22,12 @@
         <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
-        <div style="margin-left:16px;display:flex;gap:6px">
-            <button onclick="window.print()" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer">🖨️ {{ _('Print') }}</button>
+        <div style="margin-left:16px;display:flex;gap:6px;align-items:center">
+            <select id="printOrient" style="padding:4px 8px;font-size:12px;border:1px solid #ccc;border-radius:4px">
+                <option value="portrait">📄 Portrait</option>
+                <option value="landscape">📃 Landscape</option>
+            </select>
+            <button onclick="doCalPrint()" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer">🖨️ {{ _('Print') }}</button>
             <a href="/maintenance-calendar/export?month={{ month_start.strftime('%Y-%m') }}" class="btn btn-sm" style="background:#27ae60;color:white">📄 PDF</a>
             <a href="/maintenance-calendar/export?month={{ month_start.strftime('%Y-%m') }}&format=csv" class="btn btn-sm" style="background:#8e44ad;color:white">📊 CSV</a>
         </div>
@@ -70,8 +74,8 @@
                 <th style="padding:10px;text-align:center;font-size:12px">{{ _('Wed') }}</th>
                 <th style="padding:10px;text-align:center;font-size:12px">{{ _('Thu') }}</th>
                 <th style="padding:10px;text-align:center;font-size:12px">{{ _('Fri') }}</th>
-                <th style="padding:10px;text-align:center;font-size:12px;background:#16213e">{{ _('Sat') }}</th>
-                <th style="padding:10px;text-align:center;font-size:12px;background:#16213e">{{ _('Sun') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px;background:#3d1a1a;color:#ff6b6b">{{ _('Sat') }}</th>
+                <th style="padding:10px;text-align:center;font-size:12px;background:#3d1a1a;color:#ff6b6b">{{ _('Sun') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -92,8 +96,8 @@
                                 {% if day_events.append(ev) %}{% endif %}
                             {% endif %}
                         {% endfor %}
-                        <td style="vertical-align:top;height:90px;padding:4px 6px;border:1px solid #eee;{% if cell_date.val == today %}background:#e8f4fd{% endif %}{% if dow >= 5 %}background:#f8f9fa{% endif %}">
-                            <div style="font-size:12px;font-weight:600;color:{% if cell_date.val == today %}#3498db{% elif dow >= 5 %}#aaa{% else %}#333{% endif %};margin-bottom:4px">
+                        <td style="vertical-align:top;height:90px;padding:4px 6px;border:1px solid #eee;{% if cell_date.val == today %}background:#e8f4fd{% elif dow >= 5 %}background:#fff5f5{% endif %}">
+                            <div style="font-size:12px;font-weight:600;color:{% if cell_date.val == today %}#3498db{% elif dow >= 5 %}#e74c3c{% else %}#333{% endif %};margin-bottom:4px">
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
@@ -157,4 +161,16 @@
     <p style="color:#888;text-align:center;padding:20px">{{ _('No events this month') }}</p>
     {% endif %}
 </div>
+
+<script>
+var _printStyle = null;
+function doCalPrint() {
+    var orient = document.getElementById('printOrient').value;
+    if (_printStyle) _printStyle.remove();
+    _printStyle = document.createElement('style');
+    _printStyle.textContent = '@media print { @page { size: ' + orient + '; margin: 10mm; } }';
+    document.head.appendChild(_printStyle);
+    window.print();
+}
+</script>
 {% endblock %}
