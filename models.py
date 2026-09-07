@@ -600,6 +600,8 @@ class FaultReport(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     accepted_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
+    # reporter relationship is already created via User.fault_reports backref (line 50)
+    technician = db.relationship('User', foreign_keys=[technician_id], viewonly=True)
     photos = db.relationship('FaultPhoto', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     videos = db.relationship('FaultVideo', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     work_report = db.relationship('WorkReport', backref='fault_report', lazy=True, cascade='all, delete-orphan')
