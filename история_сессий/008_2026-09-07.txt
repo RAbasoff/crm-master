@@ -132,4 +132,26 @@
 - 3230b9e: recurring events in calendar
 - 9e9ad6e: recurring events fix
 - ccd0240: dropdown fix
+- 9f86a26: recurrence_type column fix, calendar colors, test notifications
+
+============================================================
+
+ЗАДАЧА 6: Исправление recurrence_type
+
+ПРОБЛЕМА: В БД столбец назывался recurrence_type, а код искал recurrence.
+Все планы с периодичностью не работали.
+
+ИСПРАВЛЕНИЕ:
+- models.py: recurrence → recurrence_type (mapped to existing DB column)
+- app.py: все ссылки .recurrence → .recurrence_type
+- Шаблоны: plan.recurrence → plan.recurrence_type
+- Убрана дублирующая миграция recurrence
+
+============================================================
+
+ЗАДАЧА 7: Цвета календаря
+
+- Завершённые события → салатовый (#8BC34A)
+- Просроченные без записей → красный (#c0392b) — без изменений
+- Тестовые уведомления "ЗАМЕНА НОЖЕЙ" отправлены 7 пользователям
 - 5da87a7: notification count badge
