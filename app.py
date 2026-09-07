@@ -1496,7 +1496,10 @@ def maintenance_calendar():
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
     for pl in plans:
-        if pl.planned_start and month_start <= pl.planned_start < month_end:
+        if not pl.planned_start:
+            continue
+        # Основное событие
+        if month_start <= pl.planned_start < month_end:
             events.append({
                 'date': pl.planned_start,
                 'type': 'plan',
@@ -1509,6 +1512,51 @@ def maintenance_calendar():
                 'plan_id': pl.id,
                 'status': pl.status
             })
+        # Периодические повторения (виртуальные события)
+        if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
+            d = pl.planned_start
+            limit = month_end + timedelta(days=1)
+            for _ in range(200):
+                if d >= limit:
+                    break
+                if d >= month_start and d != pl.planned_start:
+                    events.append({
+                        'date': d,
+                        'type': 'plan',
+                        'part': pl.title[:40],
+                        'machine': pl.machine.name,
+                        'machine_id': pl.machine_id,
+                        'part_id': None,
+                        'category': pl.maintenance_type,
+                        'overdue': d < today,
+                        'plan_id': pl.id,
+                        'status': pl.status
+                    })
+                # Следующая дата
+                if pl.recurrence == 'weekly':
+                    d += timedelta(weeks=1)
+                elif pl.recurrence == 'biweekly':
+                    d += timedelta(weeks=2)
+                elif pl.recurrence == 'monthly':
+                    try:
+                        d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1)
+                    except ValueError:
+                        d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1, day=28)
+                elif pl.recurrence == 'quarterly':
+                    m = d.month + 3
+                    y = d.year + (1 if m > 12 else 0)
+                    m = ((m - 1) % 12) + 1
+                    try:
+                        d = d.replace(year=y, month=m)
+                    except ValueError:
+                        d = d.replace(year=y, month=m, day=28)
+                elif pl.recurrence == 'yearly':
+                    try:
+                        d = d.replace(year=d.year + 1)
+                    except ValueError:
+                        d = d.replace(year=d.year + 1, day=28)
+                else:
+                    break
 
     # Get overdue items (before today) — skip if there's a maintenance record after the due date
     overdue = []
