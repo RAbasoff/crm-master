@@ -1564,8 +1564,8 @@ def maintenance_calendar():
                 'status': pl.status
             })
         # Периодические повторения (виртуальные события)
-        if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
-            rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence, month_start, month_end)
+        if pl.recurrence_type and pl.recurrence_type != 'none' and pl.status not in ('completed', 'cancelled'):
+            rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence_type, month_start, month_end)
             for rd in rec_dates:
                 if rd == pl.planned_start:
                     continue  # уже добавлено
@@ -1610,9 +1610,9 @@ def maintenance_calendar():
     # Send reminders for upcoming plans (within 3 days) to responsible persons
     recurring_active = MaintenancePlan.query.filter(
         MaintenancePlan.status.in_(['planned', 'in_progress']),
-        MaintenancePlan.recurrence.isnot(None),
-        MaintenancePlan.recurrence != '',
-        MaintenancePlan.recurrence != 'none'
+        MaintenancePlan.recurrence_type.isnot(None),
+        MaintenancePlan.recurrence_type != '',
+        MaintenancePlan.recurrence_type != 'none'
     ).all()
     def _get_notify_user_id(plan):
         """Определяет user_id для уведомления: responsible_user → responsible_person → machine owner."""
@@ -1633,7 +1633,7 @@ def maintenance_calendar():
         notify_uid = _get_notify_user_id(pl)
         if not notify_uid:
             continue
-        rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence, today, today + timedelta(days=3))
+        rec_dates = _recurrence_dates(pl.planned_start, pl.recurrence_type, today, today + timedelta(days=3))
         for rd in rec_dates:
             existing = Notification.query.filter_by(
                 user_id=notify_uid,
@@ -1728,8 +1728,8 @@ def maintenance_calendar_export():
             continue
         if month_start <= pl.planned_start < month_end:
             events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title, 'machine': pl.machine.name, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled')})
-        if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
-            for rd in _rec_dates(pl.planned_start, pl.recurrence, month_start, month_end):
+        if pl.recurrence_type and pl.recurrence_type != 'none' and pl.status not in ('completed', 'cancelled'):
+            for rd in _rec_dates(pl.planned_start, pl.recurrence_type, month_start, month_end):
                 if rd != pl.planned_start:
                     events.append({'date': rd, 'type': 'Plan (recurring)', 'part': pl.title, 'machine': pl.machine.name, 'overdue': rd < today})
 
@@ -1785,7 +1785,7 @@ def maintenance_plan_new():
             cost=float(request.form.get('cost', 0)),
             report=request.form.get('report', ''),
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
-            recurrence=request.form.get('recurrence', '') or None,
+            recurrence_type=request.form.get('recurrence', '') or None,
             responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
             responsible_person_id=int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None,
             notes=request.form.get('notes', ''),
@@ -1869,7 +1869,7 @@ def maintenance_plan_edit(plan_id):
         p.report = request.form.get('report', '')
         p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None
         old_status = p.status
-        p.recurrence = request.form.get('recurrence', '') or None
+        p.recurrence_type = request.form.get('recurrence', '') or None
         p.notes = request.form.get('notes', '')
         if 'offer_file' in request.files and request.files['offer_file'].filename:
             fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
@@ -1882,10 +1882,10 @@ def maintenance_plan_edit(plan_id):
         db.session.commit()
 
         # Auto-create next recurring plan on completion
-        if p.status == 'completed' and old_status != 'completed' and p.recurrence and p.recurrence != 'none':
+        if p.status == 'completed' and old_status != 'completed' and p.recurrence_type and p.recurrence_type != 'none':
             from calendar import monthrange
             base = p.actual_end or p.planned_start
-            rec = p.recurrence
+            rec = p.recurrence_type
             if rec == 'daily':
                 new_date = base + timedelta(days=1)
             elif rec == 'weekly':
@@ -1922,7 +1922,7 @@ def maintenance_plan_edit(plan_id):
                     responsible_person_id=p.responsible_person_id,
                     status='planned',
                     planned_start=new_date,
-                    recurrence=p.recurrence,
+                    recurrence_type=p.recurrence_type,
                     created_by=current_user.id
                 )
                 db.session.add(new_plan)
