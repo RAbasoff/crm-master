@@ -196,3 +196,16 @@
 - Убраны try/except из maintenance_plans_list и maintenance_calendar
 - Убрана функция-обёртка _maintenance_calendar_inner
 - Убрана функция-обёртка _maintenance_plan_new_inner
+
+============================================================
+
+ЗАДАЧА 10: Удаление обёрток _inner
+
+ПРОБЛЕМА: _maintenance_plan_new_inner() и _maintenance_calendar_inner()
+были вынесены в отдельные функции. Это ломает контекст request/сессии
+на PythonAnywhere (WSGI).
+
+ИСПРАВЛЕНИЕ (5be094a):
+- Убрана _maintenance_plan_new_inner — код прямо в route function
+- Убрана _maintenance_calendar_inner — код прямо в route function
+- Убраны все try/except wrappers из maintenance routes
