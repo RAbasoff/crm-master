@@ -63,8 +63,41 @@
 
 СТАТУС: Исправления внесены, требуется деплой.
 
-ФАЙЛЫ:
-- models.py (line ~597) — добавлены reporter/technician relationships
+ФАЙЛЫ (первая волна):
+- models.py — technician relationship (viewonly=True), reporter не трогать
 - templates/faults.html — колонка Reporter в таблице
-- templates/maintenance_calendar.html — кнопки Print/CSV/PDF + print CSS
-- app.py (line ~1545) — маршрут /maintenance-calendar/export
+- templates/maintenance_calendar.html — кнопки Print/CSV/PDF + событие: имя станка + тип
+- app.py — маршрут /maintenance-calendar/export (CSV)
+
+============================================================
+
+ЗАДАЧА 3: Периодичность ТО и ответственное лицо
+
+ДОБАВЛЕНО:
+
+1. models.py — MaintenancePlan:
+   - responsible_user_id (FK → user.id)
+   - responsible_user = relationship('User')
+
+2. app.py — maintenance plans (new + edit):
+   - Принимает responsible_user_id из формы
+   - Передаёт users в шаблон
+   - При завершении плана с recurrence → автосоздаёт следующий
+   - Копирует responsible_user_id в новый план
+   - Отправляет create_notification ответственному
+   - В календаре: проверка upcoming plans (≤3 дня) → напоминание
+
+3. templates/maintenance_plan_form.html:
+   - Dropdown ответственного лица (responsible_user_id)
+   - Периодичность: daily, weekly, biweekly, triweekly, monthly, quarterly, semiannual, yearly
+
+4. templates/maintenance_plan_detail.html:
+   - Показывает ответственное лицо и периодичность
+
+5. utils.py — миграция:
+   - maintenance_plan.recurrence VARCHAR(20)
+   - maintenance_plan.responsible_user_id INTEGER
+
+============================================================
+
+СТАТУС: Закоммичено (44e7dbe), запушено. Нужен git pull + Reload.
