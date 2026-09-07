@@ -209,3 +209,17 @@
 - Убрана _maintenance_plan_new_inner — код прямо в route function
 - Убрана _maintenance_calendar_inner — код прямо в route function
 - Убраны все try/except wrappers из maintenance routes
+
+============================================================
+
+ЗАДАЧА 11: Периодичность ТО (безопасный подход)
+
+РЕШЕНИЕ (a5cef24 + 5da5740):
+- models.py: recurrence = db.Column(db.String(20)) — одна строка
+- utils.py: миграция ALTER TABLE — одна строка
+- Шаблон формы: dropdown (weekly/biweekly/monthly/quarterly/yearly)
+- Шаблон деталей: показывает recurrence
+- app.py (new): recurrence в конструкторе MaintenancePlan
+- app.py (edit): сохранение + автосоздание при завершении
+- Календарь: виртуальные события для повторений
+- Событие календаря: имя станка + название (ev.machine[:6] + ev.part[:10])
