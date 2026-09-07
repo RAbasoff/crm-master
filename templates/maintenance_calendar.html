@@ -3,16 +3,11 @@
 {% block content %}
 <div class="page-header">
     <h1>📅 {{ _('Maintenance Calendar') }}</h1>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;align-items:center">
         <a href="/maintenance-calendar?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
         <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
-        <div style="margin-left:12px;display:flex;gap:6px">
-            <button onclick="printCalendar()" class="btn btn-sm" style="background:#27ae60;color:white" title="{{ _('Print') }}">🖨 {{ _('Print') }}</button>
-            <a href="/maintenance-calendar/export?month={{ month }}&format=csv" class="btn btn-sm" style="background:#3498db;color:white" title="CSV">📄 CSV</a>
-            <button onclick="exportPDF()" class="btn btn-sm" style="background:#e74c3c;color:white" title="PDF">📑 PDF</button>
-        </div>
     </div>
 </div>
 
@@ -48,7 +43,7 @@
     {% set start_weekday = first_day.weekday() %}  {# 0=Mon #}
     {% set days_in_month = (month_end - month_start).days %}
     
-    <table id="calendarGrid" style="width:100%;border-collapse:collapse;table-layout:fixed">
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead>
             <tr style="background:#1a1a2e;color:white">
                 <th style="padding:10px;text-align:center;font-size:12px">{{ _('Mon') }}</th>
@@ -83,8 +78,8 @@
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' or ev.done %}#fff{% else %}white{% endif %};background:{% if ev.type == 'plan' %}{% if ev.status == 'completed' %}#8BC34A{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %}{% elif ev.done %}#8BC34A{% elif ev.type == 'replacement' %}{% if ev.overdue %}#c0392b{% else %}#e67e22{% endif %}{% elif ev.type == 'maintenance' %}{% if ev.overdue %}#c0392b{% else %}#f39c12{% endif %}{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
-                                <span style="font-weight:600">{{ ev.machine[:8] }}</span> {{ ev.part[:12] }}
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}/parts{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' or ev.done %}#666{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.type == 'plan' %}{% if ev.status == 'completed' %}#d5dbdb{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %}{% elif ev.done %}#d5dbdb{% elif ev.type == 'replacement' %}{% if ev.overdue %}#c0392b{% else %}#e67e22{% endif %}{% elif ev.type == 'maintenance' %}{% if ev.overdue %}#c0392b{% else %}#f39c12{% endif %}{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
+                                {% if ev.type == 'plan' %}📋{% elif ev.type == 'replacement' %}🔄{% elif ev.type == 'maintenance' %}🔧{% else %}⚙️{% endif %} {{ ev.part[:15] }}
                             </a>
                             {% endfor %}
                         </td>
@@ -134,80 +129,4 @@
     <p style="color:#888;text-align:center;padding:20px">{{ _('No events this month') }}</p>
     {% endif %}
 </div>
-
-<script>
-function buildPrintHTML() {
-    const month = '{{ month_start.strftime("%B %Y") }}';
-    let html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-    html += '<title>{{ _("Maintenance Calendar") }} ' + month + '</title>';
-    html += '<style>';
-    html += 'body{font-family:Arial,sans-serif;margin:20px;color:#333}';
-    html += 'h1{text-align:center;font-size:20px;margin-bottom:16px}';
-    html += 'table{width:100%;border-collapse:collapse;margin-bottom:16px}';
-    html += 'th{background:#333;color:white;padding:8px;text-align:center;font-size:11px}';
-    html += 'td{border:1px solid #ccc;height:80px;vertical-align:top;padding:4px 6px;font-size:10px}';
-    html += '.ev{display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;color:white;white-space:nowrap;overflow:hidden}';
-    html += '.day{font-size:12px;font-weight:600;margin-bottom:4px}';
-    html += '.legend{margin-top:12px;font-size:10px;display:flex;gap:16px;flex-wrap:wrap}';
-    html += '.legend span{display:inline-flex;align-items:center;gap:4px}';
-    html += '.dot{width:12px;height:12px;border-radius:2px;display:inline-block}';
-    html += '@media print{body{margin:10mm}th{background:#333!important;color:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
-    html += '</style></head><body>';
-    html += '<h1>{{ _("Maintenance Calendar") }} — ' + month + '</h1>';
-    html += '<table><thead><tr>';
-    var days = ['{{ _("Mon") }}','{{ _("Tue") }}','{{ _("Wed") }}','{{ _("Thu") }}','{{ _("Fri") }}','{{ _("Sat") }}','{{ _("Sun") }}'];
-    days.forEach(function(d){ html += '<th>' + d + '</th>'; });
-    html += '</tr></thead><tbody>';
-
-    var calTable = document.querySelector('#calendarGrid');
-    if (calTable) {
-        var rows = calTable.querySelectorAll('tbody tr');
-        rows.forEach(function(row) {
-            html += '<tr>';
-            var cells = row.querySelectorAll('td');
-            cells.forEach(function(cell) {
-                var bg = cell.style.background || '';
-                var cellHTML = '';
-                var dayDiv = cell.querySelector('div');
-                if (dayDiv) cellHTML += '<div class="day">' + dayDiv.textContent.trim() + '</div>';
-                var links = cell.querySelectorAll('a');
-                links.forEach(function(a) {
-                    var abg = a.style.background || '#3498db';
-                    var acol = a.style.color || 'white';
-                    cellHTML += '<span class="ev" style="background:' + abg + ';color:' + acol + '">' + a.textContent.trim() + '</span>';
-                });
-                var sty = 'vertical-align:top;height:80px;padding:4px 6px;border:1px solid #ddd;';
-                if (bg) sty += 'background:' + bg + ';';
-                html += '<td style="' + sty + '">' + cellHTML + '</td>';
-            });
-            html += '</tr>';
-        });
-    }
-    html += '</tbody></table>';
-    html += '<div class="legend">';
-    html += '<span><span class="dot" style="background:#9b59b6"></span> {{ _("Plan") }}</span>';
-    html += '<span><span class="dot" style="background:#e67e22"></span> {{ _("Replacement") }}</span>';
-    html += '<span><span class="dot" style="background:#f39c12"></span> {{ _("Maintenance") }}</span>';
-    html += '<span><span class="dot" style="background:#c0392b"></span> {{ _("Overdue") }}</span>';
-    html += '<span><span class="dot" style="background:#8BC34A"></span> {{ _("Completed") }}</span>';
-    html += '</div></body></html>';
-    return html;
-}
-
-function printCalendar() {
-    var w = window.open('', '_blank');
-    w.document.open();
-    w.document.write(buildPrintHTML());
-    w.document.close();
-    w.onload = function() { w.print(); };
-}
-
-function exportPDF() {
-    var w = window.open('', '_blank');
-    w.document.open();
-    w.document.write(buildPrintHTML());
-    w.document.close();
-    w.onload = function() { w.print(); };
-}
-</script>
 {% endblock %}

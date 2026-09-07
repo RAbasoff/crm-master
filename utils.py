@@ -454,7 +454,6 @@ def run_migrations():
         )"""),
         ("equipment_part.warehouse_item_id", "ALTER TABLE equipment_part ADD COLUMN warehouse_item_id INTEGER REFERENCES warehouse_item(id)"),
         ("maintenance_plan.responsible_user_id", "ALTER TABLE maintenance_plan ADD COLUMN responsible_user_id INTEGER REFERENCES user(id)"),
-        ("maintenance_plan.responsible_person_id", "ALTER TABLE maintenance_plan ADD COLUMN responsible_person_id INTEGER REFERENCES client(id)"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
