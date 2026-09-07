@@ -172,3 +172,27 @@
 - Убрано удвоение calc_
 - Убрана дублирующая _rec_dates из CSV-экспорта
 - Все ссылки ведут на _calc_recurrence_dates
+
+============================================================
+
+ЗАДАЧА 9: Календарь и планы не открываются на PythonAnywhere
+
+АНАЛИЗ ACCESS LOG:
+- /maintenance-calendar и /maintenance-plans возвращают 302 (redirect to login)
+- Другие страницы (/machines, /floor) работают нормально
+- После POST /maintenance-plans/9/edit сессия ломается
+- 302 = login redirect от @login_required
+
+ПРИЧИНЫ:
+1. Форма maintenance_plan_form.html НЕ имела CSRF-токена
+   → POST без CSRF → Flask-WTF отклоняет → сессия ломается
+2. try/except в маршрутах маскировал ошибки → redirect вместо ошибки
+3. _maintenance_plan_new_inner() вынесена в отдельную функцию →
+   контекст request теряется
+
+ИСПРАВЛЕНИЕ (137c091):
+- Добавлен <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  в maintenance_plan_form.html
+- Убраны try/except из maintenance_plans_list и maintenance_calendar
+- Убрана функция-обёртка _maintenance_calendar_inner
+- Убрана функция-обёртка _maintenance_plan_new_inner
