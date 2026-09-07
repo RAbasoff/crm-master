@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gas System') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔴 {{ _('Gas & Equipment') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/gas/cylinders/new" class="btn btn-primary">+ {{ _('Add Cylinder') }}</a>
+        <a href="/gas/components/new" class="btn btn-sm" style="background:#eee">+ {{ _('Add Component') }}</a>
+        <a href="/gas/orders/new" class="btn btn-sm" style="background:#eee">+ {{ _('Order Cylinders') }}</a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats" style="margin-bottom:20px">
+    <div class="stat-card" style="border-left:4px solid #3498db">
+        <div class="number">{{ stats.n2_full }}</div>
+        <div class="label">N₂ {{ _('Full') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="number">{{ stats.n2_in_use }}</div>
+        <div class="label">N₂ {{ _('In Use') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number">{{ stats.n2_empty }}</div>
+        <div class="label">N₂ {{ _('Empty') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #3498db;margin-left:16px">
+        <div class="number">{{ stats.co2_full }}</div>
+        <div class="label">CO₂ {{ _('Full') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="number">{{ stats.co2_in_use }}</div>
+        <div class="label">CO₂ {{ _('In Use') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c">
+        <div class="number">{{ stats.co2_empty }}</div>
+        <div class="label">CO₂ {{ _('Empty') }}</div>
+    </div>
+</div>
+
+<!-- Interactive Cylinder Visualization -->
+<div class="card" style="margin-bottom:20px">
+    <h2 style="margin-bottom:16px">{{ _('Cylinder Status') }}</h2>
+    <div style="display:flex;gap:40px;justify-content:center;flex-wrap:wrap;padding:20px 0">
+
+        <!-- N₂ Cylinders -->
+        <div style="text-align:center">
+            <h3 style="color:#3498db;margin-bottom:16px">N₂ Nitrogen</h3>
+            <div style="display:flex;gap:24px;justify-content:center">
+                {% for cyl in n2_cylinders[:2] %}
+                <div class="cylinder-card" id="cyl-{{ cyl.id }}" data-id="{{ cyl.id }}" data-gas="nitrogen"
+                     style="cursor:pointer;transition:all 0.2s"
+                     onclick="showCylinderMenu({{ cyl.id }}, '{{ cyl.gas_type }}', '{{ cyl.cylinder_number }}', '{{ cyl.status }}')">
+                    <div class="cylinder-visual" style="position:relative;width:100px;height:200px;margin:0 auto 12px">
+                        <!-- Cylinder body -->
+                        <div style="position:absolute;bottom:20px;left:25px;width:50px;height:140px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status == 'full' %}#3498db{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#e74c3c{% else %}#95a5a6{% endif %};background:linear-gradient(to top, {% if cyl.status == 'full' %}#3498db{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#e74c3c{% else %}#95a5a6{% endif %}33, transparent)">
+                        </div>
+                        <!-- Valve top -->
+                        <div style="position:absolute;top:25px;left:40px;width:20px;height:25px;background:#888;border-radius:3px 3px 0 0"></div>
+                        <!-- Cap -->
+                        <div style="position:absolute;top:15px;left:35px;width:30px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
+                        <!-- Pressure gauge -->
+                        <div style="position:absolute;top:55px;right:5px;width:28px;height:28px;border-radius:50%;border:2px solid #888;background:white;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:bold;color:{% if cyl.status == 'full' %}#27ae60{% elif cyl.status == 'in_use' %}#f39c12{% else %}#e74c3c{% endif %}">
+                            {% if cyl.status == 'full' %}FULL{% elif cyl.status == 'in_use' %}USE{% else %}LOW{% endif %}
+                        </div>
+                    </div>
+                    <div style="font-weight:600;font-size:13px">{{ cyl.cylinder_number }}</div>
+                    <div style="font-size:11px;margin-top:4px">
+                        <span class="badge badge-{% if cyl.status == 'full' %}ok{% elif cyl.status == 'in_use' %}warning{% elif cyl.status == 'empty' %}critical{% else %}info{% endif %}">
+                            {{ cyl.status|upper }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Separator -->
+        <div style="width:2px;background:#eee;align-self:stretch"></div>
+
+        <!-- CO₂ Cylinders -->
+        <div style="text-align:center">
+            <h3 style="color:#e74c3c;margin-bottom:16px">CO₂ Carbon Dioxide</h3>
+            <div style="display:flex;gap:24px;justify-content:center">
+                {% for cyl in co2_cylinders[:2] %}
+                <div class="cylinder-card" id="cyl-{{ cyl.id }}" data-id="{{ cyl.id }}" data-gas="co2"
+                     style="cursor:pointer;transition:all 0.2s"
+                     onclick="showCylinderMenu({{ cyl.id }}, '{{ cyl.gas_type }}', '{{ cyl.cylinder_number }}', '{{ cyl.status }}')">
+                    <div class="cylinder-visual" style="position:relative;width:100px;height:200px;margin:0 auto 12px">
+                        <div style="position:absolute;bottom:20px;left:25px;width:50px;height:140px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status == 'full' %}#e74c3c{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#95a5a6{% else %}#95a5a6{% endif %};background:linear-gradient(to top, {% if cyl.status == 'full' %}#e74c3c{% elif cyl.status == 'in_use' %}#f39c12{% elif cyl.status == 'empty' %}#95a5a6{% else %}#95a5a6{% endif %}33, transparent)">
+                        </div>
+                        <div style="position:absolute;top:25px;left:40px;width:20px;height:25px;background:#888;border-radius:3px 3px 0 0"></div>
+                        <div style="position:absolute;top:15px;left:35px;width:30px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
+                        <div style="position:absolute;top:55px;right:5px;width:28px;height:28px;border-radius:50%;border:2px solid #888;background:white;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:bold;color:{% if cyl.status == 'full' %}#27ae60{% elif cyl.status == 'in_use' %}#f39c12{% else %}#e74c3c{% endif %}">
+                            {% if cyl.status == 'full' %}FULL{% elif cyl.status == 'in_use' %}USE{% else %}LOW{% endif %}
+                        </div>
+                    </div>
+                    <div style="font-weight:600;font-size:13px">{{ cyl.cylinder_number }}</div>
+                    <div style="font-size:11px;margin-top:4px">
+                        <span class="badge badge-{% if cyl.status == 'full' %}ok{% elif cyl.status == 'in_use' %}warning{% elif cyl.status == 'empty' %}critical{% else %}info{% endif %}">
+                            {{ cyl.status|upper }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:20px;justify-content:center;margin-top:12px;font-size:12px;color:#888">
+        <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:16px;height:16px;border-radius:50%;background:#27ae60"></div> {{ _('Full') }}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:16px;height:16px;border-radius:50%;background:#f39c12"></div> {{ _('In Use') }}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:16px;height:16px;border-radius:50%;background:#e74c3c"></div> {{ _('Empty') }}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:16px;height:16px;border-radius:50%;background:#95a5a6"></div> {{ _('Maintenance') }}
+        </div>
+    </div>
+    <p style="text-align:center;font-size:11px;color:#aaa;margin-top:8px">{{ _('Click a cylinder to change status') }}</p>
+</div>
+
+<!-- Statistics Section -->
+<div class="card" style="margin-bottom:20px">
+    <h2 style="margin-bottom:16px">📊 {{ _('Gas System Statistics') }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+        <div style="background:#f8f9fa;padding:16px;border-radius:8px;border-left:4px solid #3498db">
+            <div style="font-size:24px;font-weight:700;color:#3498db">{{ stats.n2_full + stats.n2_in_use + stats.n2_empty }}</div>
+            <div style="font-size:12px;color:#888">{{ _('Total N₂ Cylinders') }}</div>
+        </div>
+        <div style="background:#f8f9fa;padding:16px;border-radius:8px;border-left:4px solid #e74c3c">
+            <div style="font-size:24px;font-weight:700;color:#e74c3c">{{ stats.co2_full + stats.co2_in_use + stats.co2_empty }}</div>
+            <div style="font-size:12px;color:#888">{{ _('Total CO₂ Cylinders') }}</div>
+        </div>
+        <div style="background:#f8f9fa;padding:16px;border-radius:8px;border-left:4px solid #27ae60">
+            <div style="font-size:24px;font-weight:700;color:#27ae60">{{ stats.n2_full + stats.co2_full }}</div>
+            <div style="font-size:12px;color:#888">{{ _('Total Full') }}</div>
+        </div>
+        <div style="background:#f8f9fa;padding:16px;border-radius:8px;border-left:4px solid #f39c12">
+            <div style="font-size:24px;font-weight:700;color:#f39c12">{{ stats.n2_in_use + stats.co2_in_use }}</div>
+            <div style="font-size:12px;color:#888">{{ _('Total In Use') }}</div>
+        </div>
+        <div style="background:#f8f9fa;padding:16px;border-radius:8px;border-left:4px solid #95a5a6">
+            <div style="font-size:24px;font-weight:700;color:#95a5a6">{{ stats.n2_empty + stats.co2_empty }}</div>
+            <div style="font-size:12px;color:#888">{{ _('Total Empty') }}</div>
+        </div>
+        <div style="background:#f8f9fa;padding:16px;border-radius:8px;border-left:4px solid #9b59b6">
+            <div style="font-size:24px;font-weight:700;color:#9b59b6">{{ components|length }}</div>
+            <div style="font-size:12px;color:#888">{{ _('System Components') }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Cylinder Status Menu (popup) -->
+<div id="cylinderMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:24px;min-width:300px;box-shadow:0 10px 40px rgba(0,0,0,0.3)">
+        <h3 id="menuTitle" style="margin:0 0 16px;font-size:16px"></h3>
+        <div id="menuStatus" style="margin-bottom:16px"></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="setCylinderStatus('full')" style="padding:10px;border:2px solid #27ae60;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#27ae60">🟢 {{ _('Full') }}</button>
+            <button onclick="setCylinderStatus('in_use')" style="padding:10px;border:2px solid #f39c12;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#f39c12">🟡 {{ _('In Use') }}</button>
+            <button onclick="setCylinderStatus('empty')" style="padding:10px;border:2px solid #e74c3c;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#e74c3c">🔴 {{ _('Empty') }}</button>
+            <button onclick="setCylinderStatus('maintenance')" style="padding:10px;border:2px solid #95a5a6;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#95a5a6">🔧 {{ _('Maintenance') }}</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+            <a id="menuEditLink" href="#" class="btn btn-sm" style="flex:1;background:#3498db;color:white;text-align:center;text-decoration:none">✏️ {{ _('Edit') }}</a>
+            <button onclick="closeCylinderMenu()" class="btn btn-sm" style="flex:1;background:#eee">{{ _('Cancel') }}</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentCylId = null;
+
+function showCylinderMenu(id, gas, number, status) {
+    currentCylId = id;
+    var gasLabel = gas === 'nitrogen' ? 'N₂' : 'CO₂';
+    document.getElementById('menuTitle').textContent = gasLabel + ' — ' + number;
+    document.getElementById('menuStatus').innerHTML =
+        '<span style="font-size:13px">{{ _("Current status") }}: <b>' + status.toUpperCase() + '</b></span>';
+    document.getElementById('menuEditLink').href = '/gas/cylinders/' + id + '/edit';
+    document.getElementById('cylinderMenu').style.display = 'block';
+}
+
+function closeCylinderMenu() {
+    document.getElementById('cylinderMenu').style.display = 'none';
+    currentCylId = null;
+}
+
+function setCylinderStatus(status) {
+    if (!currentCylId) return;
+    fetch('/gas/cylinders/' + currentCylId + '/status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({status: status})
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) {
+            closeCylinderMenu();
+            location.reload();
+        } else {
+            alert(d.error || 'Error');
+        }
+    })
+    .catch(e => alert('Error: ' + e.message));
+}
+
+// Close menu on outside click
+document.getElementById('cylinderMenu').addEventListener('click', function(e) {
+    if (e.target === this) closeCylinderMenu();
+});
+</script>
+
+<!-- Components Table -->
+{% if components %}
+<div class="card" style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2>🔧 {{ _('Gas System Components') }}</h2>
+        <a href="/gas/components" class="btn btn-sm" style="background:#eee">{{ _('View All') }}</a>
+    </div>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Gas') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Last Check') }}</th>
+            <th>{{ _('Next Check') }}</th>
+        </tr>
+        {% for c in components %}
+        <tr>
+            <td>
+                {% if c.component_type == 'valve' %}🔩
+                {% elif c.component_type == 'regulator' %}⚙️
+                {% elif c.component_type == 'heater' %}🔥
+                {% elif c.component_type == 'manometer' %}📊
+                {% elif c.component_type == 'shut_off' %}🔒
+                {% else %}🔧{% endif %}
+                {{ c.component_type }}
+            </td>
+            <td>{{ c.name }}</td>
+            <td><span class="badge badge-{{ 'active' if c.gas_type == 'nitrogen' else 'maintenance' }}">{{ 'N₂' if c.gas_type == 'nitrogen' else 'CO₂' }}</span></td>
+            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>{{ c.last_check.strftime('%d-%m-%Y') if c.last_check else '—' }}</td>
+            <td>{{ c.next_check.strftime('%d-%m-%Y') if c.next_check else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- Recent Orders -->
+{% if orders %}
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2>📦 {{ _('Recent Orders') }}</h2>
+        <a href="/gas/orders" class="btn btn-sm" style="background:#eee">{{ _('View All') }}</a>
+    </div>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th><th>{{ _('Supplier') }}</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td>
+            <td>{{ 'N₂' if o.gas_type == 'nitrogen' else 'CO₂' }}</td>
+            <td>{{ o.quantity }}</td>
+            <td><span class="badge badge-{{ o.status }}">{{ o.status }}</span></td>
+            <td>{{ o.supplier or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+{% endblock %}

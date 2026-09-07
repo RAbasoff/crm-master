@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gas Components') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ _('Gas System Components') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/gas" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
+        <a href="/gas/components/new" class="btn btn-primary">+ {{ _('Add Component') }}</a>
+    </div>
+</div>
+
+<div style="display:flex;gap:8px;margin-bottom:16px">
+    <a href="/gas/components" class="btn btn-sm" style="background:{% if not gas_filter %}#3498db;color:white{% else %}#eee{% endif %}">{{ _('All') }}</a>
+    <a href="/gas/components?gas=nitrogen" class="btn btn-sm" style="background:{% if gas_filter=='nitrogen' %}#3498db;color:white{% else %}#eee{% endif %}">N₂</a>
+    <a href="/gas/components?gas=co2" class="btn btn-sm" style="background:{% if gas_filter=='co2' %}#3498db;color:white{% else %}#eee{% endif %}">CO₂</a>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Type') }}</th><th>{{ _('Name') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Status') }}</th><th>{{ _('Last Check') }}</th><th>{{ _('Next Check') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for c in components %}
+        <tr>
+            <td>{% if c.component_type == 'valve' %}🔩{% elif c.component_type == 'regulator' %}⚙️{% elif c.component_type == 'heater' %}🔥{% elif c.component_type == 'manometer' %}📊{% elif c.component_type == 'shut_off' %}🔒{% else %}🔧{% endif %} {{ c.component_type }}</td>
+            <td>{{ c.name }}</td>
+            <td><span class="badge badge-{{ 'active' if c.gas_type == 'nitrogen' else 'maintenance' }}">{{ 'N₂' if c.gas_type == 'nitrogen' else 'CO₂' }}</span></td>
+            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>{{ c.last_check.strftime('%d-%m-%Y') if c.last_check else '—' }}</td>
+            <td>{{ c.next_check.strftime('%d-%m-%Y') if c.next_check else '—' }}</td>
+            <td>
+                <a href="/gas/components/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

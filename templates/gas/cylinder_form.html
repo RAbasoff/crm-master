@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Cylinder') if cylinder else _('New Cylinder') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Edit Cylinder') + ': ' + cylinder.cylinder_number if cylinder else _('New Cylinder') }}</h1>
+</div>
+<div class="card">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Gas Type') }} *</label>
+                <select name="gas_type" required>
+                    <option value="nitrogen" {% if cylinder and cylinder.gas_type == 'nitrogen' %}selected{% endif %}>N₂ {{ _('Nitrogen') }}</option>
+                    <option value="co2" {% if cylinder and cylinder.gas_type == 'co2' %}selected{% endif %}>CO₂ {{ _('Carbon Dioxide') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Cylinder Number') }} * (Z + 6 digits)</label>
+                <input type="text" name="cylinder_number" value="{{ cylinder.cylinder_number if cylinder else '' }}" required placeholder="e.g. Z123456" pattern="Z\d{6}" title="Must start with Z followed by 6 digits (e.g. Z123456)">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    {% for val, label in [('full', 'Full'), ('in_use', 'In Use'), ('empty', 'Empty'), ('maintenance', 'Maintenance')] %}
+                    <option value="{{ val }}" {% if cylinder and cylinder.status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Received Date') }}</label>
+                <input type="date" name="received_at" value="{{ cylinder.received_at.strftime('%Y-%m-%d') if cylinder and cylinder.received_at else '' }}">
+            </div>
+        </div>
+        {% if cylinder %}
+        <div class="form-group">
+            <label>{{ _('Installed Date') }}</label>
+            <input type="date" name="installed_at" value="{{ cylinder.installed_at.strftime('%Y-%m-%d') if cylinder.installed_at else '' }}">
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="3">{{ cylinder.notes if cylinder else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/gas" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+    {% if cylinder %}
+    <form method="POST" action="/gas/cylinders/{{ cylinder.id }}/delete" style="margin-top:12px" onsubmit="return confirm('{{ _('Delete this cylinder?') }}')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">{{ _('Delete') }}</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -386,6 +386,9 @@
             {% if has_access('electricity') %}
             <a href="/electricity" class="sb-item {% if 'electric' in (request.endpoint or '') or 'cabinet' in (request.endpoint or '') or 'breaker' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚡</span>{{ _('Electricity') }}</a>
             {% endif %}
+            {% if has_access('machines') or current_user.role in ['admin', 'technician'] %}
+            <a href="/gas" class="sb-item {% if 'gas' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas System') }}</a>
+            {% endif %}
             {% if has_access('maintenance') %}
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}" onclick="document.getElementById('maintSub').classList.toggle('collapsed');return true;"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }} <span style="margin-left:auto;font-size:9px;opacity:0.5">▶</span></a>
             <div id="maintSub" class="sb-group-items collapsed">

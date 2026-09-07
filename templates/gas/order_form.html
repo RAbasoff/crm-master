@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ _('New Order') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('New Cylinder Order') }}</h1>
+</div>
+<div class="card">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Gas Type') }} *</label>
+                <select name="gas_type" required>
+                    <option value="nitrogen">N₂ {{ _('Nitrogen') }}</option>
+                    <option value="co2">CO₂ {{ _('Carbon Dioxide') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Quantity') }}</label>
+                <input type="number" name="quantity" value="1" min="1" max="50">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Supplier') }}</label>
+            <input type="text" name="supplier" placeholder="{{ _('Supplier name') }}">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Reason') }}</label>
+            <textarea name="reason" rows="3" placeholder="{{ _('Why are these cylinders needed?') }}"></textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Create Order') }}</button>
+            <a href="/gas/orders" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gas Cylinders') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔴 {{ _('Gas Cylinders') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/gas" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
+        <a href="/gas/cylinders/new" class="btn btn-primary">+ {{ _('Add Cylinder') }}</a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div style="display:flex;gap:8px;margin-bottom:16px">
+    <a href="/gas/cylinders" class="btn btn-sm" style="background:{% if not gas_filter %}#3498db;color:white{% else %}#eee{% endif %}">{{ _('All') }}</a>
+    <a href="/gas/cylinders?gas=nitrogen" class="btn btn-sm" style="background:{% if gas_filter=='nitrogen' %}#3498db;color:white{% else %}#eee{% endif %}">N₂ {{ _('Nitrogen') }}</a>
+    <a href="/gas/cylinders?gas=co2" class="btn btn-sm" style="background:{% if gas_filter=='co2' %}#3498db;color:white{% else %}#eee{% endif %}">CO₂ {{ _('Carbon Dioxide') }}</a>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Gas') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Received') }}</th>
+            <th>{{ _('Installed') }}</th>
+            <th>{{ _('Notes') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for c in cylinders %}
+        <tr>
+            <td><strong>{{ c.cylinder_number }}</strong></td>
+            <td><span class="badge badge-{{ 'active' if c.gas_type == 'nitrogen' else 'maintenance' }}">{{ 'N₂' if c.gas_type == 'nitrogen' else 'CO₂' }}</span></td>
+            <td><span class="badge badge-{% if c.status == 'full' %}ok{% elif c.status == 'in_use' %}warning{% elif c.status == 'empty' %}critical{% else %}info{% endif %}">{{ c.status }}</span></td>
+            <td>{{ c.received_at.strftime('%d-%m-%Y') if c.received_at else '—' }}</td>
+            <td>{{ c.installed_at.strftime('%d-%m-%Y') if c.installed_at else '—' }}</td>
+            <td>{{ c.notes or '—' }}</td>
+            <td>
+                <a href="/gas/cylinders/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

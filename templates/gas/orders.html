@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Cylinder Orders') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📦 {{ _('Cylinder Orders') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/gas" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
+        <a href="/gas/orders/new" class="btn btn-primary">+ {{ _('New Order') }}</a>
+    </div>
+</div>
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th><th>{{ _('Supplier') }}</th><th>{{ _('Reason') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td>
+            <td><span class="badge badge-{{ 'active' if o.gas_type == 'nitrogen' else 'maintenance' }}">{{ 'N₂' if o.gas_type == 'nitrogen' else 'CO₂' }}</span></td>
+            <td>{{ o.quantity }}</td>
+            <td><span class="badge badge-{{ o.status }}">{{ o.status }}</span></td>
+            <td>{{ o.supplier or '—' }}</td>
+            <td>{{ o.reason or '—' }}</td>
+            <td>
+                {% if o.status == 'pending' %}
+                <form method="POST" action="/gas/orders/{{ o.id }}/status" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="ordered">
+                    <button type="submit" class="btn btn-sm" style="background:#f39c12;color:white;padding:4px 8px">📦 {{ _('Mark Ordered') }}</button>
+                </form>
+                {% elif o.status == 'ordered' %}
+                <form method="POST" action="/gas/orders/{{ o.id }}/status" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="delivered">
+                    <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;padding:4px 8px">✅ {{ _('Mark Delivered') }}</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}
