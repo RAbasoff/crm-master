@@ -63,59 +63,6 @@ from flask_login import LoginManager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-
-def _calc_recurrence_dates(start, rec, range_start, range_end):
-    """Вычисляет все даты периодического события в диапазоне."""
-    dates = []
-    if not rec or rec == 'none':
-        return dates
-    d = start
-    limit = range_end + timedelta(days=1)
-    max_iter = 200
-    i = 0
-    while d < limit and i < max_iter:
-        if d >= range_start:
-            dates.append(d)
-        if rec == 'daily':
-            d += timedelta(days=1)
-        elif rec == 'weekly':
-            d += timedelta(weeks=1)
-        elif rec == 'biweekly':
-            d += timedelta(weeks=2)
-        elif rec == 'triweekly':
-            d += timedelta(weeks=3)
-        elif rec == 'monthly':
-            try:
-                d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1)
-            except ValueError:
-                d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1, day=28)
-        elif rec == 'quarterly':
-            m = d.month + 3
-            y = d.year + (1 if m > 12 else 0)
-            m = ((m - 1) % 12) + 1
-            try:
-                d = d.replace(year=y, month=m)
-            except ValueError:
-                d = d.replace(year=y, month=m, day=28)
-        elif rec == 'semiannual':
-            m = d.month + 6
-            y = d.year + (1 if m > 12 else 0)
-            m = ((m - 1) % 12) + 1
-            try:
-                d = d.replace(year=y, month=m)
-            except ValueError:
-                d = d.replace(year=y, month=m, day=28)
-        elif rec == 'yearly':
-            try:
-                d = d.replace(year=d.year + 1)
-            except ValueError:
-                d = d.replace(year=d.year + 1, day=28)
-        else:
-            break
-        i += 1
-    return dates
-
-
 # ============================================================
 # IMPROVEMENTS: Backup, Email, Cost Tracking
 # ============================================================
@@ -1480,7 +1427,347 @@ def electricity_schematic():
     return render_template('electricity_schematic.html', cabinets=cabinets)
 
 # ============================================================
-# ROUTES — MAINTENANCE CALENDAR# ============================================================@app.route('/maintenance-calendar')@login_requireddef maintenance_calendar():    today = datetime.utcnow().date()    month = request.args.get('month', today.strftime('%Y-%m'))    year, mon = map(int, month.split('-'))    month_start = datetime(year, mon, 1).date()    if mon == 12:        month_end = datetime(year + 1, 1, 1).date()    else:        month_end = datetime(year, mon + 1, 1).date()        # Get all parts with upcoming maintenance/replacement (eagerly load machine)    from sqlalchemy.orm import joinedload    if current_user.has_role('admin', 'director', 'technician'):        parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()    else:        machine_ids = [m.id for m in current_user.assigned_machines]        parts = MachinePart.query.options(joinedload(MachinePart.machine)).filter(MachinePart.machine_id.in_(machine_ids)).all()        # Build calendar events    events = []    for p in parts:        if p.next_replacement and month_start <= p.next_replacement < month_end:            events.append({                'date': p.next_replacement,                'type': 'replacement',                'part': p.name,                'machine': p.machine.name,                'machine_id': p.machine_id,                'part_id': p.id,                'category': p.category,                'overdue': p.next_replacement < today            })        if p.next_maintenance and month_start <= p.next_maintenance < month_end:            events.append({                'date': p.next_maintenance,                'type': 'maintenance',                'part': p.name,                'machine': p.machine.name,                'machine_id': p.machine_id,                'part_id': p.id,                'category': p.category,                'overdue': p.next_maintenance < today            })        # Also check maintenance records        for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():            if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:                events.append({                    'date': mr.next_maintenance.date(),                    'type': 'machine_maintenance',                    'part': mr.description[:40],                    'machine': p.machine.name,                    'machine_id': p.machine_id,                    'part_id': None,                    'category': mr.maintenance_type,                    'overdue': mr.next_maintenance.date() < today                })        # Add maintenance plans    if current_user.has_role('admin', 'director', 'technician'):        plans = MaintenancePlan.query.all()    else:        plan_machine_ids = [m.id for m in current_user.assigned_machines]        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()    for pl in plans:        if pl.planned_start and month_start <= pl.planned_start < month_end:            events.append({                'date': pl.planned_start,                'type': 'plan',                'part': pl.title[:40],                'machine': pl.machine.name,                'machine_id': pl.machine_id,                'part_id': None,                'category': pl.maintenance_type,                'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'),                'plan_id': pl.id,                'status': pl.status            })    # Get overdue items (before today) — skip if there's a maintenance record after the due date    overdue = []    for p in parts:        if p.next_replacement and p.next_replacement < today:            # Check if replacement was done after the due date            done_after = PartMaintenanceLog.query.filter(                PartMaintenanceLog.part_id == p.id,                PartMaintenanceLog.action.in_(['replaced', 'maintenance']),                PartMaintenanceLog.date >= datetime.combine(p.next_replacement, datetime.min.time())            ).first()            if not done_after:                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})        if p.next_maintenance and p.next_maintenance < today:            done_after = PartMaintenanceLog.query.filter(                PartMaintenanceLog.part_id == p.id,                PartMaintenanceLog.action.in_(['replaced', 'maintenance']),                PartMaintenanceLog.date >= datetime.combine(p.next_maintenance, datetime.min.time())            ).first()            if not done_after:                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})        # Navigation    prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')    next_month = month_end.strftime('%Y-%m')        return render_template('maintenance_calendar.html',        month=month, month_start=month_start, month_end=month_end,        events=sorted(events, key=lambda e: e['date']),        overdue=overdue, today=today,        prev_month=prev_month, next_month=next_month,        timedelta=timedelta)# ============================================================# ROUTES — MAINTENANCE PLANS# ============================================================@app.route('/maintenance-plans')@login_requireddef maintenance_plans_list():    if current_user.has_role('admin', 'director', 'technician'):        plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()    else:        machine_ids = [m.id for m in current_user.assigned_machines]        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()    machines = Machine.query.order_by(Machine.name).all()    return render_template('maintenance_plans.html', plans=plans, machines=machines)@app.route('/maintenance-plans/new', methods=['GET', 'POST'])@login_required@role_required('admin', 'technician')def maintenance_plan_new():    if request.method == 'POST':        p = MaintenancePlan(            machine_id=int(request.form['machine_id']),            title=request.form['title'],            description=request.form.get('description', ''),            maintenance_type=request.form.get('maintenance_type', 'preventive'),            status=request.form.get('status', 'planned'),            planned_start=datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date(),            planned_end=datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None,            is_external='is_external' in request.form,            company_name=request.form.get('company_name', ''),            company_contact=request.form.get('company_contact', ''),            company_person=request.form.get('company_person', ''),            worker_id=int(request.form['worker_id']) if request.form.get('worker_id') else None,            parts_used=request.form.get('parts_used', '[]'),            cost=float(request.form.get('cost', 0)),            report=request.form.get('report', ''),            next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,            notes=request.form.get('notes', ''),            created_by=current_user.id        )        if 'offer_file' in request.files and request.files['offer_file'].filename:            fn = secure_filename(f"offer_{request.files['offer_file'].filename}")            request.files['offer_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))            p.offer_file = fn        if 'work_act_file' in request.files and request.files['work_act_file'].filename:            fn = secure_filename(f"act_{request.files['work_act_file'].filename}")            request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))            p.work_act_file = fn        db.session.add(p)        db.session.commit()                # Check if TWO should be created        create_two = request.form.get('create_two') == 'yes'        worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None                if create_two and worker_id:            # Create TWO from maintenance plan            two = TechnicalWorkOrder(                number=gen_two_number(),                machine_id=p.machine_id,                description=f'ТО: {p.title}\n{p.description}',                planned_date=p.planned_start,                status='assigned',                created_by=current_user.id            )            db.session.add(two)            db.session.flush()            # Assign worker            worker = Monteur.query.get(worker_id)            if worker:                two.workers.append(worker)            db.session.commit()            log_audit('create', 'two_from_plan', two.id, f'{two.number} from plan {p.id}')            flash(_('Maintenance plan created with TWO') + f': {two.number}', 'success')        else:            flash(_('Maintenance plan created'), 'success')                return redirect(url_for('maintenance_plan_detail', plan_id=p.id))    machines = Machine.query.order_by(Machine.name).all()    workers = Monteur.query.filter_by(actief=True).all()    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers)@app.route('/maintenance-plans/<int:plan_id>')@login_requireddef maintenance_plan_detail(plan_id):    p = MaintenancePlan.query.get_or_404(plan_id)    return render_template('maintenance_plan_detail.html', plan=p)@app.route('/maintenance-plans/<int:plan_id>/edit', methods=['GET', 'POST'])@login_required@role_required('admin', 'technician')def maintenance_plan_edit(plan_id):    p = MaintenancePlan.query.get_or_404(plan_id)    if request.method == 'POST':        p.machine_id = int(request.form['machine_id'])        p.title = request.form['title']        p.description = request.form.get('description', '')        p.maintenance_type = request.form.get('maintenance_type', p.maintenance_type)        p.status = request.form.get('status', p.status)        p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()        p.planned_end = datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None        p.actual_start = datetime.strptime(request.form['actual_start'], '%Y-%m-%d').date() if request.form.get('actual_start') else None        p.actual_end = datetime.strptime(request.form['actual_end'], '%Y-%m-%d').date() if request.form.get('actual_end') else None        p.is_external = 'is_external' in request.form        p.company_name = request.form.get('company_name', '')        p.company_contact = request.form.get('company_contact', '')        p.company_person = request.form.get('company_person', '')        p.worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None        p.parts_used = request.form.get('parts_used', '[]')        p.cost = float(request.form.get('cost', 0))        p.report = request.form.get('report', '')        p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None        p.notes = request.form.get('notes', '')        if 'offer_file' in request.files and request.files['offer_file'].filename:            fn = secure_filename(f"offer_{request.files['offer_file'].filename}")            request.files['offer_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))            p.offer_file = fn        if 'work_act_file' in request.files and request.files['work_act_file'].filename:            fn = secure_filename(f"act_{request.files['work_act_file'].filename}")            request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))            p.work_act_file = fn        db.session.commit()        flash(_('Maintenance plan updated'), 'success')        return redirect(url_for('maintenance_plan_detail', plan_id=p.id))    machines = Machine.query.order_by(Machine.name).all()    workers = Monteur.query.filter_by(actief=True).all()    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers)@app.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])@login_required@role_required('admin')def maintenance_plan_delete(plan_id):    p = MaintenancePlan.query.get_or_404(plan_id)    db.session.delete(p)    db.session.commit()    flash(_('Maintenance plan deleted'), 'success')    return redirect(url_for('maintenance_plans_list'))@app.route('/api/maintenance/plans')@login_requireddef api_maintenance_plans():    today = datetime.utcnow().date()    month = request.args.get('month', today.strftime('%Y-%m'))    year, mon = map(int, month.split('-'))    month_start = datetime(year, mon, 1).date()    if mon == 12:        month_end = datetime(year + 1, 1, 1).date()    else:        month_end = datetime(year, mon + 1, 1).date()    if current_user.has_role('admin', 'director', 'technician'):        plans = MaintenancePlan.query.all()    else:        machine_ids = [m.id for m in current_user.assigned_machines]        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).all()    result = []    for p in plans:        if p.planned_start and month_start <= p.planned_start < month_end:            result.append({                'id': p.id, 'title': p.title, 'machine': p.machine.name,                'machine_id': p.machine_id, 'type': p.maintenance_type,                'status': p.status, 'start': p.planned_start.isoformat(),                'end': p.planned_end.isoformat() if p.planned_end else None,                'is_external': p.is_external,                'company': p.company_name if p.is_external else None,                'worker': p.worker.naam if p.worker else None,            })    return jsonify(result)@app.route('/api/maintenance/reminders')@login_requireddef api_maintenance_reminders():    today = datetime.utcnow().date()    soon = today + timedelta(days=14)    # Filter at DB level: only parts with upcoming dates    part_q = MachinePart.query.filter(        db.or_(            MachinePart.next_replacement <= soon,            MachinePart.next_maintenance <= soon        )    )    if not current_user.has_role('admin', 'director', 'technician'):        machine_ids = [m.id for m in current_user.assigned_machines]        part_q = part_q.filter(MachinePart.machine_id.in_(machine_ids))    reminders = []    for p in part_q.all():        if p.next_replacement and p.next_replacement <= soon:            days_left = (p.next_replacement - today).days            reminders.append({                'type': 'replacement', 'part': p.name, 'machine': p.machine.name,                'machine_id': p.machine_id, 'part_id': p.id,                'date': p.next_replacement.isoformat(),                'days_left': days_left, 'overdue': days_left < 0            })        if p.next_maintenance and p.next_maintenance <= soon:            days_left = (p.next_maintenance - today).days            reminders.append({                'type': 'maintenance', 'part': p.name, 'machine': p.machine.name,                'machine_id': p.machine_id, 'part_id': p.id,                'date': p.next_maintenance.isoformat(),                'days_left': days_left, 'overdue': days_left < 0            })    consumables = VoorraadItem.query.filter(        VoorraadItem.consumable_type.isnot(None),        VoorraadItem.consumable_type != '',        VoorraadItem.next_replacement.isnot(None),        VoorraadItem.next_replacement <= soon    ).all()    for c in consumables:        days_left = (c.next_replacement - today).days        reminders.append({            'type': 'consumable', 'part': c.naam, 'machine': c.compatible_machines or '—',            'machine_id': None, 'part_id': c.id,            'date': c.next_replacement.isoformat(),            'days_left': days_left, 'overdue': days_left < 0,            'consumable_type': c.consumable_type, 'volume': c.volume or ''        })    reminders.sort(key=lambda r: r['date'])    return jsonify(reminders)# ============================================================
+# ROUTES — MAINTENANCE CALENDAR
+# ============================================================
+
+@app.route('/maintenance-calendar')
+@login_required
+def maintenance_calendar():
+    today = datetime.utcnow().date()
+    month = request.args.get('month', today.strftime('%Y-%m'))
+    year, mon = map(int, month.split('-'))
+    month_start = datetime(year, mon, 1).date()
+    if mon == 12:
+        month_end = datetime(year + 1, 1, 1).date()
+    else:
+        month_end = datetime(year, mon + 1, 1).date()
+    
+    # Get all parts with upcoming maintenance/replacement (eagerly load machine)
+    from sqlalchemy.orm import joinedload
+    if current_user.has_role('admin', 'director', 'technician'):
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        parts = MachinePart.query.options(joinedload(MachinePart.machine)).filter(MachinePart.machine_id.in_(machine_ids)).all()
+    
+    # Build calendar events
+    events = []
+    for p in parts:
+        if p.next_replacement and month_start <= p.next_replacement < month_end:
+            events.append({
+                'date': p.next_replacement,
+                'type': 'replacement',
+                'part': p.name,
+                'machine': p.machine.name,
+                'machine_id': p.machine_id,
+                'part_id': p.id,
+                'category': p.category,
+                'overdue': p.next_replacement < today
+            })
+        if p.next_maintenance and month_start <= p.next_maintenance < month_end:
+            events.append({
+                'date': p.next_maintenance,
+                'type': 'maintenance',
+                'part': p.name,
+                'machine': p.machine.name,
+                'machine_id': p.machine_id,
+                'part_id': p.id,
+                'category': p.category,
+                'overdue': p.next_maintenance < today
+            })
+        # Also check maintenance records
+        for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
+            if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
+                events.append({
+                    'date': mr.next_maintenance.date(),
+                    'type': 'machine_maintenance',
+                    'part': mr.description[:40],
+                    'machine': p.machine.name,
+                    'machine_id': p.machine_id,
+                    'part_id': None,
+                    'category': mr.maintenance_type,
+                    'overdue': mr.next_maintenance.date() < today
+                })
+    
+    # Add maintenance plans
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.all()
+    else:
+        plan_machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
+    for pl in plans:
+        if pl.planned_start and month_start <= pl.planned_start < month_end:
+            events.append({
+                'date': pl.planned_start,
+                'type': 'plan',
+                'part': pl.title[:40],
+                'machine': pl.machine.name,
+                'machine_id': pl.machine_id,
+                'part_id': None,
+                'category': pl.maintenance_type,
+                'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'),
+                'plan_id': pl.id,
+                'status': pl.status
+            })
+
+    # Get overdue items (before today) — skip if there's a maintenance record after the due date
+    overdue = []
+    for p in parts:
+        if p.next_replacement and p.next_replacement < today:
+            # Check if replacement was done after the due date
+            done_after = PartMaintenanceLog.query.filter(
+                PartMaintenanceLog.part_id == p.id,
+                PartMaintenanceLog.action.in_(['replaced', 'maintenance']),
+                PartMaintenanceLog.date >= datetime.combine(p.next_replacement, datetime.min.time())
+            ).first()
+            if not done_after:
+                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
+        if p.next_maintenance and p.next_maintenance < today:
+            done_after = PartMaintenanceLog.query.filter(
+                PartMaintenanceLog.part_id == p.id,
+                PartMaintenanceLog.action.in_(['replaced', 'maintenance']),
+                PartMaintenanceLog.date >= datetime.combine(p.next_maintenance, datetime.min.time())
+            ).first()
+            if not done_after:
+                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
+    
+    # Navigation
+    prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
+    next_month = month_end.strftime('%Y-%m')
+    
+    return render_template('maintenance_calendar.html',
+        month=month, month_start=month_start, month_end=month_end,
+        events=sorted(events, key=lambda e: e['date']),
+        overdue=overdue, today=today,
+        prev_month=prev_month, next_month=next_month,
+        timedelta=timedelta)
+
+# ============================================================
+# ROUTES — MAINTENANCE PLANS
+# ============================================================
+
+@app.route('/maintenance-plans')
+@login_required
+def maintenance_plans_list():
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('maintenance_plans.html', plans=plans, machines=machines)
+
+@app.route('/maintenance-plans/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'technician')
+def maintenance_plan_new():
+    if request.method == 'POST':
+        p = MaintenancePlan(
+            machine_id=int(request.form['machine_id']),
+            title=request.form['title'],
+            description=request.form.get('description', ''),
+            maintenance_type=request.form.get('maintenance_type', 'preventive'),
+            status=request.form.get('status', 'planned'),
+            planned_start=datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date(),
+            planned_end=datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None,
+            is_external='is_external' in request.form,
+            company_name=request.form.get('company_name', ''),
+            company_contact=request.form.get('company_contact', ''),
+            company_person=request.form.get('company_person', ''),
+            worker_id=int(request.form['worker_id']) if request.form.get('worker_id') else None,
+            parts_used=request.form.get('parts_used', '[]'),
+            cost=float(request.form.get('cost', 0)),
+            report=request.form.get('report', ''),
+            next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
+            notes=request.form.get('notes', ''),
+            created_by=current_user.id
+        )
+        if 'offer_file' in request.files and request.files['offer_file'].filename:
+            fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
+            request.files['offer_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+            p.offer_file = fn
+        if 'work_act_file' in request.files and request.files['work_act_file'].filename:
+            fn = secure_filename(f"act_{request.files['work_act_file'].filename}")
+            request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+            p.work_act_file = fn
+        db.session.add(p)
+        db.session.commit()
+        
+        # Check if TWO should be created
+        create_two = request.form.get('create_two') == 'yes'
+        worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
+        
+        if create_two and worker_id:
+            # Create TWO from maintenance plan
+            two = TechnicalWorkOrder(
+                number=gen_two_number(),
+                machine_id=p.machine_id,
+                description=f'ТО: {p.title}\n{p.description}',
+                planned_date=p.planned_start,
+                status='assigned',
+                created_by=current_user.id
+            )
+            db.session.add(two)
+            db.session.flush()
+            # Assign worker
+            worker = Monteur.query.get(worker_id)
+            if worker:
+                two.workers.append(worker)
+            db.session.commit()
+            log_audit('create', 'two_from_plan', two.id, f'{two.number} from plan {p.id}')
+            flash(_('Maintenance plan created with TWO') + f': {two.number}', 'success')
+        else:
+            flash(_('Maintenance plan created'), 'success')
+        
+        return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
+    machines = Machine.query.order_by(Machine.name).all()
+    workers = Monteur.query.filter_by(actief=True).all()
+    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers)
+
+@app.route('/maintenance-plans/<int:plan_id>')
+@login_required
+def maintenance_plan_detail(plan_id):
+    p = MaintenancePlan.query.get_or_404(plan_id)
+    return render_template('maintenance_plan_detail.html', plan=p)
+
+@app.route('/maintenance-plans/<int:plan_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'technician')
+def maintenance_plan_edit(plan_id):
+    p = MaintenancePlan.query.get_or_404(plan_id)
+    if request.method == 'POST':
+        p.machine_id = int(request.form['machine_id'])
+        p.title = request.form['title']
+        p.description = request.form.get('description', '')
+        p.maintenance_type = request.form.get('maintenance_type', p.maintenance_type)
+        p.status = request.form.get('status', p.status)
+        p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
+        p.planned_end = datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None
+        p.actual_start = datetime.strptime(request.form['actual_start'], '%Y-%m-%d').date() if request.form.get('actual_start') else None
+        p.actual_end = datetime.strptime(request.form['actual_end'], '%Y-%m-%d').date() if request.form.get('actual_end') else None
+        p.is_external = 'is_external' in request.form
+        p.company_name = request.form.get('company_name', '')
+        p.company_contact = request.form.get('company_contact', '')
+        p.company_person = request.form.get('company_person', '')
+        p.worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
+        p.parts_used = request.form.get('parts_used', '[]')
+        p.cost = float(request.form.get('cost', 0))
+        p.report = request.form.get('report', '')
+        p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None
+        p.notes = request.form.get('notes', '')
+        if 'offer_file' in request.files and request.files['offer_file'].filename:
+            fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
+            request.files['offer_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+            p.offer_file = fn
+        if 'work_act_file' in request.files and request.files['work_act_file'].filename:
+            fn = secure_filename(f"act_{request.files['work_act_file'].filename}")
+            request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+            p.work_act_file = fn
+        db.session.commit()
+        flash(_('Maintenance plan updated'), 'success')
+        return redirect(url_for('maintenance_plan_detail', plan_id=p.id))
+    machines = Machine.query.order_by(Machine.name).all()
+    workers = Monteur.query.filter_by(actief=True).all()
+    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers)
+
+@app.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def maintenance_plan_delete(plan_id):
+    p = MaintenancePlan.query.get_or_404(plan_id)
+    db.session.delete(p)
+    db.session.commit()
+    flash(_('Maintenance plan deleted'), 'success')
+    return redirect(url_for('maintenance_plans_list'))
+
+@app.route('/api/maintenance/plans')
+@login_required
+def api_maintenance_plans():
+    today = datetime.utcnow().date()
+    month = request.args.get('month', today.strftime('%Y-%m'))
+    year, mon = map(int, month.split('-'))
+    month_start = datetime(year, mon, 1).date()
+    if mon == 12:
+        month_end = datetime(year + 1, 1, 1).date()
+    else:
+        month_end = datetime(year, mon + 1, 1).date()
+
+    if current_user.has_role('admin', 'director', 'technician'):
+        plans = MaintenancePlan.query.all()
+    else:
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).all()
+
+    result = []
+    for p in plans:
+        if p.planned_start and month_start <= p.planned_start < month_end:
+            result.append({
+                'id': p.id, 'title': p.title, 'machine': p.machine.name,
+                'machine_id': p.machine_id, 'type': p.maintenance_type,
+                'status': p.status, 'start': p.planned_start.isoformat(),
+                'end': p.planned_end.isoformat() if p.planned_end else None,
+                'is_external': p.is_external,
+                'company': p.company_name if p.is_external else None,
+                'worker': p.worker.naam if p.worker else None,
+            })
+    return jsonify(result)
+
+@app.route('/api/maintenance/reminders')
+@login_required
+def api_maintenance_reminders():
+    today = datetime.utcnow().date()
+    soon = today + timedelta(days=14)
+
+    # Filter at DB level: only parts with upcoming dates
+    part_q = MachinePart.query.filter(
+        db.or_(
+            MachinePart.next_replacement <= soon,
+            MachinePart.next_maintenance <= soon
+        )
+    )
+    if not current_user.has_role('admin', 'director', 'technician'):
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        part_q = part_q.filter(MachinePart.machine_id.in_(machine_ids))
+
+    reminders = []
+    for p in part_q.all():
+        if p.next_replacement and p.next_replacement <= soon:
+            days_left = (p.next_replacement - today).days
+            reminders.append({
+                'type': 'replacement', 'part': p.name, 'machine': p.machine.name,
+                'machine_id': p.machine_id, 'part_id': p.id,
+                'date': p.next_replacement.isoformat(),
+                'days_left': days_left, 'overdue': days_left < 0
+            })
+        if p.next_maintenance and p.next_maintenance <= soon:
+            days_left = (p.next_maintenance - today).days
+            reminders.append({
+                'type': 'maintenance', 'part': p.name, 'machine': p.machine.name,
+                'machine_id': p.machine_id, 'part_id': p.id,
+                'date': p.next_maintenance.isoformat(),
+                'days_left': days_left, 'overdue': days_left < 0
+            })
+
+    consumables = VoorraadItem.query.filter(
+        VoorraadItem.consumable_type.isnot(None),
+        VoorraadItem.consumable_type != '',
+        VoorraadItem.next_replacement.isnot(None),
+        VoorraadItem.next_replacement <= soon
+    ).all()
+    for c in consumables:
+        days_left = (c.next_replacement - today).days
+        reminders.append({
+            'type': 'consumable', 'part': c.naam, 'machine': c.compatible_machines or '—',
+            'machine_id': None, 'part_id': c.id,
+            'date': c.next_replacement.isoformat(),
+            'days_left': days_left, 'overdue': days_left < 0,
+            'consumable_type': c.consumable_type, 'volume': c.volume or ''
+        })
+
+    reminders.sort(key=lambda r: r['date'])
+    return jsonify(reminders)
+
+# ============================================================
 # ROUTES — EQUIPMENT MAINTENANCE
 # ============================================================
 
