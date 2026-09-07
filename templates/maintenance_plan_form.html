@@ -99,7 +99,7 @@
                 <select name="responsible_user_id">
                     <option value="">{{ _('— Not assigned —') }}</option>
                     {% for u in users %}
-                    <option value="{{ u.id }}" {% if plan and plan.responsible_user_id == u.id %}selected{% endif %}>{{ u.display_name or u.username }} ({{ u.role }})</option>
+                    <option value="{{ u.id }}" {% if plan and plan.responsible_user_id == u.id %}selected{% endif %}>👤 {{ u.display_name or u.username }}{% if u.worker_profile and u.worker_profile.specialisatie %} — {{ u.worker_profile.specialisatie }}{% endif %}</option>
                     {% endfor %}
                 </select>
                 <small style="color:#888">{{ _('This person will receive notifications about upcoming and overdue maintenance') }}</small>
