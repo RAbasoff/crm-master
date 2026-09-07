@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Electricity') }} — CRM{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:center;align-items:center;min-height:60vh">
+    <div class="card" style="max-width:480px;text-align:center;padding:40px">
+        <div style="font-size:64px;margin-bottom:16px">🔒</div>
+        <h2 style="margin-bottom:12px;color:#e74c3c">{{ _('Access Temporarily Restricted') }}</h2>
+        <p style="color:#666;font-size:14px;margin-bottom:24px">
+            {{ _('The Electricity module is currently under maintenance. Please try again later.') }}
+        </p>
+        <button onclick="window.history.back()" class="btn btn-primary" style="padding:10px 32px;font-size:14px">
+            {{ _('Understood') }}
+        </button>
+    </div>
+</div>
+{% endblock %}
