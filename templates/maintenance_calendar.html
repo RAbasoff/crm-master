@@ -48,7 +48,7 @@
     {% set start_weekday = first_day.weekday() %}  {# 0=Mon #}
     {% set days_in_month = (month_end - month_start).days %}
     
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+    <table id="calendarGrid" style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead>
             <tr style="background:#1a1a2e;color:white">
                 <th style="padding:10px;text-align:center;font-size:12px">{{ _('Mon') }}</th>
@@ -135,79 +135,79 @@
     {% endif %}
 </div>
 
-<!-- Print / Export -->
-<div id="printArea" style="display:none">
-    <div id="printContent"></div>
-</div>
-
-<style>
-@media print {
-    body * { visibility: hidden !important; }
-    #printContent, #printContent * { visibility: visible !important; }
-    #printContent {
-        position: absolute; left: 0; top: 0; width: 100%;
-        display: block !important; padding: 10px;
-    }
-    #printContent table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
-    #printContent th { background: #333 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #printContent td { border: 1px solid #ccc; height: 80px; vertical-align: top; padding: 4px; font-size: 10px; }
-    #printContent .pe { display: block; font-size: 9px; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; color: white; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #printContent .ph { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-    #printContent .pl { margin-top: 10px; font-size: 10px; display: flex; gap: 16px; flex-wrap: wrap; }
-    #printContent .pl span { display: inline-flex; align-items: center; gap: 4px; }
-    #printContent .pl .dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-}
-</style>
-
 <script>
 function buildPrintHTML() {
     const month = '{{ month_start.strftime("%B %Y") }}';
-    let html = '<div class="ph">{{ _("Maintenance Calendar") }} — ' + month + '</div>';
+    let html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
+    html += '<title>{{ _("Maintenance Calendar") }} ' + month + '</title>';
+    html += '<style>';
+    html += 'body{font-family:Arial,sans-serif;margin:20px;color:#333}';
+    html += 'h1{text-align:center;font-size:20px;margin-bottom:16px}';
+    html += 'table{width:100%;border-collapse:collapse;margin-bottom:16px}';
+    html += 'th{background:#333;color:white;padding:8px;text-align:center;font-size:11px}';
+    html += 'td{border:1px solid #ccc;height:80px;vertical-align:top;padding:4px 6px;font-size:10px}';
+    html += '.ev{display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;color:white;white-space:nowrap;overflow:hidden}';
+    html += '.day{font-size:12px;font-weight:600;margin-bottom:4px}';
+    html += '.legend{margin-top:12px;font-size:10px;display:flex;gap:16px;flex-wrap:wrap}';
+    html += '.legend span{display:inline-flex;align-items:center;gap:4px}';
+    html += '.dot{width:12px;height:12px;border-radius:2px;display:inline-block}';
+    html += '@media print{body{margin:10mm}th{background:#333!important;color:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+    html += '</style></head><body>';
+    html += '<h1>{{ _("Maintenance Calendar") }} — ' + month + '</h1>';
     html += '<table><thead><tr>';
-    const days = ['{{ _("Mon") }}','{{ _("Tue") }}','{{ _("Wed") }}','{{ _("Thu") }}','{{ _("Fri") }}','{{ _("Sat") }}','{{ _("Sun") }}'];
-    days.forEach(d => html += '<th style="padding:8px;text-align:center;font-size:11px">' + d + '</th>');
+    var days = ['{{ _("Mon") }}','{{ _("Tue") }}','{{ _("Wed") }}','{{ _("Thu") }}','{{ _("Fri") }}','{{ _("Sat") }}','{{ _("Sun") }}'];
+    days.forEach(function(d){ html += '<th>' + d + '</th>'; });
     html += '</tr></thead><tbody>';
 
-    const calTable = document.querySelector('.card table');
+    var calTable = document.querySelector('#calendarGrid');
     if (calTable) {
-        const rows = calTable.querySelectorAll('tbody tr');
-        rows.forEach(row => {
+        var rows = calTable.querySelectorAll('tbody tr');
+        rows.forEach(function(row) {
             html += '<tr>';
-            row.querySelectorAll('td').forEach(cell => {
-                const bg = cell.style.background || '';
-                let cellHTML = '';
-                const dayDiv = cell.querySelector('div');
-                if (dayDiv) cellHTML += '<div style="font-size:12px;font-weight:600;margin-bottom:4px">' + dayDiv.textContent.trim() + '</div>';
-                cell.querySelectorAll('a').forEach(a => {
-                    const abg = a.style.background || '#3498db';
-                    const acol = a.style.color || 'white';
-                    cellHTML += '<span class="pe" style="background:' + abg + ';color:' + acol + '">' + a.textContent.trim() + '</span>';
+            var cells = row.querySelectorAll('td');
+            cells.forEach(function(cell) {
+                var bg = cell.style.background || '';
+                var cellHTML = '';
+                var dayDiv = cell.querySelector('div');
+                if (dayDiv) cellHTML += '<div class="day">' + dayDiv.textContent.trim() + '</div>';
+                var links = cell.querySelectorAll('a');
+                links.forEach(function(a) {
+                    var abg = a.style.background || '#3498db';
+                    var acol = a.style.color || 'white';
+                    cellHTML += '<span class="ev" style="background:' + abg + ';color:' + acol + '">' + a.textContent.trim() + '</span>';
                 });
-                const style = 'vertical-align:top;height:80px;padding:4px 6px;border:1px solid #ddd;' + (bg ? 'background:' + bg + ';' : '');
-                html += '<td style="' + style + '">' + cellHTML + '</td>';
+                var sty = 'vertical-align:top;height:80px;padding:4px 6px;border:1px solid #ddd;';
+                if (bg) sty += 'background:' + bg + ';';
+                html += '<td style="' + sty + '">' + cellHTML + '</td>';
             });
             html += '</tr>';
         });
     }
     html += '</tbody></table>';
-    html += '<div class="pl">';
+    html += '<div class="legend">';
     html += '<span><span class="dot" style="background:#9b59b6"></span> {{ _("Plan") }}</span>';
     html += '<span><span class="dot" style="background:#e67e22"></span> {{ _("Replacement") }}</span>';
     html += '<span><span class="dot" style="background:#f39c12"></span> {{ _("Maintenance") }}</span>';
     html += '<span><span class="dot" style="background:#c0392b"></span> {{ _("Overdue") }}</span>';
     html += '<span><span class="dot" style="background:#d5dbdb"></span> {{ _("Completed") }}</span>';
-    html += '</div>';
+    html += '</div></body></html>';
     return html;
 }
 
 function printCalendar() {
-    document.getElementById('printContent').innerHTML = buildPrintHTML();
-    window.print();
+    var w = window.open('', '_blank');
+    w.document.open();
+    w.document.write(buildPrintHTML());
+    w.document.close();
+    w.onload = function() { w.print(); };
 }
 
 function exportPDF() {
-    document.getElementById('printContent').innerHTML = buildPrintHTML();
-    window.print();
+    var w = window.open('', '_blank');
+    w.document.open();
+    w.document.write(buildPrintHTML());
+    w.document.close();
+    w.onload = function() { w.print(); };
 }
 </script>
 {% endblock %}
