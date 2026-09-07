@@ -101,3 +101,35 @@
 ============================================================
 
 СТАТУС: Закоммичено (44e7dbe), запушено. Нужен git pull + Reload.
+
+============================================================
+
+ЗАДАЧА 4: Ответственные из списка Verantwoordelijke
+
+ПРОБЛЕМА: Dropdown показывал User, а не Verantwoordelijke (ответственные за станки).
+
+РЕШЕНИЕ:
+1. models.py — MaintenancePlan: добавлен responsible_person_id (FK → client)
+2. maintenance_plan_form.html — два dropdown:
+   - Responsible for machine (Verantwoordelijke) — из списка станков
+   - System user for notifications — из User
+3. app.py — _get_notify_user_id(): приоритет:
+   responsible_user → responsible_person (ищет linked User) → machine.responsible_user
+4. Миграция: maintenance_plan.responsible_person_id INTEGER REFERENCES client(id)
+
+============================================================
+
+ЗАДАЧА 5: Исправление периодических событий
+
+ПРОБЛЕМА: Календарь не показывал события по периодичности (biweekly и др.)
+Причина: автосоздание только при завершении плана.
+
+РЕШЕНИЕ: Виртуальные события — функция _recurrence_dates() вычисляет все даты
+в диапазоне месяца. Не засоряет БД. Работает для всех периодов.
+
+ФАЙЛЫ (финальные коммиты):
+- 119d6c9: responsible person from machines
+- 3230b9e: recurring events in calendar
+- 9e9ad6e: recurring events fix
+- ccd0240: dropdown fix
+- 5da87a7: notification count badge
