@@ -225,7 +225,7 @@
             .main-wrap { margin-left: 0; }
             .topbar .sb-toggle { display: flex; }
         }
-        
+
         @media (max-width: 768px) {
             html { font-size: 15px; }
             body { padding-bottom: 72px; }
@@ -251,14 +251,22 @@
             .tb-user { display: none; }
             .lang-pills { display: none; }
             .search-wrap { display: none; }
-            .table-wrap { margin: 0 -14px; padding: 0 14px; }
-            table { font-size: 12px; }
+            .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
+            table { font-size: 12px; min-width: 600px; }
             th, td { padding: 8px 10px; }
             .badge { font-size: 10px; padding: 2px 6px; }
             .photo-grid { grid-template-columns: repeat(2, 1fr); }
             .modal-content { padding: 16px; margin: 10px; }
+            /* Calendar mobile */
+            table.calendar { font-size: 8px; }
+            table.calendar th { padding: 4px 2px; font-size: 9px; }
+            table.calendar td { height: 50px; padding: 2px; font-size: 8px; }
+            /* Gas cylinders mobile */
+            .cylinder-card { transform: scale(0.7); transform-origin: top center; }
+            /* Access rights table scroll */
+            .access-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         }
-        
+
         @media (max-width: 480px) {
             .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
             .stat-card .number { font-size: 20px; }
@@ -268,11 +276,21 @@
             .btn { padding: 12px 16px; font-size: 14px; }
             .form-group label { font-size: 12px; }
             .page-header h1 { font-size: 16px; }
+            table.calendar td { height: 40px; font-size: 7px; }
+            table.calendar .day-num { font-size: 9px; }
         }
-        
+
         @media (max-width: 380px) {
             .stats { grid-template-columns: 1fr; }
             .stat-card .number { font-size: 18px; }
+        }
+
+        /* Desktop wide screen */
+        @media (min-width: 1400px) {
+            .main-wrap { max-width: 1400px; margin-left: auto; margin-right: auto; }
+            .sidebar { width: 260px; }
+            .topbar { margin-left: 260px; }
+            .main-wrap { margin-left: 260px; }
         }
         
         .table-wrap::-webkit-scrollbar { height: 4px; }
