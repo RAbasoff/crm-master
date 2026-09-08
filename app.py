@@ -3780,7 +3780,7 @@ def group_permissions(group_id):
 
 # Sections list for permissions UI
 SECTIONS_TREE = [
-    {'group': 'Production', 'icon': '🏭', 'items': [
+    {'group': 'Production', 'icon': '🏭', 'entries': [
         ('dashboard', 'Dashboard', '🏠'),
         ('floor', 'Floor Plan', '🏭'),
         ('machines', 'Machines', '⚙️'),
@@ -3795,16 +3795,16 @@ SECTIONS_TREE = [
         ('faults', 'Faults', '⚠️'),
         ('two', 'TWO', '📝'),
     ]},
-    {'group': 'Communication', 'icon': '💬', 'items': [
+    {'group': 'Communication', 'icon': '💬', 'entries': [
         ('messages', 'Messages', '💬'),
         ('notifications', 'Notifications', '🔔'),
     ]},
-    {'group': 'Staff', 'icon': '👥', 'items': [
+    {'group': 'Staff', 'icon': '👥', 'entries': [
         ('schedule', 'Schedule', '📅'),
         ('vacations', 'Vacations', '🏖'),
         ('time_tracking', 'Time Tracking', '⏱'),
     ]},
-    {'group': 'Business', 'icon': '📋', 'items': [
+    {'group': 'Business', 'icon': '📋', 'entries': [
         ('orders', 'Work Orders', '📋'),
         ('clients', 'Responsible / Clients', '👤'),
         ('workers', 'Workers', '🔧'),
@@ -3814,13 +3814,13 @@ SECTIONS_TREE = [
         ('consumables', 'Replacement Reminders', '🔔'),
         ('purchase_requests', 'Purchase Requests', '🛒'),
     ]},
-    {'group': 'Analytics', 'icon': '📊', 'items': [
+    {'group': 'Analytics', 'icon': '📊', 'entries': [
         ('reports', 'Reports', '📊'),
         ('work_report', 'Work Report', '📋'),
         ('archive', 'Archive', '📦'),
         ('statistics', 'Statistics', '📈'),
     ]},
-    {'group': 'System', 'icon': '⚙️', 'items': [
+    {'group': 'System', 'icon': '⚙️', 'entries': [
         ('settings', 'Settings', '⚙️'),
         ('users', 'Users', '👥'),
         ('audit_log', 'Audit Log', '📋'),
@@ -3828,7 +3828,7 @@ SECTIONS_TREE = [
 ]
 
 # Flat list for backward compatibility (used by group_permissions)
-SECTIONS_LIST = [(key, name, icon) for section in SECTIONS_TREE for key, name, icon in section['items']]
+SECTIONS_LIST = [(key, name, icon) for section in SECTIONS_TREE for key, name, icon in section['entries']]
 
 @app.route('/responsible/new', methods=['GET', 'POST'])
 @login_required
