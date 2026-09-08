@@ -925,7 +925,8 @@ def settings():
     return render_template('settings.html', users=users, sections=sections, groups=groups,
         responsible=responsible, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
-        top_machines_faults=top_machines_faults)
+        top_machines_faults=top_machines_faults,
+        sections_tree=SECTIONS_TREE)
 
 @app.route('/settings/backup', methods=['POST'])
 @login_required

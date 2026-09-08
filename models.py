@@ -59,6 +59,12 @@ class User(UserMixin, db.Model):
     def has_role(self, *roles):
         return self.role in roles
 
+    def has_section_access(self, section_key):
+        """Check if user has access to a specific section."""
+        if self.role == 'admin':
+            return True
+        return any(a.section_key == section_key for a in self.allowed_sections)
+
 class UserSectionAccess(db.Model):
     __tablename__ = 'user_section_access'
     id = db.Column(db.Integer, primary_key=True)

@@ -11,6 +11,7 @@
 <!-- SETTINGS TABS -->
 <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
     <button onclick="showTab('users')" class="btn btn-sm tab-btn active" id="tab-users" style="background:#3498db;color:white">👥 {{ _('Users') }}</button>
+    <button onclick="showTab('access')" class="btn btn-sm tab-btn" id="tab-access" style="background:#eee">🔐 {{ _('Access Rights') }}</button>
     <button onclick="showTab('responsible')" class="btn btn-sm tab-btn" id="tab-responsible" style="background:#eee">👤 {{ _('Responsible') }}</button>
     <button onclick="showTab('machines')" class="btn btn-sm tab-btn" id="tab-machines" style="background:#eee">⚙️ {{ _('Machines') }}</button>
     <button onclick="showTab('machine-assign')" class="btn btn-sm tab-btn" id="tab-machine-assign" style="background:#eee">🔄 {{ _('Assign') }}</button>
@@ -100,6 +101,8 @@
     </div>
 </div>
 </div>
+
+{% include 'settings_access.html' %}
 
 <!-- ==================== TAB: RESPONSIBLE ==================== -->
 <div id="tab-content-responsible" class="tab-content" style="display:none">
@@ -507,6 +510,28 @@ function toggleUserActive(userId, active) {
 function saveUserAccess(userId) {
     const cbs = document.querySelectorAll('.section-cb-' + userId + ':checked');
     const sections = Array.from(cbs).map(cb => cb.value);
+    csrfFetch('/settings/user/' + userId + '/access', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sections: sections})
+    }).then(r => r.json()).then(d => { if (d.ok) showToast('✓ {{ _("Saved") }}'); });
+}
+
+function saveSectionAccess(userId, section, enabled) {
+    // Collect all checked sections for this user
+    const cbs = document.querySelectorAll('.access-' + userId + ':checked');
+    const sections = Array.from(cbs).map(cb => cb.dataset.section);
+    csrfFetch('/settings/user/' + userId + '/access', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sections: sections})
+    }).then(r => r.json()).then(d => { if (d.ok) showToast('✓ {{ _("Saved") }}'); });
+}
+
+function selectAll(userId, checked) {
+    document.querySelectorAll('.access-' + userId).forEach(cb => {
+        cb.checked = checked;
+    });
+    // Auto-save
+    const sections = checked ? Array.from(document.querySelectorAll('.access-' + userId)).map(cb => cb.dataset.section) : [];
     csrfFetch('/settings/user/' + userId + '/access', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({sections: sections})

@@ -31,8 +31,22 @@ class Config:
 
 LANGUAGES = {'nl': 'Nederlands', 'en': 'English', 'ru': 'Русский', 'pl': 'Polski'}
 
-SECTION_KEYS = ['machines', 'warehouse', 'orders', 'clients', 'workers', 'faults',
-                'messages', 'reports', 'schedule', 'time_tracking', 'vacations',
-                'cylinders', 'maintenance', 'purchase_requests', 'users', 'sections', 'floor',
-                'invoices', 'contractors', 'two', 'audit_log', 'settings', 'statistics',
-                'equipment', 'consumables', 'electricity', 'tool_wear']
+SECTION_KEYS = [
+    # Production
+    'dashboard', 'floor', 'machines', 'equipment', 'tool_wear', 'assets',
+    'electricity', 'gas', 'maintenance', 'maintenance_plans', 'repairs',
+    'faults', 'two',
+    # Communication
+    'messages', 'notifications',
+    # Staff
+    'schedule', 'vacations', 'time_tracking',
+    # Business
+    'orders', 'clients', 'workers', 'invoices', 'contractors',
+    'warehouse', 'consumables', 'purchase_requests',
+    # Analytics
+    'reports', 'work_report', 'archive', 'statistics',
+    # System
+    'settings', 'users', 'audit_log', 'sections',
+    # Legacy
+    'cylinders', 'quality',
+]
