@@ -4037,13 +4037,16 @@ def responsible_delete(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
     name = c.naam
     cid = c.id
-    # Clear all FK references before delete
+    # Clear ALL FK references before delete
     c.resp_sections = []
     Machine.query.filter_by(responsible_person_id=cid).update({'responsible_person_id': None})
     MaintenancePlan.query.filter_by(responsible_person_id=cid).update({'responsible_person_id': None})
     db.session.execute(section_responsible.delete().where(section_responsible.c.person_id == cid))
-    # Clear linked user reference
     User.query.filter_by(person_id=cid).update({'person_id': None})
+    # Orders referencing this person
+    from models import Opdracht
+    Opdracht.query.filter_by(klant_id=cid).update({'klant_id': None})
+    db.session.flush()
     db.session.delete(c)
     db.session.commit()
     log_audit('delete', 'responsible', cid, name)
