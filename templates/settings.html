@@ -22,84 +22,81 @@
     <a href="/map-editor" class="btn btn-sm" style="background:#2c3e50;color:white">🗺️ {{ _('Map Editor') }}</a>
 </div>
 
-<!-- ==================== TAB: USERS ==================== -->
+<!-- ==================== TAB: USERS (unified roles + section access) ==================== -->
 <div id="tab-content-users" class="tab-content">
     <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <h2 style="margin:0">👥 {{ _('User Access Rights') }}</h2>
-            <a href="/users/new" class="btn btn-sm btn-primary">+ {{ _('Add User') }}</a>
-        </div>
-        
-        <!-- ROLE PRESETS -->
-        <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px">
-            <h3 style="font-size:13px;margin-bottom:8px">🎯 {{ _('Quick Role Presets') }}</h3>
-            <p style="font-size:11px;color:#888;margin-bottom:8px">{{ _('Click to apply role template to a user') }}</p>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #e74c3c">
-                    <strong style="color:#e74c3c">Admin</strong>
-                    <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('Full access to everything') }}</p>
-                </div>
-                <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #9b59b6">
-                    <strong style="color:#9b59b6">Moderator</strong>
-                    <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('All modules, no system changes') }}</p>
-                </div>
-                <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #f39c12">
-                    <strong style="color:#f39c12">Director</strong>
-                    <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('All except settings, users') }}</p>
-                </div>
-                <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #3498db">
-                    <strong style="color:#3498db">Technician</strong>
-                    <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('Machines, faults, warehouse, TWO') }}</p>
-                </div>
-                <div style="flex:1;min-width:200px;padding:10px;background:white;border-radius:8px;border-left:4px solid #27ae60">
-                    <strong style="color:#27ae60">User</strong>
-                    <p style="font-size:11px;color:#666;margin:4px 0 0">{{ _('View only, report faults') }}</p>
-                </div>
+            <h2 style="margin:0">👥 {{ _('Users & Access') }}</h2>
+            <div style="display:flex;gap:8px">
+                <button onclick="saveAllUserAccess()" class="btn btn-sm btn-primary">💾 {{ _('Save All') }}</button>
+                <a href="/users/new" class="btn btn-sm" style="background:#eee">+ {{ _('Add User') }}</a>
             </div>
         </div>
 
-        <div class="table-wrap"><table>
-            <tr>
-                <th>{{ _('User') }}</th>
-                <th>{{ _('Role') }}</th>
-                <th>{{ _('Status') }}</th>
-                <th>{{ _('Quick Actions') }}</th>
-            </tr>
-            {% for u in users %}
-            <tr id="user-row-{{ u.id }}">
-                <td>
-                    <strong>{{ u.display_name or u.username }}</strong>
-                    <br><small style="color:#888">{{ u.username }}</small>
-                </td>
-                <td>
-                    <select id="role-{{ u.id }}" onchange="updateUserRole({{ u.id }}, this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px">
-                        <option value="user" {% if u.role=='user' %}selected{% endif %}>👤 User</option>
-                        <option value="technician" {% if u.role=='technician' %}selected{% endif %}>🔧 Technician</option>
-                        <option value="director" {% if u.role=='director' %}selected{% endif %}>📊 Director</option>
-                        <option value="moderator" {% if u.role=='moderator' %}selected{% endif %}>🛡️ Moderator</option>
-                        <option value="admin" {% if u.role=='admin' %}selected{% endif %}>⚡ Admin</option>
-                    </select>
-                </td>
-                <td>
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input type="checkbox" {% if u.is_active_user %}checked{% endif %} onchange="toggleUserActive({{ u.id }}, this.checked)" style="width:16px;height:16px">
-                        <span style="font-size:12px;color:{% if u.is_active_user %}#27ae60{% else %}#e74c3c{% endif %}">{% if u.is_active_user %}✓{% else %}✗{% endif %}</span>
-                    </label>
-                </td>
-                <td>
-                    <div style="display:flex;gap:4px;flex-wrap:wrap">
-                        <button onclick="setRole({{ u.id }}, 'admin')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#e74c3c;color:white">Admin</button>
-                        <button onclick="setRole({{ u.id }}, 'moderator')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#9b59b6;color:white">Mod</button>
-                        <button onclick="setRole({{ u.id }}, 'director')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#f39c12;color:white">Director</button>
-                        <button onclick="setRole({{ u.id }}, 'technician')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#3498db;color:white">Tech</button>
-                        <button onclick="setRole({{ u.id }}, 'user')" class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:#27ae60;color:white">User</button>
+        {% for u in users %}
+        <div style="margin-bottom:10px;background:#f8f9fa;border-radius:10px;overflow:hidden;border:1px solid #e8ecf1">
+            <!-- User header -->
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;flex-wrap:wrap"
+                 onclick="var d=document.getElementById('detail-{{ u.id }}');d.style.display=d.style.display==='none'?'block':'none';this.querySelector('.arr').textContent=d.style.display==='none'?'▶':'▼'">
+                <span class="arr" style="font-size:10px;opacity:0.5">▶</span>
+                <div style="width:32px;height:32px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#3498db{% elif u.role=='moderator' %}#9b59b6{% else %}#27ae60{% endif %};display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:700">
+                    {{ (u.display_name or u.username)[0]|upper }}
+                </div>
+                <strong style="font-size:13px;min-width:120px">{{ u.display_name or u.username }}</strong>
+                <small style="color:#888">{{ u.username }}</small>
+
+                <!-- Inline role selector -->
+                <select id="role-{{ u.id }}" onchange="updateUserRole({{ u.id }}, this.value)" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="event.stopPropagation()">
+                    <option value="user" {% if u.role=='user' %}selected{% endif %}>👤 User</option>
+                    <option value="technician" {% if u.role=='technician' %}selected{% endif %}>🔧 Technician</option>
+                    <option value="moderator" {% if u.role=='moderator' %}selected{% endif %}>🛡️ Moderator</option>
+                    <option value="admin" {% if u.role=='admin' %}selected{% endif %}>⚡ Admin</option>
+                </select>
+
+                <!-- Active toggle -->
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer" onclick="event.stopPropagation()">
+                    <input type="checkbox" {% if u.is_active_user %}checked{% endif %} onchange="toggleUserActive({{ u.id }}, this.checked)" style="width:14px;height:14px">
+                    <span style="font-size:11px;color:{% if u.is_active_user %}#27ae60{% else %}#e74c3c{% endif %}">{% if u.is_active_user %}✓ Active{% else %}✗{% endif %}</span>
+                </label>
+
+                <!-- Quick role buttons -->
+                <div style="display:flex;gap:3px;margin-left:auto">
+                    <button onclick="event.stopPropagation();setRole({{ u.id }},'admin')" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#e74c3c;color:white">Admin</button>
+                    <button onclick="event.stopPropagation();setRole({{ u.id }},'technician')" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#3498db;color:white">Tech</button>
+                    <button onclick="event.stopPropagation();setRole({{ u.id }},'user')" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#27ae60;color:white">User</button>
+                </div>
+            </div>
+
+            <!-- Expandable section access -->
+            <div id="detail-{{ u.id }}" style="display:none;padding:0 14px 14px">
+                {% if u.role == 'admin' %}
+                <p style="font-size:12px;color:#27ae60;padding:8px 0">⚡ {{ _('Admin has full access to all modules.') }}</p>
+                {% else %}
+                <p style="font-size:11px;color:#888;margin-bottom:8px">{{ _('Toggle section access for this user:') }}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    {% for section in sections_tree %}
+                    <div style="background:white;border:1px solid #e8ecf1;border-radius:6px;padding:6px 8px">
+                        <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px">{{ section.icon }} {{ section.group }}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:2px">
+                            {% for key, name, icon in section.entries %}
+                            <label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;background:{% if u.has_section_access(key) %}#e8f5e9{% else %}#f5f5f5{% endif %};border:1px solid {% if u.has_section_access(key) %}#c8e6c9{% else %}#e8ecf1{% endif %}">
+                                <input type="checkbox" class="user-access-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if u.has_section_access(key) %}checked{% endif %} style="width:12px;height:12px">
+                                {{ icon }} {{ name }}
+                            </label>
+                            {% endfor %}
+                        </div>
                     </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </table></div>
+                    {% endfor %}
+                </div>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                    <button onclick="selectAllUser({{ u.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#27ae60;color:white">{{ _('Select All') }}</button>
+                    <button onclick="selectAllUser({{ u.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#e74c3c;color:white">{{ _('Clear All') }}</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
     </div>
-</div>
 </div>
 
 {% include 'settings_access.html' %}
@@ -507,24 +504,15 @@ function toggleUserActive(userId, active) {
     });
 }
 
-function saveAllAccess() {
-    // Collect all user access checkboxes
+function saveAllUserAccess() {
+    // Collect ALL user section checkboxes across all users
     const userData = {};
-    document.querySelectorAll('.access-cb[data-user]').forEach(cb => {
+    document.querySelectorAll('input[data-user][data-section]').forEach(cb => {
         const uid = cb.dataset.user;
         if (!userData[uid]) userData[uid] = [];
         if (cb.checked) userData[uid].push(cb.dataset.section);
     });
-    // Collect all responsible access checkboxes
-    const respData = {};
-    document.querySelectorAll('.access-cb[data-responsible]').forEach(cb => {
-        const rid = cb.dataset.responsible;
-        if (!respData[rid]) respData[rid] = [];
-        if (cb.checked) respData[rid].push(cb.dataset.section);
-    });
-
     const promises = [];
-    // Save user access
     for (const [uid, sections] of Object.entries(userData)) {
         promises.push(
             csrfFetch('/settings/user/' + uid + '/access', {
@@ -533,33 +521,23 @@ function saveAllAccess() {
             })
         );
     }
-    // Save responsible access
-    if (Object.keys(respData).length > 0) {
-        promises.push(
-            csrfFetch('/settings/responsible-access', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(respData)
-            })
-        );
+    if (promises.length === 0) {
+        showToast('No changes');
+        return;
     }
-
     Promise.all(promises).then(results => {
         const allOk = results.every(r => r.ok);
         if (allOk) {
-            showToast('✓ {{ _("All access rights saved") }}');
+            showToast('✓ {{ _("Saved") }} — {{ _("Reload to see sidebar changes") }}');
             setTimeout(() => location.reload(), 1000);
         } else {
-            showToast('Error saving some changes');
+            showToast('Error saving');
         }
-    }).catch(() => showToast('Error saving access rights'));
+    }).catch(() => showToast('Error'));
 }
 
 function selectAllUser(userId, checked) {
-    document.querySelectorAll('.user-' + userId).forEach(cb => { cb.checked = checked; });
-}
-
-function selectAllResp(respId, checked) {
-    document.querySelectorAll('.resp-' + respId).forEach(cb => { cb.checked = checked; });
+    document.querySelectorAll('.user-access-' + userId).forEach(cb => { cb.checked = checked; });
 }
 
 function filterMachines(sectionId) {
