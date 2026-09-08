@@ -329,6 +329,8 @@ class ResponsibleAuth(UserMixin):
         self.is_active_user = person.is_active
         self.access_level = person.access_level or 'floor'
         self.allowed_sections = []
+        self.assigned_machines = []  # responsible persons don't own machines
+        self.fault_reports = []
 
     @property
     def person(self):
@@ -340,6 +342,9 @@ class ResponsibleAuth(UserMixin):
 
     def has_role(self, *roles):
         return 'responsible' in roles
+
+    def has_section_access(self, section_key):
+        return False
 
     def check_password(self, password):
         return self._person.check_password(password)
