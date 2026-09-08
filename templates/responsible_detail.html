@@ -5,6 +5,12 @@
     <h1>🏢 {{ person.company or person.naam }}</h1>
     <div style="display:flex;gap:8px">
         <a href="/responsible/{{ person.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        {% if current_user.has_role('admin') %}
+        <form method="POST" action="/responsible/{{ person.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ person.naam }}?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger">🗑️ {{ _('Delete') }}</button>
+        </form>
+        {% endif %}
         <a href="/responsible" class="btn" style="background:#eee">{{ _('Back') }}</a>
     </div>
 </div>
