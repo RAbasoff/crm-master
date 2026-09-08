@@ -4035,10 +4035,19 @@ def responsible_quick_edit(resp_id):
 @role_required('admin')
 def responsible_delete(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
+    name = c.naam
+    cid = c.id
+    # Clear all FK references before delete
     c.resp_sections = []
+    Machine.query.filter_by(responsible_person_id=cid).update({'responsible_person_id': None})
+    MaintenancePlan.query.filter_by(responsible_person_id=cid).update({'responsible_person_id': None})
+    db.session.execute(section_responsible.delete().where(section_responsible.c.person_id == cid))
+    # Clear linked user reference
+    User.query.filter_by(person_id=cid).update({'person_id': None})
     db.session.delete(c)
     db.session.commit()
-    flash(_('Responsible person deleted'), 'success')
+    log_audit('delete', 'responsible', cid, name)
+    flash(_('Responsible person deleted') + f': {name}', 'success')
     return redirect(url_for('responsible_list'))
 
 @app.route('/responsible/quick-add', methods=['POST'])
