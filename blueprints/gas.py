@@ -16,6 +16,18 @@ from utils import role_required, log_audit, create_notification
 bp = Blueprint('gas', __name__, url_prefix='/gas')
 
 
+@bp.before_request
+def check_gas_access():
+    """Temporary lockdown — admin only."""
+    try:
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
+        if not current_user.has_role('admin'):
+            return render_template('electricity_locked.html'), 403
+    except Exception:
+        return redirect(url_for('login'))
+
+
 # ============================================================
 # MAIN VIEW — Interactive Cylinder Dashboard
 # ============================================================
