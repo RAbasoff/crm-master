@@ -27,5 +27,9 @@
 </div>
 <div style="display:flex;gap:8px">
     <a href="/messages/new?receiver={{ message.sender_id }}" class="btn btn-primary">{{ _('Reply') }}</a>
+    <form method="POST" action="/messages/{{ message.id }}/delete" onsubmit="return confirm('{{ _('Delete this message?') }}')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">🗑️ {{ _('Delete') }}</button>
+    </form>
 </div>
 {% endblock %}

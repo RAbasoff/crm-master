@@ -922,8 +922,18 @@ def settings():
             top_machines_faults.append(m)
     top_machines_faults.sort(key=lambda x: x.fault_count, reverse=True)
     
+    # Responsible persons with access data
+    responsible_list = [r for r in responsible if r.is_active]
+    responsible_access = {}
+    for r in responsible_list:
+        if hasattr(r, 'allowed_sections') and r.allowed_sections:
+            responsible_access[r.id] = [s.section_key for s in r.allowed_sections]
+        else:
+            responsible_access[r.id] = []
+
     return render_template('settings.html', users=users, sections=sections, groups=groups,
-        responsible=responsible, machines=machines,
+        responsible=responsible, responsible_list=responsible_list,
+        responsible_access=responsible_access, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
         top_machines_faults=top_machines_faults,
         sections_tree=SECTIONS_TREE)
@@ -959,6 +969,35 @@ def settings_user_access(user_id):
         u.is_active_user = data['is_active']
     db.session.commit()
     log_audit('update', 'user_access', u.id, f'Updated access for {u.username}')
+    return jsonify({'ok': True})
+
+@app.route('/settings/responsible-access', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_responsible_access():
+    """Save access rights for responsible persons (Verantwoordelijke)."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+
+    for resp_id_str, sections in data.items():
+        resp_id = int(resp_id_str)
+        person = Verantwoordelijke.query.get(resp_id)
+        if not person:
+            continue
+        # Store in UserSectionAccess with a special key format: "resp_{id}:{section}"
+        # First, clear old entries for this responsible person
+        UserSectionAccess.query.filter(
+            UserSectionAccess.section_key.like(f'resp_{resp_id}:%')
+        ).delete()
+        # Add new entries
+        for section_key in sections:
+            db.session.add(UserSectionAccess(
+                user_id=0,  # 0 = responsible person (not a real user)
+                section_key=f'resp_{resp_id}:{section_key}'
+            ))
+    db.session.commit()
+    log_audit('update', 'responsible_access', 0, f'Updated access for {len(data)} responsible persons')
     return jsonify({'ok': True})
 
 @app.route('/settings/section/<int:section_id>/update', methods=['POST'])
@@ -2912,6 +2951,18 @@ def message_detail(message_id):
         m.is_read = True
         db.session.commit()
     return render_template('message_detail.html', message=m)
+
+@app.route('/messages/<int:message_id>/delete', methods=['POST'])
+@login_required
+def message_delete(message_id):
+    m = Message.query.get_or_404(message_id)
+    if m.sender_id != current_user.id and m.receiver_id != current_user.id:
+        from flask import abort
+        abort(403)
+    db.session.delete(m)
+    db.session.commit()
+    flash(_('Message deleted'), 'success')
+    return redirect(url_for('messages_list'))
 
 # ============================================================
 # ROUTES — NOTIFICATIONS

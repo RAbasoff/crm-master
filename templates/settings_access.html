@@ -2,18 +2,16 @@
 <div id="tab-content-access" class="tab-content" style="display:none">
     <div class="card">
         <h2 style="margin-bottom:16px">🔐 {{ _('Access Rights by Module') }}</h2>
-        <p style="font-size:12px;color:#888;margin-bottom:16px">{{ _('Check modules each user can access. Structure matches the sidebar menu.') }}</p>
+        <p style="font-size:12px;color:#888;margin-bottom:16px">{{ _('Check modules each user/Responsible can access. Press Save to apply.') }}</p>
 
         {% for section in sections_tree %}
         <div style="margin-bottom:12px;background:#f8f9fa;border-radius:10px;overflow:hidden">
-            <!-- Section header -->
             <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1a1a2e;color:white;cursor:pointer"
                  onclick="var g=this.nextElementSibling;g.style.display=g.style.display==='none'?'block':'none';this.querySelector('.arr').textContent=g.style.display==='none'?'▶':'▼'">
                 <span class="arr" style="font-size:10px;opacity:0.6">▼</span>
                 <span style="font-size:10px">{{ section.icon }}</span>
                 <strong style="font-size:13px">{{ section.group }}</strong>
             </div>
-            <!-- Subsections grid -->
             <div style="display:block">
                 <table style="width:100%;border-collapse:collapse;font-size:11px">
                     <tr>
@@ -21,6 +19,11 @@
                         {% for u in users %}
                         <th style="text-align:center;padding:6px 4px;min-width:50px">
                             <div style="font-size:10px;font-weight:600;color:#555">{{ (u.display_name or u.username)[:6] }}</div>
+                        </th>
+                        {% endfor %}
+                        {% for r in responsible_list %}
+                        <th style="text-align:center;padding:6px 4px;min-width:50px">
+                            <div style="font-size:10px;font-weight:600;color:#e67e22">{{ r.naam[:6] }}</div>
                         </th>
                         {% endfor %}
                     </tr>
@@ -33,13 +36,22 @@
                             <span style="color:#27ae60;font-size:14px" title="Admin: always enabled">✓</span>
                             {% else %}
                             <input type="checkbox"
-                                   class="access-cb access-{{ u.id }}"
+                                   class="access-cb user-{{ u.id }}"
                                    data-user="{{ u.id }}"
                                    data-section="{{ key }}"
                                    {% if u.has_section_access(key) %}checked{% endif %}
-                                   onchange="saveSectionAccess({{ u.id }}, '{{ key }}', this.checked)"
                                    style="width:15px;height:15px;cursor:pointer">
                             {% endif %}
+                        </td>
+                        {% endfor %}
+                        {% for r in responsible_list %}
+                        <td style="text-align:center;padding:4px">
+                            <input type="checkbox"
+                                   class="access-cb resp-{{ r.id }}"
+                                   data-responsible="{{ r.id }}"
+                                   data-section="{{ key }}"
+                                   {% if r.id in responsible_access and key in responsible_access[r.id] %}checked{% endif %}
+                                   style="width:15px;height:15px;cursor:pointer">
                         </td>
                         {% endfor %}
                     </tr>
@@ -49,15 +61,24 @@
         </div>
         {% endfor %}
 
-        <!-- Quick actions -->
-        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <!-- Quick actions + Save -->
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center">
+            <button onclick="saveAllAccess()" class="btn btn-primary" style="padding:8px 24px;font-size:13px">💾 {{ _('Save All') }}</button>
             {% for u in users if u.role != 'admin' %}
             <div style="padding:8px 12px;background:white;border-radius:8px;border:1px solid #ddd">
                 <strong style="font-size:11px">{{ u.display_name or u.username }}</strong>
                 <div style="margin-top:4px;display:flex;gap:4px">
-                    <button onclick="selectAll({{ u.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#27ae60;color:white">All</button>
-                    <button onclick="selectAll({{ u.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#e74c3c;color:white">None</button>
-                    <button onclick="saveUserAccess({{ u.id }})" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#3498db;color:white">Save</button>
+                    <button onclick="selectAllUser({{ u.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#27ae60;color:white">All</button>
+                    <button onclick="selectAllUser({{ u.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#e74c3c;color:white">None</button>
+                </div>
+            </div>
+            {% endfor %}
+            {% for r in responsible_list %}
+            <div style="padding:8px 12px;background:white;border-radius:8px;border:1px solid #e67e22">
+                <strong style="font-size:11px;color:#e67e22">{{ r.naam }}</strong>
+                <div style="margin-top:4px;display:flex;gap:4px">
+                    <button onclick="selectAllResp({{ r.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#27ae60;color:white">All</button>
+                    <button onclick="selectAllResp({{ r.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#e74c3c;color:white">None</button>
                 </div>
             </div>
             {% endfor %}

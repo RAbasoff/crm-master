@@ -507,31 +507,59 @@ function toggleUserActive(userId, active) {
     });
 }
 
-function saveSectionAccess(userId, section, enabled) {
-    const cbs = document.querySelectorAll('.access-' + userId + ':checked');
-    const sections = Array.from(cbs).map(cb => cb.dataset.section);
-    csrfFetch('/settings/user/' + userId + '/access', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({sections: sections})
-    }).then(r => r.json()).then(d => {
-        if (d.ok) {
-            showToast('✓ {{ _("Saved") }} — {{ _("Reload to see sidebar changes") }}');
-            // Auto-reload after short delay so user sees the toast
-            setTimeout(() => location.reload(), 800);
-        }
+function saveAllAccess() {
+    // Collect all user access checkboxes
+    const userData = {};
+    document.querySelectorAll('.access-cb[data-user]').forEach(cb => {
+        const uid = cb.dataset.user;
+        if (!userData[uid]) userData[uid] = [];
+        if (cb.checked) userData[uid].push(cb.dataset.section);
     });
+    // Collect all responsible access checkboxes
+    const respData = {};
+    document.querySelectorAll('.access-cb[data-responsible]').forEach(cb => {
+        const rid = cb.dataset.responsible;
+        if (!respData[rid]) respData[rid] = [];
+        if (cb.checked) respData[rid].push(cb.dataset.section);
+    });
+
+    const promises = [];
+    // Save user access
+    for (const [uid, sections] of Object.entries(userData)) {
+        promises.push(
+            csrfFetch('/settings/user/' + uid + '/access', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({sections: sections})
+            })
+        );
+    }
+    // Save responsible access
+    if (Object.keys(respData).length > 0) {
+        promises.push(
+            csrfFetch('/settings/responsible-access', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(respData)
+            })
+        );
+    }
+
+    Promise.all(promises).then(results => {
+        const allOk = results.every(r => r.ok);
+        if (allOk) {
+            showToast('✓ {{ _("All access rights saved") }}');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Error saving some changes');
+        }
+    }).catch(() => showToast('Error saving access rights'));
 }
 
-function selectAll(userId, checked) {
-    document.querySelectorAll('.access-' + userId).forEach(cb => {
-        cb.checked = checked;
-    });
-    // Auto-save
-    const sections = checked ? Array.from(document.querySelectorAll('.access-' + userId)).map(cb => cb.dataset.section) : [];
-    csrfFetch('/settings/user/' + userId + '/access', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({sections: sections})
-    }).then(r => r.json()).then(d => { if (d.ok) showToast('✓ {{ _("Saved") }}'); });
+function selectAllUser(userId, checked) {
+    document.querySelectorAll('.user-' + userId).forEach(cb => { cb.checked = checked; });
+}
+
+function selectAllResp(respId, checked) {
+    document.querySelectorAll('.resp-' + respId).forEach(cb => { cb.checked = checked; });
 }
 
 function filterMachines(sectionId) {
