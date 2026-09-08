@@ -4218,6 +4218,44 @@ def worker_delete(worker_id):
     flash(_('Worker deleted') + f': {name}', 'success')
     return redirect(url_for('workers_list'))
 
+@app.route('/workers/<int:worker_id>/create-user', methods=['POST'])
+@login_required
+@role_required('admin')
+def worker_create_user(worker_id):
+    """Create a User account with technician role for a worker."""
+    w = Monteur.query.get_or_404(worker_id)
+    if w.user_id:
+        flash(_('Worker already linked to a user'), 'error')
+        return redirect(url_for('worker_edit', worker_id=worker_id))
+    
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '').strip()
+    
+    if not username or not password:
+        flash(_('Username and password required'), 'error')
+        return redirect(url_for('worker_edit', worker_id=worker_id))
+    
+    if User.query.filter_by(username=username).first():
+        flash(_('Username already exists'), 'error')
+        return redirect(url_for('worker_edit', worker_id=worker_id))
+    
+    u = User(
+        username=username,
+        display_name=w.naam,
+        role='technician',
+        is_active_user=True,
+    )
+    u.set_password(password)
+    db.session.add(u)
+    db.session.flush()
+    
+    w.user_id = u.id
+    db.session.commit()
+    
+    log_audit('create', 'user_from_worker', u.id, f'{w.naam} -> {username} (technician)')
+    flash(_('Login created for') + f' {w.naam}: {username}', 'success')
+    return redirect(url_for('worker_edit', worker_id=worker_id))
+
 # ============================================================
 # ROUTES — INVOICES
 # ============================================================

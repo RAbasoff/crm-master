@@ -38,5 +38,26 @@
         <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
         <a href="/workers" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
     </form>
+
+    {% if worker and not worker.user_id %}
+    <div style="margin-top:16px;padding:16px;background:#f0f7ff;border-radius:8px;border-left:4px solid #3498db">
+        <h3 style="font-size:14px;margin-bottom:8px">👤 {{ _('Create system login for this worker') }}</h3>
+        <p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('This will create a User account with role "technician" so the worker can log in and receive notifications.') }}</p>
+        <form method="POST" action="/workers/{{ worker.id }}/create-user">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Username') }}</label>
+                    <input type="text" name="username" value="{{ worker.naam|lower|replace(' ','') }}" required>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Password') }}</label>
+                    <input type="password" name="password" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary" style="height:38px">🔑 {{ _('Create Login') }}</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
