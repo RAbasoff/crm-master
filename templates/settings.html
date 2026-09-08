@@ -517,13 +517,18 @@ function saveUserAccess(userId) {
 }
 
 function saveSectionAccess(userId, section, enabled) {
-    // Collect all checked sections for this user
     const cbs = document.querySelectorAll('.access-' + userId + ':checked');
     const sections = Array.from(cbs).map(cb => cb.dataset.section);
     csrfFetch('/settings/user/' + userId + '/access', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({sections: sections})
-    }).then(r => r.json()).then(d => { if (d.ok) showToast('✓ {{ _("Saved") }}'); });
+    }).then(r => r.json()).then(d => {
+        if (d.ok) {
+            showToast('✓ {{ _("Saved") }} — {{ _("Reload to see sidebar changes") }}');
+            // Auto-reload after short delay so user sees the toast
+            setTimeout(() => location.reload(), 800);
+        }
+    });
 }
 
 function selectAll(userId, checked) {
