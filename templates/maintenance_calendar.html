@@ -22,6 +22,8 @@
         <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
+        <a href="/maintenance-plans" class="btn btn-sm" style="background:#9b59b6;color:white">📋 {{ _('Plans') }}</a>
+        <a href="/maintenance-plans/new" class="btn btn-sm" style="background:#27ae60;color:white">+ {{ _('New Plan') }}</a>
         <div style="margin-left:16px;display:flex;gap:6px;align-items:center">
             <select id="printOrient" style="padding:4px 8px;font-size:12px;border:1px solid #ccc;border-radius:4px">
                 <option value="portrait">📄 Portrait</option>

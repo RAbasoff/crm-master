@@ -390,10 +390,10 @@
             <a href="/gas" class="sb-item {% if 'gas' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas System') }}</a>
             {% endif %}
             {% if has_access('maintenance') %}
-            <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}" onclick="document.getElementById('maintSub').classList.toggle('collapsed');return true;"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }} <span style="margin-left:auto;font-size:9px;opacity:0.5">▶</span></a>
-            <div id="maintSub" class="sb-group-items collapsed">
-                <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📋</span>{{ _('Maint. Plans') }}</a>
-            </div>
+            <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
+            {% endif %}
+            {% if has_access('maintenance') %}
+            <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
             {% endif %}
             {% if has_access('equipment') %}
             <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Equipment Repairs') }}</a>
