@@ -22,7 +22,17 @@
             <td>€{{ "%.0f"|format(w.tarief_per_uur) }}/h</td>
             <td>{{ w.opdrachten|length }}</td>
             <td>{% if w.actief %}<span class="badge badge-gereed">{{ _('Active') }}</span>{% else %}<span class="badge badge-geannuleerd">{{ _('Inactive') }}</span>{% endif %}</td>
-            <td><a href="/workers/{{ w.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a></td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <a href="/workers/{{ w.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                    {% if current_user.has_role('admin') %}
+                    <form method="POST" action="/workers/{{ w.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete worker') }} {{ w.naam }}?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px">🗑️</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </td>
         </tr>
         {% endfor %}
     </table></div>

@@ -108,7 +108,7 @@ msgid "QR Generate"
 msgstr "QR genereren"
 
 msgid "Home"
-msgstr "Home"
+msgstr "Thuis"
 
 msgid "Total Work Orders"
 msgstr "Totaal werkorders"
@@ -681,7 +681,7 @@ msgid "Recent Repairs"
 msgstr "Recente reparaties"
 
 msgid "Component"
-msgstr "Component"
+msgstr "Onderdeel"
 
 msgid "Gas"
 msgstr "Gas"
@@ -801,10 +801,10 @@ msgid "All types"
 msgstr "Alle types"
 
 msgid "Records"
-msgstr "Records"
+msgstr "Registraties"
 
 msgid "Order"
-msgstr "Order"
+msgstr "Bestelling"
 
 msgid "Comment"
 msgstr "Opmerking"
@@ -816,7 +816,7 @@ msgid "No stock movements recorded yet"
 msgstr "Nog geen voorraadmutaties geregistreerd"
 
 msgid "Export CSV"
-msgstr "Export CSV"
+msgstr "Exporteer CSV"
 
 msgid "Edit Report"
 msgstr "Rapport bewerken"

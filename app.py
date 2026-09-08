@@ -3778,31 +3778,56 @@ def group_permissions(group_id):
     return render_template('group_permissions.html', group=group, sections=SECTIONS_LIST, perms=perms)
 
 # Sections list for permissions UI
-SECTIONS_LIST = [
-    ('machines', 'Machines', '⚙️'),
-    ('floor', 'Floor Plan', '🏭'),
-    ('sections', 'Sections', '🏗️'),
-    ('faults', 'Faults', '⚠️'),
-    ('two', 'TWO', '🔧'),
-    ('maintenance', 'Maintenance', '📅'),
-    ('warehouse', 'Warehouse', '📦'),
-    ('orders', 'Work Orders', '📋'),
-    ('clients', 'Clients', '👤'),
-    ('workers', 'Workers', '🔧'),
-    ('contractors', 'Contractors', '🏢'),
-    ('invoices', 'Invoices', '📄'),
-    ('messages', 'Messages', '💬'),
-    ('notifications', 'Notifications', '🔔'),
-    ('purchase_requests', 'Purchase Requests', '🛒'),
-    ('reports', 'Reports', '📊'),
-    ('schedule', 'Schedule', '📅'),
-    ('time_tracking', 'Time Tracking', '⏱'),
-    ('vacations', 'Vacations', '🏖'),
-    ('cylinders', 'Gas Cylinders', '🔴'),
-    ('quality', 'Quality Control', '✅'),
-    ('users', 'Users', '👥'),
-    ('audit_log', 'Audit Log', '📋'),
+SECTIONS_TREE = [
+    {'group': 'Production', 'icon': '🏭', 'items': [
+        ('dashboard', 'Dashboard', '🏠'),
+        ('floor', 'Floor Plan', '🏭'),
+        ('machines', 'Machines', '⚙️'),
+        ('equipment', 'Equipment / Mule Maintenance', '🔧'),
+        ('tool_wear', 'Knife Sharpening', '🔪'),
+        ('assets', 'Other Devices', '🏭'),
+        ('electricity', 'Electricity', '⚡'),
+        ('gas', 'Gas System', '🔴'),
+        ('maintenance', 'Maintenance Calendar', '📅'),
+        ('maintenance_plans', 'Maintenance Plans', '📋'),
+        ('repairs', 'Equipment Repairs', '🔧'),
+        ('faults', 'Faults', '⚠️'),
+        ('two', 'TWO', '📝'),
+    ]},
+    {'group': 'Communication', 'icon': '💬', 'items': [
+        ('messages', 'Messages', '💬'),
+        ('notifications', 'Notifications', '🔔'),
+    ]},
+    {'group': 'Staff', 'icon': '👥', 'items': [
+        ('schedule', 'Schedule', '📅'),
+        ('vacations', 'Vacations', '🏖'),
+        ('time_tracking', 'Time Tracking', '⏱'),
+    ]},
+    {'group': 'Business', 'icon': '📋', 'items': [
+        ('orders', 'Work Orders', '📋'),
+        ('clients', 'Responsible / Clients', '👤'),
+        ('workers', 'Workers', '🔧'),
+        ('invoices', 'Invoices', '📄'),
+        ('contractors', 'Contractors', '🏢'),
+        ('warehouse', 'Warehouse', '📦'),
+        ('consumables', 'Replacement Reminders', '🔔'),
+        ('purchase_requests', 'Purchase Requests', '🛒'),
+    ]},
+    {'group': 'Analytics', 'icon': '📊', 'items': [
+        ('reports', 'Reports', '📊'),
+        ('work_report', 'Work Report', '📋'),
+        ('archive', 'Archive', '📦'),
+        ('statistics', 'Statistics', '📈'),
+    ]},
+    {'group': 'System', 'icon': '⚙️', 'items': [
+        ('settings', 'Settings', '⚙️'),
+        ('users', 'Users', '👥'),
+        ('audit_log', 'Audit Log', '📋'),
+    ]},
 ]
+
+# Flat list for backward compatibility (used by group_permissions)
+SECTIONS_LIST = [(key, name, icon) for section in SECTIONS_TREE for key, name, icon in section['items']]
 
 @app.route('/responsible/new', methods=['GET', 'POST'])
 @login_required
@@ -4105,6 +4130,18 @@ def worker_edit(worker_id):
     users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).order_by(User.display_name).all()
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
     return render_template('worker_form.html', worker=w, users=users, groups=groups)
+
+@app.route('/workers/<int:worker_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def worker_delete(worker_id):
+    w = Monteur.query.get_or_404(worker_id)
+    name = w.naam
+    db.session.delete(w)
+    db.session.commit()
+    log_audit('delete', 'worker', worker_id, name)
+    flash(_('Worker deleted') + f': {name}', 'success')
+    return redirect(url_for('workers_list'))
 
 # ============================================================
 # ROUTES — INVOICES

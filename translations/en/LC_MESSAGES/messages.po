@@ -620,7 +620,7 @@ msgstr "can login"
 msgid "Assigned Sections"
 msgstr "Assigned Sections"
 
-msgid "Цеха"
+msgid "Sections"
 msgstr "Sections"
 
 msgid "Select sections this person is responsible for"
