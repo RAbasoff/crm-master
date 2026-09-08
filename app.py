@@ -1360,7 +1360,9 @@ def maintenance_calendar():
                         'status': pl.status
                     })
                 # Следующая дата
-                if pl.recurrence == 'weekly':
+                if pl.recurrence == 'daily':
+                    d += timedelta(days=1)
+                elif pl.recurrence == 'weekly':
                     d += timedelta(weeks=1)
                 elif pl.recurrence == 'biweekly':
                     d += timedelta(weeks=2)
@@ -1468,7 +1470,9 @@ def maintenance_calendar_export():
                     break
                 if d >= month_start and d != pl.planned_start:
                     events.append({'date': d, 'type': 'Plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'machine_id': pl.machine_id, 'overdue': d < today, 'status': pl.status})
-                if pl.recurrence == 'weekly':
+                if pl.recurrence == 'daily':
+                    d += timedelta(days=1)
+                elif pl.recurrence == 'weekly':
                     d += timedelta(weeks=1)
                 elif pl.recurrence == 'biweekly':
                     d += timedelta(weeks=2)
@@ -1642,7 +1646,9 @@ def maintenance_plan_edit(plan_id):
         if p.status == 'completed' and old_status != 'completed' and p.recurrence and p.recurrence != 'none':
             base = p.actual_end or p.planned_start
             rec = p.recurrence
-            if rec == 'weekly':
+            if rec == 'daily':
+                new_date = base + timedelta(days=1)
+            elif rec == 'weekly':
                 new_date = base + timedelta(weeks=1)
             elif rec == 'biweekly':
                 new_date = base + timedelta(weeks=2)
