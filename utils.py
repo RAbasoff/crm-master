@@ -703,8 +703,8 @@ def run_data_migrations():
 
         # Desired persons: name -> (group_name, access_level)
         desired_persons = {
-            'Thijs':   ('Director', 'full'),
-            'Tim':     ('Director', 'floor'),
+            '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440': ('Director', 'full'),
+            '\u0422\u0435\u0445\u043d\u0438\u043a':             ('Technician', 'floor'),
             'Maico':   ('Technician', 'floor'),
             'Aris':    ('Technician', 'floor'),
             'Filip':   ('Technician', 'floor'),
@@ -716,7 +716,7 @@ def run_data_migrations():
         }
 
         # Names to remove (if they exist and are NOT in desired list)
-        names_to_remove = ['Hashim', 'Dina', 'Lukas']
+        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Tim', 'Thijs']
 
         # 7a. Remove old persons by name
         for name in names_to_remove:
@@ -792,7 +792,7 @@ def run_data_migrations():
         db.session.commit()
 
         # 7d. Set usernames on Director/Technician persons (no system user accounts)
-        for name, username in [('Tim', 'tim'), ('Thijs', 'thijs')]:
+        for name, username in [('\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'tim'), ('\u0422\u0435\u0445\u043d\u0438\u043a', 'thijs')]:
             person = Verantwoordelijke.query.filter_by(naam=name).first()
             if person and not person.username:
                 person.username = username
