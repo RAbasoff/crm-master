@@ -653,6 +653,7 @@ def machine_consume_consumable(machine_id, cons_id):
         flash(_('Insufficient stock! Available: {} {}').format(item.hoeveelheid, item.eenheid), 'error')
         return redirect(url_for('machine_detail', machine_id=machine_id))
     item.hoeveelheid -= qty
+    mc.last_issued_at = datetime.utcnow()
     mutatie = VoorraadMutatie(
         item_id=item.id,
         type='uitgaand',
@@ -675,6 +676,21 @@ def machine_unlink_consumable(machine_id, cons_id):
     db.session.delete(mc)
     db.session.commit()
     flash(_('Unlinked consumable: {}').format(name), 'success')
+    return redirect(url_for('machine_detail', machine_id=machine_id))
+
+
+@app.route('/machines/<int:machine_id>/consumables/<int:cons_id>/update-date', methods=['POST'])
+@login_required
+@role_required('admin')
+def machine_consumable_update_date(machine_id, cons_id):
+    mc = MachineConsumable.query.get_or_404(cons_id)
+    date_str = request.form.get('last_issued_at', '').strip()
+    if date_str:
+        mc.last_issued_at = datetime.strptime(date_str, '%Y-%m-%d')
+    else:
+        mc.last_issued_at = None
+    db.session.commit()
+    flash(_('Date updated'), 'success')
     return redirect(url_for('machine_detail', machine_id=machine_id))
 
 

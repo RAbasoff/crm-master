@@ -240,6 +240,7 @@ class MachineConsumable(db.Model):
     warehouse_item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False, index=True)
     quantity_per_use = db.Column(db.Float, default=1)
     notes = db.Column(db.Text)
+    last_issued_at = db.Column(db.DateTime)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     machine = db.relationship('Machine', backref=db.backref('consumables', lazy=True, cascade='all, delete-orphan'))

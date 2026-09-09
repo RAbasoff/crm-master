@@ -477,6 +477,7 @@ def run_migrations():
             uploaded_by INTEGER REFERENCES user(id),
             uploaded_at DATETIME
         )"""),
+        ("machine_consumable.last_issued_at", "ALTER TABLE machine_consumable ADD COLUMN last_issued_at DATETIME"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

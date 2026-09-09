@@ -158,12 +158,25 @@
     <h2>🧴 {{ _('Consumables') }}</h2>
     {% if machine.consumables %}
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Material') }}</th><th>{{ _('On Stock') }}</th><th>{{ _('Qty / Use') }}</th><th>{{ _('Notes') }}</th><th>{{ _('Actions') }}</th></tr>
+        <tr><th>{{ _('Material') }}</th><th>{{ _('On Stock') }}</th><th>{{ _('Qty / Use') }}</th><th>{{ _('Last Issued') }}</th><th>{{ _('Notes') }}</th><th>{{ _('Actions') }}</th></tr>
         {% for mc in machine.consumables %}
         <tr>
             <td><a href="/warehouse/{{ mc.warehouse_item.id }}/edit" style="color:#3498db;font-weight:bold">{{ mc.warehouse_item.naam }}</a></td>
             <td style="{% if mc.warehouse_item.hoeveelheid <= mc.warehouse_item.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ mc.warehouse_item.hoeveelheid }} {{ mc.warehouse_item.eenheid }}</td>
             <td>{{ mc.quantity_per_use }} {{ mc.warehouse_item.eenheid }}</td>
+            <td style="white-space:nowrap">
+                {% if current_user.has_role('admin') %}
+                <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/update-date" style="display:inline-flex;gap:4px;align-items:center">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="date" name="last_issued_at" value="{{ mc.last_issued_at.strftime('%Y-%m-%d') if mc.last_issued_at else '' }}" style="padding:3px;border:1px solid #ddd;border-radius:4px;font-size:11px;width:130px">
+                    <button type="submit" class="btn btn-sm" style="padding:3px 6px;min-height:auto;font-size:11px;background:#eee">✓</button>
+                </form>
+                {% elif mc.last_issued_at %}
+                {{ mc.last_issued_at.strftime('%d-%m-%Y') }}
+                {% else %}
+                —
+                {% endif %}
+            </td>
             <td>{{ mc.notes or '—' }}</td>
             <td style="white-space:nowrap">
                 <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/consume" style="display:inline-flex;gap:4px;align-items:center">
