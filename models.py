@@ -63,6 +63,31 @@ class User(UserMixin, db.Model):
         """Check if user has access to a specific section."""
         if self.role == 'admin':
             return True
+        # Check group permissions first (via person_id link)
+        has_group = False
+        if self.person_id:
+            person = Verantwoordelijke.query.get(self.person_id)
+            if person and person.group_id:
+                perm = GroupPermission.query.filter_by(
+                    group_id=person.group_id, section_key=section_key
+                ).first()
+                if perm:
+                    return perm.can_view
+                # Check if user has ANY group permissions defined
+                if GroupPermission.query.filter_by(group_id=person.group_id).first():
+                    has_group = True
+        # Check individual allowed_sections (additive on top of group — grants view+create+edit)
+        if any(a.section_key == section_key for a in self.allowed_sections):
+            return True
+        # Has group but section not in group or allowed_sections
+        if has_group:
+            return False
+        # Fallback to access_level (only when no group)
+        if self.access_level == 'full':
+            return True
+        if self.access_level == 'limited':
+            return False
+        # partial or default: check explicit allowed_sections
         return any(a.section_key == section_key for a in self.allowed_sections)
 
 class UserSectionAccess(db.Model):

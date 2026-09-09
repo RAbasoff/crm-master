@@ -8,11 +8,21 @@ import os
 from werkzeug.utils import secure_filename
 
 SECTION_KEYS = [
-    'machines', 'warehouse', 'orders', 'clients', 'workers', 'faults',
-    'messages', 'reports', 'schedule', 'time_tracking', 'vacations',
-    'maintenance', 'purchase_requests', 'users', 'sections', 'floor',
-    'invoices', 'contractors', 'two', 'audit_log', 'settings', 'statistics',
-    'equipment', 'consumables', 'electricity', 'tool_wear'
+    # Production
+    'dashboard', 'floor', 'machines', 'equipment', 'tool_wear', 'assets',
+    'electricity', 'gas', 'maintenance', 'maintenance_plans', 'repairs',
+    'faults', 'two',
+    # Communication
+    'messages', 'notifications',
+    # Staff
+    'schedule', 'vacations', 'time_tracking',
+    # Business
+    'orders', 'clients', 'workers', 'invoices', 'contractors',
+    'warehouse', 'consumables', 'purchase_requests',
+    # Analytics
+    'reports', 'work_report', 'archive', 'statistics',
+    # System
+    'settings', 'users', 'audit_log', 'sections',
 ]
 
 # Role hierarchy: admin > director > technician > user
@@ -55,7 +65,16 @@ def user_has_section_access(section_key, action='view'):
         if action == 'edit': return perm.can_edit
         if action == 'delete': return perm.can_delete
         return perm.can_view
-    # Fallback to access_level
+    # Section not in group permissions — check individual allowed_sections
+    # (allowed_sections grant full view+create+edit on top of group permissions)
+    if any(s.section_key == section_key for s in current_user.allowed_sections):
+        if action in ('view', 'create', 'edit'):
+            return True
+        return False
+    # No group perms and no individual override
+    if group_perms:
+        return False  # has a group but section not in group or allowed_sections
+    # Fallback to access_level (only when no group permissions exist)
     if current_user.access_level == 'full':
         return True
     if current_user.access_level == 'limited':

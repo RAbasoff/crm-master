@@ -49,7 +49,7 @@
                 <select id="role-{{ u.id }}" onchange="updateUserRole({{ u.id }}, this.value)" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="event.stopPropagation()">
                     <option value="user" {% if u.role=='user' %}selected{% endif %}>👤 User</option>
                     <option value="technician" {% if u.role=='technician' %}selected{% endif %}>🔧 Technician</option>
-                    <option value="moderator" {% if u.role=='moderator' %}selected{% endif %}>🛡️ Moderator</option>
+                    <option value="director" {% if u.role=='director' %}selected{% endif %}>📋 Director</option>
                     <option value="admin" {% if u.role=='admin' %}selected{% endif %}>⚡ Admin</option>
                 </select>
 
@@ -538,6 +538,58 @@ function saveAllUserAccess() {
 
 function selectAllUser(userId, checked) {
     document.querySelectorAll('.user-access-' + userId).forEach(cb => { cb.checked = checked; });
+    document.querySelectorAll('.access-cb.user-' + userId).forEach(cb => { cb.checked = checked; });
+}
+
+function selectAllResp(responsibleId, checked) {
+    document.querySelectorAll('.access-cb.resp-' + responsibleId).forEach(cb => { cb.checked = checked; });
+}
+
+function saveAllAccess() {
+    // Collect user section checkboxes
+    const userData = {};
+    document.querySelectorAll('.access-cb[data-user]').forEach(cb => {
+        const uid = cb.dataset.user;
+        if (!userData[uid]) userData[uid] = [];
+        if (cb.checked) userData[uid].push(cb.dataset.section);
+    });
+    const promises = [];
+    for (const [uid, sections] of Object.entries(userData)) {
+        promises.push(
+            csrfFetch('/settings/user/' + uid + '/access', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({sections: sections})
+            })
+        );
+    }
+    // Collect responsible section checkboxes
+    const respData = {};
+    document.querySelectorAll('.access-cb[data-responsible]').forEach(cb => {
+        const rid = cb.dataset.responsible;
+        if (!respData[rid]) respData[rid] = [];
+        if (cb.checked) respData[rid].push(cb.dataset.section);
+    });
+    if (Object.keys(respData).length > 0) {
+        promises.push(
+            csrfFetch('/settings/responsible-access', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(respData)
+            })
+        );
+    }
+    if (promises.length === 0) {
+        showToast('No changes');
+        return;
+    }
+    Promise.all(promises).then(results => {
+        const allOk = results.every(r => r.ok);
+        if (allOk) {
+            showToast('✓ {{ _("Saved") }}');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Error saving');
+        }
+    }).catch(() => showToast('Error'));
 }
 
 function filterMachines(sectionId) {

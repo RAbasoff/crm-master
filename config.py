@@ -47,6 +47,4 @@ SECTION_KEYS = [
     'reports', 'work_report', 'archive', 'statistics',
     # System
     'settings', 'users', 'audit_log', 'sections',
-    # Legacy
-    'cylinders', 'quality',
 ]

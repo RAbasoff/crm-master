@@ -22,7 +22,6 @@
                 <select name="role" id="roleSelect" onchange="onRoleChange()">
                     {% for r, label, desc in [
                         ('admin', _('Admin'), _('Full access: settings, users, all modules')),
-                        ('moderator', _('Moderator'), _('All modules, no system changes')),
                         ('director', _('Director'), _('All modules except settings and user management')),
                         ('technician', _('Technician'), _('Machines, faults, warehouse, TWO')),
                         ('user', _('User'), _('View only, create fault reports'))
@@ -128,7 +127,7 @@ function toggleSections() {
 }
 function onRoleChange() {
     const role = document.getElementById('roleSelect').value;
-    if (role === 'admin' || role === 'moderator') {
+    if (role === 'admin') {
         document.getElementById('accessLevel').value = 'full';
         document.getElementById('sectionsBlock').style.display = 'none';
     }
