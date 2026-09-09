@@ -1,10 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Switch Log') }} — {{ cabinet.name }} — CRM{% endblock %}
+{% block title %}{{ _('Switch Log') }}{% if cabinet %} — {{ cabinet.name }}{% endif %} — CRM{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>📋 {{ _('Switch Log') }} — {{ cabinet.name }}</h1>
+    <h1>📋 {{ _('Switch Log') }}{% if cabinet %} — {{ cabinet.name }}{% endif %}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% if cabinet %}
         <a href="/electricity/cabinet/{{ cabinet.id }}" class="btn btn-sm" style="background:#eee">← {{ _('Back to Cabinet') }}</a>
+        {% endif %}
         <a href="/electricity" class="btn btn-sm" style="background:#eee">{{ _('All Cabinets') }}</a>
     </div>
 </div>
@@ -13,8 +15,19 @@
 {% if current_user.has_role('admin', 'director', 'technician') %}
 <div class="card">
     <h2>✏️ {{ _('Log New Switch') }}</h2>
-    <form method="POST" action="/electricity/cabinet/{{ cabinet.id }}/switch-log/add">
+    <form method="POST" action="{% if cabinet %}/electricity/cabinet/{{ cabinet.id }}/switch-log/add{% else %}/electricity/switch-log/add{% endif %}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if not cabinet and cabinets is defined %}
+        <div class="form-group">
+            <label>{{ _('Cabinet') }} *</label>
+            <select name="cabinet_id" required>
+                <option value="">— {{ _('Select cabinet') }} —</option>
+                {% for c in cabinets %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group">
                 <label>{{ _('From Breaker') }} ({{ _('switched off') }})</label>
@@ -23,7 +36,7 @@
                     {% for cab in all_breakers|groupby('cabinet.name') %}
                     <optgroup label="{{ cab[0] }}">
                         {% for b in cab[1] %}
-                        <option value="{{ b.id }}" {% if b.cabinet_id == cabinet.id %}style="font-weight:bold"{% endif %}>{{ b.label }} — {{ b.amperage or '?' }}A ({{ b.cabinet.name }})</option>
+                        <option value="{{ b.id }}">{{ b.label }} — {{ b.amperage or '?' }}A ({{ b.cabinet.name }})</option>
                         {% endfor %}
                     </optgroup>
                     {% endfor %}
@@ -36,7 +49,7 @@
                     {% for cab in all_breakers|groupby('cabinet.name') %}
                     <optgroup label="{{ cab[0] }}">
                         {% for b in cab[1] %}
-                        <option value="{{ b.id }}" {% if b.cabinet_id == cabinet.id %}style="font-weight:bold"{% endif %}>{{ b.label }} — {{ b.amperage or '?' }}A ({{ b.cabinet.name }})</option>
+                        <option value="{{ b.id }}">{{ b.label }} — {{ b.amperage or '?' }}A ({{ b.cabinet.name }})</option>
                         {% endfor %}
                     </optgroup>
                     {% endfor %}
@@ -45,7 +58,7 @@
         </div>
         <div class="form-group">
             <label>{{ _('Reason') }} *</label>
-            <input type="text" name="reason" required placeholder="{{ _('Why was this switch made?') }}" style="width:100%">
+            <input type="text" name="reason" required placeholder="{{ _('Why was this switch made? e.g. overload on F12, moved to F18') }}" style="width:100%">
         </div>
         <div class="form-group">
             <label>{{ _('Notes') }}</label>
@@ -64,6 +77,7 @@
         <tr>
             <th>#</th>
             <th>{{ _('Date') }}</th>
+            <th>{{ _('Cabinet') }}</th>
             <th>{{ _('From') }}</th>
             <th>{{ _('To') }}</th>
             <th>{{ _('Reason') }}</th>
@@ -75,10 +89,11 @@
         <tr>
             <td>{{ log.id }}</td>
             <td style="white-space:nowrap">{{ log.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+            <td><a href="/electricity/cabinet/{{ log.cabinet_id }}" style="color:#3498db">{{ log.cabinet.name }}</a></td>
             <td>
                 {% if log.from_breaker %}
                 <span class="badge" style="background:#e74c3c;color:white">{{ log.from_breaker.label }}</span>
-                <small style="color:#888">{{ log.from_breaker.cabinet.name }}</small>
+                <small style="color:#888">{{ log.from_breaker.amperage or '?' }}A</small>
                 {% else %}
                 <span style="color:#888">—</span>
                 {% endif %}
@@ -86,7 +101,7 @@
             <td>
                 {% if log.to_breaker %}
                 <span class="badge" style="background:#27ae60;color:white">{{ log.to_breaker.label }}</span>
-                <small style="color:#888">{{ log.to_breaker.cabinet.name }}</small>
+                <small style="color:#888">{{ log.to_breaker.amperage or '?' }}A</small>
                 {% else %}
                 <span style="color:#888">—</span>
                 {% endif %}

@@ -74,7 +74,7 @@
                 <div class="form-group" style="margin-bottom:0">
                     <label style="font-size:11px;color:#888;font-weight:600">{{ _('Role') }}</label>
                     <select name="role" style="padding:6px 8px;font-size:13px">
-                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('moderator', 'Moderator'), ('admin', 'Admin')] %}
+                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('admin', 'Admin')] %}
                         <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
@@ -174,7 +174,7 @@
                 <div class="form-group">
                     <label>{{ _('Role') }}</label>
                     <select name="role">
-                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('moderator', 'Moderator'), ('admin', 'Admin')] %}
+                        {% for r, label in [('user', 'User'), ('technician', 'Technician'), ('director', 'Director'), ('admin', 'Admin')] %}
                         <option value="{{ r }}">{{ label }}</option>
                         {% endfor %}
                     </select>

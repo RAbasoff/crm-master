@@ -1,0 +1,131 @@
+Сессия 009 — 09.09.2026
+Проект: CRM Мастерская
+
+============================================================
+
+ЗАДАЧА 1: Расходные материалы для станков
+
+ЗАДАЧА: Для каждого станка — возможность привязать расходный материал
+со склада и списать его.
+
+ДОБАВЛЕНО:
+
+1. models.py — модель MachineConsumable:
+   - machine_id → machine.id
+   - warehouse_item_id → warehouse_item.id
+   - quantity_per_use (количество на одно списание)
+   - notes, added_at
+   - UniqueConstraint(machine_id, warehouse_item_id)
+   - Связи: machine, warehouse_item (backref linked_machines)
+
+2. app.py — 4 маршрута:
+   - /machines/<id>/consumables/link — привязать расходник
+   - /machines/<id>/consumables/<id>/consume — списать со склада
+     (уменьшает остаток, создаёт VoorraadMutatie type='uitgaand')
+   - /machines/<id>/consumables/<id>/unlink — отвязать
+   - /api/warehouse/consumables — API для поиска
+
+3. machine_detail — обновлён:
+   - machine_detail передаёт warehouse_items в шаблон
+   - templates/machine_detail.html — секция "Consumables":
+     · Таблица привязанных расходников с остатком
+     · Кнопка списания с полем количества
+     · Форма привязки нового материала из склада
+
+4. utils.py — миграция machine_consumable (CREATE TABLE)
+
+============================================================
+
+ЗАДАЧА 2: Журнал переключений в электричестве
+
+ЗАДАЧА: Схема переключений — с какого автомата на какой, причина.
+
+ДОБАВЛЕНО:
+
+1. models.py — модель ElectricalSwitchLog:
+   - cabinet_id → electrical_cabinet.id
+   - from_breaker_id → circuit_breaker.id
+   - to_breaker_id → circuit_breaker.id
+   - reason (обязательное поле)
+   - notes, performed_by, created_at
+
+2. blueprints/electricity.py — маршруты:
+   - /switch-log — глобальный журнал (все щиты)
+   - /switch-log/add — добавить запись (с выбором щита)
+   - /cabinet/<id>/switch-log — журнал конкретного щита
+   - /cabinet/<id>/switch-log/add — добавить для щита
+   - /switch-log/<id>/delete — удалить запись
+
+3. templates/switch_log.html — шаблон журнала:
+   - Форма: From breaker → To breaker, причина, заметки
+   - Dropdown со всеми автоматами всех щитов (optgroup)
+   - Выбор щита при глобальном доступе
+   - Таблица всех записей с Cabinet, From, To, Reason, Who
+
+4. electricity.html — главная страница:
+   - Кнопка "Switch Log" в заголовке
+   - Секция "Recent Switches" (последние 5)
+   - Ссылка на полный журнал
+
+============================================================
+
+ЗАДАЧА 3: Документы для электрощитов
+
+ЗАДАЧА: Загрузка документов (электрические схемы отдельно).
+
+ДОБАВЛЕНО:
+
+1. models.py — модель ElectricalDocument:
+   - cabinet_id → electrical_cabinet.id
+   - doc_type: schematic / wiring / photo / report / other
+   - title, filename, uploaded_by, uploaded_at
+
+2. blueprints/electricity.py — маршруты:
+   - /document/upload — глобальная загрузка (выбор щита)
+   - /cabinet/<id>/document/upload — загрузка для щита
+   - /document/<id>/delete — удалить документ
+
+3. electricity.html — главная страница:
+   - Кнопка "Upload Document" в заголовке
+   - Секция "Documents & Schemes":
+     · Электрические схемы — отдельная таблица
+     · Остальные документы — отдельная таблица
+     · Каждая строка: Title, Cabinet, Date, Open/Delete
+   - Форма загрузки: Cabinet, Type, Title, File
+
+4. cabinet_detail.html — обновлён:
+   - Кнопки "Switch Log" и "Upload Document"
+   - Секция документов (схемы отдельно)
+   - Секция последних переключений
+
+============================================================
+
+ЗАДАЧА 4: Перенос на главную страницу электричества
+
+ЗАДАЧА: Все кнопки и секции (документы, журнал) — на главную
+страницу модуля электричества, не только в кабинеты.
+
+РЕШЕНИЕ:
+- electricity_list передаёт switch_logs и documents в шаблон
+- Главная страница: кнопки Switch Log, Upload Document, New Cabinet
+- Секция документов со схемами отдельно
+- Секция последних переключений
+- Форма загрузки документов с выбором щита
+- switch_log.html работает и глобально, и для конкретного щита
+
+============================================================
+
+СТАТУС: В процессе — нужен commit, push и деплой.
+
+ФАЙЛЫ:
+- models.py — MachineConsumable, ElectricalSwitchLog, ElectricalDocument
+- app.py — маршруты consumables, импорт MachineConsumable
+- blueprints/electricity.py — switch log, document routes
+- templates/machine_detail.html — секция consumables
+- templates/cabinet_detail.html — документы, switch log
+- templates/electricity.html — документы, switch log на главной
+- templates/switch_log.html — новый шаблон журнала
+- utils.py — миграции (3 таблицы)
+
+============================================================
+Сессия завершена: 09.09.2026

@@ -50,7 +50,10 @@ def electricity_list():
         p['cabinets'] = [cab_map[cid] for cid in p['cabinet_ids'] if cid in cab_map]
         p['total_breakers'] = sum(len(c.breakers) for c in p['cabinets'])
         p['on_count'] = sum(1 for c in p['cabinets'] for b in c.breakers if b.status == 'on')
-    return render_template('electricity.html', cabinets=cabinets, stats=stats, panels=panels)
+    switch_logs = ElectricalSwitchLog.query.order_by(ElectricalSwitchLog.created_at.desc()).limit(20).all()
+    documents = ElectricalDocument.query.order_by(ElectricalDocument.uploaded_at.desc()).all()
+    return render_template('electricity.html', cabinets=cabinets, stats=stats, panels=panels,
+                           switch_logs=switch_logs, documents=documents)
 
 
 @bp.route('/cabinet/new', methods=['GET', 'POST'])
@@ -247,11 +250,10 @@ def switch_log_add(cabinet_id):
 @role_required('admin')
 def switch_log_delete(log_id):
     log = ElectricalSwitchLog.query.get_or_404(log_id)
-    cabinet_id = log.cabinet_id
     db.session.delete(log)
     db.session.commit()
     flash(_('Log entry deleted'), 'success')
-    return redirect(url_for('electricity.switch_log', cabinet_id=cabinet_id))
+    return redirect(url_for('electricity.switch_log_global'))
 
 
 # ── DOCUMENTS ───────────────────────────────────────────────
@@ -285,12 +287,77 @@ def document_upload(cabinet_id):
 @role_required('admin')
 def document_delete(doc_id):
     doc = ElectricalDocument.query.get_or_404(doc_id)
-    cabinet_id = doc.cabinet_id
-    # Remove file
     filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], doc.filename)
     if os.path.exists(filepath):
         os.remove(filepath)
     db.session.delete(doc)
     db.session.commit()
     flash(_('Document deleted'), 'success')
-    return redirect(url_for('electricity.cabinet_detail', cabinet_id=cabinet_id))
+    return redirect(url_for('electricity.electricity_list'))
+
+
+# ── GLOBAL: upload + switch log from main page ─────────────
+
+@bp.route('/document/upload', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def document_upload_global():
+    cabinet_id = int(request.form.get('cabinet_id', 0))
+    if not cabinet_id:
+        flash(_('Select a cabinet'), 'error')
+        return redirect(url_for('electricity.electricity_list'))
+    c = ElectricalCabinet.query.get_or_404(cabinet_id)
+    if 'document' not in request.files or not request.files['document'].filename:
+        flash(_('No file selected'), 'error')
+        return redirect(url_for('electricity.electricity_list'))
+    file = request.files['document']
+    filename = secure_filename(f"elec_{c.id}_{file.filename}")
+    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    doc = ElectricalDocument(
+        cabinet_id=c.id,
+        doc_type=request.form.get('doc_type', 'schematic'),
+        title=request.form.get('title', file.filename),
+        filename=filename,
+        uploaded_by=current_user.id
+    )
+    db.session.add(doc)
+    db.session.commit()
+    flash(_('Document uploaded for {}').format(c.name), 'success')
+    return redirect(url_for('electricity.electricity_list'))
+
+
+@bp.route('/switch-log')
+@login_required
+def switch_log_global():
+    logs = ElectricalSwitchLog.query.order_by(ElectricalSwitchLog.created_at.desc()).limit(100).all()
+    all_breakers = CircuitBreaker.query.join(ElectricalCabinet).filter(ElectricalCabinet.is_active == True).order_by(ElectricalCabinet.name, CircuitBreaker.label).all()
+    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    return render_template('switch_log.html', cabinet=None, logs=logs, all_breakers=all_breakers, cabinets=cabinets)
+
+
+@bp.route('/switch-log/add', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def switch_log_add_global():
+    cabinet_id = int(request.form.get('cabinet_id', 0))
+    if not cabinet_id:
+        flash(_('Select a cabinet'), 'error')
+        return redirect(url_for('electricity.switch_log_global'))
+    from_id = int(request.form['from_breaker_id']) if request.form.get('from_breaker_id') else None
+    to_id = int(request.form['to_breaker_id']) if request.form.get('to_breaker_id') else None
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash(_('Reason is required'), 'error')
+        return redirect(url_for('electricity.switch_log_global'))
+    log = ElectricalSwitchLog(
+        cabinet_id=cabinet_id,
+        from_breaker_id=from_id,
+        to_breaker_id=to_id,
+        reason=reason,
+        notes=request.form.get('notes', ''),
+        performed_by=current_user.id
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(_('Switch logged'), 'success')
+    return redirect(url_for('electricity.switch_log_global'))

@@ -39,7 +39,7 @@
             <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;flex-wrap:wrap"
                  onclick="var d=document.getElementById('detail-{{ u.id }}');d.style.display=d.style.display==='none'?'block':'none';this.querySelector('.arr').textContent=d.style.display==='none'?'▶':'▼'">
                 <span class="arr" style="font-size:10px;opacity:0.5">▶</span>
-                <div style="width:32px;height:32px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#3498db{% elif u.role=='moderator' %}#9b59b6{% else %}#27ae60{% endif %};display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:700">
+                <div style="width:32px;height:32px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#3498db{% elif u.role=='director' %}#f39c12{% else %}#27ae60{% endif %};display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:700">
                     {{ (u.display_name or u.username)[0]|upper }}
                 </div>
                 <strong style="font-size:13px;min-width:120px">{{ u.display_name or u.username }}</strong>
