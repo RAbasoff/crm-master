@@ -47,7 +47,7 @@ class User(UserMixin, db.Model):
     sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True, cascade='all, delete-orphan')
     received_messages = db.relationship('Message', foreign_keys='Message.receiver_id', backref='receiver', lazy=True, cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='user', lazy=True, cascade='all, delete-orphan')
-    fault_reports = db.relationship('FaultReport', foreign_keys='FaultReport.reporter_id', backref='reporter', lazy=True)
+    fault_reports = db.relationship('FaultReport', foreign_keys='FaultReport.reporter_id', back_populates='reporter', lazy=True)
     work_reports = db.relationship('WorkReport', backref='technician', lazy=True)
 
     def set_password(self, password):
@@ -627,6 +627,8 @@ class FaultReport(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     accepted_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
+    reporter = db.relationship('User', foreign_keys=[reporter_id], back_populates='fault_reports')
+    technician = db.relationship('User', foreign_keys=[technician_id])
     photos = db.relationship('FaultPhoto', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     videos = db.relationship('FaultVideo', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     work_report = db.relationship('WorkReport', backref='fault_report', lazy=True, cascade='all, delete-orphan')
