@@ -791,20 +791,7 @@ def run_data_migrations():
 
         db.session.commit()
 
-        # 7d. Set usernames on Director/Technician persons (no passwords - set manually in UI)
-        for name, username in [('\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'tim'), ('\u0422\u0435\u0445\u043d\u0438\u043a', 'thijs')]:
-            person = Verantwoordelijke.query.filter_by(naam=name).first()
-            if person:
-                person.username = username
-                person.is_active = True
-                person.password_hash = None  # password set by admin in UI
-                print(f"Data migration: set login '{username}' for {name}")
-            # Remove any leftover system user accounts for these persons
-            if person:
-                old_user = User.query.filter_by(person_id=person.id).first()
-                if old_user:
-                    db.session.delete(old_user)
-                    print(f"Data migration: removed system user '{old_user.username}' for {name} (use Responsible login)")
+        # 7d. No auto-setup for Director/Technician — admin configures manually in UI
 
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
