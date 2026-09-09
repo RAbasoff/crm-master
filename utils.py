@@ -545,6 +545,146 @@ def run_migrations():
     conn.close()
 
 
+def run_data_migrations():
+    """Data migrations via SQLAlchemy ORM — works on both SQLite and PostgreSQL."""
+    try:
+        from models import (ResponsibleGroup, GroupPermission, User, UserSectionAccess,
+                            Verantwoordelijke)
+
+        # ── 1. Ensure 4 standard groups exist ───────────────────────────
+        groups_spec = [
+            ('Administrator', 'admin', 1),
+            ('Director',      'director', 2),
+            ('Technician',    'technician', 3),
+            ('User',          'user', 4),
+        ]
+        for name, level, sort_order in groups_spec:
+            g = ResponsibleGroup.query.filter_by(name=name).first()
+            if not g:
+                g = ResponsibleGroup(name=name, access_level=level)
+                db.session.add(g)
+                db.session.flush()
+                print(f"Data migration: created group '{name}'")
+        db.session.commit()
+
+        # ── 2. Base group permissions (view on all modules) ─────────────
+        all_sections = [
+            'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
+            'assets', 'electricity', 'gas', 'maintenance', 'maintenance_plans',
+            'repairs', 'faults', 'two', 'messages', 'notifications',
+            'schedule', 'vacations', 'time_tracking', 'orders', 'clients',
+            'workers', 'invoices', 'contractors', 'warehouse', 'consumables',
+            'purchase_requests', 'reports', 'work_report', 'archive',
+            'statistics', 'sections',
+        ]
+
+        groups = ResponsibleGroup.query.all()
+        for g in groups:
+            existing = {p.section_key for p in GroupPermission.query.filter_by(group_id=g.id).all()}
+            added = 0
+            for section in all_sections:
+                if section not in existing:
+                    db.session.add(GroupPermission(
+                        group_id=g.id, section_key=section,
+                        can_view=True, can_create=False, can_edit=False, can_delete=False
+                    ))
+                    added += 1
+            if added:
+                print(f"Data migration: added {added} base permissions to '{g.name}'")
+
+        # ── 3. Extra CRUD for Director group ────────────────────────────
+        director = ResponsibleGroup.query.filter_by(name='Director').first()
+        if director:
+            director_crud = {
+                'faults': (True, True, True, False),
+                'maintenance': (True, True, True, False),
+                'two': (True, True, True, False),
+                'orders': (True, True, True, False),
+                'messages': (True, True, True, False),
+                'notifications': (True, True, True, False),
+                'contractors': (True, True, True, False),
+                'warehouse': (True, True, True, False),
+                'reports': (True, True, True, False),
+                'purchase_requests': (True, True, True, False),
+                'invoices': (True, True, False, False),
+            }
+            for section, (v, c, e, d) in director_crud.items():
+                p = GroupPermission.query.filter_by(group_id=director.id, section_key=section).first()
+                if p:
+                    changed = False
+                    if p.can_view != v: p.can_view = v; changed = True
+                    if p.can_create != c: p.can_create = c; changed = True
+                    if p.can_edit != e: p.can_edit = e; changed = True
+                    if p.can_delete != d: p.can_delete = d; changed = True
+                    if changed:
+                        print(f"Data migration: updated Director perm '{section}'")
+                else:
+                    db.session.add(GroupPermission(
+                        group_id=director.id, section_key=section,
+                        can_view=v, can_create=c, can_edit=e, can_delete=d
+                    ))
+
+        # ── 4. Extra CRUD for Technician group ──────────────────────────
+        tech = ResponsibleGroup.query.filter_by(name='Technician').first()
+        if tech:
+            tech_crud = {
+                'faults': (True, True, True, False),
+                'machines': (True, False, True, False),
+                'messages': (True, True, True, False),
+                'notifications': (True, True, True, False),
+                'orders': (True, True, True, False),
+                'reports': (True, True, True, False),
+                'warehouse': (True, True, True, False),
+            }
+            for section, (v, c, e, d) in tech_crud.items():
+                p = GroupPermission.query.filter_by(group_id=tech.id, section_key=section).first()
+                if p:
+                    changed = False
+                    if p.can_view != v: p.can_view = v; changed = True
+                    if p.can_create != c: p.can_create = c; changed = True
+                    if p.can_edit != e: p.can_edit = e; changed = True
+                    if p.can_delete != d: p.can_delete = d; changed = True
+                    if changed:
+                        print(f"Data migration: updated Technician perm '{section}'")
+
+        # ── 5. Extra CRUD for User group ────────────────────────────────
+        user_group = ResponsibleGroup.query.filter_by(name='User').first()
+        if user_group:
+            user_crud = {
+                'messages': (True, True, True, False),
+                'notifications': (True, True, True, False),
+                'orders': (True, True, True, False),
+            }
+            for section, (v, c, e, d) in user_crud.items():
+                p = GroupPermission.query.filter_by(group_id=user_group.id, section_key=section).first()
+                if p:
+                    changed = False
+                    if p.can_view != v: p.can_view = v; changed = True
+                    if p.can_create != c: p.can_create = c; changed = True
+                    if p.can_edit != e: p.can_edit = e; changed = True
+                    if p.can_delete != d: p.can_delete = d; changed = True
+                    if changed:
+                        print(f"Data migration: updated User perm '{section}'")
+
+        # ── 6. Clean up legacy section keys ─────────────────────────────
+        legacy = GroupPermission.query.filter(
+            GroupPermission.section_key.in_(['cylinders', 'quality'])
+        ).delete(synchronize_session=False)
+        if legacy:
+            print(f"Data migration: removed {legacy} legacy permissions (cylinders/quality)")
+
+        legacy_usa = UserSectionAccess.query.filter(
+            UserSectionAccess.section_key.in_(['cylinders', 'quality'])
+        ).delete(synchronize_session=False)
+
+        db.session.commit()
+        print("Data migrations complete.")
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Data migration error: {e}")
+
+
 def add_work_report(entry_text):
     """Add entry to Work Report log from anywhere in the app"""
     from flask_login import current_user

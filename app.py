@@ -32,7 +32,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
-                   log_user_activity, log_system)
+                   log_user_activity, log_system, run_data_migrations)
 
 # ============================================================
 # APP CONFIG
@@ -120,6 +120,7 @@ def calculate_fault_cost(fault):
 with app.app_context():
     db.create_all()
     run_migrations()
+    run_data_migrations()
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
