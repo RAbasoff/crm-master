@@ -128,4 +128,47 @@
 - utils.py — миграции (3 таблицы)
 
 ============================================================
+
+ЗАДАЧА 5: Печать Monthly Schedule — только сетка
+
+ПРОБЛЕМА: При печати графика виден левый sidebar.
+
+ИСПРАВЛЕНИЕ (schedule_monthly.html):
+- .sidebar { display: none }
+- .topbar, .bottom-nav { display: none }
+- .main-wrap { margin-left: 0 }
+- print-color-adjust: exact (сохранение цветов)
+- Шрифт 11px (был 10px)
+
+============================================================
+
+ЗАДАЧА 6: CSRF ошибка "страница не найдена"
+
+ПРОБЛЕМА: После удаления модуля БАЛЛОНЫ в error log появляется
+"The CSRF token is missing" — при каждом POST-запросе с мёртвой сессией.
+
+ПРИЧИНА: После Reload на PythonAnywhere сессия умирала →
+каждый POST без валидного CSRF → redirect → "страница не найдена".
+
+ДОПОЛНИТЕЛЬНО: В отчётах (текст, Excel, Word, HTML) остались
+ссылки на stats["cylinders"] — вызывали KeyError.
+
+ИСПРАВЛЕНИЯ:
+1. app.py — добавлен CSRFError handler:
+   @app.errorhandler(CSRFError)
+   → тихий redirect на login (без error log)
+2. Удалены все ссылки на stats["cylinders"] из 4 отчётов:
+   - текстовый (lines.append)
+   - Excel (ws.cell)
+   - Word (doc.add_heading + table4)
+   - HTML (f-string)
+
+============================================================
+
+СЕКРЕТНЫЙ КЛЮЧ СЕРВЕРА (PythonAnywhere):
+Файл: ~/crm-master/instance/.secret_key
+Значение: cf808d032714098a9c7c622994fc06d7e3d1ac66c95ec9d314bf40819e48d961
+ВАЖНО: Не удалять! При удалении — все сессии пользователей сломаются.
+
+============================================================
 Сессия завершена: 09.09.2026
