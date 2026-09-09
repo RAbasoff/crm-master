@@ -687,7 +687,7 @@ def run_data_migrations():
         db.session.commit()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v2'
+        marker_key = 'user_cleanup_v3'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -791,7 +791,40 @@ def run_data_migrations():
 
         db.session.commit()
 
-        # 7d. No auto-setup for Director/Technician — admin configures manually in UI
+        # 7d. Ensure Director and Technician system user accounts exist
+        for username, display, role, person_name, access_level in [
+            ('director', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'director', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'full'),
+            ('technician', '\u0422\u0435\u0445\u043d\u0438\u043a', 'technician', '\u0422\u0435\u0445\u043d\u0438\u043a', 'floor'),
+        ]:
+            person = Verantwoordelijke.query.filter_by(naam=person_name).first()
+            if not person:
+                continue
+            user = User.query.filter_by(person_id=person.id).first()
+            if not user:
+                user = User(
+                    username=username, display_name=display,
+                    role=role, access_level=access_level,
+                    person_id=person.id, is_active_user=True
+                )
+                user.password_hash = ''
+                db.session.add(user)
+                print(f"Data migration: created system user '{username}' -> {display}")
+
+        db.session.flush()
+
+        # 7e. Add allowed_sections for Director user (extra on top of group)
+        director_user = User.query.filter_by(username='director').first()
+        if director_user:
+            extra_sections = [
+                'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
+                'assets', 'electricity', 'gas', 'maintenance_plans', 'repairs',
+                'schedule', 'vacations', 'time_tracking', 'clients', 'workers',
+                'invoices', 'consumables', 'work_report', 'archive', 'statistics', 'sections',
+            ]
+            existing_usa = {s.section_key for s in UserSectionAccess.query.filter_by(user_id=director_user.id).all()}
+            for section in extra_sections:
+                if section not in existing_usa:
+                    db.session.add(UserSectionAccess(user_id=director_user.id, section_key=section))
 
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
