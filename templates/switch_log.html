@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Switch Log') }} — {{ cabinet.name }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📋 {{ _('Switch Log') }} — {{ cabinet.name }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/electricity/cabinet/{{ cabinet.id }}" class="btn btn-sm" style="background:#eee">← {{ _('Back to Cabinet') }}</a>
+        <a href="/electricity" class="btn btn-sm" style="background:#eee">{{ _('All Cabinets') }}</a>
+    </div>
+</div>
+
+<!-- ADD NEW ENTRY -->
+{% if current_user.has_role('admin', 'director', 'technician') %}
+<div class="card">
+    <h2>✏️ {{ _('Log New Switch') }}</h2>
+    <form method="POST" action="/electricity/cabinet/{{ cabinet.id }}/switch-log/add">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+                <label>{{ _('From Breaker') }} ({{ _('switched off') }})</label>
+                <select name="from_breaker_id">
+                    <option value="">— {{ _('None / External') }} —</option>
+                    {% for cab in all_breakers|groupby('cabinet.name') %}
+                    <optgroup label="{{ cab[0] }}">
+                        {% for b in cab[1] %}
+                        <option value="{{ b.id }}" {% if b.cabinet_id == cabinet.id %}style="font-weight:bold"{% endif %}>{{ b.label }} — {{ b.amperage or '?' }}A ({{ b.cabinet.name }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('To Breaker') }} ({{ _('switched on') }})</label>
+                <select name="to_breaker_id">
+                    <option value="">— {{ _('None / Disconnected') }} —</option>
+                    {% for cab in all_breakers|groupby('cabinet.name') %}
+                    <optgroup label="{{ cab[0] }}">
+                        {% for b in cab[1] %}
+                        <option value="{{ b.id }}" {% if b.cabinet_id == cabinet.id %}style="font-weight:bold"{% endif %}>{{ b.label }} — {{ b.amperage or '?' }}A ({{ b.cabinet.name }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Reason') }} *</label>
+            <input type="text" name="reason" required placeholder="{{ _('Why was this switch made?') }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2" placeholder="{{ _('Additional details') }}" style="width:100%"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">✅ {{ _('Log Switch') }}</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- LOG ENTRIES -->
+<div class="card">
+    <h2>📜 {{ _('All Entries') }} ({{ logs|length }})</h2>
+    {% if logs %}
+    <div class="table-wrap"><table>
+        <tr>
+            <th>#</th>
+            <th>{{ _('Date') }}</th>
+            <th>{{ _('From') }}</th>
+            <th>{{ _('To') }}</th>
+            <th>{{ _('Reason') }}</th>
+            <th>{{ _('Notes') }}</th>
+            <th>{{ _('Who') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.id }}</td>
+            <td style="white-space:nowrap">{{ log.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+            <td>
+                {% if log.from_breaker %}
+                <span class="badge" style="background:#e74c3c;color:white">{{ log.from_breaker.label }}</span>
+                <small style="color:#888">{{ log.from_breaker.cabinet.name }}</small>
+                {% else %}
+                <span style="color:#888">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if log.to_breaker %}
+                <span class="badge" style="background:#27ae60;color:white">{{ log.to_breaker.label }}</span>
+                <small style="color:#888">{{ log.to_breaker.cabinet.name }}</small>
+                {% else %}
+                <span style="color:#888">—</span>
+                {% endif %}
+            </td>
+            <td>{{ log.reason }}</td>
+            <td>{{ log.notes or '—' }}</td>
+            <td>{{ log.performer.display_name or log.performer.username if log.performer else '—' }}</td>
+            <td>
+                {% if current_user.has_role('admin') %}
+                <form method="POST" action="/electricity/switch-log/{{ log.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this entry?') }}')">
+                    <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;min-height:auto;font-size:12px">🗑️</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888;text-align:center;padding:20px">{{ _('No switch log entries yet') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

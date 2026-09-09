@@ -233,6 +233,20 @@ class MachineSparePart(db.Model):
     warehouse_item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False)
     quantity_needed = db.Column(db.Float, default=0)
 
+class MachineConsumable(db.Model):
+    __tablename__ = 'machine_consumable'
+    id = db.Column(db.Integer, primary_key=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=False, index=True)
+    warehouse_item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False, index=True)
+    quantity_per_use = db.Column(db.Float, default=1)
+    notes = db.Column(db.Text)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    machine = db.relationship('Machine', backref=db.backref('consumables', lazy=True, cascade='all, delete-orphan'))
+    warehouse_item = db.relationship('VoorraadItem', backref=db.backref('linked_machines', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (db.UniqueConstraint('machine_id', 'warehouse_item_id', name='uq_machine_consumable'),)
+
 class ToolWear(db.Model):
     __tablename__ = 'tool_wear'
     id = db.Column(db.Integer, primary_key=True)
@@ -974,6 +988,37 @@ class CircuitBreaker(db.Model):
     row = db.Column(db.Integer, default=1)
     position = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ElectricalSwitchLog(db.Model):
+    """Журнал переключений в электрощитах"""
+    __tablename__ = 'electrical_switch_log'
+    id = db.Column(db.Integer, primary_key=True)
+    cabinet_id = db.Column(db.Integer, db.ForeignKey('electrical_cabinet.id'), nullable=False, index=True)
+    from_breaker_id = db.Column(db.Integer, db.ForeignKey('circuit_breaker.id'))
+    to_breaker_id = db.Column(db.Integer, db.ForeignKey('circuit_breaker.id'))
+    reason = db.Column(db.Text, nullable=False)
+    notes = db.Column(db.Text)
+    performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    cabinet = db.relationship('ElectricalCabinet', backref=db.backref('switch_logs', lazy=True, cascade='all, delete-orphan'))
+    from_breaker = db.relationship('CircuitBreaker', foreign_keys=[from_breaker_id])
+    to_breaker = db.relationship('CircuitBreaker', foreign_keys=[to_breaker_id])
+    performer = db.relationship('User', foreign_keys=[performed_by])
+
+class ElectricalDocument(db.Model):
+    """Документы электрощитов (схемы, чертежи, акты)"""
+    __tablename__ = 'electrical_document'
+    id = db.Column(db.Integer, primary_key=True)
+    cabinet_id = db.Column(db.Integer, db.ForeignKey('electrical_cabinet.id'), nullable=False, index=True)
+    doc_type = db.Column(db.String(50), nullable=False, default='schematic')
+    title = db.Column(db.String(200), nullable=False)
+    filename = db.Column(db.String(300), nullable=False)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    cabinet = db.relationship('ElectricalCabinet', backref=db.backref('documents', lazy=True, cascade='all, delete-orphan'))
+    uploader = db.relationship('User', foreign_keys=[uploaded_by])
 
 class MonthlyArchive(db.Model):
     __tablename__ = 'monthly_archive'

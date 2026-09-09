@@ -8,6 +8,8 @@
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/electricity/cabinet/{{ cabinet.id }}/edit" class="btn btn-sm" style="background:#f39c12;color:white">✏️ {{ _('Edit') }}</a>
         <a href="/electricity/cabinet/{{ cabinet.id }}/breaker/new" class="btn btn-sm btn-primary">+ {{ _('Add Breaker') }}</a>
+        <a href="/electricity/cabinet/{{ cabinet.id }}/switch-log" class="btn btn-sm" style="background:#8e44ad;color:white">📋 {{ _('Switch Log') }}</a>
+        <button class="btn btn-sm" style="background:#2980b9;color:white" onclick="document.getElementById('uploadDoc').style.display='block'">📄 {{ _('Upload Document') }}</button>
         {% endif %}
         {% if current_user.has_role('admin') %}
         <form method="POST" action="/electricity/cabinet/{{ cabinet.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this cabinet?') }}')">
@@ -31,7 +33,116 @@
         <div class="number" id="countOff">{{ cabinet.breakers|selectattr('status','equalto','off')|list|length }}</div>
         <div class="label">OFF</div>
     </div>
+    <div class="stat-card" style="border-left:4px solid #8e44ad">
+        <div class="number">{{ cabinet.switch_logs|length }}</div>
+        <div class="label">{{ _('Switches') }}</div>
+    </div>
 </div>
+
+<!-- DOCUMENTS -->
+<div class="card">
+    <h2>📄 {{ _('Documents') }}</h2>
+    {% set schematics = cabinet.documents|selectattr('doc_type','equalto','schematic')|list %}
+    {% set other_docs = cabinet.documents|rejectattr('doc_type','equalto','schematic')|list %}
+
+    {% if schematics %}
+    <h3 style="margin:8px 0 6px;font-size:14px;color:#2980b9">🔌 {{ _('Electrical Schemes') }}</h3>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Title') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for doc in schematics %}
+        <tr>
+            <td>🔌 {{ doc.title }}</td>
+            <td>{{ doc.uploaded_at.strftime('%d-%m-%Y') }}</td>
+            <td style="white-space:nowrap">
+                <a href="/static/uploads/{{ doc.filename }}" target="_blank" class="btn btn-sm btn-primary" style="padding:4px 10px;min-height:auto;font-size:12px">{{ _('Open') }}</a>
+                {% if current_user.has_role('admin') %}
+                <form method="POST" action="/electricity/document/{{ doc.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                    <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;min-height:auto;font-size:12px">🗑️</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% endif %}
+
+    {% if other_docs %}
+    <h3 style="margin:8px 0 6px;font-size:14px;color:#555">📄 {{ _('Other Documents') }}</h3>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Type') }}</th><th>{{ _('Title') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for doc in other_docs %}
+        <tr>
+            <td>{{ doc.doc_type }}</td>
+            <td>{{ doc.title }}</td>
+            <td>{{ doc.uploaded_at.strftime('%d-%m-%Y') }}</td>
+            <td style="white-space:nowrap">
+                <a href="/static/uploads/{{ doc.filename }}" target="_blank" class="btn btn-sm btn-primary" style="padding:4px 10px;min-height:auto;font-size:12px">{{ _('Open') }}</a>
+                {% if current_user.has_role('admin') %}
+                <form method="POST" action="/electricity/document/{{ doc.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
+                    <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;min-height:auto;font-size:12px">🗑️</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% endif %}
+
+    {% if not cabinet.documents %}
+    <p style="color:#888">{{ _('No documents uploaded') }}</p>
+    {% endif %}
+
+    <!-- Upload form -->
+    <div id="uploadDoc" style="display:none;margin-top:16px;padding:16px;background:#f8f9fa;border-radius:8px">
+        <form method="POST" action="/electricity/cabinet/{{ cabinet.id }}/document/upload" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Type') }}</label>
+                    <select name="doc_type">
+                        <option value="schematic">{{ _('Electrical Scheme') }}</option>
+                        <option value="wiring">{{ _('Wiring Diagram') }}</option>
+                        <option value="photo">{{ _('Photo') }}</option>
+                        <option value="report">{{ _('Report / Act') }}</option>
+                        <option value="other">{{ _('Other') }}</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;flex:1;min-width:180px">
+                    <label>{{ _('Title') }}</label>
+                    <input type="text" name="title" placeholder="{{ _('Document title') }}">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('File') }}</label>
+                    <input type="file" name="document" accept=".pdf,.png,.jpg,.jpeg,.dwg,.dxf" required>
+                </div>
+                <button type="submit" class="btn btn-sm btn-success">{{ _('Upload') }}</button>
+                <button type="button" class="btn btn-sm" style="background:#eee" onclick="document.getElementById('uploadDoc').style.display='none'">{{ _('Cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RECENT SWITCH LOG -->
+{% if cabinet.switch_logs %}
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="margin:0">📋 {{ _('Recent Switches') }}</h2>
+        <a href="/electricity/cabinet/{{ cabinet.id }}/switch-log" class="btn btn-sm" style="background:#8e44ad;color:white">{{ _('Full Log') }}</a>
+    </div>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('From') }}</th><th>{{ _('To') }}</th><th>{{ _('Reason') }}</th><th>{{ _('Who') }}</th></tr>
+        {% for log in cabinet.switch_logs[:5] %}
+        <tr>
+            <td>{{ log.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+            <td>{% if log.from_breaker %}{{ log.from_breaker.label }} ({{ log.from_breaker.cabinet.name }}){% else %}—{% endif %}</td>
+            <td>{% if log.to_breaker %}{{ log.to_breaker.label }} ({{ log.to_breaker.cabinet.name }}){% else %}—{% endif %}</td>
+            <td>{{ log.reason[:60] }}{% if log.reason|length > 60 %}...{% endif %}</td>
+            <td>{{ log.performer.display_name or log.performer.username if log.performer else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
 
 {% if cabinet.breakers %}
 <!-- INTERACTIVE CABINET MODEL -->

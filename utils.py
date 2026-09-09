@@ -15,9 +15,8 @@ SECTION_KEYS = [
     'equipment', 'consumables', 'electricity', 'tool_wear'
 ]
 
-# Role hierarchy: admin > moderator > director > technician > user
+# Role hierarchy: admin > director > technician > user
 # admin: full access, can modify program settings
-# moderator: full access, cannot modify program settings (users, sections)
 # director/technician/user: access controlled by allowed_sections and group permissions
 
 def role_required(*roles):
@@ -46,11 +45,6 @@ def get_user_group_permissions(user):
 def user_has_section_access(section_key, action='view'):
     # Admin always has full access
     if current_user.role == 'admin':
-        return True
-    # Moderator has full access except system settings
-    if current_user.role == 'moderator':
-        if section_key in ('users', 'audit_log'):
-            return False
         return True
     # Check group permissions first
     group_perms = get_user_group_permissions(current_user)
@@ -455,6 +449,34 @@ def run_migrations():
         ("equipment_part.warehouse_item_id", "ALTER TABLE equipment_part ADD COLUMN warehouse_item_id INTEGER REFERENCES warehouse_item(id)"),
         ("maintenance_plan.responsible_user_id", "ALTER TABLE maintenance_plan ADD COLUMN responsible_user_id INTEGER REFERENCES user(id)"),
         ("maintenance_plan.recurrence", "ALTER TABLE maintenance_plan ADD COLUMN recurrence VARCHAR(20)"),
+        ("machine_consumable", """CREATE TABLE IF NOT EXISTS machine_consumable (
+            id INTEGER PRIMARY KEY,
+            machine_id INTEGER NOT NULL REFERENCES machine(id),
+            warehouse_item_id INTEGER NOT NULL REFERENCES warehouse_item(id),
+            quantity_per_use FLOAT DEFAULT 1,
+            notes TEXT,
+            added_at DATETIME,
+            UNIQUE(machine_id, warehouse_item_id)
+        )"""),
+        ("electrical_switch_log", """CREATE TABLE IF NOT EXISTS electrical_switch_log (
+            id INTEGER PRIMARY KEY,
+            cabinet_id INTEGER NOT NULL REFERENCES electrical_cabinet(id),
+            from_breaker_id INTEGER REFERENCES circuit_breaker(id),
+            to_breaker_id INTEGER REFERENCES circuit_breaker(id),
+            reason TEXT NOT NULL,
+            notes TEXT,
+            performed_by INTEGER REFERENCES user(id),
+            created_at DATETIME
+        )"""),
+        ("electrical_document", """CREATE TABLE IF NOT EXISTS electrical_document (
+            id INTEGER PRIMARY KEY,
+            cabinet_id INTEGER NOT NULL REFERENCES electrical_cabinet(id),
+            doc_type VARCHAR(50) NOT NULL DEFAULT 'schematic',
+            title VARCHAR(200) NOT NULL,
+            filename VARCHAR(300) NOT NULL,
+            uploaded_by INTEGER REFERENCES user(id),
+            uploaded_at DATETIME
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

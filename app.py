@@ -16,7 +16,7 @@ from sqlalchemy import func, case
 from config import Config, LANGUAGES, SECTION_KEYS
 from models import (db, User, UserSectionAccess, FactorySection, Machine, MachinePart,
                     PartMaintenanceLog, MachineDocument, MaintenanceRecord, MaintenancePhoto,
-                    MaintenancePlan, MachineSparePart, ResponsibleGroup, Verantwoordelijke,
+                    MaintenancePlan, MachineSparePart, MachineConsumable, ResponsibleGroup, Verantwoordelijke,
                     Monteur, Contractor, ContractorEmployee, WarehouseGroup, VoorraadItem,
                     VoorraadMutatie, Invoice, InvoiceItem, FaultReport, FaultPhoto, FaultVideo, WorkReport, WorkReportPhoto,
                     PurchaseRequest, WorkSchedule, TimeEntry, Vacation, Message, Notification,
@@ -608,7 +608,80 @@ def machine_detail(machine_id):
     m = Machine.query.get_or_404(machine_id)
     faults = FaultReport.query.filter_by(machine_id=m.id).order_by(FaultReport.created_at.desc()).all()
     maintenance = MaintenanceRecord.query.filter_by(machine_id=m.id).order_by(MaintenanceRecord.date_performed.desc()).all()
-    return render_template('machine_detail.html', machine=m, faults=faults, maintenance=maintenance)
+    warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    return render_template('machine_detail.html', machine=m, faults=faults, maintenance=maintenance, warehouse_items=warehouse_items)
+
+# ── CONSUMABLES: link, write-off, unlink ────────────────────
+
+@app.route('/machines/<int:machine_id>/consumables/link', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_link_consumable(machine_id):
+    m = Machine.query.get_or_404(machine_id)
+    item_id = int(request.form['warehouse_item_id'])
+    existing = MachineConsumable.query.filter_by(machine_id=m.id, warehouse_item_id=item_id).first()
+    if existing:
+        flash(_('This item is already linked to this machine'), 'warning')
+        return redirect(url_for('machine_detail', machine_id=m.id))
+    mc = MachineConsumable(
+        machine_id=m.id,
+        warehouse_item_id=item_id,
+        quantity_per_use=float(request.form.get('quantity_per_use', 1)),
+        notes=request.form.get('notes', '')
+    )
+    db.session.add(mc)
+    db.session.commit()
+    item = VoorraadItem.query.get(item_id)
+    flash(_('Linked consumable: {}').format(item.naam if item else ''), 'success')
+    return redirect(url_for('machine_detail', machine_id=m.id))
+
+
+@app.route('/machines/<int:machine_id>/consumables/<int:cons_id>/consume', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_consume_consumable(machine_id, cons_id):
+    mc = MachineConsumable.query.get_or_404(cons_id)
+    qty = float(request.form.get('quantity', mc.quantity_per_use or 1))
+    item = mc.warehouse_item
+    if qty > item.hoeveelheid:
+        flash(_('Insufficient stock! Available: {} {}').format(item.hoeveelheid, item.eenheid), 'error')
+        return redirect(url_for('machine_detail', machine_id=machine_id))
+    item.hoeveelheid -= qty
+    mutatie = VoorraadMutatie(
+        item_id=item.id,
+        type='uitgaand',
+        hoeveelheid=qty,
+        opmerking=_('Written off for machine: {}').format(mc.machine.name),
+        user_id=current_user.id
+    )
+    db.session.add(mutatie)
+    db.session.commit()
+    flash(_('Written off {} {} {} for {}').format(qty, item.eenheid, item.naam, mc.machine.name), 'success')
+    return redirect(url_for('machine_detail', machine_id=machine_id))
+
+
+@app.route('/machines/<int:machine_id>/consumables/<int:cons_id>/unlink', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_unlink_consumable(machine_id, cons_id):
+    mc = MachineConsumable.query.get_or_404(cons_id)
+    name = mc.warehouse_item.naam if mc.warehouse_item else ''
+    db.session.delete(mc)
+    db.session.commit()
+    flash(_('Unlinked consumable: {}').format(name), 'success')
+    return redirect(url_for('machine_detail', machine_id=machine_id))
+
+
+@app.route('/api/warehouse/consumables')
+@login_required
+def api_warehouse_consumables():
+    q = request.args.get('q', '')
+    items = VoorraadItem.query
+    if q:
+        items = items.filter(VoorraadItem.naam.ilike(f'%{q}%'))
+    items = items.order_by(VoorraadItem.naam).limit(50).all()
+    return jsonify([{'id': i.id, 'naam': i.naam, 'eenheid': i.eenheid, 'hoeveelheid': i.hoeveelheid} for i in items])
+
 
 @app.route('/machines/<int:machine_id>/edit', methods=['GET', 'POST'])
 @login_required

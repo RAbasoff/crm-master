@@ -1,5 +1,5 @@
 """
-Electricity blueprint — electrical cabinets, breakers, schematic
+Electricity blueprint — electrical cabinets, breakers, schematic, switch log, documents
 """
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
-from models import db, ElectricalCabinet, CircuitBreaker
+from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument
 from utils import role_required
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
@@ -204,3 +204,93 @@ def breaker_delete(breaker_id):
 def electricity_schematic():
     cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
     return render_template('electricity_schematic.html', cabinets=cabinets)
+
+
+# ── SWITCH LOG ──────────────────────────────────────────────
+
+@bp.route('/cabinet/<int:cabinet_id>/switch-log')
+@login_required
+def switch_log(cabinet_id):
+    c = ElectricalCabinet.query.get_or_404(cabinet_id)
+    logs = ElectricalSwitchLog.query.filter_by(cabinet_id=c.id).order_by(ElectricalSwitchLog.created_at.desc()).all()
+    all_breakers = CircuitBreaker.query.join(ElectricalCabinet).filter(ElectricalCabinet.is_active == True).order_by(ElectricalCabinet.name, CircuitBreaker.label).all()
+    return render_template('switch_log.html', cabinet=c, logs=logs, all_breakers=all_breakers)
+
+
+@bp.route('/cabinet/<int:cabinet_id>/switch-log/add', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def switch_log_add(cabinet_id):
+    c = ElectricalCabinet.query.get_or_404(cabinet_id)
+    from_id = int(request.form['from_breaker_id']) if request.form.get('from_breaker_id') else None
+    to_id = int(request.form['to_breaker_id']) if request.form.get('to_breaker_id') else None
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash(_('Reason is required'), 'error')
+        return redirect(url_for('electricity.switch_log', cabinet_id=c.id))
+    log = ElectricalSwitchLog(
+        cabinet_id=c.id,
+        from_breaker_id=from_id,
+        to_breaker_id=to_id,
+        reason=reason,
+        notes=request.form.get('notes', ''),
+        performed_by=current_user.id
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(_('Switch logged'), 'success')
+    return redirect(url_for('electricity.switch_log', cabinet_id=c.id))
+
+
+@bp.route('/switch-log/<int:log_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def switch_log_delete(log_id):
+    log = ElectricalSwitchLog.query.get_or_404(log_id)
+    cabinet_id = log.cabinet_id
+    db.session.delete(log)
+    db.session.commit()
+    flash(_('Log entry deleted'), 'success')
+    return redirect(url_for('electricity.switch_log', cabinet_id=cabinet_id))
+
+
+# ── DOCUMENTS ───────────────────────────────────────────────
+
+@bp.route('/cabinet/<int:cabinet_id>/document/upload', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def document_upload(cabinet_id):
+    c = ElectricalCabinet.query.get_or_404(cabinet_id)
+    if 'document' not in request.files or not request.files['document'].filename:
+        flash(_('No file selected'), 'error')
+        return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
+    file = request.files['document']
+    filename = secure_filename(f"elec_{c.id}_{file.filename}")
+    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    doc = ElectricalDocument(
+        cabinet_id=c.id,
+        doc_type=request.form.get('doc_type', 'schematic'),
+        title=request.form.get('title', file.filename),
+        filename=filename,
+        uploaded_by=current_user.id
+    )
+    db.session.add(doc)
+    db.session.commit()
+    flash(_('Document uploaded'), 'success')
+    return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
+
+
+@bp.route('/document/<int:doc_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def document_delete(doc_id):
+    doc = ElectricalDocument.query.get_or_404(doc_id)
+    cabinet_id = doc.cabinet_id
+    # Remove file
+    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], doc.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    db.session.delete(doc)
+    db.session.commit()
+    flash(_('Document deleted'), 'success')
+    return redirect(url_for('electricity.cabinet_detail', cabinet_id=cabinet_id))

@@ -153,6 +153,63 @@
     {% endif %}
 </div>
 
+<!-- CONSUMABLES -->
+<div class="card">
+    <h2>🧴 {{ _('Consumables') }}</h2>
+    {% if machine.consumables %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Material') }}</th><th>{{ _('On Stock') }}</th><th>{{ _('Qty / Use') }}</th><th>{{ _('Notes') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for mc in machine.consumables %}
+        <tr>
+            <td><a href="/warehouse/{{ mc.warehouse_item.id }}/edit" style="color:#3498db;font-weight:bold">{{ mc.warehouse_item.naam }}</a></td>
+            <td style="{% if mc.warehouse_item.hoeveelheid <= mc.warehouse_item.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ mc.warehouse_item.hoeveelheid }} {{ mc.warehouse_item.eenheid }}</td>
+            <td>{{ mc.quantity_per_use }} {{ mc.warehouse_item.eenheid }}</td>
+            <td>{{ mc.notes or '—' }}</td>
+            <td style="white-space:nowrap">
+                <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/consume" style="display:inline-flex;gap:4px;align-items:center">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="number" name="quantity" value="{{ mc.quantity_per_use }}" min="0.01" step="0.01" style="width:70px;padding:4px;border:1px solid #ddd;border-radius:4px;font-size:12px">
+                    <button type="submit" class="btn btn-sm btn-warning" style="padding:4px 10px;min-height:auto;font-size:12px">📤 {{ _('Write Off') }}</button>
+                </form>
+                {% if current_user.has_role('admin', 'technician') %}
+                <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/unlink" style="display:inline" onsubmit="return confirm('{{ _('Unlink this consumable?') }}')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;min-height:auto;font-size:12px">✕</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('No consumables linked') }}</p>
+    {% endif %}
+
+    {% if current_user.has_role('admin', 'technician') %}
+    <div style="margin-top:12px;padding:12px;background:#f8f9fa;border-radius:8px">
+        <strong style="font-size:13px">+ {{ _('Link consumable from warehouse') }}</strong>
+        <form method="POST" action="/machines/{{ machine.id }}/consumables/link" style="display:flex;gap:8px;align-items:flex-end;margin-top:8px;flex-wrap:wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group" style="margin:0;flex:1;min-width:200px">
+                <select name="warehouse_item_id" required style="width:100%">
+                    <option value="">— {{ _('Select material') }} —</option>
+                    {% for wi in warehouse_items %}
+                    <option value="{{ wi.id }}">{{ wi.naam }} ({{ wi.hoeveelheid }} {{ wi.eenheid }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin:0;width:100px">
+                <input type="number" name="quantity_per_use" value="1" min="0.01" step="0.01" placeholder="{{ _('Qty') }}" style="width:100%">
+            </div>
+            <div class="form-group" style="margin:0;width:180px">
+                <input type="text" name="notes" placeholder="{{ _('Notes') }}" style="width:100%">
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">{{ _('Link') }}</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
 <!-- FAULTS -->
 <div class="card">
     <h2>⚠️ {{ _('Fault History') }} ({{ faults|length }})</h2>
