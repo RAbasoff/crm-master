@@ -791,12 +791,18 @@ def run_data_migrations():
 
         db.session.commit()
 
-        # 7d. Set usernames on Director/Technician persons (no system user accounts)
-        for name, username in [('\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'tim'), ('\u0422\u0435\u0445\u043d\u0438\u043a', 'thijs')]:
+        # 7d. Set usernames and passwords on Director/Technician persons
+        from werkzeug.security import generate_password_hash
+        for name, username, password in [
+            ('\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'tim', 'tim123'),
+            ('\u0422\u0435\u0445\u043d\u0438\u043a', 'thijs', 'thijs123'),
+        ]:
             person = Verantwoordelijke.query.filter_by(naam=name).first()
-            if person and not person.username:
+            if person:
                 person.username = username
-                print(f"Data migration: set username '{username}' for {name}")
+                person.password_hash = generate_password_hash(password)
+                person.is_active = True
+                print(f"Data migration: set login '{username}' for {name}")
             # Remove any leftover system user accounts for these persons
             if person:
                 old_user = User.query.filter_by(person_id=person.id).first()
