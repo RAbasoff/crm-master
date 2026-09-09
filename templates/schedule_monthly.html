@@ -128,12 +128,15 @@
     .bottom-nav { display: none !important; }
     .nav-dropdown { display: none !important; }
     .main-wrap { margin-left: 0 !important; }
-    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; page-break-inside: avoid; }
     .print-only { display: block !important; }
-    table th, table td { font-size: 10px !important; padding: 3px 2px !important; }
+    table { width: 100% !important; }
+    table th { font-size: 11px !important; padding: 4px 3px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table td { font-size: 11px !important; padding: 4px 3px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { padding: 0 !important; margin: 0 !important; }
     .container { max-width: 100% !important; padding: 8px !important; }
     th[style*="sticky"] { position: static !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 }
 </style>
 
