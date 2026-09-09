@@ -122,13 +122,18 @@
 @media print {
     #noPrint { display: none !important; }
     #bulkBar { display: none !important; }
+    .sidebar { display: none !important; }
+    .sidebar-overlay { display: none !important; }
     .topbar { display: none !important; }
+    .bottom-nav { display: none !important; }
     .nav-dropdown { display: none !important; }
+    .main-wrap { margin-left: 0 !important; }
     .card { box-shadow: none !important; border: 1px solid #ddd !important; }
     .print-only { display: block !important; }
     table th, table td { font-size: 10px !important; padding: 3px 2px !important; }
     body { padding: 0 !important; margin: 0 !important; }
     .container { max-width: 100% !important; padding: 8px !important; }
+    th[style*="sticky"] { position: static !important; }
 }
 </style>
 
