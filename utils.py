@@ -686,8 +686,16 @@ def run_data_migrations():
 
         db.session.commit()
 
+        # ── 6b. Clean stale data in client table ────────────────────────
+        try:
+            db.session.execute(text("UPDATE client SET password_plain=NULL, position=NULL, notities=NULL"))
+            db.session.commit()
+            print("Data migration: cleared password_plain and stale fields from client table")
+        except Exception:
+            db.session.rollback()
+
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v4'
+        marker_key = 'user_cleanup_v5'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
