@@ -43,14 +43,19 @@ def role_required(*roles):
     return decorator
 
 def get_user_group_permissions(user):
-    """Get permissions from user's group (via person_id link)"""
-    if not user.person_id:
-        return {}
-    person = Verantwoordelijke.query.get(user.person_id)
-    if not person or not person.group_id:
-        return {}
-    perms = GroupPermission.query.filter_by(group_id=person.group_id).all()
-    return {p.section_key: p for p in perms}
+    """Get permissions from user's group (via person_id link or role fallback)"""
+    if user.person_id:
+        person = Verantwoordelijke.query.get(user.person_id)
+        if person and person.group_id:
+            perms = GroupPermission.query.filter_by(group_id=person.group_id).all()
+            return {p.section_key: p for p in perms}
+    # Fallback: look up group by role name (e.g. role='technician' -> group 'Technician')
+    if user.role and user.role != 'admin':
+        group = ResponsibleGroup.query.filter_by(access_level=user.role).first()
+        if group:
+            perms = GroupPermission.query.filter_by(group_id=group.id).all()
+            return {p.section_key: p for p in perms}
+    return {}
 
 def user_has_section_access(section_key, action='view'):
     # Admin always has full access
@@ -707,7 +712,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v9'
+        marker_key = 'user_cleanup_v10'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -868,6 +873,14 @@ def run_data_migrations():
             for section in extra_sections:
                 if section not in existing_usa:
                     db.session.add(UserSectionAccess(user_id=director_user.id, section_key=section))
+
+        # 7f. Remove technician persons from Responsible view (they're now in Technische dienst)
+        tech_group = ResponsibleGroup.query.filter_by(access_level='technician').first()
+        if tech_group:
+            tech_persons = Verantwoordelijke.query.filter_by(group_id=tech_group.id).all()
+            for p in tech_persons:
+                p.group_id = None
+                print(f"Data migration: moved '{p.naam}' from Responsible to unassigned (Technische dienst)")
 
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
