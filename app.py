@@ -3798,6 +3798,9 @@ def responsible_list():
     q = Verantwoordelijke.query
     if group_id:
         q = q.filter_by(group_id=int(group_id))
+    else:
+        # Exclude persons without a group (technicians moved to Technische dienst)
+        q = q.filter(Verantwoordelijke.group_id.isnot(None))
     verantwoordelijken = q.order_by(Verantwoordelijke.naam).all()
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
     all_sections = FactorySection.query.order_by(FactorySection.name).all()
