@@ -657,6 +657,7 @@ def run_data_migrations():
         user_group = ResponsibleGroup.query.filter_by(name='User').first()
         if user_group:
             user_crud = {
+                'faults': (True, True, True, False),
                 'messages': (True, True, True, False),
                 'notifications': (True, True, True, False),
                 'orders': (True, True, True, False),
