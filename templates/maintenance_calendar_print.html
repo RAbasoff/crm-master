@@ -30,7 +30,7 @@
         table.calendar .day-num.today { color: #3498db; }
 
         .ev { display: block; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; color: white; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ev-completed { background: #b8deb8; color: #4a7a4a; }
+        .ev-completed { background: #bdbdbd; color: #444; }
         .ev-overdue { background: #c0392b; }
         .ev-in-progress { background: #f39c12; }
         .ev-plan { background: #9b59b6; }
@@ -46,7 +46,7 @@
         table.events-list th { background: #f0f0f0; padding: 6px 8px; text-align: left; border-bottom: 2px solid #ddd; }
         table.events-list td { padding: 5px 8px; border-bottom: 1px solid #eee; }
         table.events-list tr.overdue td { color: #c0392b; font-weight: 600; }
-        table.events-list tr.completed td { color: #4a7a4a; }
+        table.events-list tr.completed td { color: #555; }
 
         .overdue-section { background: #fff5f5; border-left: 4px solid #e74c3c; padding: 10px 14px; margin-bottom: 14px; }
         .overdue-section h2 { color: #e74c3c; font-size: 13px; margin-bottom: 6px; }
@@ -112,7 +112,7 @@
                         <td class="{% if cell_date == today %}today{% endif %}{% if dow >= 5 %} weekend{% endif %}">
                             <div class="day-num {% if dow >= 5 %}we{% elif cell_date == today %}today{% else %}wd{% endif %}">{{ ns.day }}</div>
                             {% for ev in day_events %}
-                            <span class="ev {% if ev.status == 'completed' %}ev-completed{% elif ev.overdue %}ev-overdue{% elif ev.status == 'in_progress' %}ev-in-progress{% elif ev.type == 'replacement' %}ev-replacement{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}ev-maintenance{% elif ev.type == 'plan' %}ev-plan{% else %}ev-other{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
+                            <span class="ev {% if ev.status == 'completed' or ev.done or (not ev.overdue and ev.date < today and ev.status != 'in_progress') %}ev-completed{% elif ev.overdue %}ev-overdue{% elif ev.status == 'in_progress' %}ev-in-progress{% elif ev.type == 'replacement' %}ev-replacement{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}ev-maintenance{% elif ev.type == 'plan' %}ev-plan{% else %}ev-other{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
                                 {{ ev.machine[:8] }} {{ ev.part[:12] }}
                             </span>
                             {% endfor %}
@@ -132,7 +132,7 @@
     <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div> Plan</div>
         <div class="legend-item"><div class="legend-dot" style="background:#f39c12"></div> In Progress</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#b8deb8"></div> Completed</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#bdbdbd"></div> Completed</div>
         <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div> Overdue</div>
         <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div> Replacement</div>
         <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div> Other</div>
@@ -144,7 +144,7 @@
     <table class="events-list">
         <tr><th>Date</th><th>Machine</th><th>Part</th><th>Type</th><th>Status</th></tr>
         {% for ev in events %}
-        <tr class="{% if ev.overdue %}overdue{% elif ev.status == 'completed' %}completed{% endif %}">
+        <tr class="{% if ev.overdue and not ev.done %}overdue{% elif ev.status == 'completed' or ev.done or (not ev.overdue and ev.date < today and ev.status != 'in_progress') %}completed{% endif %}">
             <td style="white-space:nowrap">{{ ev.date.strftime('%d-%m-%Y') }}</td>
             <td>{{ ev.machine }}</td>
             <td>{{ ev.part }}</td>

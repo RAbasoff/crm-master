@@ -103,7 +103,7 @@
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' or ev.done or (not ev.overdue and ev.date < today and ev.status != 'in_progress') %}#3a6b3a{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.status == 'completed' or ev.done %}#c8e6c9{% elif not ev.overdue and ev.date < today and ev.status != 'in_progress' %}#c8e6c9{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.status == 'completed' or ev.done or (not ev.overdue and ev.date < today and ev.status != 'in_progress') %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.status == 'completed' or ev.done %}#bdbdbd{% elif not ev.overdue and ev.date < today and ev.status != 'in_progress' %}#bdbdbd{% elif ev.status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}
                             </a>
                             {% endfor %}
@@ -122,7 +122,7 @@
     <div class="print-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div> {{ _('Plan') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#f39c12"></div> {{ _('In Progress') }}</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#b8deb8"></div> {{ _('Completed') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#bdbdbd"></div> {{ _('Completed') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div> {{ _('Overdue') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div> {{ _('Replacement') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div> {{ _('Other') }}</div>
