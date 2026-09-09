@@ -790,59 +790,18 @@ def run_data_migrations():
 
         db.session.commit()
 
-        # 7d. Ensure Tim and Thijs have system user accounts + usernames
-        for name, username, role in [('Tim', 'tim', 'director'), ('Thijs', 'thijs', 'technician')]:
+        # 7d. Set usernames on Director/Technician persons (no system user accounts)
+        for name, username in [('Tim', 'tim'), ('Thijs', 'thijs')]:
             person = Verantwoordelijke.query.filter_by(naam=name).first()
-            if not person:
-                continue
-            # Set username on person
-            if not person.username:
+            if person and not person.username:
                 person.username = username
-            # Ensure system user exists
-            user = User.query.filter_by(person_id=person.id).first()
-            if not user:
-                user = User.query.filter_by(username=username).first()
-            if not user:
-                from werkzeug.security import generate_password_hash
-                user = User(
-                    username=username,
-                    display_name=name,
-                    role=role,
-                    access_level='full' if name == 'Thijs' else 'floor',
-                    person_id=person.id,
-                    is_active_user=True
-                )
-                user.set_password(f'{username}123')
-                db.session.add(user)
-                print(f"Data migration: created system user '{username}' -> {name} ({role})")
-            else:
-                if user.person_id != person.id:
-                    user.person_id = person.id
-                if user.role != role:
-                    user.role = role
-
-        # 7e. Add allowed_sections for Tim (extra sections on top of Director group)
-        tim_user = User.query.filter_by(username='tim').first()
-        if tim_user:
-            director_group = ResponsibleGroup.query.filter_by(name='Director').first()
-            director_sections = set()
-            if director_group:
-                director_sections = {p.section_key for p in GroupPermission.query.filter_by(group_id=director_group.id).all()}
-            # Sections Tim needs that Director group doesn't fully cover
-            extra_sections = [
-                'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
-                'assets', 'electricity', 'gas', 'maintenance_plans', 'repairs',
-                'schedule', 'vacations', 'time_tracking', 'clients', 'workers',
-                'invoices', 'consumables', 'work_report', 'archive', 'statistics', 'sections',
-            ]
-            existing_usa = {s.section_key for s in UserSectionAccess.query.filter_by(user_id=tim_user.id).all()}
-            added = 0
-            for section in extra_sections:
-                if section not in existing_usa:
-                    db.session.add(UserSectionAccess(user_id=tim_user.id, section_key=section))
-                    added += 1
-            if added:
-                print(f"Data migration: added {added} allowed_sections for Tim")
+                print(f"Data migration: set username '{username}' for {name}")
+            # Remove any leftover system user accounts for these persons
+            if person:
+                old_user = User.query.filter_by(person_id=person.id).first()
+                if old_user:
+                    db.session.delete(old_user)
+                    print(f"Data migration: removed system user '{old_user.username}' for {name} (use Responsible login)")
 
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
