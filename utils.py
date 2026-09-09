@@ -707,7 +707,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v8'
+        marker_key = 'user_cleanup_v9'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -820,10 +820,13 @@ def run_data_migrations():
 
         db.session.commit()
 
-        # 7d. Ensure Director and Technician system user accounts exist
-        for username, display, role, person_name, access_level in [
-            ('director', 'Directeur', 'director', 'Directeur', 'full'),
-            ('technician', 'Technicus', 'technician', 'Technicus', 'floor'),
+        # 7d. Ensure Director + technician system user accounts exist
+        for username, display, role, access_level, person_name, worker_name in [
+            ('director', 'Directeur', 'director', 'full', 'Directeur', None),
+            ('technician', 'Technicus', 'technician', 'full', 'Technicus', None),
+            ('maico', 'Maico', 'technician', 'full', 'Maico', 'Maico'),
+            ('aris', 'Aris', 'technician', 'full', 'Aris', 'Aristidis'),
+            ('filip', 'Filip', 'technician', 'full', 'Filip', 'FIlip'),
         ]:
             person = Verantwoordelijke.query.filter_by(naam=person_name).first()
             if not person:
@@ -837,7 +840,18 @@ def run_data_migrations():
                 )
                 user.password_hash = ''
                 db.session.add(user)
+                db.session.flush()
                 print(f"Data migration: created system user '{username}' -> {display}")
+            # Link to worker if applicable
+            if worker_name:
+                try:
+                    from models import Monteur
+                    worker = Monteur.query.filter_by(naam=worker_name).first()
+                    if worker and not worker.user_id:
+                        worker.user_id = user.id
+                        print(f"Data migration: linked {username} -> worker '{worker_name}'")
+                except Exception:
+                    pass
 
         db.session.flush()
 
