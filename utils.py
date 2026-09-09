@@ -687,7 +687,7 @@ def run_data_migrations():
         db.session.commit()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v1'
+        marker_key = 'user_cleanup_v2'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
