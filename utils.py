@@ -695,7 +695,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v5'
+        marker_key = 'user_cleanup_v6'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -741,7 +741,16 @@ def run_data_migrations():
                 db.session.delete(p)
                 print(f"Data migration: removed person '{name}' (ID={p.id})")
 
-        # 7b. Rewrite FK from non-admin system users to admin
+        # 7b. Delete system users with old usernames (tim, thijs, user, tech)
+        for old_username in ['tim', 'thijs', 'user', 'tech']:
+            u = User.query.filter_by(username=old_username).first()
+            if u and u.role != 'admin':
+                db.session.delete(u)
+                print(f"Data migration: deleted system user '{old_username}' (ID={u.id})")
+
+        db.session.flush()
+
+        # 7c. Rewrite FK from non-admin system users to admin
         old_system_users = User.query.filter(User.id != admin_id, User.role != 'admin').all()
         for u in old_system_users:
             # Skip if this user is linked to a desired person
