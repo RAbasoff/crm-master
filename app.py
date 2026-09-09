@@ -5,7 +5,7 @@ CRM-система для мастерской с производственны
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session, g
 from flask_babel import Babel, gettext as _, get_locale
 from flask_login import login_user, logout_user, login_required, current_user
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
@@ -210,6 +210,12 @@ def internal_error(e):
         return jsonify(error='Internal server error'), 500
     flash(_('An error occurred. Please try again.'), 'error')
     return redirect(url_for('index'))
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify(error='CSRF token missing or expired'), 400
+    return redirect(url_for('login'))
 
 @app.route('/favicon.ico')
 def favicon():
@@ -3329,12 +3335,6 @@ def stats_export():
         lines.append(f'Приход за период: {stats["warehouse"]["incoming"]}')
         lines.append(f'Расход за период: {stats["warehouse"]["outgoing"]}')
         lines.append('')
-        lines.append('--- БАЛЛОНЫ ---')
-        lines.append(f'N₂ полных: {stats["cylinders"]["n2_full"]}')
-        lines.append(f'N₂ в работе: {stats["cylinders"]["n2_in_use"]}')
-        lines.append(f'CO₂ полных: {stats["cylinders"]["co2_full"]}')
-        lines.append(f'CO₂ в работе: {stats["cylinders"]["co2_in_use"]}')
-        lines.append('')
         lines.append('--- TWO (НАРЯДЫ) ---')
         lines.append(f'Всего: {stats["two"]["total"]}')
         lines.append(f'Активных: {stats["two"]["active"]}')
@@ -3450,15 +3450,6 @@ def stats_export():
             row += 1
         
         row += 1
-        ws.cell(row=row, column=1, value='БАЛЛОНЫ').font = section_font
-        row += 1
-        for label, val in [('N₂ полных', stats['cylinders']['n2_full']), ('N₂ в работе', stats['cylinders']['n2_in_use']),
-                           ('CO₂ полных', stats['cylinders']['co2_full']), ('CO₂ в работе', stats['cylinders']['co2_in_use'])]:
-            ws.cell(row=row, column=1, value=label).border = thin_border
-            ws.cell(row=row, column=2, value=val).border = thin_border
-            row += 1
-        
-        row += 1
         ws.cell(row=row, column=1, value='ОТЧЁТ ПО СТАНКАМ').font = section_font
         row += 1
         machine_headers = ['Станок', 'Тип', 'Серийный номер', 'Отдел', 'Всего заявок', 'За период', 'Открытых', 'Критичных']
@@ -3529,16 +3520,6 @@ def stats_export():
             table3.rows[i].cells[0].text = label
             table3.rows[i].cells[1].text = str(val)
         
-        doc.add_heading('Баллоны', level=2)
-        table4 = doc.add_table(rows=5, cols=2)
-        table4.style = 'Light Grid Accent 1'
-        table4.rows[0].cells[0].text = 'Показатель'
-        table4.rows[0].cells[1].text = 'Количество'
-        for i, (label, val) in enumerate([('N₂ полных', stats['cylinders']['n2_full']), ('N₂ в работе', stats['cylinders']['n2_in_use']),
-                                           ('CO₂ полных', stats['cylinders']['co2_full']), ('CO₂ в работе', stats['cylinders']['co2_in_use'])], 1):
-            table4.rows[i].cells[0].text = label
-            table4.rows[i].cells[1].text = str(val)
-        
         doc.add_heading('Отчёт по станкам', level=2)
         table5 = doc.add_table(rows=len(machine_data)+1, cols=8)
         table5.style = 'Light Grid Accent 1'
@@ -3608,14 +3589,6 @@ tr:nth-child(even) {{ background: #f9f9f9; }}
 <div class="stat"><div class="num">{stats["warehouse"]["low_stock"]}</div><div class="lbl">Низкий запас</div></div>
 <div class="stat"><div class="num">{stats["warehouse"]["incoming"]}</div><div class="lbl">Приход</div></div>
 <div class="stat"><div class="num">{stats["warehouse"]["outgoing"]}</div><div class="lbl">Расход</div></div>
-</div>
-
-<h2>Баллоны</h2>
-<div>
-<div class="stat"><div class="num">{stats["cylinders"]["n2_full"]}</div><div class="lbl">N₂ полных</div></div>
-<div class="stat"><div class="num">{stats["cylinders"]["n2_in_use"]}</div><div class="lbl">N₂ в работе</div></div>
-<div class="stat"><div class="num">{stats["cylinders"]["co2_full"]}</div><div class="lbl">CO₂ полных</div></div>
-<div class="stat"><div class="num">{stats["cylinders"]["co2_in_use"]}</div><div class="lbl">CO₂ в работе</div></div>
 </div>
 
 <h2>TWO (Наряды)</h2>
