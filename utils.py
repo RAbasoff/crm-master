@@ -687,7 +687,7 @@ def run_data_migrations():
         db.session.commit()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v3'
+        marker_key = 'user_cleanup_v4'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -703,8 +703,8 @@ def run_data_migrations():
 
         # Desired persons: name -> (group_name, access_level)
         desired_persons = {
-            '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440': ('Director', 'full'),
-            '\u0422\u0435\u0445\u043d\u0438\u043a':             ('Technician', 'floor'),
+            'Directeur':  ('Director', 'full'),
+            'Technicus':  ('Technician', 'floor'),
             'Maico':   ('Technician', 'floor'),
             'Aris':    ('Technician', 'floor'),
             'Filip':   ('Technician', 'floor'),
@@ -716,7 +716,7 @@ def run_data_migrations():
         }
 
         # Names to remove (if they exist and are NOT in desired list)
-        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Tim', 'Thijs']
+        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Tim', 'Thijs', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
 
         # 7a. Remove old persons by name
         for name in names_to_remove:
@@ -793,8 +793,8 @@ def run_data_migrations():
 
         # 7d. Ensure Director and Technician system user accounts exist
         for username, display, role, person_name, access_level in [
-            ('director', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'director', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', 'full'),
-            ('technician', '\u0422\u0435\u0445\u043d\u0438\u043a', 'technician', '\u0422\u0435\u0445\u043d\u0438\u043a', 'floor'),
+            ('director', 'Directeur', 'director', 'Directeur', 'full'),
+            ('technician', 'Technicus', 'technician', 'Technicus', 'floor'),
         ]:
             person = Verantwoordelijke.query.filter_by(naam=person_name).first()
             if not person:
