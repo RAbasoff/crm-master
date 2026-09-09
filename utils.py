@@ -673,7 +673,7 @@ def run_data_migrations():
                     if changed:
                         print(f"Data migration: updated User perm '{section}'")
 
-        # ── 6. Clean up legacy section keys ─────────────────────────────
+        # ── 6. Clean up legacy section keys and access levels ──────────
         legacy = GroupPermission.query.filter(
             GroupPermission.section_key.in_(['cylinders', 'quality'])
         ).delete(synchronize_session=False)
@@ -683,6 +683,18 @@ def run_data_migrations():
         UserSectionAccess.query.filter(
             UserSectionAccess.section_key.in_(['cylinders', 'quality'])
         ).delete(synchronize_session=False)
+
+        # Remove quality access level from groups
+        quality_groups = ResponsibleGroup.query.filter_by(access_level='quality').all()
+        for g in quality_groups:
+            db.session.delete(g)
+            print(f"Data migration: deleted group '{g.name}' with access_level=quality")
+
+        # Remove quality access level from persons
+        try:
+            db.session.execute(text("UPDATE client SET access_level='floor' WHERE access_level='quality'"))
+        except Exception:
+            pass
 
         db.session.commit()
 
@@ -695,7 +707,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v7'
+        marker_key = 'user_cleanup_v8'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
