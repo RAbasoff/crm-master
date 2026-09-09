@@ -695,7 +695,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v6'
+        marker_key = 'user_cleanup_v7'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -724,7 +724,7 @@ def run_data_migrations():
         }
 
         # Names to remove (if they exist and are NOT in desired list)
-        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Tim', 'Thijs', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
+        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
 
         # 7a. Remove old persons by name
         for name in names_to_remove:
