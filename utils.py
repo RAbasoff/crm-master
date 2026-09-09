@@ -549,16 +549,22 @@ def run_data_migrations():
     """Data migrations via SQLAlchemy ORM — works on both SQLite and PostgreSQL."""
     try:
         from models import (ResponsibleGroup, GroupPermission, User, UserSectionAccess,
-                            Verantwoordelijke)
+                            Verantwoordelijke, Machine, Equipment,
+                            fault_technicians, user_machine, FaultReport,
+                            Notification, Message, AuditLog, SystemLog,
+                            UserActivityLog, WorkReport, PurchaseRequest,
+                            TimeEntry, Vacation, WorkSchedule, WeekendShift,
+                            CylinderLog, CylinderOrder)
+        from sqlalchemy import text
 
         # ── 1. Ensure 4 standard groups exist ───────────────────────────
         groups_spec = [
-            ('Administrator', 'admin', 1),
-            ('Director',      'director', 2),
-            ('Technician',    'technician', 3),
-            ('User',          'user', 4),
+            ('Administrator', 'admin'),
+            ('Director',      'director'),
+            ('Technician',    'technician'),
+            ('User',          'user'),
         ]
-        for name, level, sort_order in groups_spec:
+        for name, level in groups_spec:
             g = ResponsibleGroup.query.filter_by(name=name).first()
             if not g:
                 g = ResponsibleGroup(name=name, access_level=level)
@@ -673,12 +679,175 @@ def run_data_migrations():
         if legacy:
             print(f"Data migration: removed {legacy} legacy permissions (cylinders/quality)")
 
-        legacy_usa = UserSectionAccess.query.filter(
+        UserSectionAccess.query.filter(
             UserSectionAccess.section_key.in_(['cylinders', 'quality'])
         ).delete(synchronize_session=False)
 
         db.session.commit()
-        print("Data migrations complete.")
+
+        # ── 7. One-time user cleanup (runs once via marker) ─────────────
+        marker_key = 'user_cleanup_v1'
+        marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
+        if marker:
+            print("Data migration: user cleanup already done, skipping.")
+            return
+
+        print("Data migration: running one-time user cleanup...")
+
+        admin_user = User.query.filter_by(role='admin').first()
+        if not admin_user:
+            print("Data migration: no admin user found, skipping cleanup")
+            return
+        admin_id = admin_user.id
+
+        # Desired persons: name -> (group_name, access_level)
+        desired_persons = {
+            'Thijs':   ('Director', 'full'),
+            'Tim':     ('Director', 'floor'),
+            'Maico':   ('Technician', 'floor'),
+            'Aris':    ('Technician', 'floor'),
+            'Filip':   ('Technician', 'floor'),
+            'Bartek':  ('User', 'floor'),
+            'Pablo':   ('User', 'floor'),
+            'Javier':  ('User', 'floor'),
+            'Hashem':  ('User', 'floor'),
+            'Paulina': ('User', 'floor'),
+        }
+
+        # Names to remove (if they exist and are NOT in desired list)
+        names_to_remove = ['Hashim', 'Dina', 'Lukas']
+
+        # 7a. Remove old persons by name
+        for name in names_to_remove:
+            persons = Verantwoordelijke.query.filter_by(naam=name).all()
+            for p in persons:
+                # Clear references
+                Machine.query.filter_by(responsible_person_id=p.id).update({'responsible_person_id': None})
+                Equipment.query.filter_by(responsible_person_id=p.id).update({'responsible_person_id': None})
+                # Clear section_responsible via raw SQL (association table)
+                try:
+                    db.session.execute(text("DELETE FROM section_responsible WHERE person_id=:pid"), {'pid': p.id})
+                except Exception:
+                    pass
+                db.session.delete(p)
+                print(f"Data migration: removed person '{name}' (ID={p.id})")
+
+        # 7b. Rewrite FK from non-admin system users to admin
+        old_system_users = User.query.filter(User.id != admin_id, User.role != 'admin').all()
+        for u in old_system_users:
+            # Skip if this user is linked to a desired person
+            if u.person_id:
+                person = Verantwoordelijke.query.get(u.person_id)
+                if person and person.naam in desired_persons:
+                    continue
+            # Rewrite FK
+            for model, fk_field in [
+                (FaultReport, 'reporter_id'), (FaultReport, 'technician_id'),
+                (Notification, 'user_id'), (Message, 'sender_id'), (Message, 'receiver_id'),
+                (AuditLog, 'user_id'), (SystemLog, 'user_id'), (UserActivityLog, 'user_id'),
+                (WorkReport, 'technician_id'), (PurchaseRequest, 'requester_id'),
+                (PurchaseRequest, 'reviewer_id'), (TimeEntry, 'user_id'),
+                (Vacation, 'user_id'), (WorkSchedule, 'user_id'),
+                (WeekendShift, 'user_id'), (WeekendShift, 'created_by'),
+            ]:
+                try:
+                    count = model.query.filter(getattr(model, fk_field) == u.id).update(
+                        {fk_field: admin_id}, synchronize_session=False
+                    )
+                except Exception:
+                    pass
+            # Delete association rows
+            try:
+                db.session.execute(text("DELETE FROM fault_technicians WHERE technician_id=:uid"), {'uid': u.id})
+                db.session.execute(text("DELETE FROM user_machine WHERE user_id=:uid"), {'uid': u.id})
+            except Exception:
+                pass
+            # Delete user
+            username = u.username
+            db.session.delete(u)
+            print(f"Data migration: removed system user '{username}' (ID={u.id}), FKs -> admin")
+
+        db.session.commit()
+
+        # 7c. Ensure desired persons exist with correct groups
+        for name, (group_name, access_level) in desired_persons.items():
+            group = ResponsibleGroup.query.filter_by(name=group_name).first()
+            person = Verantwoordelijke.query.filter_by(naam=name).first()
+            if not person:
+                person = Verantwoordelijke(
+                    naam=name, group_id=group.id if group else None,
+                    access_level=access_level, is_active=True
+                )
+                db.session.add(person)
+                db.session.flush()
+                print(f"Data migration: created person '{name}' -> {group_name}")
+            else:
+                if group and person.group_id != group.id:
+                    person.group_id = group.id
+                    print(f"Data migration: moved '{name}' -> {group_name}")
+                if person.access_level != access_level:
+                    person.access_level = access_level
+
+        db.session.commit()
+
+        # 7d. Ensure Tim and Thijs have system user accounts + usernames
+        for name, username, role in [('Tim', 'tim', 'director'), ('Thijs', 'thijs', 'technician')]:
+            person = Verantwoordelijke.query.filter_by(naam=name).first()
+            if not person:
+                continue
+            # Set username on person
+            if not person.username:
+                person.username = username
+            # Ensure system user exists
+            user = User.query.filter_by(person_id=person.id).first()
+            if not user:
+                user = User.query.filter_by(username=username).first()
+            if not user:
+                from werkzeug.security import generate_password_hash
+                user = User(
+                    username=username,
+                    display_name=name,
+                    role=role,
+                    access_level='full' if name == 'Thijs' else 'floor',
+                    person_id=person.id,
+                    is_active_user=True
+                )
+                user.set_password(f'{username}123')
+                db.session.add(user)
+                print(f"Data migration: created system user '{username}' -> {name} ({role})")
+            else:
+                if user.person_id != person.id:
+                    user.person_id = person.id
+                if user.role != role:
+                    user.role = role
+
+        # 7e. Add allowed_sections for Tim (extra sections on top of Director group)
+        tim_user = User.query.filter_by(username='tim').first()
+        if tim_user:
+            director_group = ResponsibleGroup.query.filter_by(name='Director').first()
+            director_sections = set()
+            if director_group:
+                director_sections = {p.section_key for p in GroupPermission.query.filter_by(group_id=director_group.id).all()}
+            # Sections Tim needs that Director group doesn't fully cover
+            extra_sections = [
+                'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
+                'assets', 'electricity', 'gas', 'maintenance_plans', 'repairs',
+                'schedule', 'vacations', 'time_tracking', 'clients', 'workers',
+                'invoices', 'consumables', 'work_report', 'archive', 'statistics', 'sections',
+            ]
+            existing_usa = {s.section_key for s in UserSectionAccess.query.filter_by(user_id=tim_user.id).all()}
+            added = 0
+            for section in extra_sections:
+                if section not in existing_usa:
+                    db.session.add(UserSectionAccess(user_id=tim_user.id, section_key=section))
+                    added += 1
+            if added:
+                print(f"Data migration: added {added} allowed_sections for Tim")
+
+        # Mark migration as done
+        db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
+        db.session.commit()
+        print("Data migration: user cleanup complete.")
 
     except Exception as e:
         db.session.rollback()
