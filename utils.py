@@ -3,7 +3,7 @@ from flask import flash, redirect, url_for, request
 from flask_login import current_user
 from flask_babel import gettext as _
 from datetime import datetime, timedelta
-from models import db, Notification, AuditLog, GroupPermission, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry
+from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry
 import os
 from werkzeug.utils import secure_filename
 
@@ -933,6 +933,12 @@ def run_data_migrations():
         db.session.rollback()
         print(f"Data migration error: {e}")
 
+
+def sanitize_like(query_str):
+    """Escape LIKE wildcards in user input to prevent ILIKE injection."""
+    if not query_str:
+        return ''
+    return query_str.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 def add_work_report(entry_text):
     """Add entry to Work Report log from anywhere in the app"""

@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 
 from models import (db, VoorraadItem, VoorraadMutatie, WarehouseGroup, WarehouseReservation,
                     SupplierPrice, Machine, Contractor)
-from utils import role_required, log_audit
+from utils import role_required, log_audit, sanitize_like
 
 bp = Blueprint('warehouse', __name__, url_prefix='/warehouse')
 
@@ -423,12 +423,12 @@ def warehouse_search_report():
     item_q = VoorraadItem.query
     if q_text:
         item_q = item_q.filter(or_(
-            VoorraadItem.naam.ilike(f'%{q_text}%'),
-            VoorraadItem.description.ilike(f'%{q_text}%'),
-            VoorraadItem.supplier_part_number.ilike(f'%{q_text}%')
+            VoorraadItem.naam.ilike(f'%{sanitize_like(q_text)}%'),
+            VoorraadItem.description.ilike(f'%{sanitize_like(q_text)}%'),
+            VoorraadItem.supplier_part_number.ilike(f'%{sanitize_like(q_text)}%')
         ))
-    if spn: item_q = item_q.filter(VoorraadItem.supplier_part_number.ilike(f'%{spn}%'))
-    if locatie: item_q = item_q.filter(VoorraadItem.locatie.ilike(f'%{locatie}%'))
+    if spn: item_q = item_q.filter(VoorraadItem.supplier_part_number.ilike(f'%{sanitize_like(spn)}%'))
+    if locatie: item_q = item_q.filter(VoorraadItem.locatie.ilike(f'%{sanitize_like(locatie)}%'))
     if categorie: item_q = item_q.filter_by(categorie=categorie)
     if group_id: item_q = item_q.filter_by(group_id=int(group_id))
     items = item_q.order_by(VoorraadItem.naam).all()
@@ -436,12 +436,12 @@ def warehouse_search_report():
     mov_q = VoorraadMutatie.query.join(VoorraadItem)
     if q_text:
         mov_q = mov_q.filter(or_(
-            VoorraadItem.naam.ilike(f'%{q_text}%'),
-            VoorraadItem.supplier_part_number.ilike(f'%{q_text}%'),
-            VoorraadMutatie.opmerking.ilike(f'%{q_text}%')
+            VoorraadItem.naam.ilike(f'%{sanitize_like(q_text)}%'),
+            VoorraadItem.supplier_part_number.ilike(f'%{sanitize_like(q_text)}%'),
+            VoorraadMutatie.opmerking.ilike(f'%{sanitize_like(q_text)}%')
         ))
-    if spn: mov_q = mov_q.filter(VoorraadItem.supplier_part_number.ilike(f'%{spn}%'))
-    if locatie: mov_q = mov_q.filter(VoorraadItem.locatie.ilike(f'%{locatie}%'))
+    if spn: mov_q = mov_q.filter(VoorraadItem.supplier_part_number.ilike(f'%{sanitize_like(spn)}%'))
+    if locatie: mov_q = mov_q.filter(VoorraadItem.locatie.ilike(f'%{sanitize_like(locatie)}%'))
     if categorie: mov_q = mov_q.filter(VoorraadItem.categorie == categorie)
     if group_id: mov_q = mov_q.filter(VoorraadItem.group_id == int(group_id))
     if move_type: mov_q = mov_q.filter(VoorraadMutatie.type == move_type)

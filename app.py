@@ -28,11 +28,12 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     UserActivityLog, SystemLog,
                     EquipmentMaintenance, EquipmentPart, EquipmentComponent, EquipmentPartOrder,
                     Equipment, EquipmentDocument, EquipmentServiceLog,
-                    WarehouseReservation, SupplierPrice)
+                    WarehouseReservation, SupplierPrice,
+                    GasCylinder, CylinderLog, CylinderOrder)
 from utils import (role_required, user_has_section_access, section_access_required,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
-                   log_user_activity, log_system, run_data_migrations)
+                   log_user_activity, log_system, run_data_migrations, sanitize_like)
 
 # ============================================================
 # APP CONFIG
@@ -99,15 +100,21 @@ def send_email(to_email, subject, body):
     msg['Subject'] = subject
     msg['From'] = smtp_user
     msg['To'] = to_email
+    server = None
     try:
-        server = smtplib.SMTP(smtp_host, 587)
+        server = smtplib.SMTP(smtp_host, 587, timeout=10)
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
-        server.quit()
         return True
     except Exception:
         return False
+    finally:
+        if server:
+            try:
+                server.quit()
+            except Exception:
+                pass
 
 def calculate_fault_cost(fault):
     """Calculate estimated cost for a fault"""
@@ -701,7 +708,7 @@ def api_warehouse_consumables():
     q = request.args.get('q', '')
     items = VoorraadItem.query
     if q:
-        items = items.filter(VoorraadItem.naam.ilike(f'%{q}%'))
+        items = items.filter(VoorraadItem.naam.ilike(f'%{sanitize_like(q)}%'))
     items = items.order_by(VoorraadItem.naam).limit(50).all()
     return jsonify([{'id': i.id, 'naam': i.naam, 'eenheid': i.eenheid, 'hoeveelheid': i.hoeveelheid} for i in items])
 
@@ -1959,7 +1966,7 @@ def equipment_list():
     q = EquipmentMaintenance.query
     serial = request.args.get('serial', '').strip()
     if serial:
-        q = q.filter(EquipmentMaintenance.serial.ilike(f'%{serial}%'))
+        q = q.filter(EquipmentMaintenance.serial.ilike(f'%{sanitize_like(serial)}%'))
     records = q.order_by(EquipmentMaintenance.date.desc()).all()
     orders = EquipmentPartOrder.query.order_by(EquipmentPartOrder.created_at.desc()).limit(20).all()
     machines = Machine.query.order_by(Machine.name).all()
@@ -2705,70 +2712,97 @@ def suggest_available_workers(date, exclude_ids=None):
     if exclude_ids is None:
         exclude_ids = []
     
-    # Check holidays
     holidays = get_belgian_holidays(date.year)
     if date in holidays:
         return []
     
     weekday = date.isoweekday()
-    available = []
-    
     workers = Monteur.query.filter_by(actief=True).all()
+    if not workers:
+        return []
+    
+    worker_user_ids = [w.user_id for w in workers if w.user_id and w.user_id not in exclude_ids]
+    if not worker_user_ids:
+        return []
+    
+    # Batch-fetch shifts (1 query instead of N)
+    shifts = WeekendShift.query.filter(
+        WeekendShift.user_id.in_(worker_user_ids),
+        WeekendShift.date == date
+    ).all()
+    off_user_ids = {s.user_id for s in shifts if s.shift_type in ('off', 'sick')}
+    
+    # Batch-fetch schedules (1 query instead of N)
+    schedules = WorkSchedule.query.filter(
+        WorkSchedule.user_id.in_(worker_user_ids),
+        WorkSchedule.is_active == True
+    ).all()
+    schedule_map = {s.user_id: s for s in schedules}
+    
+    available = []
     for w in workers:
-        if w.user_id in exclude_ids:
+        if not w.user_id or w.user_id in exclude_ids:
+            continue
+        if w.user_id in off_user_ids:
             continue
         
-        # Check if off/sick
-        shift = WeekendShift.query.filter_by(user_id=w.user_id, date=date).first()
-        if shift and shift.shift_type in ('off', 'sick'):
-            continue
-        
-        # Check work schedule
-        schedule = WorkSchedule.query.filter_by(user_id=w.user_id, is_active=True).first()
-        if schedule:
+        schedule = schedule_map.get(w.user_id)
+        if schedule and schedule.work_days:
             work_days = [int(d.strip()) for d in schedule.work_days.split(',')]
             if weekday not in work_days:
                 continue
         else:
-            # No schedule = assume Mon-Fri, skip weekends
             if weekday >= 6:
                 continue
         
         available.append({'id': w.user_id, 'name': w.naam, 'specialty': w.specialisatie or ''})
     
-    return available[:5]  # Return max 5 suggestions
+    return available[:5]
 
 def suggest_available_dates(worker_id, from_date, count=5):
     """Find next available dates for a worker."""
     dates = []
-    current = from_date + timedelta(days=1)
-    holidays = get_belgian_holidays(from_date.year)
+    end_date = from_date + timedelta(days=31)
     
-    for _ in range(30):  # Check next 30 days
+    # Get holidays for both years (in case we span year boundary)
+    holidays = get_belgian_holidays(from_date.year)
+    if end_date.year != from_date.year:
+        holidays.update(get_belgian_holidays(end_date.year))
+    
+    # Batch-fetch shifts for the whole range (1 query instead of 30)
+    shifts = WeekendShift.query.filter(
+        WeekendShift.user_id == worker_id,
+        WeekendShift.date > from_date,
+        WeekendShift.date <= end_date
+    ).all()
+    shift_map = {s.date: s for s in shifts}
+    
+    # Fetch schedule once (constant for this worker)
+    schedule = WorkSchedule.query.filter_by(user_id=worker_id, is_active=True).first()
+    work_days = None
+    if schedule and schedule.work_days:
+        work_days = [int(d.strip()) for d in schedule.work_days.split(',')]
+    
+    current = from_date + timedelta(days=1)
+    for _ in range(31):
         if len(dates) >= count:
             break
         
-        # Check holiday
         if current in holidays:
             current += timedelta(days=1)
             continue
         
-        # Check off/sick
-        shift = WeekendShift.query.filter_by(user_id=worker_id, date=current).first()
+        shift = shift_map.get(current)
         if shift and shift.shift_type in ('off', 'sick'):
             current += timedelta(days=1)
             continue
         
-        # Check work schedule
         weekday = current.isoweekday()
-        schedule = WorkSchedule.query.filter_by(user_id=worker_id, is_active=True).first()
-        if schedule:
-            work_days = [int(d.strip()) for d in schedule.work_days.split(',')]
+        if work_days:
             if weekday not in work_days:
                 current += timedelta(days=1)
                 continue
         else:
-            # No schedule = assume Mon-Fri, skip weekends
             if weekday >= 6:
                 current += timedelta(days=1)
                 continue
@@ -3197,6 +3231,12 @@ def stats_full():
     two_total = TechnicalWorkOrder.query.count()
     two_active = TechnicalWorkOrder.query.filter(TechnicalWorkOrder.status.in_(['draft', 'assigned', 'in_progress'])).count()
     two_completed = TechnicalWorkOrder.query.filter_by(status='completed').count()
+    
+    # Gas cylinder stats
+    cyl_n2_full = GasCylinder.query.filter_by(gas_type='nitrogen', status='full').count()
+    cyl_n2_in_use = GasCylinder.query.filter_by(gas_type='nitrogen', status='in_use').count()
+    cyl_co2_full = GasCylinder.query.filter_by(gas_type='co2', status='full').count()
+    cyl_co2_in_use = GasCylinder.query.filter_by(gas_type='co2', status='in_use').count()
     
     # Machine report with filtering
     section_filter = request.args.get('section', '')
@@ -3869,43 +3909,6 @@ def responsible_group_delete(group_id):
     flash(_('Group deleted'), 'success')
     return redirect(url_for('responsible_groups'))
 
-@app.route('/responsible/groups/<int:group_id>/permissions', methods=['GET', 'POST'])
-@login_required
-@role_required('admin')
-def group_permissions(group_id):
-    group = ResponsibleGroup.query.get_or_404(group_id)
-    
-    if request.method == 'POST':
-        # Clear existing permissions
-        GroupPermission.query.filter_by(group_id=group.id).delete()
-        
-        # Add new permissions from form
-        for key, name, icon in SECTIONS_LIST:
-            can_view = f'{key}_view' in request.form
-            can_create = f'{key}_create' in request.form
-            can_edit = f'{key}_edit' in request.form
-            can_delete = f'{key}_delete' in request.form
-            
-            if can_view or can_create or can_edit or can_delete:
-                perm = GroupPermission(
-                    group_id=group.id,
-                    section_key=key,
-                    can_view=can_view,
-                    can_create=can_create,
-                    can_edit=can_edit,
-                    can_delete=can_delete
-                )
-                db.session.add(perm)
-        
-        db.session.commit()
-        flash(_('Permissions updated'), 'success')
-        return redirect(url_for('responsible_groups'))
-    
-    # Get current permissions
-    perms = {p.section_key: p for p in group.permissions}
-    
-    return render_template('group_permissions.html', group=group, sections=SECTIONS_LIST, perms=perms)
-
 # Sections list for permissions UI
 SECTIONS_TREE = [
     {'group': 'Production', 'icon': '🏭', 'entries': [
@@ -3957,6 +3960,44 @@ SECTIONS_TREE = [
 
 # Flat list for backward compatibility (used by group_permissions)
 SECTIONS_LIST = [(key, name, icon) for section in SECTIONS_TREE for key, name, icon in section['entries']]
+
+
+@app.route('/responsible/groups/<int:group_id>/permissions', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def group_permissions(group_id):
+    group = ResponsibleGroup.query.get_or_404(group_id)
+    
+    if request.method == 'POST':
+        # Clear existing permissions
+        GroupPermission.query.filter_by(group_id=group.id).delete()
+        
+        # Add new permissions from form
+        for key, name, icon in SECTIONS_LIST:
+            can_view = f'{key}_view' in request.form
+            can_create = f'{key}_create' in request.form
+            can_edit = f'{key}_edit' in request.form
+            can_delete = f'{key}_delete' in request.form
+            
+            if can_view or can_create or can_edit or can_delete:
+                perm = GroupPermission(
+                    group_id=group.id,
+                    section_key=key,
+                    can_view=can_view,
+                    can_create=can_create,
+                    can_edit=can_edit,
+                    can_delete=can_delete
+                )
+                db.session.add(perm)
+        
+        db.session.commit()
+        flash(_('Permissions updated'), 'success')
+        return redirect(url_for('responsible_groups'))
+    
+    # Get current permissions
+    perms = {p.section_key: p for p in group.permissions}
+    
+    return render_template('group_permissions.html', group=group, sections=SECTIONS_LIST, perms=perms)
 
 @app.route('/responsible/new', methods=['GET', 'POST'])
 @login_required
@@ -4109,9 +4150,14 @@ def responsible_delete(resp_id):
     MaintenancePlan.query.filter_by(responsible_person_id=cid).update({'responsible_person_id': None})
     db.session.execute(section_responsible.delete().where(section_responsible.c.person_id == cid))
     User.query.filter_by(person_id=cid).update({'person_id': None})
-    # Orders referencing this person
+    # Orders referencing this person — reassign to first active responsible before delete
     from models import Opdracht
-    Opdracht.query.filter_by(klant_id=cid).update({'klant_id': None})
+    fallback_resp = Verantwoordelijke.query.filter(Verantwoordelijke.id != cid, Verantwoordelijke.is_active == True).first()
+    if fallback_resp:
+        Opdracht.query.filter_by(responsible_id=cid).update({'responsible_id': fallback_resp.id})
+    else:
+        # No fallback — cannot null out a NOT NULL column, so just leave as-is (orphaned)
+        pass
     db.session.flush()
     db.session.delete(c)
     db.session.commit()
@@ -5068,7 +5114,7 @@ def machine_barcode(machine_id):
             x += bar_width
     try:
         font = ImageFont.truetype("arial.ttf", 12)
-    except:
+    except (OSError, IOError):
         font = ImageFont.load_default()
     bbox = draw.textbbox((0, 0), code_str, font=font)
     tw = bbox[2] - bbox[0]
@@ -5165,8 +5211,8 @@ def warehouse_search():
         items = VoorraadItem.query.order_by(VoorraadItem.naam).limit(50).all()
     else:
         items = VoorraadItem.query.filter(
-            (VoorraadItem.naam.ilike(f'%{q}%')) | 
-            (VoorraadItem.categorie.ilike(f'%{q}%'))
+            (VoorraadItem.naam.ilike(f'%{sanitize_like(q)}%')) | 
+            (VoorraadItem.categorie.ilike(f'%{sanitize_like(q)}%'))
         ).order_by(VoorraadItem.naam).all()
     return jsonify([{
         'id': i.id, 'name': i.naam, 'category': i.categorie or '',
@@ -5285,7 +5331,7 @@ def warehouse_barcode(item_id):
     # Draw text
     try:
         font = ImageFont.truetype("arial.ttf", 12)
-    except:
+    except (OSError, IOError):
         font = ImageFont.load_default()
     bbox = draw.textbbox((0, 0), code_str, font=font)
     text_width = bbox[2] - bbox[0]
@@ -5319,7 +5365,7 @@ def warehouse_scan():
     item = VoorraadItem.query.filter(
         db.or_(
             VoorraadItem.supplier_part_number == code,
-            VoorraadItem.naam.ilike(f'%{code}%')
+            VoorraadItem.naam.ilike(f'%{sanitize_like(code)}%')
         )
     ).first()
     if item:
@@ -6234,12 +6280,12 @@ def archive_create():
     
     # Archive work reports
     reports = WorkReport.query.filter(WorkReport.created_at >= d_from, WorkReport.created_at < d_to).all()
-    reports_data = [{'id': r.id, 'fault_id': r.fault_id, 'hours': r.time_spent_hours, 'description': r.description or '', 'created_at': r.created_at.strftime('%Y-%m-%d %H:%M')} for r in reports]
+    reports_data = [{'id': r.id, 'fault_id': r.fault_id, 'hours': r.time_spent_hours, 'description': r.work_description or '', 'created_at': r.created_at.strftime('%Y-%m-%d %H:%M')} for r in reports]
     db.session.add(MonthlyArchive(archive_month=month_str, section='work_reports', data_json=json.dumps(reports_data, ensure_ascii=False), created_by=current_user.id))
     
     # Archive time entries
     entries = TimeEntry.query.filter(TimeEntry.date >= d_from.date(), TimeEntry.date < d_to.date()).all()
-    entries_data = [{'id': e.id, 'user_id': e.user_id, 'date': e.date.strftime('%Y-%m-%d'), 'hours': e.hours or 0, 'notes': e.notes or ''} for e in entries]
+    entries_data = [{'id': e.id, 'user_id': e.user_id, 'date': e.date.strftime('%Y-%m-%d'), 'hours': e.hours_worked or 0, 'notes': e.notes or ''} for e in entries]
     db.session.add(MonthlyArchive(archive_month=month_str, section='time_entries', data_json=json.dumps(entries_data, ensure_ascii=False), created_by=current_user.id))
     
     db.session.commit()
@@ -6270,9 +6316,9 @@ def api_search():
     
     # Search machines
     machines = Machine.query.filter(
-        (Machine.name.ilike(f'%{q}%')) | 
-        (Machine.serial_number.ilike(f'%{q}%')) |
-        (Machine.description.ilike(f'%{q}%'))
+        (Machine.name.ilike(f'%{sanitize_like(q)}%')) | 
+        (Machine.serial_number.ilike(f'%{sanitize_like(q)}%')) |
+        (Machine.description.ilike(f'%{sanitize_like(q)}%'))
     ).limit(5).all()
     for m in machines:
         results.append({
@@ -6286,8 +6332,8 @@ def api_search():
     
     # Search faults
     faults = FaultReport.query.filter(
-        (FaultReport.title.ilike(f'%{q}%')) | 
-        (FaultReport.description.ilike(f'%{q}%'))
+        (FaultReport.title.ilike(f'%{sanitize_like(q)}%')) | 
+        (FaultReport.description.ilike(f'%{sanitize_like(q)}%'))
     ).limit(5).all()
     for f in faults:
         results.append({
@@ -6301,10 +6347,10 @@ def api_search():
     
     # Search work orders
     orders = Opdracht.query.filter(
-        (Opdracht.nummer.ilike(f'%{q}%')) | 
-        (Opdracht.apparaat.ilike(f'%{q}%')) |
-        (Opdracht.model.ilike(f'%{q}%')) |
-        (Opdracht.serienummer.ilike(f'%{q}%'))
+        (Opdracht.nummer.ilike(f'%{sanitize_like(q)}%')) | 
+        (Opdracht.apparaat.ilike(f'%{sanitize_like(q)}%')) |
+        (Opdracht.model.ilike(f'%{sanitize_like(q)}%')) |
+        (Opdracht.serienummer.ilike(f'%{sanitize_like(q)}%'))
     ).limit(5).all()
     for o in orders:
         results.append({
@@ -6318,9 +6364,9 @@ def api_search():
     
     # Search warehouse
     items = VoorraadItem.query.filter(
-        (VoorraadItem.naam.ilike(f'%{q}%')) | 
-        (VoorraadItem.categorie.ilike(f'%{q}%')) |
-        (VoorraadItem.locatie.ilike(f'%{q}%'))
+        (VoorraadItem.naam.ilike(f'%{sanitize_like(q)}%')) | 
+        (VoorraadItem.categorie.ilike(f'%{sanitize_like(q)}%')) |
+        (VoorraadItem.locatie.ilike(f'%{sanitize_like(q)}%'))
     ).limit(5).all()
     for i in items:
         results.append({
@@ -6334,10 +6380,10 @@ def api_search():
     
     # Search clients/responsible
     clients = Verantwoordelijke.query.filter(
-        (Verantwoordelijke.naam.ilike(f'%{q}%')) | 
-        (Verantwoordelijke.company.ilike(f'%{q}%')) |
-        (Verantwoordelijke.telefoon.ilike(f'%{q}%')) |
-        (Verantwoordelijke.email.ilike(f'%{q}%'))
+        (Verantwoordelijke.naam.ilike(f'%{sanitize_like(q)}%')) | 
+        (Verantwoordelijke.company.ilike(f'%{sanitize_like(q)}%')) |
+        (Verantwoordelijke.telefoon.ilike(f'%{sanitize_like(q)}%')) |
+        (Verantwoordelijke.email.ilike(f'%{sanitize_like(q)}%'))
     ).limit(5).all()
     for c in clients:
         results.append({
@@ -6351,8 +6397,8 @@ def api_search():
     
     # Search workers
     workers = Monteur.query.filter(
-        (Monteur.naam.ilike(f'%{q}%')) | 
-        (Monteur.specialisatie.ilike(f'%{q}%'))
+        (Monteur.naam.ilike(f'%{sanitize_like(q)}%')) | 
+        (Monteur.specialisatie.ilike(f'%{sanitize_like(q)}%'))
     ).limit(3).all()
     for w in workers:
         results.append({
@@ -6366,8 +6412,8 @@ def api_search():
     
     # Search contractors
     contractors = Contractor.query.filter(
-        (Contractor.company_name.ilike(f'%{q}%')) | 
-        (Contractor.service_type.ilike(f'%{q}%'))
+        (Contractor.company_name.ilike(f'%{sanitize_like(q)}%')) | 
+        (Contractor.service_type.ilike(f'%{sanitize_like(q)}%'))
     ).limit(3).all()
     for c in contractors:
         results.append({
@@ -6381,8 +6427,8 @@ def api_search():
     
     # Search TWO
     twos = TechnicalWorkOrder.query.filter(
-        (TechnicalWorkOrder.number.ilike(f'%{q}%')) | 
-        (TechnicalWorkOrder.description.ilike(f'%{q}%'))
+        (TechnicalWorkOrder.number.ilike(f'%{sanitize_like(q)}%')) | 
+        (TechnicalWorkOrder.description.ilike(f'%{sanitize_like(q)}%'))
     ).limit(3).all()
     for t in twos:
         results.append({
@@ -6397,10 +6443,10 @@ def api_search():
     # Search users (admin only)
     if current_user.has_role('admin'):
         users = User.query.filter(
-            (User.username.ilike(f'%{q}%')) | 
-            (User.display_name.ilike(f'%{q}%')) |
-            (User.first_name.ilike(f'%{q}%')) |
-            (User.last_name.ilike(f'%{q}%'))
+            (User.username.ilike(f'%{sanitize_like(q)}%')) | 
+            (User.display_name.ilike(f'%{sanitize_like(q)}%')) |
+            (User.first_name.ilike(f'%{sanitize_like(q)}%')) |
+            (User.last_name.ilike(f'%{sanitize_like(q)}%'))
         ).limit(3).all()
         for u in users:
             results.append({
