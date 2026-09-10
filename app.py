@@ -155,7 +155,7 @@ def before_request():
     
     # Role switcher: override current_user.role from session
     if current_user.is_authenticated and session.get('switched_role'):
-        if current_user.has_role('admin'):  # only admins can switch
+        if session.get('original_role') == 'admin':  # only real admins can switch
             current_user.role = session['switched_role']
 
 @app.context_processor
@@ -177,14 +177,17 @@ def set_language(lang):
 @login_required
 def switch_role(role):
     """Quick role switcher for admin testing. Only admins can use."""
-    if not current_user.has_role('admin'):
+    if not current_user.role == 'admin' and not session.get('original_role'):
         flash(_('Access denied'), 'error')
         return redirect(url_for('index'))
     valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
     if role == 'reset':
         session.pop('switched_role', None)
+        session.pop('original_role', None)
         flash(_('Role reset to') + ' admin', 'success')
     elif role in valid_roles:
+        if 'original_role' not in session:
+            session['original_role'] = current_user.role
         session['switched_role'] = role
         flash(_('Switched to') + f' {role}', 'success')
     return redirect(request.referrer or url_for('index'))

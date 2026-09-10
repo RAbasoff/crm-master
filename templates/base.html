@@ -562,7 +562,7 @@
                 {% endfor %}
             </div>
             <div class="tb-sep"></div>
-            {% if current_user.is_authenticated and current_user.has_role('admin') %}
+            {% if current_user.is_authenticated and (session.get('original_role') == 'admin' or current_user.role == 'admin') %}
             <div class="role-switcher">
                 <button class="role-switcher-btn" onclick="toggleRoleDropdown()" title="Role Switcher">
                     <span class="rs-dot rs-{{ session.get('switched_role', current_user.role) }}"></span>
@@ -578,7 +578,7 @@
                         {% if session.get('switched_role', current_user.role) == r %}<span class="rd-check">✓</span>{% endif %}
                     </a>
                     {% endfor %}
-                    <div class="rd-reset" onclick="location.href='/switch-role/reset'">↩ Reset to admin</div>
+                    <div class="rd-reset" onclick="location.href='/switch-role/reset'">↩ Reset to {{ session.get('original_role', 'admin') }}</div>
                 </div>
             </div>
             <div class="tb-sep"></div>
@@ -616,7 +616,7 @@
     {% if session.get('switched_role') %}
     <div class="rs-banner">
         ⚠️ Viewing as <strong>{{ session.switched_role|capitalize }}</strong> — not your real role.
-        <a href="/switch-role/reset">Reset to {{ current_user.role|capitalize }}</a>
+        <a href="/switch-role/reset">Reset to {{ session.get('original_role', 'admin')|capitalize }}</a>
     </div>
     {% endif %}
     
