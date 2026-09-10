@@ -167,7 +167,7 @@
                 </div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.title }}</div>
-                    <div style="font-size:11px;color:#888;margin-top:2px">{{ f.machine.name }} · {{ f.created_at.strftime('%d-%m %H:%M') }}</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px">{% if f.machine %}🏭 {{ f.machine.name }}{% elif f.equipment %}⚙️ {{ f.equipment.name }}{% endif %} · {{ f.created_at.strftime('%d-%m %H:%M') }}</div>
                 </div>
                 <span class="badge badge-{{ f.status }}" style="flex-shrink:0">{{ f.status }}</span>
             </a>

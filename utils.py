@@ -502,6 +502,7 @@ def run_migrations():
             uploaded_at DATETIME
         )"""),
         ("machine_consumable.last_issued_at", "ALTER TABLE machine_consumable ADD COLUMN last_issued_at DATETIME"),
+        ("fault_report.equipment_id", "ALTER TABLE fault_report ADD COLUMN equipment_id INTEGER REFERENCES equipment(id)"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

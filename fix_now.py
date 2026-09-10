@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
-"""One-shot fix: delete old marker, run cleanup, verify result."""
+"""One-shot fix: add Maico/Filip to workers + clean Rusln."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('FLASK_APP', 'app')
 
 from app import app
-from models import db, User, Verantwoordelijke, UserSectionAccess
-from sqlalchemy import func
+from models import db, User, Verantwoordelijke, Monteur
 
 with app.app_context():
-    # 1. Delete old markers so migration can re-run
-    for v in ['user_cleanup_v10', 'user_cleanup_v11', 'user_cleanup_v12']:
-        m = UserSectionAccess.query.filter_by(user_id=0, section_key=v).first()
-        if m:
-            db.session.delete(m)
-            print(f"Deleted marker: {v}")
+    # 1. Add Maico and Filip to workers table (if not already there)
+    tech_workers = [
+        ('Maico', 'Mechanica'),
+        ('Filip', 'Mechanica'),
+        ('Aris', 'Mechanica'),  # Aristidis - check if already exists
+    ]
+    for naam, spec in tech_workers:
+        existing = Monteur.query.filter_by(naam=naam).first()
+        if existing:
+            print(f"Worker '{naam}' already exists (ID={existing.id})")
+        else:
+            w = Monteur(naam=naam, specialisatie=spec, actief=True)
+            db.session.add(w)
+            print(f"Created worker '{naam}'")
+
     db.session.commit()
 
-    # 2. Run the data migration
-    from utils import run_data_migrations
-    run_data_migrations()
-
-    # 3. Clean up 'Rusln' typo person
+    # 2. Clean up 'Rusln' typo person (if still exists)
     rusln = Verantwoordelijke.query.filter_by(naam='Rusln').first()
     if rusln:
         from models import Machine, Equipment
@@ -32,11 +36,10 @@ with app.app_context():
         db.session.commit()
         print("Deleted typo person 'Rusln'")
 
-    # 4. Verify
-    print("\n--- USERS ---")
-    for u in User.query.order_by(User.id).all():
-        print(f"  {u.username:15s}  role={u.role}")
-    print("\n--- PERSONS ---")
-    for p in Verantwoordelijke.query.filter_by(is_active=True).order_by(Verantwoordelijke.id).all():
-        print(f"  {p.naam:15s}  group_id={p.group_id}")
+    # 3. Verify workers
+    print("\n--- WORKERS (Monteur table) ---")
+    for w in Monteur.query.order_by(Monteur.naam).all():
+        status = "active" if w.actief else "inactive"
+        print(f"  ID={w.id:3d}  naam={w.naam:15s}  spec={w.specialisatie or '-':15s}  {status}")
+
     print("\nDone.")

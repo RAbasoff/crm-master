@@ -4,7 +4,7 @@
 <h1>{{ _('Work Report') }} — {{ _('Fault') }} #{{ fault.id }}</h1>
 <div class="card">
     <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px">
-        <p><strong>{{ _('Machine') }}:</strong> {{ fault.machine.name }}</p>
+        <p><strong>{{ _('Machine / Equipment') }}:</strong> {% if fault.machine %}🏭 {{ fault.machine.name }}{% elif fault.equipment %}⚙️ {{ fault.equipment.name }}{% else %}—{% endif %}</p>
         <p><strong>{{ _('Fault') }}:</strong> {{ fault.title }}</p>
     </div>
     <form method="POST" enctype="multipart/form-data" id="workReportForm">

@@ -12,7 +12,7 @@
                     <option value="">{{ _('Without fault report') }}</option>
                     {% for f in faults %}
                     <option value="{{ f.id }}" {% if two and two.fault_id == f.id %}selected{% endif %}>
-                        #{{ f.id }} {{ f.title }} — {{ f.machine.name }} ({{ f.priority }})
+                        #{{ f.id }} {{ f.title }} — {% if f.machine %}{{ f.machine.name }}{% elif f.equipment %}{{ f.equipment.name }}{% endif %} ({{ f.priority }})
                     </option>
                     {% endfor %}
                 </select>

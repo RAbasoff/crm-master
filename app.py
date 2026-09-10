@@ -2967,9 +2967,9 @@ def two_from_fault(fault_id):
         'title': f.title,
         'description': f.description,
         'machine_id': f.machine_id,
-        'machine_name': f.machine.name,
-        'section_id': f.machine.section_id,
-        'section_name': f.machine.section.name if f.machine.section else '',
+        'machine_name': f.target_name,
+        'section_id': f.machine.section_id if f.machine else None,
+        'section_name': f.machine.section.name if f.machine and f.machine.section else '',
         'priority': f.priority,
         'reporter': f.reporter.display_name if f.reporter else ''
     })
@@ -6019,7 +6019,7 @@ def export_faults():
     writer.writerow(['ID', 'Title', 'Machine', 'Priority', 'Status', 'Reporter', 'Technician', 'Created', 'Resolved'])
     for f in faults:
         tech = User.query.get(f.technician_id) if f.technician_id else None
-        writer.writerow([f.id, f.title, f.machine.name, f.priority, f.status,
+        writer.writerow([f.id, f.title, f.target_name, f.priority, f.status,
                          f.reporter.display_name if f.reporter else '',
                          tech.display_name if tech else '',
                          f.created_at.strftime('%Y-%m-%d'),
@@ -6294,7 +6294,7 @@ def api_search():
             'type': 'fault',
             'icon': '⚠️',
             'title': f.title,
-            'subtitle': f'{f.machine.name} - {f.priority}',
+            'subtitle': f'{f.target_name} - {f.priority}',
             'url': f'/faults/{f.id}',
             'status': f.status
         })

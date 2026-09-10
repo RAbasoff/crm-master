@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
-                    WorkReport, WorkReportPhoto, User, Machine, Contractor,
+                    WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie)
 from utils import role_required, log_audit, create_notification, add_work_report
 
@@ -35,11 +35,14 @@ def faults_list():
 @login_required
 def fault_new():
     if request.method == 'POST':
+        machine_id = request.form.get('machine_id')
+        equipment_id = request.form.get('equipment_id')
         f = FaultReport(
             title=request.form['title'],
             description=request.form['description'],
             priority=request.form.get('priority', 'normal'),
-            machine_id=int(request.form['machine_id']),
+            machine_id=int(machine_id) if machine_id else None,
+            equipment_id=int(equipment_id) if equipment_id else None,
             reporter_id=current_user.id
         )
         db.session.add(f)
@@ -56,6 +59,8 @@ def fault_new():
             f.accepted_at = datetime.utcnow()
 
         db.session.commit()
+
+        target = f.target_name
 
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
@@ -78,7 +83,7 @@ def fault_new():
             create_notification(
                 tech.id,
                 _('Fault assigned to you'),
-                f"{_('Machine')}: {f.machine.name} - {f.title} ({_('Priority')}: {f.priority})",
+                f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority})",
                 'fault',
                 url_for('faults.fault_detail', fault_id=f.id)
             )
@@ -87,13 +92,13 @@ def fault_new():
                 create_notification(
                     tech.id,
                     _('New fault report'),
-                    f"{_('Machine')}: {f.machine.name} - {f.title}",
+                    f"{_('Machine')}: {target} - {f.title}",
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
 
-        log_audit('create', 'fault', f.id, f'{f.title} — {f.machine.name} (приоритет: {f.priority})')
-        add_work_report(f'⚠️ Новая поломка: {f.title} — {f.machine.name} (приоритет: {f.priority})')
+        log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority})')
+        add_work_report(f'⚠️ Новая поломка: {f.title} — {target} (приоритет: {f.priority})')
 
         if f.priority == 'critical':
             from app import send_email
@@ -104,7 +109,7 @@ def fault_new():
                         admin.email,
                         f'🔴 КРИТИЧЕСКАЯ ЗАЯВКА: {f.title}',
                         f'<h2>Критическая заявка #{f.id}</h2>'
-                        f'<p><strong>Станок:</strong> {f.machine.name}</p>'
+                        f'<p><strong>Станок/Оборудование:</strong> {target}</p>'
                         f'<p><strong>Описание:</strong> {f.description[:200]}</p>'
                         f'<p><a href="https://rabasoff.pythonanywhere.com/faults/{f.id}">Открыть заявку</a></p>'
                     )
@@ -114,7 +119,8 @@ def fault_new():
 
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('fault_form.html', fault=None, machines=machines, technicians=technicians)
+    equipment_list = Equipment.query.order_by(Equipment.name).all()
+    return render_template('fault_form.html', fault=None, machines=machines, equipment_list=equipment_list, technicians=technicians)
 
 
 @bp.route('/<int:fault_id>')
@@ -135,7 +141,7 @@ def fault_accept(fault_id):
     f.technician_id = current_user.id
     f.accepted_at = datetime.utcnow()
     db.session.commit()
-    log_audit('accept', 'fault', f.id, f'{f.title} — {f.machine.name}')
+    log_audit('accept', 'fault', f.id, f'{f.title} — {f.target_name}')
     create_notification(
         f.reporter_id,
         _('Fault accepted'),
@@ -179,7 +185,7 @@ def fault_assign(fault_id):
         create_notification(
             tech.id,
             _('Fault assigned to you'),
-            f"{_('Admin assigned fault to you')}: {f.title} ({_('Machine')}: {f.machine.name})",
+            f"{_('Admin assigned fault to you')}: {f.title} ({_('Machine')}: {f.target_name})",
             'fault',
             url_for('faults.fault_detail', fault_id=f.id)
         )
@@ -203,7 +209,7 @@ def fault_resolve(fault_id):
     f.status = 'resolved'
     f.resolved_at = datetime.utcnow()
     db.session.commit()
-    log_audit('resolve', 'fault', f.id, f'{f.title} — {f.machine.name}')
+    log_audit('resolve', 'fault', f.id, f'{f.title} — {f.target_name}')
     create_notification(
         f.reporter_id,
         _('Fault resolved'),

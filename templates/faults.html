@@ -30,7 +30,7 @@
         <tr>
             <td><a href="/faults/{{ f.id }}">{{ f.id }}</a></td>
             <td><strong>{{ f.title }}</strong></td>
-            <td>{{ f.machine.name }}</td>
+            <td>{% if f.machine %}🏭 {{ f.machine.name }}{% elif f.equipment %}⚙️ {{ f.equipment.name }}{% else %}—{% endif %}</td>
             <td>{% if f.reporter %}{{ f.reporter.display_name or f.reporter.username }}{% else %}—{% endif %}</td>
             <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
             <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
@@ -43,7 +43,7 @@
         <tr style="background:#f0f5f1">
             <td><a href="/faults/{{ f.id }}" style="color:#8fad9a">{{ f.id }}</a></td>
             <td><span style="color:#7a9a82">{{ f.title }}</span></td>
-            <td style="color:#8fad9a">{{ f.machine.name }}</td>
+            <td style="color:#8fad9a">{% if f.machine %}🏭 {{ f.machine.name }}{% elif f.equipment %}⚙️ {{ f.equipment.name }}{% else %}—{% endif %}</td>
             <td style="color:#8fad9a">{% if f.reporter %}{{ f.reporter.display_name or f.reporter.username }}{% else %}—{% endif %}</td>
             <td><span class="badge" style="background:#d5e8d4;color:#8fad9a">{{ f.priority }}</span></td>
             <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ f.status }}</span></td>

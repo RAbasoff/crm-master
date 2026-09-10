@@ -7,13 +7,22 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
-                <label>{{ _('Machine') }} *</label>
+                <label>{{ _('Machine / Equipment') }} *</label>
                 <div style="display:flex;gap:8px;align-items:center">
-                    <select name="machine_id" id="machineSelect" required style="flex:1">
-                        <option value="">{{ _('Select Machine') }}</option>
-                        {% for m in machines %}
-                        <option value="{{ m.id }}" data-serial="{{ m.serial_number or '' }}" data-name="{{ m.name }}" {% if request.args.get('machine')|int == m.id %}selected{% endif %}>{{ m.name }} ({{ m.machine_type or '?' }})</option>
-                        {% endfor %}
+                    <input type="hidden" name="machine_id" id="machineIdInput">
+                    <input type="hidden" name="equipment_id" id="equipmentIdInput">
+                    <select id="targetSelect" required style="flex:1" onchange="onTargetChange(this)">
+                        <option value="">{{ _('Select...') }}</option>
+                        <optgroup label="🏭 {{ _('Machines') }}">
+                            {% for m in machines %}
+                            <option value="m_{{ m.id }}" data-type="machine" data-serial="{{ m.serial_number or '' }}" data-name="{{ m.name }}" {% if request.args.get('machine')|int == m.id %}selected{% endif %}>{{ m.name }} ({{ m.machine_type or '?' }})</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="⚙️ {{ _('Equipment') }}">
+                            {% for e in equipment_list %}
+                            <option value="e_{{ e.id }}" data-type="equipment" data-serial="{{ e.serial_number or '' }}" data-name="{{ e.name }}">{{ e.name }} ({{ e.equipment_type or '?' }})</option>
+                            {% endfor %}
+                        </optgroup>
                     </select>
                     <button type="button" class="btn btn-sm" style="background:#3498db;color:white;white-space:nowrap" onclick="toggleScanner()">📷 {{ _('Scan') }}</button>
                 </div>
@@ -153,31 +162,35 @@ function onScanSuccess(text) {
     result.style.background = '#f0fff0';
     result.textContent = '{{ _("Scanned") }}: ' + text;
 
-    // Try to match by QR data (JSON with machine info)
+    const sel = document.getElementById('targetSelect');
     let matched = false;
+
+    // 1. QR code: JSON with type+id
     try {
         const data = JSON.parse(text);
         if (data.type === 'machine' && data.id) {
-            selectMachine(data.id);
+            selectTarget('m_' + data.id);
+            matched = true;
+        } else if (data.type === 'equipment' && data.id) {
+            selectTarget('e_' + data.id);
             matched = true;
         }
     } catch(e) {}
 
-    // Try to match by barcode format (M00001)
+    // 2. Barcode format: M00001 (machine), E00001 (equipment)
     if (!matched) {
-        const barcodeMatch = text.match(/^M(\d+)$/);
-        if (barcodeMatch) {
-            selectMachine(parseInt(barcodeMatch[1]));
-            matched = true;
-        }
+        const mMatch = text.match(/^M(\d+)$/);
+        const eMatch = text.match(/^E(\d+)$/);
+        if (mMatch) { selectTarget('m_' + parseInt(mMatch[1])); matched = true; }
+        else if (eMatch) { selectTarget('e_' + parseInt(eMatch[1])); matched = true; }
     }
 
-    // Try to match by serial number or name
+    // 3. Fallback: match by serial number
     if (!matched) {
-        const sel = document.getElementById('machineSelect');
         for (let opt of sel.options) {
             if (opt.dataset.serial && opt.dataset.serial.toLowerCase() === text.toLowerCase()) {
                 sel.value = opt.value;
+                onTargetChange(sel);
                 matched = true;
                 result.textContent += ' → ' + opt.dataset.name;
                 break;
@@ -187,22 +200,38 @@ function onScanSuccess(text) {
 
     if (!matched) {
         result.style.background = '#fff5f0';
-        result.textContent += ' ({{ _("Machine not found") }})';
+        result.textContent += ' ({{ _("Not found") }})';
     }
 
-    // Stop scanner after successful scan
     if (scannerInstance) { scannerInstance.stop(); scannerInstance = null; }
     setTimeout(() => { scannerActive = false; document.getElementById('scannerBlock').style.display = 'none'; }, 1500);
 }
 
-function selectMachine(id) {
-    const sel = document.getElementById('machineSelect');
-    sel.value = id;
+function selectTarget(val) {
+    const sel = document.getElementById('targetSelect');
+    sel.value = val;
+    onTargetChange(sel);
     const opt = sel.options[sel.selectedIndex];
     if (opt) {
         document.getElementById('scanResult').textContent += ' → ' + opt.dataset.name;
     }
 }
+
+function onTargetChange(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('machineIdInput').value = '';
+    document.getElementById('equipmentIdInput').value = '';
+    if (opt && opt.value) {
+        const [type, id] = opt.value.split('_');
+        if (type === 'm') document.getElementById('machineIdInput').value = id;
+        else if (type === 'e') document.getElementById('equipmentIdInput').value = id;
+    }
+}
+
+// Init on page load
+document.addEventListener('DOMContentLoaded', function() {
+    onTargetChange(document.getElementById('targetSelect'));
+});
 </script>
 <style>#faultScanner{border:2px solid #3498db;border-radius:12px;overflow:hidden}#faultScanner video{border-radius:10px}</style>
 {% endblock %}

@@ -655,7 +655,8 @@ class FaultReport(db.Model):
     description = db.Column(db.Text, nullable=False)
     priority = db.Column(db.String(20), default='normal', index=True)
     status = db.Column(db.String(20), default='open', index=True)
-    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=False, index=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=True, index=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=True, index=True)
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     technician_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # primary technician (legacy)
     contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))
@@ -669,7 +670,16 @@ class FaultReport(db.Model):
     work_report = db.relationship('WorkReport', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     assigned_technicians = db.relationship('User', secondary=fault_technicians, backref='assigned_faults')
     contractor = db.relationship('Contractor', backref='fault_reports')
+    equipment = db.relationship('Equipment', backref='fault_reports')
     status_history = db.relationship('FaultStatusHistory', backref='fault', lazy=True, order_by='FaultStatusHistory.changed_at', cascade='all, delete-orphan')
+
+    @property
+    def target_name(self):
+        if self.machine:
+            return self.machine.name
+        if self.equipment:
+            return self.equipment.name
+        return '?'
 
 class FaultStatusHistory(db.Model):
     __tablename__ = 'fault_status_history'
