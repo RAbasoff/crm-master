@@ -152,6 +152,11 @@ def before_request():
         session['lang'] = 'ru'
     g.lang = session.get('lang', 'ru')
     g.LANGUAGES = LANGUAGES
+    
+    # Role switcher: override current_user.role from session
+    if current_user.is_authenticated and session.get('switched_role'):
+        if current_user.has_role('admin'):  # only admins can switch
+            current_user.role = session['switched_role']
 
 @app.context_processor
 def inject_section_access():
@@ -166,6 +171,22 @@ def inject_section_access():
 def set_language(lang):
     if lang in LANGUAGES:
         session['lang'] = lang
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/switch-role/<role>')
+@login_required
+def switch_role(role):
+    """Quick role switcher for admin testing. Only admins can use."""
+    if not current_user.has_role('admin'):
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('index'))
+    valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
+    if role == 'reset':
+        session.pop('switched_role', None)
+        flash(_('Role reset to') + ' admin', 'success')
+    elif role in valid_roles:
+        session['switched_role'] = role
+        flash(_('Switched to') + f' {role}', 'success')
     return redirect(request.referrer or url_for('index'))
 
 # ============================================================
