@@ -560,7 +560,7 @@ def run_data_migrations():
                             UserActivityLog, WorkReport, PurchaseRequest,
                             TimeEntry, Vacation, WorkSchedule, WeekendShift,
                             CylinderLog, CylinderOrder)
-        from sqlalchemy import text
+        from sqlalchemy import text, func
 
         # ── 1. Ensure 4 standard groups exist ───────────────────────────
         groups_spec = [
@@ -712,7 +712,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v10'
+        marker_key = 'user_cleanup_v11'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -743,14 +743,43 @@ def run_data_migrations():
         # Names to remove (if they exist and are NOT in desired list)
         names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
 
-        # 7a. Remove old persons by name
+        # 7a. Delete old system users FIRST (before removing persons, to clear User.person_id FK)
+        for old_username in ['tim', 'thijs', 'user', 'tech', 'Tim', 'Thijs']:
+            u = User.query.filter(func.lower(User.username) == old_username.lower()).first()
+            if u and u.role != 'admin':
+                # Rewrite FKs from this user to admin before deletion
+                for model, fk_field in [
+                    (FaultReport, 'reporter_id'), (FaultReport, 'technician_id'),
+                    (Notification, 'user_id'), (Message, 'sender_id'), (Message, 'receiver_id'),
+                    (AuditLog, 'user_id'), (SystemLog, 'user_id'), (UserActivityLog, 'user_id'),
+                    (WorkReport, 'technician_id'), (PurchaseRequest, 'requester_id'),
+                    (PurchaseRequest, 'reviewer_id'), (TimeEntry, 'user_id'),
+                    (Vacation, 'user_id'), (WorkSchedule, 'user_id'),
+                    (WeekendShift, 'user_id'), (WeekendShift, 'created_by'),
+                ]:
+                    try:
+                        model.query.filter(getattr(model, fk_field) == u.id).update(
+                            {fk_field: admin_id}, synchronize_session=False
+                        )
+                    except Exception:
+                        pass
+                try:
+                    db.session.execute(text("DELETE FROM fault_technicians WHERE technician_id=:uid"), {'uid': u.id})
+                    db.session.execute(text("DELETE FROM user_machine WHERE user_id=:uid"), {'uid': u.id})
+                except Exception:
+                    pass
+                db.session.delete(u)
+                print(f"Data migration: deleted system user '{u.username}' (ID={u.id}), FKs -> admin")
+        db.session.flush()
+
+        # 7b. Remove old persons by name (User.person_id already cleared in 7a)
         for name in names_to_remove:
             persons = Verantwoordelijke.query.filter_by(naam=name).all()
             for p in persons:
-                # Clear references
+                # Clear remaining FK references
                 Machine.query.filter_by(responsible_person_id=p.id).update({'responsible_person_id': None})
                 Equipment.query.filter_by(responsible_person_id=p.id).update({'responsible_person_id': None})
-                # Clear section_responsible via raw SQL (association table)
+                User.query.filter_by(person_id=p.id).update({'person_id': None})
                 try:
                     db.session.execute(text("DELETE FROM section_responsible WHERE person_id=:pid"), {'pid': p.id})
                 except Exception:
@@ -758,16 +787,9 @@ def run_data_migrations():
                 db.session.delete(p)
                 print(f"Data migration: removed person '{name}' (ID={p.id})")
 
-        # 7b. Delete system users with old usernames (tim, thijs, user, tech)
-        for old_username in ['tim', 'thijs', 'user', 'tech']:
-            u = User.query.filter_by(username=old_username).first()
-            if u and u.role != 'admin':
-                db.session.delete(u)
-                print(f"Data migration: deleted system user '{old_username}' (ID={u.id})")
-
         db.session.flush()
 
-        # 7c. Rewrite FK from non-admin system users to admin
+        # 7c. Rewrite FK from remaining non-admin system users to admin
         old_system_users = User.query.filter(User.id != admin_id, User.role != 'admin').all()
         for u in old_system_users:
             # Skip if this user is linked to a desired person
@@ -786,18 +808,16 @@ def run_data_migrations():
                 (WeekendShift, 'user_id'), (WeekendShift, 'created_by'),
             ]:
                 try:
-                    count = model.query.filter(getattr(model, fk_field) == u.id).update(
+                    model.query.filter(getattr(model, fk_field) == u.id).update(
                         {fk_field: admin_id}, synchronize_session=False
                     )
                 except Exception:
                     pass
-            # Delete association rows
             try:
                 db.session.execute(text("DELETE FROM fault_technicians WHERE technician_id=:uid"), {'uid': u.id})
                 db.session.execute(text("DELETE FROM user_machine WHERE user_id=:uid"), {'uid': u.id})
             except Exception:
                 pass
-            # Delete user
             username = u.username
             db.session.delete(u)
             print(f"Data migration: removed system user '{username}' (ID={u.id}), FKs -> admin")
