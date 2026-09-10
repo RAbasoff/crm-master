@@ -5,33 +5,40 @@
 - Техники висят в списке «Ответственные»
 - Lukash не удалён из persons
 - Tim до сих пор в пользователях (нужно удалить)
+- Maico/Aris/Filip были системными пользователями, а должны быть только персонами
 
-## Диагностика
-- Миграция `run_data_migrations()` в `utils.py` имела маркер `user_cleanup_v10`
-- Маркер уже стоял на продакшене → миграция пропускалась, даже при обновлении кода
-- Порядок операций был неправильный: удаление persons ДО очистки User.person_id → FK-ошибка на PostgreSQL
-- Tim удалялся только lowercase — если User запись с заглавной 'Tim', не удалялась
+## Архитектура (правильная)
+### Системные пользователи (user table) — только 4:
+1. admin (Руслан) — Администратор
+2. director — Директор
+3. technician — Technicien
+4. user — User (generic)
+
+### Персоны (client table) — Technische dienst:
+- Maico, Aris, Filip и др. — только в client, без system accounts
 
 ## Изменения
 
-### Fix 1: Bump migration marker (utils.py:715)
-- Маркер: `user_cleanup_v10` → `user_cleanup_v11`
-- Позволяет миграции запуститься заново на продакшене
+### Fix 1: Bump marker v10→v11→v12 (utils.py:715)
+Каждое изменение миграции — новый маркер, чтобы перезапустить на продакшене.
 
-### Fix 2: Порядок удаления — сначала User, потом persons (utils.py:746-788)
-- Старый порядок: persons → users (FK-ссылка User.person_id ломалась)
-- Новый порядок: users → persons (сначала удаляем User, потом person)
-- Добавлено: очистка FK перед удалением User (reporter_id, technician_id и т.д.)
+### Fix 2: Порядок удаления — сначала User, потом persons
+FK-ссылки переписываются на admin перед удалением.
 
-### Fix 3: Case-insensitive удаление User (utils.py:747-748)
-- `func.lower(User.username)` — ищет 'tim', 'Tim', 'TIM' и т.д.
-- Расширен список: ['tim', 'thijs', 'user', 'tech', 'Tim', 'Thijs']
+### Fix 3: Case-insensitive удаление (func.lower)
 
-### Fix 4: Очистка User.person_id перед удалением person (utils.py:782)
-- Добавлено: `User.query.filter_by(person_id=p.id).update({'person_id': None})`
-- Защита от FK-ошибки даже если User запись не была удалена на шаге 7a
+### Fix 4: Очистка User.person_id перед удалением person
 
-### Fix 5: Импорт func (utils.py:563)
-- `from sqlalchemy import text, func` — нужен для case-insensitive поиска
+### Fix 5: Удаление tech system users (maico, aris, filip)
+- Из таблицы user удаляются maico, aris, filip
+- FK-ссылки переписываются на admin
+- Worker-привязки очищаются
+- Персоны в client остаются (в Technische dienst)
 
-## Статус: код исправлен, готов к push
+### Fix 6: Создаются только director + technician system users
+- Убрано создание maico/aris/filip как system users
+
+### Fix 7: Добавлен Peter в names_to_remove
+- Удалён с продакшена по просьбе пользователя
+
+## Статус: v12 — готов к push

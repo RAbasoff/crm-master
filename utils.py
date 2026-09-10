@@ -712,7 +712,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v11'
+        marker_key = 'user_cleanup_v12'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -741,7 +741,7 @@ def run_data_migrations():
         }
 
         # Names to remove (if they exist and are NOT in desired list)
-        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
+        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', 'Peter', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
 
         # 7a. Delete old system users FIRST (before removing persons, to clear User.person_id FK)
         for old_username in ['tim', 'thijs', 'user', 'tech', 'Tim', 'Thijs']:
@@ -845,13 +845,44 @@ def run_data_migrations():
 
         db.session.commit()
 
-        # 7d. Ensure Director + technician system user accounts exist
-        for username, display, role, access_level, person_name, worker_name in [
-            ('director', 'Directeur', 'director', 'full', 'Directeur', None),
-            ('technician', 'Technicus', 'technician', 'full', 'Technicus', None),
-            ('maico', 'Maico', 'technician', 'full', 'Maico', 'Maico'),
-            ('aris', 'Aris', 'technician', 'full', 'Aris', 'Aristidis'),
-            ('filip', 'Filip', 'technician', 'full', 'Filip', 'FIlip'),
+        # 7d. Delete technician system users (maico, aris, filip) — they should be persons only
+        for tech_username in ['maico', 'aris', 'filip']:
+            u = User.query.filter(func.lower(User.username) == tech_username).first()
+            if u and u.role != 'admin':
+                for model, fk_field in [
+                    (FaultReport, 'reporter_id'), (FaultReport, 'technician_id'),
+                    (Notification, 'user_id'), (Message, 'sender_id'), (Message, 'receiver_id'),
+                    (AuditLog, 'user_id'), (SystemLog, 'user_id'), (UserActivityLog, 'user_id'),
+                    (WorkReport, 'technician_id'), (PurchaseRequest, 'requester_id'),
+                    (PurchaseRequest, 'reviewer_id'), (TimeEntry, 'user_id'),
+                    (Vacation, 'user_id'), (WorkSchedule, 'user_id'),
+                    (WeekendShift, 'user_id'), (WeekendShift, 'created_by'),
+                ]:
+                    try:
+                        model.query.filter(getattr(model, fk_field) == u.id).update(
+                            {fk_field: admin_id}, synchronize_session=False
+                        )
+                    except Exception:
+                        pass
+                try:
+                    db.session.execute(text("DELETE FROM fault_technicians WHERE technician_id=:uid"), {'uid': u.id})
+                    db.session.execute(text("DELETE FROM user_machine WHERE user_id=:uid"), {'uid': u.id})
+                except Exception:
+                    pass
+                # Unlink from worker
+                try:
+                    from models import Monteur
+                    Monteur.query.filter_by(user_id=u.id).update({'user_id': None})
+                except Exception:
+                    pass
+                db.session.delete(u)
+                print(f"Data migration: deleted tech system user '{u.username}' (ID={u.id}), FKs -> admin")
+        db.session.flush()
+
+        # 7e. Ensure Director + generic Technician system user accounts exist
+        for username, display, role, access_level, person_name in [
+            ('director', 'Directeur', 'director', 'full', 'Directeur'),
+            ('technician', 'Technicus', 'technician', 'full', 'Technicus'),
         ]:
             person = Verantwoordelijke.query.filter_by(naam=person_name).first()
             if not person:
@@ -867,16 +898,6 @@ def run_data_migrations():
                 db.session.add(user)
                 db.session.flush()
                 print(f"Data migration: created system user '{username}' -> {display}")
-            # Link to worker if applicable
-            if worker_name:
-                try:
-                    from models import Monteur
-                    worker = Monteur.query.filter_by(naam=worker_name).first()
-                    if worker and not worker.user_id:
-                        worker.user_id = user.id
-                        print(f"Data migration: linked {username} -> worker '{worker_name}'")
-                except Exception:
-                    pass
 
         db.session.flush()
 
