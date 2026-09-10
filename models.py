@@ -375,12 +375,18 @@ class ResponsibleAuth(UserMixin):
         self.id = f"r_{person.id}"  # prefixed ID to distinguish from User
         self.username = f"resp_{person.id}"
         self.display_name = person.naam
-        self.role = 'responsible'
         self.is_active_user = person.is_active
         self.access_level = person.access_level or 'floor'
         self.allowed_sections = []
         self.assigned_machines = []  # responsible persons don't own machines
         self.fault_reports = []
+
+        # Derive role from group's access_level (director, technician, user)
+        # so @role_required checks work correctly
+        if person.resp_group and person.resp_group.access_level:
+            self.role = person.resp_group.access_level
+        else:
+            self.role = 'responsible'
 
     @property
     def person(self):
@@ -391,9 +397,24 @@ class ResponsibleAuth(UserMixin):
         return self._person.id
 
     def has_role(self, *roles):
-        return 'responsible' in roles
+        # Check 'responsible' (legacy) AND the group-derived role
+        if 'responsible' in roles:
+            return True
+        return self.role in roles
 
-    def has_section_access(self, section_key):
+    def has_section_access(self, section_key, action='view'):
+        """Check group permissions for this responsible person."""
+        # Check group permissions
+        if self._person.group_id:
+            perm = GroupPermission.query.filter_by(
+                group_id=self._person.group_id, section_key=section_key
+            ).first()
+            if perm:
+                if action == 'view': return perm.can_view
+                if action == 'create': return perm.can_create
+                if action == 'edit': return perm.can_edit
+                if action == 'delete': return perm.can_delete
+                return perm.can_view
         return False
 
     def check_password(self, password):
