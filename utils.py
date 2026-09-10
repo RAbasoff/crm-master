@@ -741,7 +741,7 @@ def run_data_migrations():
         }
 
         # Names to remove (if they exist and are NOT in desired list)
-        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', 'Peter', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
+        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', 'Peter', 'Rusln', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
 
         # 7a. Delete old system users FIRST (before removing persons, to clear User.person_id FK)
         for old_username in ['tim', 'thijs', 'user', 'tech', 'Tim', 'Thijs']:
