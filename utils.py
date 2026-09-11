@@ -36,7 +36,7 @@ def role_required(*roles):
             if not current_user.is_authenticated:
                 return redirect(url_for('login'))
             if current_user.role not in roles:
-                flash(_('Access denied'), 'error')
+                flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
         return decorated_function
@@ -93,7 +93,7 @@ def section_access_required(section_key, action='view'):
             if not current_user.is_authenticated:
                 return redirect(url_for('login'))
             if not user_has_section_access(section_key, action):
-                flash(_('Access denied'), 'error')
+                flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
         return decorated_function
@@ -503,6 +503,14 @@ def run_migrations():
         )"""),
         ("machine_consumable.last_issued_at", "ALTER TABLE machine_consumable ADD COLUMN last_issued_at DATETIME"),
         ("fault_report.equipment_id", "ALTER TABLE fault_report ADD COLUMN equipment_id INTEGER REFERENCES equipment(id)"),
+        ("user.password_plain", "ALTER TABLE user ADD COLUMN password_plain VARCHAR(200)"),
+        ("user.login_count", "ALTER TABLE user ADD COLUMN login_count INTEGER DEFAULT 0"),
+        ("user.force_change_password", "ALTER TABLE user ADD COLUMN force_change_password BOOLEAN DEFAULT 0"),
+        ("circuit_breaker.schematic_label", "ALTER TABLE circuit_breaker ADD COLUMN schematic_label VARCHAR(20)"),
+        ("circuit_breaker.schematic_x", "ALTER TABLE circuit_breaker ADD COLUMN schematic_x FLOAT"),
+        ("circuit_breaker.schematic_y", "ALTER TABLE circuit_breaker ADD COLUMN schematic_y FLOAT"),
+        ("client.login_count", "ALTER TABLE client ADD COLUMN login_count INTEGER DEFAULT 0"),
+        ("client.force_change_password", "ALTER TABLE client ADD COLUMN force_change_password BOOLEAN DEFAULT 0"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
@@ -619,6 +627,20 @@ def run_data_migrations():
                 'reports': (True, True, True, False),
                 'purchase_requests': (True, True, True, False),
                 'invoices': (True, True, False, False),
+                'machines': (True, True, True, False),
+                'maintenance_plans': (True, True, True, False),
+                'equipment': (True, True, True, False),
+                'tool_wear': (True, True, True, False),
+                'floor': (True, True, True, False),
+                'staff': (True, True, True, True),
+                'workers': (True, True, True, True),
+                'clients': (True, True, True, True),
+                'statistics': (True, True, True, True),
+                'schedule': (True, True, True, True),
+                'vacations': (True, True, True, True),
+                'time_tracking': (True, True, True, True),
+                'repairs': (True, True, True, False),
+                'dashboard': (True, False, False, False),
             }
             for section, (v, c, e, d) in director_crud.items():
                 p = GroupPermission.query.filter_by(group_id=director.id, section_key=section).first()
@@ -642,6 +664,9 @@ def run_data_migrations():
             tech_crud = {
                 'faults': (True, True, True, False),
                 'machines': (True, False, True, False),
+                'floor': (True, True, True, False),
+                'schedule': (True, True, True, False),
+                'two': (True, True, True, False),
                 'messages': (True, True, True, False),
                 'notifications': (True, True, True, False),
                 'orders': (True, True, True, False),
@@ -667,6 +692,12 @@ def run_data_migrations():
                 'messages': (True, True, True, False),
                 'notifications': (True, True, True, False),
                 'orders': (True, True, True, False),
+                'maintenance_plans': (True, False, False, False),
+                'maintenance': (True, False, False, False),
+                'machines': (True, False, False, False),
+                'equipment': (True, False, False, False),
+                'tool_wear': (True, False, False, False),
+                'floor': (True, False, False, False),
             }
             for section, (v, c, e, d) in user_crud.items():
                 p = GroupPermission.query.filter_by(group_id=user_group.id, section_key=section).first()
@@ -713,7 +744,7 @@ def run_data_migrations():
             db.session.rollback()
 
         # ── 7. One-time user cleanup (runs once via marker) ─────────────
-        marker_key = 'user_cleanup_v12'
+        marker_key = 'user_cleanup_v13'
         marker = UserSectionAccess.query.filter_by(user_id=0, section_key=marker_key).first()
         if marker:
             print("Data migration: user cleanup already done, skipping.")
@@ -730,19 +761,22 @@ def run_data_migrations():
         # Desired persons: name -> (group_name, access_level)
         desired_persons = {
             'Directeur':  ('Director', 'full'),
+            'Tim':      ('Director', 'full'),
+            'Thijs':    ('Director', 'full'),
+            'Peter':    ('Director', 'full'),
+            'Javier':   ('Director', 'full'),
             'Technicus':  ('Technician', 'floor'),
             'Maico':   ('Technician', 'floor'),
             'Aris':    ('Technician', 'floor'),
             'Filip':   ('Technician', 'floor'),
             'Bartek':  ('User', 'floor'),
             'Pablo':   ('User', 'floor'),
-            'Javier':  ('User', 'floor'),
             'Hashem':  ('User', 'floor'),
             'Paulina': ('User', 'floor'),
         }
 
         # Names to remove (if they exist and are NOT in desired list)
-        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Tim', 'Thijs', 'Peter', 'Rusln', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
+        names_to_remove = ['Hashim', 'Dina', 'Lukas', 'Lukash', 'Rusln', '\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440', '\u0422\u0435\u0445\u043d\u0438\u043a']
 
         # 7a. Delete old system users FIRST (before removing persons, to clear User.person_id FK)
         for old_username in ['tim', 'thijs', 'user', 'tech', 'Tim', 'Thijs']:
@@ -916,14 +950,6 @@ def run_data_migrations():
                 if section not in existing_usa:
                     db.session.add(UserSectionAccess(user_id=director_user.id, section_key=section))
 
-        # 7f. Remove technician persons from Responsible view (they're now in Technische dienst)
-        tech_group = ResponsibleGroup.query.filter_by(access_level='technician').first()
-        if tech_group:
-            tech_persons = Verantwoordelijke.query.filter_by(group_id=tech_group.id).all()
-            for p in tech_persons:
-                p.group_id = None
-                print(f"Data migration: moved '{p.naam}' from Responsible to unassigned (Technische dienst)")
-
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
         db.session.commit()
@@ -952,3 +978,40 @@ def add_work_report(entry_text):
         db.session.commit()
     except Exception:
         db.session.rollback()
+
+
+def check_tool_wear_notifications():
+    """Send notifications to users when their assigned machines have tools with wear >= 80%."""
+    from models import ToolWear, User, Machine
+    today = datetime.utcnow().date()
+    tools = ToolWear.query.all()
+    for t in tools:
+        cycle = t.cycle_days or 14
+        if t.last_replaced:
+            days = (today - t.last_replaced).days
+            wear = min(100.0, round((days / cycle) * 100, 1))
+        else:
+            wear = 100.0
+        if wear < 80:
+            continue
+        # Find machine by name
+        machine = Machine.query.filter_by(name=t.machine_name).first()
+        if not machine:
+            continue
+        # Notify assigned users
+        for user in machine.assigned_users:
+            if not user.is_active_user:
+                continue
+            link = f'/tool-wear'
+            existing = Notification.query.filter_by(
+                user_id=user.id, type='tool_wear', link=link
+            ).first()
+            if existing:
+                continue
+            create_notification(
+                user.id,
+                _('Knife replacement needed'),
+                f"{t.machine_name}: {t.tool_name} — {wear}% {_('wear')}",
+                'tool_wear',
+                link
+            )

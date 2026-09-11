@@ -4,7 +4,7 @@
 <div class="page-header">
     <h1>⚙️ {{ machine.name }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-        {% if current_user.has_role('admin') %}
+        {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/{{ machine.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
         {% endif %}
         <a href="/machines/{{ machine.id }}/parts" class="btn btn-sm" style="background:#8e44ad;color:white">⚙️ {{ _('Parts') }}</a>

@@ -238,7 +238,7 @@ def warehouse_delete(item_id):
 
 @bp.route('/<int:item_id>/move', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def warehouse_move(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     mt = request.form['type']
@@ -276,7 +276,7 @@ def warehouse_movements():
 
 @bp.route('/reserve/<int:item_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def warehouse_reserve(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     qty = float(request.form.get('quantity', 1))
@@ -296,7 +296,7 @@ def warehouse_reserve(item_id):
 
 @bp.route('/reserve/<int:res_id>/release', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def warehouse_release(res_id):
     r = WarehouseReservation.query.get_or_404(res_id)
     db.session.delete(r); db.session.commit()
@@ -492,7 +492,7 @@ def warehouse_search_report():
 
 @bp.route('/api/qty', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def warehouse_qty_update():
     from flask import jsonify
     data = request.get_json()

@@ -3,7 +3,9 @@
 {% block content %}
 <div class="page-header">
     <h1>🔪 {{ _('Tool Wear Tracking') }}</h1>
+    {% if current_user.has_role('admin', 'director', 'technician') %}
     <button class="btn btn-primary" onclick="document.getElementById('addModal').style.display='flex'">+ {{ _('Add Tool') }}</button>
+    {% endif %}
 </div>
 
 <div class="card" style="padding:0">
@@ -42,10 +44,12 @@
                 </td>
                 <td>{{ t.last_replaced.strftime('%d.%m.%Y') if t.last_replaced else '—' }}</td>
                 <td style="white-space:nowrap">
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
                     <button class="btn btn-sm btn-ghost" onclick="openEdit({{ t.id }},'{{ t.machine_name }}','{{ t.tool_name }}',{{ t.cycle_days or 14 }},'{{ t.last_replaced.strftime('%Y-%m-%d') if t.last_replaced }}','{{ t.notes or '' }}')">✏️</button>
                     <form method="POST" action="/tool-wear/reset/{{ t.id }}" style="display:inline" onsubmit="return confirm('{{ _('Reset? Tool replaced?') }}')">
                         <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">🔄</button>
                     </form>
+                    {% endif %}
                     {% if current_user.has_role('admin') %}
                     <form method="POST" action="/tool-wear/delete/{{ t.id }}" style="display:inline" onsubmit="return confirm('{{ _('Delete this tool?') }}')">
                         <button type="submit" class="btn btn-sm btn-danger">🗑</button>

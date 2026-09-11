@@ -75,7 +75,7 @@
             </td>
             <td style="white-space:nowrap">
                 <a href="/machines/{{ m.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a>
-                {% if current_user.has_role('admin') %}
+                {% if current_user.has_role('admin', 'director') %}
                 <a href="/machines/{{ m.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
                 {% endif %}
             </td>

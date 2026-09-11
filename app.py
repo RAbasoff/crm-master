@@ -131,13 +131,13 @@ with app.app_context():
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
-        admin.set_password('admin123')
+        admin.set_password('admin123', save_plain=True)
         tech = User(username='tech', display_name='Sergei Petrov', role='technician')
-        tech.set_password('tech123')
+        tech.set_password('tech123', save_plain=True)
         user = User(username='user', display_name='Jan de Vries', role='user')
-        user.set_password('user123')
+        user.set_password('user123', save_plain=True)
         director = User(username='director', display_name='Director', role='director')
-        director.set_password('director123')
+        director.set_password('director123', save_plain=True)
         db.session.add_all([admin, tech, user, director])
         db.session.commit()
 
@@ -157,6 +157,12 @@ def before_request():
     if current_user.is_authenticated and session.get('switched_role'):
         if session.get('original_role') == 'admin':  # only real admins can switch
             current_user.role = session['switched_role']
+
+    # Force password change after 2 logins
+    if current_user.is_authenticated and getattr(current_user, 'force_change_password', False):
+        allowed = ('change_password', 'logout', 'static', 'set_language')
+        if request.endpoint and request.endpoint not in allowed:
+            return redirect(url_for('change_password'))
 
 @app.context_processor
 def inject_section_access():
@@ -270,8 +276,17 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password) and user.is_active_user:
             login_user(user, remember=True)
+            # Track login count
+            user.login_count = (user.login_count or 0) + 1
+            if user.login_count >= 2 and user.role != 'admin':
+                user.force_change_password = True
+            db.session.commit()
             log_user_activity('login', page='/login', details=f'User {username} logged in')
             log_system('INFO', 'auth', f'User {username} logged in', source='login')
+            # Force password change after 2 logins
+            if user.force_change_password:
+                flash(_('You must change your password'), 'warning')
+                return redirect(url_for('change_password'))
             next_url = request.args.get('next')
             if next_url:
                 parsed = urlparse(next_url)
@@ -285,10 +300,17 @@ def login():
         if person and person.check_password(password) and person.is_active:
             auth = ResponsibleAuth(person)
             person.last_login = datetime.utcnow()
+            person.login_count = (person.login_count or 0) + 1
+            if person.login_count >= 2:
+                person.force_change_password = True
+                auth.force_change_password = True
             db.session.commit()
             login_user(auth, remember=True)
             log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
             log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
+            if auth.force_change_password:
+                flash(_('You must change your password'), 'warning')
+                return redirect(url_for('change_password'))
             next_url = request.args.get('next')
             if next_url:
                 parsed = urlparse(next_url)
@@ -335,11 +357,31 @@ def profile():
             if len(new_pass) < 4:
                 flash(_('Password must be at least 4 characters'), 'error')
                 return redirect(url_for('profile'))
-            current_user.set_password(new_pass)
+            current_user.set_password(new_pass, save_plain=True)
+            current_user.force_change_password = False
 
         db.session.commit()
         flash(_('Profile updated'), 'success')
     return render_template('profile.html')
+
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        new_pass = request.form.get('new_password', '').strip()
+        confirm_pass = request.form.get('confirm_password', '').strip()
+        if not new_pass or len(new_pass) < 4:
+            flash(_('Password must be at least 4 characters'), 'error')
+        elif new_pass != confirm_pass:
+            flash(_('Passwords do not match'), 'error')
+        else:
+            current_user.set_password(new_pass, save_plain=True)
+            current_user.force_change_password = False
+            db.session.commit()
+            flash(_('Password changed'), 'success')
+            return redirect(url_for('index'))
+    return render_template('change_password.html')
 
 # ============================================================
 # ROUTES — USER MANAGEMENT (Admin only)
@@ -371,7 +413,7 @@ def user_change_password(user_id):
     elif new_pass != confirm_pass:
         flash(_('Passwords do not match'), 'error')
     else:
-        u.set_password(new_pass)
+        u.set_password(new_pass, save_plain=True)
         db.session.commit()
         flash(_('Password changed for %(username)s', username=u.username), 'success')
     return redirect(url_for('user_cabinet', user_id=u.id))
@@ -394,6 +436,7 @@ def user_cabinet_update(user_id):
     u.first_name = request.form.get('first_name', u.first_name)
     u.last_name = request.form.get('last_name', u.last_name)
     u.display_name = request.form.get('display_name', u.display_name)
+    u.phone = request.form.get('phone', u.phone)
     u.role = request.form.get('role', u.role)
     u.access_level = request.form.get('access_level', u.access_level)
     u.is_active_user = 'is_active' in request.form
@@ -405,11 +448,21 @@ def user_cabinet_update(user_id):
         confirm_pass = request.form.get('confirm_password')
         if new_pass != confirm_pass:
             flash(_('Passwords do not match'), 'error')
-            return redirect(url_for('user_cabinet', user_id=u.id))
-        u.set_password(new_pass)
+            return redirect(url_for('users_list'))
+        u.set_password(new_pass, save_plain=True)
+    # Update allowed sections
+    UserSectionAccess.query.filter_by(user_id=u.id).delete()
+    for key in request.form.getlist('allowed_sections'):
+        db.session.add(UserSectionAccess(user_id=u.id, section_key=key))
+    # Update assigned machines
+    u.assigned_machines = []
+    for mid in request.form.getlist('machines'):
+        m = Machine.query.get(int(mid))
+        if m:
+            u.assigned_machines.append(m)
     db.session.commit()
     flash(_('User updated'), 'success')
-    return redirect(url_for('user_cabinet', user_id=u.id))
+    return redirect(url_for('users_list'))
 
 @app.route('/users/<int:user_id>/delete', methods=['POST'])
 @login_required
@@ -480,7 +533,7 @@ def user_new():
             person_id=int(request.form['person_id']) if request.form.get('person_id') else None,
             hire_date=datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else None
         )
-        u.set_password(request.form['password'])
+        u.set_password(request.form['password'], save_plain=True)
         db.session.add(u)
         db.session.flush()
         # Save allowed sections
@@ -523,7 +576,7 @@ def user_edit(user_id):
         u.fire_date = datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None
         new_pass = request.form.get('password')
         if new_pass:
-            u.set_password(new_pass)
+            u.set_password(new_pass, save_plain=True)
         # Update allowed sections
         UserSectionAccess.query.filter_by(user_id=u.id).delete()
         for key in request.form.getlist('allowed_sections'):
@@ -600,7 +653,7 @@ def machines_list():
 
 @app.route('/machines/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin')
+@role_required('admin', 'director')
 def machine_new():
     if request.method == 'POST':
         m = Machine(
@@ -739,7 +792,7 @@ def api_warehouse_consumables():
 
 @app.route('/machines/<int:machine_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin')
+@role_required('admin', 'director')
 def machine_edit(machine_id):
     m = Machine.query.get_or_404(machine_id)
     if request.method == 'POST':
@@ -1704,7 +1757,7 @@ def maintenance_plans_list():
 
 @app.route('/maintenance-plans/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def maintenance_plan_new():
     if request.method == 'POST':
         p = MaintenancePlan(
@@ -1778,7 +1831,7 @@ def maintenance_plan_detail(plan_id):
 
 @app.route('/maintenance-plans/<int:plan_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def maintenance_plan_edit(plan_id):
     p = MaintenancePlan.query.get_or_404(plan_id)
     if request.method == 'POST':
@@ -2006,7 +2059,7 @@ def equipment_list():
 
 @app.route('/equipment/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def equipment_new():
     if request.method == 'POST':
         eq = EquipmentMaintenance(
@@ -2072,7 +2125,7 @@ def equipment_new():
 
 @app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def equipment_edit(eq_id):
     eq = EquipmentMaintenance.query.get_or_404(eq_id)
     if request.method == 'POST':
@@ -6170,11 +6223,14 @@ def tool_wear_page():
         else:
             t.wear_percent = 100.0
     
+    # Check and send knife replacement notifications
+    check_tool_wear_notifications()
+    
     return render_template('tool_wear.html', tools=tools, today=today)
 
 @app.route('/tool-wear/add', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def tool_wear_add():
     machine_name = request.form.get('machine_name', '').strip()
     tool_name = request.form.get('tool_name', '').strip() or 'Ножи / Фреза'
@@ -6188,7 +6244,7 @@ def tool_wear_add():
 
 @app.route('/tool-wear/update/<int:tool_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def tool_wear_update(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.machine_name = request.form.get('machine_name', tool.machine_name).strip()
@@ -6215,13 +6271,21 @@ def tool_wear_delete(tool_id):
 
 @app.route('/tool-wear/reset/<int:tool_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def tool_wear_reset(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.wear_percent = 0
     tool.last_replaced = datetime.utcnow().date()
     tool.updated_by = current_user.id
     db.session.commit()
+    # Clear knife replacement notifications for users assigned to this machine
+    machine = Machine.query.filter_by(name=tool.machine_name).first()
+    if machine:
+        for user in machine.assigned_users:
+            Notification.query.filter_by(
+                user_id=user.id, type='tool_wear', link='/tool-wear'
+            ).delete()
+        db.session.commit()
     add_work_report(f'🔪 Замена инструмента: {tool.machine_name} — {tool.tool_name} (износ сброшен)')
     flash(_('Tool replaced, wear reset to 0%'), 'success')
     return redirect(url_for('tool_wear_page'))

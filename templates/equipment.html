@@ -4,8 +4,10 @@
 <div class="page-header">
     <h1>🔧 {{ _('Mule Maintenance') }}</h1>
     <div style="display:flex;gap:8px">
+        {% if current_user.has_role('admin', 'director', 'technician') %}
         <button onclick="document.getElementById('orderModal').style.display='flex'" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Order Parts') }}</button>
         <a href="/equipment/new" class="btn btn-primary">+ {{ _('New Record') }}</a>
+        {% endif %}
     </div>
 </div>
 
@@ -78,10 +80,14 @@
             <td>{{ r.periodicity or '—' }}</td>
             <td>
                 <div style="display:flex;gap:4px">
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
                     <a href="/equipment/{{ r.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                    {% endif %}
+                    {% if current_user.has_role('admin') %}
                     <form method="POST" action="/equipment/{{ r.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete?') }}')">
                         <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
                     </form>
+                    {% endif %}
                 </div>
             </td>
         </tr>

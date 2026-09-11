@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-header">
     <h1>🔧 {{ _('Maintenance Plans') }}</h1>
-    {% if current_user.has_role('admin', 'technician') %}
+    {% if current_user.has_role('admin', 'director', 'technician') %}
     <a href="/maintenance-plans/new" class="btn btn-primary">+ {{ _('New plan') }}</a>
     {% endif %}
 </div>
@@ -38,7 +38,7 @@
                 <td>{{ p.planned_end.strftime('%d-%m-%Y') if p.planned_end else '—' }}</td>
                 <td>{% if p.is_external %}🏢 {{ p.company_name or '—' }}{% else %}🔧 {{ p.worker.naam if p.worker else '—' }}{% endif %}</td>
                 <td>
-                    {% if current_user.has_role('admin', 'technician') %}
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
                     <a href="/maintenance-plans/{{ p.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
                     {% endif %}
                 </td>
@@ -54,7 +54,7 @@
                 <td style="color:#8aa88e">{{ p.planned_end.strftime('%d-%m-%Y') if p.planned_end else '—' }}</td>
                 <td style="color:#8aa88e">{% if p.is_external %}🏢 {{ p.company_name or '—' }}{% else %}🔧 {{ p.worker.naam if p.worker else '—' }}{% endif %}</td>
                 <td>
-                    {% if current_user.has_role('admin', 'technician') %}
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
                     <a href="/maintenance-plans/{{ p.id }}/edit" class="btn btn-sm" style="background:#eee;padding:4px 8px">✏️</a>
                     {% endif %}
                 </td>
