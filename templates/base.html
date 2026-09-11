@@ -404,7 +404,7 @@
             {% if has_access('electricity') %}
             <a href="/electricity" class="sb-item" data-section="electricity" style="{% if not has_access('electricity') %}display:none{% endif %}"><span class="sb-icon">⚡</span>{{ _('Electricity') }}</a>
             {% endif %}
-            {% if has_access('machines') or current_user.role in ['admin', 'technician'] %}
+            {% if has_access('gas') or has_access('machines') %}
             <a href="/gas" class="sb-item {% if 'gas' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas System') }}</a>
             {% endif %}
             {% if has_access('maintenance') %}
@@ -473,7 +473,7 @@
             </div>
             {% endif %}
             
-            {% if has_access('reports') or has_access('statistics') or current_user.role == 'director' %}
+            {% if has_access('reports') or has_access('statistics') %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Analytics') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             {% if has_access('reports') %}

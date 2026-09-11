@@ -183,19 +183,9 @@ def reset_role():
 
 @app.route('/switch-role/<role>')
 def switch_role(role):
-    """DISABLED."""
+    """DISABLED — removed to fix session corruption."""
     session.clear()
     return redirect(url_for('login'))
-    if role == 'reset':
-        session.pop('switched_role', None)
-        session.pop('original_role', None)
-        flash(_('Role reset to') + ' admin', 'success')
-    elif role in valid_roles:
-        if 'original_role' not in session:
-            session['original_role'] = current_user.role
-        session['switched_role'] = role
-        flash(_('Switched to') + f' {role}', 'success')
-    return redirect(request.referrer or url_for('index'))
 
 # ============================================================
 # USER LOADER

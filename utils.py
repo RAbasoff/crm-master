@@ -35,7 +35,7 @@ def role_required(*roles):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for('login'))
-            if current_user.role not in roles:
+            if not current_user.has_role(*roles):
                 flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
