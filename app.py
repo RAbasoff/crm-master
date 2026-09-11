@@ -184,17 +184,31 @@ def set_language(lang):
 @app.route('/reset-role')
 @login_required
 def reset_role():
-    """Emergency reset — always accessible."""
+    """Emergency reset — always accessible. Clears ALL role-switch session data."""
     session.pop('switched_role', None)
     session.pop('original_role', None)
-    flash(_('Role reset to') + ' ' + current_user.role, 'success')
-    return redirect(request.referrer or url_for('index'))
+    # Force session save
+    session.modified = True
+    flash(_('Role reset'), 'success')
+    return redirect(url_for('index'))
 
 @app.route('/switch-role/<role>')
 @login_required
 def switch_role(role):
     """Quick role switcher for admin testing."""
     valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
+    if role == 'reset':
+        session.pop('switched_role', None)
+        session.pop('original_role', None)
+        session.modified = True
+        flash(_('Role reset'), 'success')
+    elif role in valid_roles:
+        if 'original_role' not in session:
+            session['original_role'] = current_user.role
+        session['switched_role'] = role
+        session.modified = True
+        flash(_('Switched to') + f' {role}', 'success')
+    return redirect(request.referrer or url_for('index'))
     if role == 'reset':
         session.pop('switched_role', None)
         session.pop('original_role', None)
