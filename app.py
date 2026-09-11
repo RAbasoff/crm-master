@@ -175,22 +175,17 @@ def set_language(lang):
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/reset-role')
-@login_required
 def reset_role():
-    """Emergency reset — clears ALL role-switch session data."""
-    session.pop('switched_role', None)
-    session.pop('original_role', None)
+    """NUCLEAR reset — clears ALL session data."""
+    session.clear()
     session.modified = True
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 @app.route('/switch-role/<role>')
-@login_required
 def switch_role(role):
-    """DISABLED — role switcher removed."""
-    session.pop('switched_role', None)
-    session.pop('original_role', None)
-    session.modified = True
-    return redirect(url_for('index'))
+    """DISABLED."""
+    session.clear()
+    return redirect(url_for('login'))
     if role == 'reset':
         session.pop('switched_role', None)
         session.pop('original_role', None)
