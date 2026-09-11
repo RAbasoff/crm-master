@@ -562,7 +562,7 @@
                 {% endfor %}
             </div>
             <div class="tb-sep"></div>
-            {% if current_user.is_authenticated and (session.get('original_role') or session.get('switched_role') or current_user.role == 'admin') %}
+            {% if current_user.is_authenticated %}
             <div class="role-switcher">
                 <button class="role-switcher-btn" onclick="toggleRoleDropdown()" title="Role Switcher">
                     <span class="rs-dot rs-{{ session.get('switched_role', current_user.role) }}"></span>
