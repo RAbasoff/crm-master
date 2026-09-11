@@ -78,39 +78,7 @@
         .lang-pill { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #999; text-decoration: none; transition: 0.15s; }
         .lang-pill:hover { color: #333; background: #f0f2f5; }
         .lang-pill.active { color: #5b9cf6; background: rgba(91,156,246,0.1); }
-        
-        /* Role switcher */
-        .role-switcher { position: relative; }
-        .role-switcher-btn { background: none; border: 1px solid #e0e4ea; border-radius: 8px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; color: #666; display: flex; align-items: center; gap: 4px; transition: 0.2s; white-space: nowrap; }
-        .role-switcher-btn:hover { background: #f0f2f5; color: #333; }
-        .role-switcher-btn .rs-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .role-switcher-btn .rs-dot.rs-admin { background: #e74c3c; }
-        .role-switcher-btn .rs-dot.rs-director { background: #f39c12; }
-        .role-switcher-btn .rs-dot.rs-technician { background: #3498db; }
-        .role-switcher-btn .rs-dot.rs-user { background: #27ae60; }
-        .role-switcher-btn .rs-dot.rs-responsible { background: #9b59b6; }
-        .role-dropdown { display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); min-width: 200px; z-index: 500; border: 1px solid #e0e4ea; overflow: hidden; margin-top: 4px; }
-        .role-dropdown.open { display: block; }
-        .role-dropdown .rd-header { padding: 10px 14px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #999; font-weight: 700; border-bottom: 1px solid #f0f2f5; }
-        .role-dropdown .rd-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 500; color: #555; transition: 0.15s; text-decoration: none; }
-        .role-dropdown .rd-item:hover { background: #f5f7fa; color: #333; }
-        .role-dropdown .rd-item.active { background: rgba(91,156,246,0.08); color: #5b9cf6; font-weight: 600; }
-        .role-dropdown .rd-item .rd-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .role-dropdown .rd-item .rd-check { margin-left: auto; font-size: 12px; color: #5b9cf6; }
-        .role-dropdown .rd-reset { border-top: 1px solid #f0f2f5; padding: 10px 14px; font-size: 12px; color: #999; cursor: pointer; text-align: center; }
-        .role-dropdown .rd-reset:hover { background: #f5f7fa; color: #333; }
-        body.dark-mode .role-switcher-btn { border-color: #30363d; color: #8b949e; }
-        body.dark-mode .role-switcher-btn:hover { background: #21262d; color: #c9d1d9; }
-        body.dark-mode .role-dropdown { background: #161b22; border-color: #30363d; }
-        body.dark-mode .role-dropdown .rd-header { border-color: #21262d; color: #6e7681; }
-        body.dark-mode .role-dropdown .rd-item { color: #8b949e; }
-        body.dark-mode .role-dropdown .rd-item:hover { background: #21262d; color: #c9d1d9; }
-        body.dark-mode .role-dropdown .rd-item.active { background: rgba(91,156,246,0.1); color: #5b9cf6; }
-        body.dark-mode .role-dropdown .rd-reset { border-color: #21262d; color: #6e7681; }
-        body.dark-mode .role-dropdown .rd-reset:hover { background: #21262d; color: #c9d1d9; }
-        .rs-banner { background: linear-gradient(90deg, #f39c12, #e67e22); color: white; text-align: center; padding: 6px 16px; font-size: 12px; font-weight: 600; position: relative; z-index: 200; }
-        .rs-banner a { color: white; text-decoration: underline; margin-left: 8px; }
-        
+
         /* Dark toggle */
         .dark-toggle { background: none; border: none; color: #999; cursor: pointer; padding: 8px; border-radius: 8px; font-size: 16px; transition: 0.2s; }
         .dark-toggle:hover { color: #333; background: #f0f2f5; }
@@ -562,27 +530,6 @@
                 {% endfor %}
             </div>
             <div class="tb-sep"></div>
-            {% if current_user.is_authenticated %}
-            <div class="role-switcher">
-                <button class="role-switcher-btn" onclick="toggleRoleDropdown()" title="Role Switcher">
-                    <span class="rs-dot rs-{{ session.get('switched_role', current_user.role) }}"></span>
-                    {{ session.get('switched_role', current_user.role)|capitalize }}
-                    {% if session.get('switched_role') %}<span style="font-size:9px;opacity:0.6">↕</span>{% endif %}
-                </button>
-                <div class="role-dropdown" id="roleDropdown">
-                    <div class="rd-header">Switch role (test mode)</div>
-                    {% for r in ['admin', 'director', 'technician', 'user', 'responsible'] %}
-                    <a href="/switch-role/{{ r }}" class="rd-item {% if session.get('switched_role', current_user.role) == r %}active{% endif %}">
-                        <span class="rd-dot" style="background:{% if r=='admin' %}#e74c3c{% elif r=='director' %}#f39c12{% elif r=='technician' %}#3498db{% elif r=='user' %}#27ae60{% else %}#9b59b6{% endif %}"></span>
-                        {{ r|capitalize }}
-                        {% if session.get('switched_role', current_user.role) == r %}<span class="rd-check">✓</span>{% endif %}
-                    </a>
-                    {% endfor %}
-                    <div class="rd-reset" onclick="location.href='/switch-role/reset'">↩ Reset to {{ session.get('original_role', 'admin') }}</div>
-                </div>
-            </div>
-            <div class="tb-sep"></div>
-            {% endif %}
             <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="{{ _('Install App') }}">📲</button>
             <button class="dark-toggle" onclick="toggleDarkMode()" title="{{ _('Toggle dark mode') }}">🌙</button>
             <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()" style="position:relative">
@@ -612,14 +559,6 @@
         </div>
     </div>
     
-    <!-- ROLE SWITCH BANNER -->
-    {% if session.get('switched_role') %}
-    <div class="rs-banner">
-        ⚠️ Viewing as <strong>{{ session.switched_role|capitalize }}</strong> — not your real role.
-        <a href="/switch-role/reset">Reset to {{ session.get('original_role', 'admin')|capitalize }}</a>
-    </div>
-    {% endif %}
-    
     <!-- CONTENT -->
     <div class="main-wrap">
         <div class="container">
@@ -646,18 +585,6 @@
         }
         
         // Role switcher dropdown
-        function toggleRoleDropdown() {
-            const dd = document.getElementById('roleDropdown');
-            dd.classList.toggle('open');
-        }
-        document.addEventListener('click', function(e) {
-            const rs = document.querySelector('.role-switcher');
-            const dd = document.getElementById('roleDropdown');
-            if (rs && dd && !rs.contains(e.target)) {
-                dd.classList.remove('open');
-            }
-        });
-        
         // Collapsible sidebar sections
         function toggleSbGroup(sectionEl) {
             const items = sectionEl.nextElementSibling;

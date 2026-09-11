@@ -153,13 +153,6 @@ def before_request():
     g.lang = session.get('lang', 'ru')
     g.LANGUAGES = LANGUAGES
     
-    # Role switcher: override current_user.role from session
-    if current_user.is_authenticated and session.get('switched_role'):
-        if 'original_role' not in session:
-            session['original_role'] = current_user.role  # safety net
-        if session.get('original_role') == 'admin' or current_user.role == 'admin':
-            current_user.role = session['switched_role']
-
     # Force password change after 2 logins
     if current_user.is_authenticated and getattr(current_user, 'force_change_password', False):
         allowed = ('change_password', 'logout', 'static', 'set_language')
@@ -184,31 +177,20 @@ def set_language(lang):
 @app.route('/reset-role')
 @login_required
 def reset_role():
-    """Emergency reset — always accessible. Clears ALL role-switch session data."""
+    """Emergency reset — clears ALL role-switch session data."""
     session.pop('switched_role', None)
     session.pop('original_role', None)
-    # Force session save
     session.modified = True
-    flash(_('Role reset'), 'success')
     return redirect(url_for('index'))
 
 @app.route('/switch-role/<role>')
 @login_required
 def switch_role(role):
-    """Quick role switcher for admin testing."""
-    valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
-    if role == 'reset':
-        session.pop('switched_role', None)
-        session.pop('original_role', None)
-        session.modified = True
-        flash(_('Role reset'), 'success')
-    elif role in valid_roles:
-        if 'original_role' not in session:
-            session['original_role'] = current_user.role
-        session['switched_role'] = role
-        session.modified = True
-        flash(_('Switched to') + f' {role}', 'success')
-    return redirect(request.referrer or url_for('index'))
+    """DISABLED — role switcher removed."""
+    session.pop('switched_role', None)
+    session.pop('original_role', None)
+    session.modified = True
+    return redirect(url_for('index'))
     if role == 'reset':
         session.pop('switched_role', None)
         session.pop('original_role', None)
