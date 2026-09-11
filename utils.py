@@ -629,8 +629,8 @@ def run_data_migrations():
                 'invoices': (True, True, False, False),
                 'machines': (True, True, True, False),
                 'maintenance_plans': (True, True, True, False),
-                'equipment': (True, True, True, False),
-                'tool_wear': (True, True, True, False),
+                'equipment': (True, False, False, False),
+                'tool_wear': (True, False, False, False),
                 'floor': (True, True, True, False),
                 'staff': (True, True, True, True),
                 'workers': (True, True, True, True),
@@ -639,7 +639,7 @@ def run_data_migrations():
                 'schedule': (True, True, True, True),
                 'vacations': (True, True, True, True),
                 'time_tracking': (True, True, True, True),
-                'repairs': (True, True, True, False),
+                'repairs': (True, False, False, False),
                 'dashboard': (True, False, False, False),
             }
             for section, (v, c, e, d) in director_crud.items():

@@ -2059,7 +2059,7 @@ def equipment_list():
 
 @app.route('/equipment/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def equipment_new():
     if request.method == 'POST':
         eq = EquipmentMaintenance(
@@ -2125,7 +2125,7 @@ def equipment_new():
 
 @app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def equipment_edit(eq_id):
     eq = EquipmentMaintenance.query.get_or_404(eq_id)
     if request.method == 'POST':
@@ -6230,7 +6230,7 @@ def tool_wear_page():
 
 @app.route('/tool-wear/add', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def tool_wear_add():
     machine_name = request.form.get('machine_name', '').strip()
     tool_name = request.form.get('tool_name', '').strip() or 'Ножи / Фреза'
@@ -6244,7 +6244,7 @@ def tool_wear_add():
 
 @app.route('/tool-wear/update/<int:tool_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def tool_wear_update(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.machine_name = request.form.get('machine_name', tool.machine_name).strip()
@@ -6271,7 +6271,7 @@ def tool_wear_delete(tool_id):
 
 @app.route('/tool-wear/reset/<int:tool_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'technician')
 def tool_wear_reset(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.wear_percent = 0

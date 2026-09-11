@@ -5,7 +5,9 @@
     <h1>🏭 {{ _('Other Devices') }}</h1>
     <div style="display:flex;gap:8px">
         <a href="/machines" class="btn" style="background:#eee">← {{ _('Back') }}</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/assets/new" class="btn btn-primary">+ {{ _('Add Device') }}</a>
+        {% endif %}
     </div>
 </div>
 
@@ -70,7 +72,9 @@
             <td>
                 <div style="display:flex;gap:4px">
                     <a href="/assets/{{ eq.id }}" class="btn btn-sm" style="font-size:11px;background:#eee">{{ _('View') }}</a>
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
                     <a href="/assets/{{ eq.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                    {% endif %}
                 </div>
             </td>
         </tr>

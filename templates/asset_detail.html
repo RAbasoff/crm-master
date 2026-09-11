@@ -4,7 +4,9 @@
 <div class="page-header">
     <h1>🏭 {{ eq.name }}</h1>
     <div style="display:flex;gap:8px">
+        {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/assets/{{ eq.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        {% endif %}
         <button class="btn btn-sm" style="background:#2c3e50;color:white" onclick="showQR()">QR</button>
         <a href="/assets" class="btn" style="background:#eee">{{ _('Back') }}</a>
     </div>
