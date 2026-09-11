@@ -155,7 +155,9 @@ def before_request():
     
     # Role switcher: override current_user.role from session
     if current_user.is_authenticated and session.get('switched_role'):
-        if session.get('original_role') == 'admin':  # only real admins can switch
+        if 'original_role' not in session:
+            session['original_role'] = current_user.role  # safety net
+        if session.get('original_role') == 'admin' or current_user.role == 'admin':
             current_user.role = session['switched_role']
 
     # Force password change after 2 logins
@@ -191,9 +193,9 @@ def reset_role():
 @app.route('/switch-role/<role>')
 @login_required
 def switch_role(role):
-    """Quick role switcher for admin testing. Only admins can switch, but anyone with original_role can reset."""
-    if not current_user.role == 'admin' and not session.get('original_role') and role != 'reset':
-        flash(_('Access denied'), 'error')
+    """Quick role switcher for admin testing."""
+    if not current_user.role == 'admin' and not session.get('original_role') and not session.get('switched_role') and role != 'reset':
+        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
         return redirect(url_for('index'))
     valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
     if role == 'reset':
