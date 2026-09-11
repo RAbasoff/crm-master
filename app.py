@@ -179,11 +179,20 @@ def set_language(lang):
         session['lang'] = lang
     return redirect(request.referrer or url_for('index'))
 
+@app.route('/reset-role')
+@login_required
+def reset_role():
+    """Emergency reset — always accessible."""
+    session.pop('switched_role', None)
+    session.pop('original_role', None)
+    flash(_('Role reset to') + ' ' + current_user.role, 'success')
+    return redirect(request.referrer or url_for('index'))
+
 @app.route('/switch-role/<role>')
 @login_required
 def switch_role(role):
-    """Quick role switcher for admin testing. Only admins can use."""
-    if not current_user.role == 'admin' and not session.get('original_role'):
+    """Quick role switcher for admin testing. Only admins can switch, but anyone with original_role can reset."""
+    if not current_user.role == 'admin' and not session.get('original_role') and role != 'reset':
         flash(_('Access denied'), 'error')
         return redirect(url_for('index'))
     valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
