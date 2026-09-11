@@ -194,9 +194,6 @@ def reset_role():
 @login_required
 def switch_role(role):
     """Quick role switcher for admin testing."""
-    if not current_user.role == 'admin' and not session.get('original_role') and not session.get('switched_role') and role != 'reset':
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
-        return redirect(url_for('index'))
     valid_roles = ['admin', 'director', 'technician', 'user', 'responsible']
     if role == 'reset':
         session.pop('switched_role', None)
