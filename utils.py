@@ -571,6 +571,13 @@ def run_data_migrations():
                             CylinderLog, CylinderOrder)
         from sqlalchemy import text, func
 
+        # ── 0. Fix admin role (auto-repair from role-switcher corruption) ──
+        admin_user = User.query.filter_by(username='admin').first()
+        if admin_user and admin_user.role != 'admin':
+            print(f"Data migration: FIXING admin role from '{admin_user.role}' to 'admin'")
+            admin_user.role = 'admin'
+            db.session.commit()
+
         # ── 1. Ensure 4 standard groups exist ───────────────────────────
         groups_spec = [
             ('Administrator', 'admin'),
