@@ -5,6 +5,12 @@
     <h1>{{ _('Work Order') }} {{ order.nummer }}</h1>
     <div style="display:flex; gap:8px; flex-wrap:wrap">
         <a href="/orders/{{ order.id }}/edit" class="btn btn-primary btn-sm">{{ _('Edit') }}</a>
+        {% if current_user.has_role('admin') %}
+        <form method="POST" action="/orders/{{ order.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this work order?') }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">🗑 {{ _('Delete') }}</button>
+        </form>
+        {% endif %}
         <a href="/qr/generate/{{ order.id }}" class="btn btn-sm" style="background:#f39c12;color:white" target="_blank">QR</a>
         <a href="/orders" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
     </div>

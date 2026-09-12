@@ -7,6 +7,12 @@
         {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/{{ machine.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
         {% endif %}
+        {% if current_user.has_role('admin') %}
+        <form method="POST" action="/machines/{{ machine.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this machine? All maintenance records will be removed.') }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">🗑 {{ _('Delete') }}</button>
+        </form>
+        {% endif %}
         <a href="/machines/{{ machine.id }}/parts" class="btn btn-sm" style="background:#8e44ad;color:white">⚙️ {{ _('Parts') }}</a>
         {% if current_user.has_role('admin', 'technician') %}
         <a href="/machines/{{ machine.id }}/add-maintenance" class="btn btn-sm btn-success">🔧 {{ _('Add Maintenance') }}</a>

@@ -797,6 +797,34 @@ def machine_edit(machine_id):
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     return render_template('machine_form.html', machine=m, users=users, sections=sections, contractors=contractors, verantwoordelijken=verantwoordelijken)
 
+@app.route('/machines/<int:machine_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def machine_delete(machine_id):
+    m = Machine.query.get_or_404(machine_id)
+    name = m.name
+    # Check for open fault reports
+    open_faults = FaultReport.query.filter_by(machine_id=m.id).filter(
+        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+    ).count()
+    if open_faults > 0:
+        flash(_('Cannot delete machine with {} open fault reports').format(open_faults), 'error')
+        return redirect(url_for('machine_detail', machine_id=m.id))
+    # Clear references
+    FaultReport.query.filter_by(machine_id=m.id).update({'machine_id': None})
+    MaintenanceRecord.query.filter_by(machine_id=m.id).delete()
+    MaintenancePlan.query.filter_by(machine_id=m.id).delete()
+    MachinePart.query.filter_by(machine_id=m.id).delete()
+    MachineConsumable.query.filter_by(machine_id=m.id).delete()
+    MachineDocument.query.filter_by(machine_id=m.id).delete()
+    MachineSparePart.query.filter_by(machine_id=m.id).delete()
+    m.assigned_users = []
+    db.session.delete(m)
+    db.session.commit()
+    log_audit('delete', 'machine', machine_id, name)
+    flash(_('Machine deleted') + f': {name}', 'success')
+    return redirect(url_for('machines_list'))
+
 @app.route('/machines/<int:machine_id>/upload-document', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
@@ -1060,16 +1088,21 @@ def settings():
     for s in ['open', 'accepted', 'in_progress', 'parts_ordered', 'waiting_parts', 'resolved', 'closed', 'reopened']:
         faults_by_status[s] = FaultReport.query.filter_by(status=s).count()
     
-    # Top machines with faults
+    # Top machines with faults — single aggregated query instead of N+1
     top_machines_faults = []
-    for m in machines:
-        fault_count = FaultReport.query.filter_by(machine_id=m.id).count()
-        if fault_count > 0:
-            open_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
-            critical_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
-            m.fault_count = fault_count
-            m.open_count = open_count
-            m.critical_count = critical_count
+    fault_stats = db.session.query(
+        FaultReport.machine_id,
+        func.count().label('fault_count'),
+        func.sum(case((FaultReport.status.in_(['open', 'accepted', 'in_progress']), 1), else_=0)).label('open_count'),
+        func.sum(case((FaultReport.priority == 'critical', 1), else_=0)).label('critical_count')
+    ).group_by(FaultReport.machine_id).all()
+    machine_map = {m.id: m for m in machines}
+    for mid, fc, oc, cc in fault_stats:
+        m = machine_map.get(mid)
+        if m and fc > 0:
+            m.fault_count = fc
+            m.open_count = oc or 0
+            m.critical_count = cc or 0
             top_machines_faults.append(m)
     top_machines_faults.sort(key=lambda x: x.fault_count, reverse=True)
     
@@ -3868,6 +3901,19 @@ def order_edit(order_id):
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     monteurs = Monteur.query.filter_by(actief=True).all()
     return render_template('order_form.html', verantwoordelijken=verantwoordelijken, workers=monteurs, order=order)
+
+@app.route('/orders/<int:order_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def order_delete(order_id):
+    order = Opdracht.query.get_or_404(order_id)
+    nummer = order.nummer
+    VoorraadMutatie.query.filter_by(opdracht_id=order.id).update({'opdracht_id': None})
+    db.session.delete(order)
+    db.session.commit()
+    log_audit('delete', 'opdracht', order_id, nummer)
+    flash(_('Work Order deleted') + f': {nummer}', 'success')
+    return redirect(url_for('orders_list'))
 
 # ============================================================
 # ROUTES — KLANTEN (existing)
