@@ -243,8 +243,18 @@ def warehouse_delete(item_id):
 @role_required('admin', 'technician')
 def warehouse_move(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
-    mt = request.form['type']
-    qty = float(request.form['hoeveelheid'])
+    mt = request.form.get('type', '')
+    if mt not in ('inkomend', 'uitgaand'):
+        flash(_('Invalid movement type'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
+    try:
+        qty = float(request.form.get('hoeveelheid', 0))
+    except (ValueError, TypeError):
+        flash(_('Invalid quantity'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
+    if qty <= 0:
+        flash(_('Quantity must be positive'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
     if mt == 'uitgaand' and qty > item.hoeveelheid:
         flash(_('Insufficient stock!'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
@@ -355,10 +365,15 @@ def warehouse_prices(item_id):
 @login_required
 @role_required('admin', 'director')
 def warehouse_price_add(item_id):
+    try:
+        price = float(request.form.get('price', 0))
+    except (ValueError, TypeError):
+        flash(_('Invalid price'), 'error')
+        return redirect(url_for('warehouse.warehouse_prices', item_id=item_id))
     p = SupplierPrice(
         item_id=item_id,
-        supplier_name=request.form['supplier_name'],
-        price=float(request.form['price']),
+        supplier_name=request.form.get('supplier_name', ''),
+        price=price,
         delivery_days=int(request.form['delivery_days']) if request.form.get('delivery_days') else None,
         min_order=float(request.form['min_order']) if request.form.get('min_order') else None,
         notes=request.form.get('notes', '')

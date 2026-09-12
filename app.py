@@ -148,13 +148,13 @@ with app.app_context():
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
-        admin.set_password('admin123', save_plain=True)
+        admin.set_password('admin123')
         tech = User(username='tech', display_name='Sergei Petrov', role='technician')
-        tech.set_password('tech123', save_plain=True)
+        tech.set_password('tech123')
         user = User(username='user', display_name='Jan de Vries', role='user')
-        user.set_password('user123', save_plain=True)
+        user.set_password('user123')
         director = User(username='director', display_name='Director', role='director')
-        director.set_password('director123', save_plain=True)
+        director.set_password('director123')
         db.session.add_all([admin, tech, user, director])
         db.session.commit()
 
@@ -201,6 +201,7 @@ def set_language(lang):
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/reset-role')
+@login_required
 def reset_role():
     """NUCLEAR reset — clears ALL session data."""
     session.clear()
@@ -279,8 +280,11 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        if not username or not password:
+            flash(_('Invalid credentials'), 'error')
+            return render_template('login.html')
         # Try User first
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password) and user.is_active_user:
@@ -366,7 +370,7 @@ def profile():
             if len(new_pass) < 8:
                 flash(_('Password must be at least 8 characters'), 'error')
                 return redirect(url_for('profile'))
-            current_user.set_password(new_pass, save_plain=True)
+            current_user.set_password(new_pass)
             current_user.force_change_password = False
 
         db.session.commit()
@@ -385,7 +389,7 @@ def change_password():
         elif new_pass != confirm_pass:
             flash(_('Passwords do not match'), 'error')
         else:
-            current_user.set_password(new_pass, save_plain=True)
+            current_user.set_password(new_pass)
             current_user.force_change_password = False
             db.session.commit()
             flash(_('Password changed'), 'success')
@@ -423,7 +427,7 @@ def user_change_password(user_id):
     elif new_pass != confirm_pass:
         flash(_('Passwords do not match'), 'error')
     else:
-        u.set_password(new_pass, save_plain=True)
+        u.set_password(new_pass)
         db.session.commit()
         flash(_('Password changed for %(username)s', username=u.username), 'success')
     return redirect(url_for('user_cabinet', user_id=u.id))
@@ -459,7 +463,7 @@ def user_cabinet_update(user_id):
         if new_pass != confirm_pass:
             flash(_('Passwords do not match'), 'error')
             return redirect(url_for('users_list'))
-        u.set_password(new_pass, save_plain=True)
+        u.set_password(new_pass)
     # Update allowed sections
     UserSectionAccess.query.filter_by(user_id=u.id).delete()
     for key in request.form.getlist('allowed_sections'):
@@ -543,7 +547,7 @@ def user_new():
             person_id=int(request.form['person_id']) if request.form.get('person_id') else None,
             hire_date=datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else None
         )
-        u.set_password(request.form['password'], save_plain=True)
+        u.set_password(request.form['password'])
         db.session.add(u)
         db.session.flush()
         # Save allowed sections
@@ -586,7 +590,7 @@ def user_edit(user_id):
         u.fire_date = datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None
         new_pass = request.form.get('password')
         if new_pass:
-            u.set_password(new_pass, save_plain=True)
+            u.set_password(new_pass)
         # Update allowed sections
         UserSectionAccess.query.filter_by(user_id=u.id).delete()
         for key in request.form.getlist('allowed_sections'):
