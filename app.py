@@ -128,12 +128,30 @@ with app.app_context():
     db.create_all()
     run_migrations()
     run_data_migrations()
-    # Auto-fix admin role (role-switcher corruption)
+    # Auto-fix admin role (role-switcher corruption) — triple safety
     _admin = User.query.filter_by(username='admin').first()
     if _admin and _admin.role != 'admin':
         _admin.role = 'admin'
         db.session.commit()
         print(f"APP STARTUP: Fixed admin role from '{_admin.role}' to 'admin'")
+    # Also fix via raw SQL as fallback
+    try:
+        import sqlite3 as _sqlite3
+        _db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+        if os.path.exists(_db_path):
+            _conn = _sqlite3.connect(_db_path)
+            _cur = _conn.cursor()
+            _cur.execute("SELECT id, role FROM user WHERE username='admin'")
+            _row = _cur.fetchone()
+            if _row:
+                print(f"STARTUP DEBUG: admin id={_row[0]} role={_row[1]}")
+            if _row and _row[1] != 'admin':
+                _cur.execute("UPDATE user SET role='admin' WHERE username='admin'")
+                _conn.commit()
+                print(f"SQL FIX: admin role fixed from '{_row[1]}' to 'admin'")
+            _conn.close()
+    except Exception as _e:
+        print(f"SQL fix skipped: {_e}")
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
