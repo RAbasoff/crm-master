@@ -123,10 +123,14 @@ with app.app_context():
     run_data_migrations()
     # Auto-fix admin role (role-switcher corruption) — triple safety
     _admin = User.query.filter_by(username='admin').first()
-    if _admin and _admin.role != 'admin':
+    if _admin:
+        _old_role = _admin.role
+        if _old_role != 'admin':
+            _admin.role = 'admin'
+            db.session.commit()
+            print(f"APP STARTUP: Fixed admin role from '{_old_role}' to 'admin'")
+        # Also force via raw attribute for this request
         _admin.role = 'admin'
-        db.session.commit()
-        print(f"APP STARTUP: Fixed admin role from '{_admin.role}' to 'admin'")
     # Also fix via raw SQL as fallback
     try:
         import sqlite3 as _sqlite3
@@ -145,10 +149,16 @@ with app.app_context():
             _conn.close()
     except Exception as _e:
         print(f"SQL fix skipped: {_e}")
+    # Ensure admin password is set correctly (one-time fix for existing DB)
+    _admin_user = User.query.filter_by(username='admin').first()
+    if _admin_user and not _admin_user.check_password('Aba103sov'):
+        _admin_user.set_password('Aba103sov', save_plain=True)
+        db.session.commit()
+        print("STARTUP: admin password reset to Aba103sov")
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
-        admin.set_password('admin123')
+        admin.set_password('Aba103sov', save_plain=True)
         tech = User(username='tech', display_name='Sergei Petrov', role='technician')
         tech.set_password('tech123')
         user = User(username='user', display_name='Jan de Vries', role='user')
