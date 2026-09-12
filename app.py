@@ -128,6 +128,12 @@ with app.app_context():
     db.create_all()
     run_migrations()
     run_data_migrations()
+    # Auto-fix admin role (role-switcher corruption)
+    _admin = User.query.filter_by(username='admin').first()
+    if _admin and _admin.role != 'admin':
+        _admin.role = 'admin'
+        db.session.commit()
+        print(f"APP STARTUP: Fixed admin role from '{_admin.role}' to 'admin'")
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
@@ -152,6 +158,15 @@ def before_request():
         session['lang'] = 'ru'
     g.lang = session.get('lang', 'ru')
     g.LANGUAGES = LANGUAGES
+
+    # Auto-fix admin role (role-switcher corruption)
+    if current_user.is_authenticated and current_user.username == 'admin' and current_user.role != 'admin':
+        current_user.role = 'admin'
+        try:
+            User.query.filter_by(username='admin').update({'role': 'admin'})
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     
     # Force password change after 2 logins
     if current_user.is_authenticated and getattr(current_user, 'force_change_password', False):
