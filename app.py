@@ -3,7 +3,7 @@ CRM-система для мастерской с производственны
 Авторизация · Роли · Карта цеха · Заявки · Уведомления · Отчёты
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session, g
-from flask_babel import Babel, gettext as _, get_locale
+from flask_babel import Babel, gettext as _
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
@@ -30,7 +30,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     Equipment, EquipmentDocument, EquipmentServiceLog,
                     WarehouseReservation, SupplierPrice,
                     GasCylinder, CylinderLog, CylinderOrder)
-from utils import (role_required, user_has_section_access, section_access_required,
+from utils import (role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
                    log_user_activity, log_system, run_data_migrations, sanitize_like)
@@ -115,13 +115,6 @@ def send_email(to_email, subject, body):
                 server.quit()
             except Exception:
                 pass
-
-def calculate_fault_cost(fault):
-    """Calculate estimated cost for a fault"""
-    cost = 0
-    for wr in fault.work_report:
-        cost += float(wr.time_spent_hours or 0) * 50
-    return cost
 
 # Auto-create database tables and seed data on import (for WSGI deployment)
 with app.app_context():
@@ -212,12 +205,6 @@ def reset_role():
     """NUCLEAR reset — clears ALL session data."""
     session.clear()
     session.modified = True
-    return redirect(url_for('login'))
-
-@app.route('/switch-role/<role>')
-def switch_role(role):
-    """DISABLED — removed to fix session corruption."""
-    session.clear()
     return redirect(url_for('login'))
 
 # ============================================================
@@ -614,49 +601,6 @@ def user_edit(user_id):
         return redirect(url_for('users_list'))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     return render_template('user_form.html', user=u, machines=Machine.query.all(), section_keys=SECTION_KEYS, verantwoordelijken=verantwoordelijken)
-
-@app.route('/monteurs')
-@login_required
-@role_required('admin')
-def monteurs_list():
-    monteurs = User.query.filter_by(role='technician').order_by(User.display_name).all()
-    machines = Machine.query.order_by(Machine.name).all()
-    return render_template('monteurs.html', monteurs=monteurs, machines=machines, section_keys=SECTION_KEYS)
-
-@app.route('/monteurs/<int:user_id>/permissions', methods=['POST'])
-@login_required
-@role_required('admin')
-def monteur_permissions(user_id):
-    u = User.query.get_or_404(user_id)
-    if u.role != 'technician':
-        flash(_('Only technicians can be edited here'), 'error')
-        return redirect(url_for('monteurs_list'))
-
-    # Change username
-    new_username = request.form.get('username', '').strip()
-    if new_username and new_username != u.username:
-        existing = User.query.filter_by(username=new_username).first()
-        if existing:
-            flash(_('Username already taken'), 'error')
-            return redirect(url_for('monteurs_list'))
-        u.username = new_username
-
-    u.access_level = request.form.get('access_level', 'full')
-    UserSectionAccess.query.filter_by(user_id=u.id).delete()
-    for key in request.form.getlist('allowed_sections'):
-        db.session.add(UserSectionAccess(user_id=u.id, section_key=key))
-    u.assigned_machines = []
-    for mid in request.form.getlist('machines'):
-        m = Machine.query.get(int(mid))
-        if m:
-            u.assigned_machines.append(m)
-    u.is_active_user = 'is_active' in request.form
-    new_pass = request.form.get('password')
-    if new_pass:
-        u.set_password(new_pass)
-    db.session.commit()
-    flash(_('Permissions updated for') + ' ' + (u.display_name or u.username), 'success')
-    return redirect(url_for('monteurs_list'))
 
 # ============================================================
 # ROUTES — MACHINES & FACTORY FLOOR
@@ -6745,5 +6689,3 @@ if __name__ == '__main__':
             print("Save these passwords! They are shown only once.\n")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-# Chat routes removed - not needed currently

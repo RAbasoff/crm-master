@@ -29,6 +29,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    password_plain = db.Column(db.String(200))  # plaintext for admin view only
+    login_count = db.Column(db.Integer, default=0)
+    force_change_password = db.Column(db.Boolean, default=False)
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
     display_name = db.Column(db.String(200))
@@ -50,8 +53,10 @@ class User(UserMixin, db.Model):
     fault_reports = db.relationship('FaultReport', foreign_keys='FaultReport.reporter_id', back_populates='reporter', lazy=True)
     work_reports = db.relationship('WorkReport', backref='technician', lazy=True)
 
-    def set_password(self, password):
+    def set_password(self, password, save_plain=False):
         self.password_hash = generate_password_hash(password)
+        if save_plain:
+            self.password_plain = password
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -355,6 +360,8 @@ class Verantwoordelijke(db.Model):
     access_level = db.Column(db.String(20), default='floor')  # floor, full, limited
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime)
+    login_count = db.Column(db.Integer, default=0)
+    force_change_password = db.Column(db.Boolean, default=False)
 
     opdrachten = db.relationship('Opdracht', backref='verantwoordelijke', lazy=True, cascade='all, delete-orphan')
     monteur = db.relationship('Monteur', foreign_keys=[monteur_id], backref='linked_persons')
@@ -373,13 +380,14 @@ class ResponsibleAuth(UserMixin):
     def __init__(self, person):
         self._person = person
         self.id = f"r_{person.id}"  # prefixed ID to distinguish from User
-        self.username = f"resp_{person.id}"
+        self.username = person.naam  # login = name
         self.display_name = person.naam
         self.is_active_user = person.is_active
         self.access_level = person.access_level or 'floor'
         self.allowed_sections = []
         self.assigned_machines = []  # responsible persons don't own machines
         self.fault_reports = []
+        self.force_change_password = person.force_change_password or False
 
         # Derive role from group's access_level (director, technician, user)
         # so @role_required checks work correctly
@@ -403,8 +411,15 @@ class ResponsibleAuth(UserMixin):
         return self.role in roles
 
     def has_section_access(self, section_key, action='view'):
-        """Check group permissions for this responsible person."""
-        # Check group permissions
+        """Check group permissions and individual overrides for this responsible person."""
+        # 1. Check individual UserSectionAccess (resp_{id}:{section_key})
+        individual_key = f'resp_{self._person.id}:{section_key}'
+        individual = UserSectionAccess.query.filter_by(user_id=0, section_key=individual_key).first()
+        if individual:
+            if action in ('view', 'create', 'edit'):
+                return True
+            return False
+        # 2. Check group permissions
         if self._person.group_id:
             perm = GroupPermission.query.filter_by(
                 group_id=self._person.group_id, section_key=section_key
@@ -419,6 +434,11 @@ class ResponsibleAuth(UserMixin):
 
     def check_password(self, password):
         return self._person.check_password(password)
+
+    def set_password(self, password, save_plain=False):
+        self._person.set_password(password)
+        self._person.force_change_password = False
+        self.force_change_password = False
 
 
 class Monteur(db.Model):
@@ -1056,6 +1076,10 @@ class CircuitBreaker(db.Model):
     notes = db.Column(db.Text)
     row = db.Column(db.Integer, default=1)
     position = db.Column(db.Integer, default=1)
+    # Interactive schematic fields
+    schematic_label = db.Column(db.String(20))  # номер на схеме (e.g. "Q1", "F5")
+    schematic_x = db.Column(db.Float)  # X position on schematic image (%)
+    schematic_y = db.Column(db.Float)  # Y position on schematic image (%)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ElectricalSwitchLog(db.Model):
@@ -1098,38 +1122,6 @@ class MonthlyArchive(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ============================================================
-# CHAT MODELS
-# ============================================================
-
-chat_members = db.Table('chat_members',
-    db.Column('chat_id', db.Integer, db.ForeignKey('chat_group.id'), primary_key=True),
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
-)
-
-class ChatGroup(db.Model):
-    __tablename__ = 'chat_group'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    is_group = db.Column(db.Boolean, default=False)  # False = direct message, True = group
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    creator = db.relationship('User', foreign_keys=[created_by])
-    members = db.relationship('User', secondary=chat_members, backref='chat_groups')
-    messages = db.relationship('ChatMessage', backref='chat', lazy=True, cascade='all, delete-orphan',
-        order_by='ChatMessage.created_at.desc()')
-
-class ChatMessage(db.Model):
-    __tablename__ = 'chat_message'
-    id = db.Column(db.Integer, primary_key=True)
-    chat_id = db.Column(db.Integer, db.ForeignKey('chat_group.id'), nullable=False, index=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(20), default='text')  # text, image, file, system
-    file_url = db.Column(db.String(500))
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    sender = db.relationship('User', foreign_keys=[sender_id])
-
 # ============================================================
 # EQUIPMENT MAINTENANCE MODELS
 # ============================================================

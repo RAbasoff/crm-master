@@ -15,14 +15,13 @@ bp = Blueprint('electricity', __name__, url_prefix='/electricity')
 
 @bp.before_request
 def check_electricity_access():
-    """Temporary lockdown — admin only while maintenance is in progress."""
-    try:
-        if not current_user.is_authenticated:
-            return redirect(url_for('login'))
-        if not current_user.has_role('admin'):
-            return render_template('electricity_locked.html'), 403
-    except Exception:
+    """Check electricity section access."""
+    if not current_user.is_authenticated:
         return redirect(url_for('login'))
+    from utils import user_has_section_access
+    if not user_has_section_access('electricity'):
+        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        return redirect(url_for('index'))
 
 
 @bp.route('/')

@@ -1,29 +1,11 @@
 from functools import wraps
-from flask import flash, redirect, url_for, request
+from flask import flash, redirect, url_for, request, session
 from flask_login import current_user
 from flask_babel import gettext as _
 from datetime import datetime, timedelta
 from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry
 import os
 from werkzeug.utils import secure_filename
-
-SECTION_KEYS = [
-    # Production
-    'dashboard', 'floor', 'machines', 'equipment', 'tool_wear', 'assets',
-    'electricity', 'gas', 'maintenance', 'maintenance_plans', 'repairs',
-    'faults', 'two',
-    # Communication
-    'messages', 'notifications',
-    # Staff
-    'schedule', 'vacations', 'time_tracking',
-    # Business
-    'orders', 'clients', 'workers', 'invoices', 'contractors',
-    'warehouse', 'consumables', 'purchase_requests',
-    # Analytics
-    'reports', 'work_report', 'archive', 'statistics',
-    # System
-    'settings', 'users', 'audit_log', 'sections',
-]
 
 # Role hierarchy: admin > director > technician > user
 # admin: full access, can modify program settings
