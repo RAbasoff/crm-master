@@ -1519,8 +1519,23 @@ def maintenance_calendar():
     for mr in all_maint_records:
         maint_by_machine.setdefault(mr.machine_id, []).append(mr)
 
+    # Batch-fetch PartMaintenanceLog for all parts
+    all_part_ids = [p.id for p in parts]
+    part_logs = PartMaintenanceLog.query.filter(
+        PartMaintenanceLog.part_id.in_(all_part_ids)
+    ).all() if all_part_ids else []
+    logs_by_part = {}
+    for log in part_logs:
+        logs_by_part.setdefault(log.part_id, []).append(log)
+
     for p in parts:
         if p.next_replacement and month_start <= p.next_replacement < month_end:
+            # Check if replacement was done (has log entry after due date)
+            done = False
+            for log in logs_by_part.get(p.id, []):
+                if log.action in ('replacement', 'replaced') and log.date and log.date.date() >= p.next_replacement:
+                    done = True
+                    break
             events.append({
                 'date': p.next_replacement,
                 'type': 'replacement',
@@ -1529,9 +1544,16 @@ def maintenance_calendar():
                 'machine_id': p.machine_id,
                 'part_id': p.id,
                 'category': p.category,
-                'overdue': p.next_replacement < today
+                'overdue': p.next_replacement < today and not done,
+                'done': done
             })
         if p.next_maintenance and month_start <= p.next_maintenance < month_end:
+            # Check if maintenance was done
+            done = False
+            for log in logs_by_part.get(p.id, []):
+                if log.action in ('maintenance', 'replaced') and log.date and log.date.date() >= p.next_maintenance:
+                    done = True
+                    break
             events.append({
                 'date': p.next_maintenance,
                 'type': 'maintenance',
@@ -1540,11 +1562,18 @@ def maintenance_calendar():
                 'machine_id': p.machine_id,
                 'part_id': p.id,
                 'category': p.category,
-                'overdue': p.next_maintenance < today
+                'overdue': p.next_maintenance < today and not done,
+                'done': done
             })
         # Check maintenance records (from batch-fetched data)
         for mr in maint_by_machine.get(p.machine_id, []):
             if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
+                # Check if this maintenance was done (has a follow-up record)
+                done = False
+                for log in logs_by_part.get(p.id, []):
+                    if log.date and log.date.date() >= mr.next_maintenance.date():
+                        done = True
+                        break
                 events.append({
                     'date': mr.next_maintenance.date(),
                     'type': 'machine_maintenance',
@@ -1553,7 +1582,8 @@ def maintenance_calendar():
                     'machine_id': p.machine_id,
                     'part_id': None,
                     'category': mr.maintenance_type,
-                    'overdue': mr.next_maintenance.date() < today
+                    'overdue': mr.next_maintenance.date() < today and not done,
+                    'done': done
                 })
     
     # Add maintenance plans
@@ -1567,6 +1597,7 @@ def maintenance_calendar():
             continue
         # Основное событие
         if month_start <= pl.planned_start < month_end:
+            done = pl.status in ('completed',)
             events.append({
                 'date': pl.planned_start,
                 'type': 'plan',
@@ -1577,7 +1608,8 @@ def maintenance_calendar():
                 'category': pl.maintenance_type,
                 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'),
                 'plan_id': pl.id,
-                'status': pl.status
+                'status': pl.status,
+                'done': done
             })
         # Периодические повторения (виртуальные события)
         if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
@@ -1597,7 +1629,8 @@ def maintenance_calendar():
                         'category': pl.maintenance_type,
                         'overdue': d < today,
                         'plan_id': pl.id,
-                        'status': pl.status
+                        'status': pl.status,
+                        'done': False
                     })
                 # Следующая дата
                 if pl.recurrence == 'daily':
