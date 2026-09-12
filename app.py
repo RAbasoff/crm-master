@@ -1693,6 +1693,61 @@ def maintenance_calendar():
         timedelta=timedelta)
 
 
+@app.route('/maintenance-calendar/complete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def maintenance_calendar_complete():
+    """Mark a calendar event as completed."""
+    ev_type = request.form.get('type', '')
+    part_id = request.form.get('part_id')
+    plan_id = request.form.get('plan_id')
+
+    if ev_type == 'plan' and plan_id:
+        plan = MaintenancePlan.query.get(int(plan_id))
+        if plan:
+            plan.status = 'completed'
+            plan.actual_end = datetime.utcnow().date()
+            db.session.commit()
+            flash(_('Plan marked as completed'), 'success')
+
+    elif ev_type in ('replacement', 'maintenance') and part_id:
+        part = MachinePart.query.get(int(part_id))
+        if part:
+            action = 'replacement' if ev_type == 'replacement' else 'maintenance'
+            log = PartMaintenanceLog(
+                part_id=part.id,
+                action=action,
+                description=f'Completed from calendar by {current_user.display_name or current_user.username}',
+                performed_by=current_user.id,
+                date=datetime.utcnow()
+            )
+            db.session.add(log)
+            # Update part status
+            if action == 'replacement':
+                part.last_replacement = datetime.utcnow().date()
+                if part.replacement_interval_days:
+                    part.next_replacement = date_plus_days(datetime.utcnow().date(), part.replacement_interval_days)
+            else:
+                part.last_maintenance = datetime.utcnow().date()
+                if part.maintenance_interval_days:
+                    part.next_maintenance = date_plus_days(datetime.utcnow().date(), part.maintenance_interval_days)
+            part.status = 'ok'
+            db.session.commit()
+            flash(_('Maintenance marked as completed'), 'success')
+
+    elif ev_type == 'machine_maintenance' and plan_id:
+        # Machine maintenance from MaintenanceRecord — mark via plan if linked
+        plan = MaintenancePlan.query.get(int(plan_id))
+        if plan:
+            plan.status = 'completed'
+            plan.actual_end = datetime.utcnow().date()
+            db.session.commit()
+            flash(_('Maintenance marked as completed'), 'success')
+
+    month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
+    return redirect(url_for('maintenance_calendar', month=month))
+
+
 @app.route('/maintenance-calendar/export')
 @login_required
 def maintenance_calendar_export():

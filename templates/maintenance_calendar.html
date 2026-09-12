@@ -107,9 +107,21 @@
                             {% for ev in day_events %}
                             {% set is_done = ev.done if ev.done is defined else False %}
                             {% set ev_status = ev.status if ev.status is defined else '' %}
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
+                            <div style="display:flex;align-items:center;gap:2px;margin-bottom:2px">
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}
                             </a>
+                            {% if not is_done and current_user.has_role('admin', 'director', 'technician') %}
+                            <form method="POST" action="/maintenance-calendar/complete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Mark as completed?') }}')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="type" value="{{ ev.type }}">
+                                <input type="hidden" name="part_id" value="{{ ev.part_id or '' }}">
+                                <input type="hidden" name="plan_id" value="{{ ev.plan_id or '' }}">
+                                <input type="hidden" name="month" value="{{ month }}">
+                                <button type="submit" style="background:#27ae60;color:white;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Mark completed') }}">✅</button>
+                            </form>
+                            {% endif %}
+                            </div>
                             {% endfor %}
                         </td>
                         {% set ns.day = ns.day + 1 %}
@@ -138,7 +150,7 @@
     <h2>📋 {{ _('Upcoming Events') }} ({{ events|length }})</h2>
     {% if events %}
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Date') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th></tr>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th></th></tr>
         {% for ev in events %}
         {% set is_done = ev.done if ev.done is defined else False %}
         <tr{% if is_done %} style="background:#eafaf1"{% endif %}>
@@ -161,6 +173,18 @@
                     <span class="badge badge-warning">{{ _('Soon') }}</span>
                 {% else %}
                     <span class="badge badge-ok">{{ _('Scheduled') }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not is_done and current_user.has_role('admin', 'director', 'technician') %}
+                <form method="POST" action="/maintenance-calendar/complete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Mark as completed?') }}')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="type" value="{{ ev.type }}">
+                    <input type="hidden" name="part_id" value="{{ ev.part_id or '' }}">
+                    <input type="hidden" name="plan_id" value="{{ ev.plan_id or '' }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;padding:2px 6px;font-size:11px">✅ {{ _('Done') }}</button>
+                </form>
                 {% endif %}
             </td>
         </tr>
