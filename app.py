@@ -363,8 +363,8 @@ def profile():
             if new_pass != confirm_pass:
                 flash(_('Passwords do not match'), 'error')
                 return redirect(url_for('profile'))
-            if len(new_pass) < 4:
-                flash(_('Password must be at least 4 characters'), 'error')
+            if len(new_pass) < 8:
+                flash(_('Password must be at least 8 characters'), 'error')
                 return redirect(url_for('profile'))
             current_user.set_password(new_pass, save_plain=True)
             current_user.force_change_password = False
@@ -380,8 +380,8 @@ def change_password():
     if request.method == 'POST':
         new_pass = request.form.get('new_password', '').strip()
         confirm_pass = request.form.get('confirm_password', '').strip()
-        if not new_pass or len(new_pass) < 4:
-            flash(_('Password must be at least 4 characters'), 'error')
+        if not new_pass or len(new_pass) < 8:
+            flash(_('Password must be at least 8 characters'), 'error')
         elif new_pass != confirm_pass:
             flash(_('Passwords do not match'), 'error')
         else:
@@ -406,6 +406,7 @@ def users_list():
 
 @app.route('/users/<int:user_id>')
 @login_required
+@role_required('admin', 'director')
 def user_cabinet(user_id):
     u = User.query.get_or_404(user_id)
     return render_template('user_cabinet.html', user=u)
@@ -609,13 +610,16 @@ def user_edit(user_id):
 @app.route('/machines')
 @login_required
 def machines_list():
+    page = request.args.get('page', 1, type=int)
     if current_user.has_role('admin', 'director'):
-        machines = Machine.query.all()
+        pagination = Machine.query.order_by(Machine.name).paginate(page=page, per_page=25, error_out=False)
     elif current_user.has_role('technician'):
-        machines = Machine.query.all()  # Technicians see all
+        pagination = Machine.query.order_by(Machine.name).paginate(page=page, per_page=25, error_out=False)
     else:
+        # For regular users, show only assigned machines (no pagination needed for small set)
         machines = current_user.assigned_machines
-    return render_template('machines.html', machines=machines)
+        return render_template('machines.html', machines=machines, pagination=None)
+    return render_template('machines.html', machines=pagination.items, pagination=pagination)
 
 @app.route('/machines/new', methods=['GET', 'POST'])
 @login_required
@@ -1502,6 +1506,15 @@ def maintenance_calendar():
     
     # Build calendar events
     events = []
+    # Batch-fetch all maintenance records for relevant machines
+    all_machine_ids = list(set(p.machine_id for p in parts))
+    all_maint_records = MaintenanceRecord.query.filter(
+        MaintenanceRecord.machine_id.in_(all_machine_ids)
+    ).all() if all_machine_ids else []
+    maint_by_machine = {}
+    for mr in all_maint_records:
+        maint_by_machine.setdefault(mr.machine_id, []).append(mr)
+
     for p in parts:
         if p.next_replacement and month_start <= p.next_replacement < month_end:
             events.append({
@@ -1525,8 +1538,8 @@ def maintenance_calendar():
                 'category': p.category,
                 'overdue': p.next_maintenance < today
             })
-        # Also check maintenance records
-        for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
+        # Check maintenance records (from batch-fetched data)
+        for mr in maint_by_machine.get(p.machine_id, []):
             if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
                 events.append({
                     'date': mr.next_maintenance.date(),
@@ -3326,21 +3339,43 @@ def stats_full():
     sections = FactorySection.query.order_by(FactorySection.name).all()
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
     
+    # Bulk-fetch fault stats — single query instead of 5N
     machine_report = []
+    fault_stats = db.session.query(
+        FaultReport.machine_id,
+        func.count().label('total_faults'),
+        func.sum(case((FaultReport.created_at >= d_from, 1), else_=0)).label('period_faults'),
+        func.sum(case((FaultReport.status.in_(['open', 'accepted', 'in_progress']), 1), else_=0)).label('open_faults'),
+        func.sum(case((FaultReport.priority == 'critical', 1), else_=0)).label('critical_faults')
+    ).group_by(FaultReport.machine_id).all()
+    fault_map = {mid: (tf, pf, of_, cf) for mid, tf, pf, of_, cf in fault_stats}
+
+    # Bulk-fetch last fault per machine
+    last_faults = {}
+    for mid in fault_map:
+        lf = FaultReport.query.filter(FaultReport.machine_id == mid).order_by(FaultReport.created_at.desc()).first()
+        last_faults[mid] = lf
+
+    machine_map = {m.id: m for m in all_machines}
+    for mid, (tf, pf, of_, cf) in fault_map.items():
+        m = machine_map.get(mid)
+        if m:
+            machine_report.append({
+                'machine': m,
+                'total_faults': tf,
+                'period_faults': pf or 0,
+                'open_faults': of_ or 0,
+                'critical_faults': cf or 0,
+                'last_fault': last_faults.get(mid),
+            })
+    # Add machines with no faults
+    fault_machine_ids = set(fault_map.keys())
     for m in all_machines:
-        total_faults = FaultReport.query.filter(FaultReport.machine_id == m.id).count()
-        period_faults = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.created_at >= d_from).count()
-        open_faults = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
-        critical_faults = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.priority == 'critical').count()
-        last_fault = FaultReport.query.filter(FaultReport.machine_id == m.id).order_by(FaultReport.created_at.desc()).first()
-        machine_report.append({
-            'machine': m,
-            'total_faults': total_faults,
-            'period_faults': period_faults,
-            'open_faults': open_faults,
-            'critical_faults': critical_faults,
-            'last_fault': last_fault,
-        })
+        if m.id not in fault_machine_ids:
+            machine_report.append({
+                'machine': m, 'total_faults': 0, 'period_faults': 0,
+                'open_faults': 0, 'critical_faults': 0, 'last_fault': None,
+            })
     
     # Sort by period faults descending
     machine_report.sort(key=lambda x: x['period_faults'], reverse=True)
@@ -3676,6 +3711,7 @@ def stats_export():
     
     # === PDF ===
     elif format_type == 'pdf':
+        from html import escape as h
         html = f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
@@ -3692,7 +3728,7 @@ tr:nth-child(even) {{ background: #f9f9f9; }}
 .footer {{ margin-top: 30px; font-size: 9px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }}
 </style></head><body>
 <h1>Статистика — CRM Мастерская</h1>
-<p>Период: {stats["period"]} | Дата: {stats["date"]}</p>
+<p>Период: {h(stats["period"])} | Дата: {h(stats["date"])}</p>
 
 <h2>Заявки о неисправности</h2>
 <div>
@@ -3706,13 +3742,13 @@ tr:nth-child(even) {{ background: #f9f9f9; }}
 <h2>По приоритету</h2>
 <table><tr><th>Приоритет</th><th>Количество</th></tr>'''
         for p, c in by_priority:
-            html += f'<tr><td>{p}</td><td>{c}</td></tr>'
+            html += f'<tr><td>{h(str(p))}</td><td>{c}</td></tr>'
         html += '</table>'
         
         html += '<h2>Топ станков по заявкам</h2>'
         html += '<table><tr><th>Станок</th><th>Заявок</th></tr>'
         for name, cnt in top_machines:
-            html += f'<tr><td>{name}</td><td>{cnt}</td></tr>'
+            html += f'<tr><td>{h(str(name))}</td><td>{cnt}</td></tr>'
         html += '</table>'
         
         html += f'''
@@ -3734,11 +3770,11 @@ tr:nth-child(even) {{ background: #f9f9f9; }}
 <h2>Отчёт по станкам</h2>
 <table><tr><th>Станок</th><th>Тип</th><th>Отдел</th><th>Всего</th><th>Период</th><th>Открытых</th><th>Критичных</th></tr>'''
         for m in machine_data:
-            html += f'<tr><td>{m["name"]}</td><td>{m["type"]}</td><td>{m["section"]}</td><td>{m["total"]}</td><td>{m["period"]}</td><td>{m["open"]}</td><td>{m["critical"]}</td></tr>'
+            html += f'<tr><td>{h(str(m["name"]))}</td><td>{h(str(m["type"]))}</td><td>{h(str(m["section"]))}</td><td>{m["total"]}</td><td>{m["period"]}</td><td>{m["open"]}</td><td>{m["critical"]}</td></tr>'
         html += '</table>'
         
         html += f'''
-<div class="footer">CRM Мастерская — Статистика — {stats["date"]}</div>
+<div class="footer">CRM Мастерская — Статистика — {h(stats["date"])}</div>
 </body></html>'''
         
         from flask import Response
@@ -3833,14 +3869,16 @@ def index():
 @login_required
 @role_required('admin', 'director', 'technician')
 def orders_list():
+    page = request.args.get('page', 1, type=int)
     sf = request.args.get('status', '')
     wf = request.args.get('worker', '')
     q = Opdracht.query
     if sf: q = q.filter_by(status=sf)
     if wf: q = q.filter_by(monteur_id=wf)
-    orders = q.order_by(Opdracht.aangemaakt.desc()).all()
+    pagination = q.order_by(Opdracht.aangemaakt.desc()).paginate(page=page, per_page=25, error_out=False)
+    orders = pagination.items
     workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('orders.html', orders=orders, workers=workers, status_filter=sf, worker_filter=wf)
+    return render_template('orders.html', orders=orders, workers=workers, status_filter=sf, worker_filter=wf, pagination=pagination)
 
 @app.route('/orders/new', methods=['GET', 'POST'])
 @login_required
@@ -5238,9 +5276,9 @@ def qr_product():
         return jsonify({'error': 'Geen data'}), 400
     klant = None
     if data.get('klant'):
-        klant = Verantwoordelijke.query.filter(Verantwoordelijke.naam.ilike(f"%{data['klant']}%")).first()
+        klant = Verantwoordelijke.query.filter(Verantwoordelijke.naam.ilike(f"%{sanitize_like(data['klant'])}%")).first()
     if not klant and data.get('telefoon'):
-        klant = Verantwoordelijke.query.filter(Verantwoordelijke.telefoon.like(f"%{data['telefoon']}%")).first()
+        klant = Verantwoordelijke.query.filter(Verantwoordelijke.telefoon.like(f"%{sanitize_like(data['telefoon'])}%")).first()
     result = {
         'apparaat': data.get('apparaat', ''),
         'model': data.get('model', ''),
@@ -5278,7 +5316,7 @@ def qr_lookup():
             'apparaat': order.apparaat, 'model': order.model,
             'klant': order.verantwoordelijke.naam, 'status': order.status
         })
-    klant = Verantwoordelijke.query.filter(Verantwoordelijke.telefoon.like(f"%{code}%")).first()
+    klant = Verantwoordelijke.query.filter(Verantwoordelijke.telefoon.like(f"%{sanitize_like(code)}%")).first()
     if klant:
         orders = Opdracht.query.filter_by(responsible_id=klant.id).order_by(Opdracht.aangemaakt.desc()).limit(5).all()
         return jsonify({

@@ -1,0 +1,16 @@
+{# Reusable pagination nav — include with: {% include '_pagination.html' with context %} #}
+{# Expects `pagination` variable from Flask-SQLAlchemy .paginate() #}
+{% if pagination and pagination.pages > 1 %}
+<div style="display:flex;justify-content:center;align-items:center;gap:8px;padding:16px 0;flex-wrap:wrap">
+    {% if pagination.has_prev %}
+    <a href="?page={{ pagination.prev_num }}{% for k, v in request.args.items() if k != 'page' %}&{{ k }}={{ v }}{% endfor %}" class="btn btn-sm" style="background:#eee">◀ {{ _('Previous') }}</a>
+    {% endif %}
+    <span style="font-size:13px;color:#666">
+        {{ _('Page') }} <strong>{{ pagination.page }}</strong> {{ _('of') }} <strong>{{ pagination.pages }}</strong>
+        <span style="color:#999">({{ pagination.total }} {{ _('total') }})</span>
+    </span>
+    {% if pagination.has_next %}
+    <a href="?page={{ pagination.next_num }}{% for k, v in request.args.items() if k != 'page' %}&{{ k }}={{ v }}{% endfor %}" class="btn btn-sm" style="background:#eee">{{ _('Next') }} ▶</a>
+    {% endif %}
+</div>
+{% endif %}

@@ -377,6 +377,8 @@ def api_cylinder_update(cyl_id):
 
     old_status = c.status
     if 'status' in data:
+        if data['status'] not in ('full', 'in_use', 'empty', 'maintenance'):
+            return jsonify({'error': 'Invalid status'}), 400
         c.status = data['status']
     if 'notes' in data:
         c.notes = data['notes']

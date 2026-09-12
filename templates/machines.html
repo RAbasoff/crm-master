@@ -121,4 +121,5 @@ function printSelectedLabels() {
     window.open('/machines/qr-labels?ids=' + ids.join(','), '_blank');
 }
 </script>
+{% include '_pagination.html' with context %}
 {% endblock %}

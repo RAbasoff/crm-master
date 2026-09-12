@@ -971,9 +971,19 @@ def add_work_report(entry_text):
 
 def check_tool_wear_notifications():
     """Send notifications to users when their assigned machines have tools with wear >= 80%."""
-    from models import ToolWear, User, Machine
+    from models import ToolWear, User, Machine, Notification
     today = datetime.utcnow().date()
     tools = ToolWear.query.all()
+    # Batch-fetch all machines by name
+    machine_names = set(t.machine_name for t in tools)
+    machines_by_name = {}
+    for m in Machine.query.filter(Machine.name.in_(machine_names)).all():
+        machines_by_name[m.name] = m
+    # Pre-fetch existing tool_wear notifications
+    existing_notifs = set()
+    for n in Notification.query.filter_by(type='tool_wear', link='/tool-wear').all():
+        existing_notifs.add(n.user_id)
+
     for t in tools:
         cycle = t.cycle_days or 14
         if t.last_replaced:
@@ -983,24 +993,19 @@ def check_tool_wear_notifications():
             wear = 100.0
         if wear < 80:
             continue
-        # Find machine by name
-        machine = Machine.query.filter_by(name=t.machine_name).first()
+        machine = machines_by_name.get(t.machine_name)
         if not machine:
             continue
-        # Notify assigned users
         for user in machine.assigned_users:
             if not user.is_active_user:
                 continue
-            link = f'/tool-wear'
-            existing = Notification.query.filter_by(
-                user_id=user.id, type='tool_wear', link=link
-            ).first()
-            if existing:
+            if user.id in existing_notifs:
                 continue
             create_notification(
                 user.id,
                 _('Knife replacement needed'),
                 f"{t.machine_name}: {t.tool_name} — {wear}% {_('wear')}",
                 'tool_wear',
-                link
+                '/tool-wear'
             )
+            existing_notifs.add(user.id)

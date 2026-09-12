@@ -19,16 +19,18 @@ bp = Blueprint('faults', __name__, url_prefix='/faults')
 @bp.route('/')
 @login_required
 def faults_list():
+    page = request.args.get('page', 1, type=int)
     if current_user.has_role('admin', 'director'):
-        faults = FaultReport.query.order_by(FaultReport.created_at.desc()).all()
+        pagination = FaultReport.query.order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     elif current_user.has_role('technician'):
-        faults = FaultReport.query.filter(
+        pagination = FaultReport.query.filter(
             (FaultReport.technician_id == current_user.id) |
             (FaultReport.status == 'open')
-        ).order_by(FaultReport.created_at.desc()).all()
+        ).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     else:
-        faults = FaultReport.query.filter_by(reporter_id=current_user.id).order_by(FaultReport.created_at.desc()).all()
-    return render_template('faults.html', faults=faults)
+        pagination = FaultReport.query.filter_by(reporter_id=current_user.id).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+    faults = pagination.items
+    return render_template('faults.html', faults=faults, pagination=pagination)
 
 
 @bp.route('/new', methods=['GET', 'POST'])

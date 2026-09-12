@@ -100,17 +100,19 @@ def warehouse_groups_auto():
 @login_required
 @role_required('admin', 'director', 'technician')
 def warehouse_list():
+    page = request.args.get('page', 1, type=int)
     cat = request.args.get('categorie', '')
     group_id = request.args.get('group', '')
     q = VoorraadItem.query
     if cat: q = q.filter_by(categorie=cat)
     if group_id: q = q.filter_by(group_id=int(group_id))
-    items = q.order_by(VoorraadItem.naam).all()
+    pagination = q.order_by(VoorraadItem.naam).paginate(page=page, per_page=25, error_out=False)
+    items = pagination.items
     cats = [c[0] for c in db.session.query(VoorraadItem.categorie).distinct().all() if c[0]]
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
     laag = [i for i in items if i.hoeveelheid <= i.minimum]
     return render_template('warehouse.html', items=items, categories=cats, category_filter=cat,
-        groups=groups, group_filter=int(group_id) if group_id else None, low_stock=laag)
+        groups=groups, group_filter=int(group_id) if group_id else None, low_stock=laag, pagination=pagination)
 
 
 @bp.route('/new', methods=['GET', 'POST'])
