@@ -105,8 +105,10 @@
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if ev.get('done') %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if ev.get('done') %}#27ae60{% elif ev.get('status') == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }})">
-                                <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}
+                            {% set is_done = ev.done if ev.done is defined else False %}
+                            {% set ev_status = ev.status if ev.status is defined else '' %}
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="display:block;font-size:9px;padding:2px 4px;margin-bottom:2px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
+                                <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}
                             </a>
                             {% endfor %}
                         </td>
@@ -138,17 +140,18 @@
     <div class="table-wrap"><table>
         <tr><th>{{ _('Date') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th></tr>
         {% for ev in events %}
-        <tr>
+        {% set is_done = ev.done if ev.done is defined else False %}
+        <tr{% if is_done %} style="background:#eafaf1"{% endif %}>
             <td style="white-space:nowrap">{{ ev.date.strftime('%d-%m-%Y') }}</td>
             <td><a href="/machines/{{ ev.machine_id }}">{{ ev.machine }}</a></td>
-            <td>{{ ev.part }}</td>
+            <td>{{ ev.part }}{% if is_done %} ✅{% endif %}</td>
             <td>
                 {% if ev.type == 'replacement' %}🔄 {{ _('Replacement') }}
                 {% elif ev.type == 'maintenance' %}🔧 {{ _('Maintenance') }}
                 {% else %}⚙️ {{ ev.category }}{% endif %}
             </td>
             <td>
-                {% if ev.get('done') %}
+                {% if is_done %}
                     <span class="badge" style="background:#27ae60;color:white">{{ _('Completed') }}</span>
                 {% elif ev.overdue %}
                     <span class="badge badge-critical">{{ _('Overdue') }}</span>
