@@ -153,6 +153,8 @@ with app.app_context():
     _admin_user = User.query.filter_by(username='admin').first()
     if _admin_user and not _admin_user.check_password('Aba103sov'):
         _admin_user.set_password('Aba103sov', save_plain=True)
+        _admin_user.force_change_password = False
+        _admin_user.login_count = 0
         db.session.commit()
         print("STARTUP: admin password reset to Aba103sov")
     if User.query.count() == 0:

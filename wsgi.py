@@ -6,7 +6,7 @@ import sys
 import os
 
 # Add your project directory to sys.path
-project_home = '/home/yourusername/CRM_Мастерская'
+project_home = '/home/rabasoff/crm-master'
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
