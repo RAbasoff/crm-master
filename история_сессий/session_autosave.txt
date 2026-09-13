@@ -1,28 +1,35 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ
 ============================================================
-Время: 2026-09-13 22:30 UTC
+Время: 2026-09-13 16:55 UTC
 
 ПРОЕКТ: D:\ИИ\CRM_Мастерская
 GITHUB: https://github.com/RAbasoff/crm-master.git
 ONLINE: https://rabasoff.pythonanywhere.com
 
-ПОСЛЕДНИЙ КОММИТ: 090ae3e "feat: add change_password page, improve users view, deploy docs, session history"
+ПОСЛЕДНИЙ КОММИТ: 7f627a4 "feat: monthly schedule shows Monteurs (technical service workers)"
 
-ВЫПОЛНЕНО В ЭТОЙ СЕССИИ:
-  ✅ Закоммичено и запушено 16 файлов (681 строка)
-  ✅ templates/change_password.html — страница смены пароля
-  ✅ templates/users.html — показ пароля, бейдж force_change
-  ✅ DEPLOY.md — инструкция деплоя
-  ✅ история_сессий — файлы сессий
+НЕЗАКОММИЧЕННЫХ ИЗМЕНЕНИЙ: нет
 
-ПАРОЛИ:
-  admin / Aba103sov (проверено локально)
+ВСЕ КОММИТЫ ЗА СЕССИЮ (chronological):
+  62fcd11 fix: flask_compress/caching/migrate опциональные
+  15f5a76 fix: тестовые пользователи + director TWO + E2E test
+  0ca6e5a fix: login form action
+  6c17f99 fix: strict_slashes на /login
+  60174cc fix: schedule Monteurs + director delete + login debug
+  5bde678 fix: удаление tech/user + 500 handler + CSRF flash
+  984efe2 feat: Logistiek-Oktopus группа + low-stock notifications
+  7be95a7 fix: WTF_CSRF_SSL_STRICT=False для PA
+  b240e5b feat: Logistiek access control + Pablo/Paulina creds
+  7f627a4 feat: monthly schedule → Monteurs
 
-НА PYTHONANYWHERE ОЖИДАЕТ:
-  cd ~/crm-master && git pull origin master
-  pip install --user flask-caching flask-migrate flask-compress
-  Web → Reload
-  Проверить вход: admin / Aba103sov
+ОЖИДАЕТ ОТ ПОЛЬЗОВАТЕЛЯ:
+  cd ~/crm-master && git pull origin master → Web Reload
+
+ЗАДАЧИ В ОЧЕРЕДИ:
+  1. Users модуль → показывать ГРУППЫ
+  2. Equipment → экспорт ремонтов в календарь ТО
+  3. Логин на PA — проверить после Reload (CSRF fix)
+  4. E2E тест трёх ролей
 
 ============================================================
