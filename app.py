@@ -149,14 +149,22 @@ with app.app_context():
             _conn.close()
     except Exception as _e:
         print(f"SQL fix skipped: {_e}")
-    # Ensure admin password is set correctly (one-time fix for existing DB)
+    # Ensure admin account is healthy: correct password + no force_change flag
     _admin_user = User.query.filter_by(username='admin').first()
-    if _admin_user and not _admin_user.check_password('Aba103sov'):
-        _admin_user.set_password('Aba103sov', save_plain=True)
-        _admin_user.force_change_password = False
-        _admin_user.login_count = 0
-        db.session.commit()
-        print("STARTUP: admin password reset to Aba103sov")
+    if _admin_user:
+        _needs_update = False
+        if not _admin_user.check_password('Aba103sov'):
+            _admin_user.set_password('Aba103sov', save_plain=True)
+            _needs_update = True
+            print("STARTUP: admin password reset to Aba103sov")
+        if _admin_user.force_change_password:
+            _admin_user.force_change_password = False
+            _needs_update = True
+        if _admin_user.login_count and _admin_user.login_count > 0:
+            _admin_user.login_count = 0
+            _needs_update = True
+        if _needs_update:
+            db.session.commit()
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
