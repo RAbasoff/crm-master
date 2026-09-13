@@ -223,6 +223,20 @@ with app.app_context():
         director.set_password('director123')
         db.session.add_all([admin, tech, user, director])
         safe_commit()
+    # Ensure test users exist (create if missing)
+    _test_defaults = [
+        ('tech', 'Sergei Petrov', 'technician', 'tech123'),
+        ('user', 'Jan de Vries', 'user', 'user123'),
+        ('director', 'Director', 'director', 'director123'),
+    ]
+    for _uname, _dname, _role, _pw in _test_defaults:
+        if not User.query.filter_by(username=_uname).first():
+            u = User(username=_uname, display_name=_dname, role=_role)
+            u.set_password(_pw, save_plain=True)
+            u.is_active_user = True
+            db.session.add(u)
+            safe_commit()
+            print(f"STARTUP: created missing test user '{_uname}' ({_role})")
 
 def get_current_locale():
     return session.get('lang', 'ru')
@@ -2787,7 +2801,7 @@ def two_list():
 
 @app.route('/two/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_new():
     if request.method == 'POST':
         fault_id = int(request.form['fault_id']) if request.form.get('fault_id') else None
