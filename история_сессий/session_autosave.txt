@@ -1,35 +1,38 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ
 ============================================================
-Время: 2026-09-13 16:55 UTC
+Время: 2026-09-13 16:58 UTC
 
 ПРОЕКТ: D:\ИИ\CRM_Мастерская
 GITHUB: https://github.com/RAbasoff/crm-master.git
 ONLINE: https://rabasoff.pythonanywhere.com
 
-ПОСЛЕДНИЙ КОММИТ: 7f627a4 "feat: monthly schedule shows Monteurs (technical service workers)"
+ПОСЛЕДНИЙ КОММИТ: 00ee3ac "fix: maintenance calendar recurring events — show after completion + per-occurrence done tracking"
 
 НЕЗАКОММИЧЕННЫХ ИЗМЕНЕНИЙ: нет
 
-ВСЕ КОММИТЫ ЗА СЕССИЮ (chronological):
-  62fcd11 fix: flask_compress/caching/migrate опциональные
-  15f5a76 fix: тестовые пользователи + director TWO + E2E test
-  0ca6e5a fix: login form action
-  6c17f99 fix: strict_slashes на /login
-  60174cc fix: schedule Monteurs + director delete + login debug
-  5bde678 fix: удаление tech/user + 500 handler + CSRF flash
-  984efe2 feat: Logistiek-Oktopus группа + low-stock notifications
-  7be95a7 fix: WTF_CSRF_SSL_STRICT=False для PA
-  b240e5b feat: Logistiek access control + Pablo/Paulina creds
-  7f627a4 feat: monthly schedule → Monteurs
+ВСЕ КОММИТЫ ЗА СЕССИЮ (14 шт):
+  62fcd11 flask_compress/caching/migrate опциональные
+  15f5a76 тестовые пользователи + director TWO
+  0ca6e5a login form action
+  6c17f99 strict_slashes на /login
+  60174cc schedule Monteurs + director delete + login debug
+  5bde678 удаление tech/user + 500 handler + CSRF flash
+  984efe2 Logistiek-Oktopus группа + low-stock
+  7be95a7 WTF_CSRF_SSL_STRICT=False
+  b240e5b Logistiek access control + Pablo/Paulina creds
+  7f627a4 monthly schedule → Monteurs
+  302064d WarehouseGroup local import в migrations
+  a1e5ac7 User accounts для Monteurs
+  00ee3ac календарь ТО recurring events fix
 
 ОЖИДАЕТ ОТ ПОЛЬЗОВАТЕЛЯ:
   cd ~/crm-master && git pull origin master → Web Reload
 
-ЗАДАЧИ В ОЧЕРЕДИ:
-  1. Users модуль → показывать ГРУППЫ
-  2. Equipment → экспорт ремонтов в календарь ТО
-  3. Логин на PA — проверить после Reload (CSRF fix)
+ОСТАВШИЕСЯ ЗАДАЧИ:
+  1. Проверить логин на PA (CSRF fix)
+  2. Users модуль → ГРУППЫ
+  3. Equipment → экспорт ремонтов в календарь ТО
   4. E2E тест трёх ролей
 
 ============================================================
