@@ -1,30 +1,28 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ
 ============================================================
-Время: 2026-09-13 18:31 UTC
+Время: 2026-09-13 18:45 UTC
 
 ПРОЕКТ: D:\ИИ\CRM_Мастерская
-GITHUB: https://github.com/RAbasoff/crm-master.git
-ONLINE: https://rabasoff.pythonanywhere.com
+ПОСЛЕДНИЙ КОММИТ: 7bb7549 "feat: MySQL support for PA — fix SQLite corruption + migration scripts"
 
-ПОСЛЕДНИЙ КОММИТ: c6d55f0 "fix: direct migration script for Logistiek + Monteur users on PA"
+ПРИЧИНА ВСЕХ ПРОБЛЕМ: SQLite файл БД повреждён на PA
+  (database disk image is malformed) — из-за конкурентных
+  записей из нескольких WSGI-воркеров
 
-НЕЗАКОММИЧЕННЫХ ИЗМЕНЕНИЙ: нет
+РЕШЕНИЕ: Переход на MySQL (бесплатно на PA)
 
-ОЖИДАЕТ ОТ ПОЛЬЗОВАТЕЛЯ НА PA:
-  1. cd ~/crm-master && git pull origin master
-  2. python create_logistiek.py
-  3. Web → Reload
-
-ЗАДАЧИ:
-  ✅ Logistiek-Oktopus группа + WarehouseGroup
-  ✅ Pablo/Paulina логины
-  ✅ Monteur → User accounts
-  ✅ Календарь ТО recurring fix
-  ✅ Low-stock notifications
-  🔄 Логин на PA — проверить (CSRF fix)
-  ⬜ Users модуль → ГРУППЫ
-  ⬜ Equipment → экспорт в календарь ТО
-  ⬜ E2E тест трёх ролей
+ИНСТРУКЦИЯ ДЛЯ ПОЛЬЗОВАТЕЛЯ:
+  1. PA → Databases → создать MySQL БД rabasoff$werkplaats
+  2. cd ~/crm-master && git pull origin master
+  3. pip install --user pymysql
+  4. python repair_db.py (восстановить SQLite для экспорта)
+  5. Отредактировать migrate_to_mysql.py — вписать пароль MySQL
+  6. python migrate_to_mysql.py (экспорт данных в MySQL)
+  7. Отредактировать /var/www/rabasoff_pythonanywhere_com_wsgi.py
+     — вписать пароль MySQL в DATABASE_URL
+  8. Web → Reload
+  9. python create_logistiek.py (создать Logistiek группу)
+  10. Web → Reload
 
 ============================================================
