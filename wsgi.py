@@ -13,5 +13,8 @@ if project_home not in sys.path:
 # Set environment variable for production
 os.environ.setdefault('FLASK_ENV', 'production')
 
+# MySQL database on PythonAnywhere (avoids SQLite corruption)
+os.environ.setdefault('DATABASE_URL', 'mysql+pymysql://rabasoff:YOUR_MYSQL_PASSWORD@rabasoff.mysql.pythonanywhere-services.com/rabasoff$werkplaats?charset=utf8mb4')
+
 # Import your Flask app
 from app import app as application

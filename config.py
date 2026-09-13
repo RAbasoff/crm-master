@@ -16,16 +16,25 @@ def _get_secret_key():
 
 class Config:
     SECRET_KEY = _get_secret_key()
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'werkplaats.db'))
+    
+    # MySQL on PythonAnywhere (via env var), SQLite for local development
+    _db_url = os.environ.get('DATABASE_URL', '')
+    if _db_url:
+        SQLALCHEMY_DATABASE_URI = _db_url
+    else:
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'werkplaats.db')
+    
     # Fix for Render.com (postgres:// → postgresql://)
     if SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # SQLite concurrency: WAL mode allows concurrent reads + one writer
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'connect_args': {'timeout': 30},
         'pool_pre_ping': True,
     }
+    # SQLite-specific options (only when using SQLite)
+    if 'sqlite' in SQLALCHEMY_DATABASE_URI:
+        SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'timeout': 30}
     BABEL_DEFAULT_LOCALE = 'nl'
     BABEL_SUPPORTED_LOCALES = ['nl', 'en', 'ru', 'pl']
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
