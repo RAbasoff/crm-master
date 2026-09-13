@@ -43,6 +43,7 @@ from utils import (role_required, user_has_section_access,
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config['WTF_CSRF_TIME_LIMIT'] = None  # no timeout for long sessions
+app.config['WTF_CSRF_SSL_STRICT'] = False  # allow CSRF across HTTP/HTTPS (PythonAnywhere proxy)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance'), exist_ok=True)
 
