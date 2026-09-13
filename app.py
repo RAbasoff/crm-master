@@ -357,62 +357,75 @@ def favicon():
 
 @app.route('/login', methods=['GET', 'POST'], strict_slashes=False)
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        if not username or not password:
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('index'))
+        if request.method == 'POST':
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '')
+            if not username or not password:
+                flash(_('Invalid credentials'), 'error')
+                return render_template('login.html')
+            # Try User first
+            user = User.query.filter_by(username=username).first()
+            if user and user.check_password(password) and user.is_active_user:
+                login_user(user, remember=True)
+                # Track login count
+                user.login_count = (user.login_count or 0) + 1
+                if user.login_count >= 2 and user.role != 'admin':
+                    user.force_change_password = True
+                safe_commit()
+                log_user_activity('login', page='/login', details=f'User {username} logged in')
+                log_system('INFO', 'auth', f'User {username} logged in', source='login')
+                # Force password change after 2 logins
+                if user.force_change_password:
+                    flash(_('You must change your password'), 'warning')
+                    return redirect(url_for('change_password'))
+                next_url = request.args.get('next')
+                if next_url:
+                    parsed = urlparse(next_url)
+                    if parsed.netloc and parsed.netloc != request.host:
+                        next_url = None
+                return redirect(next_url or url_for('index'))
+            # Try Verantwoordelijke by username, email or naam
+            person = Verantwoordelijke.query.filter(
+                (Verantwoordelijke.username == username) | (Verantwoordelijke.email == username) | (Verantwoordelijke.naam == username)
+            ).first()
+            if person and person.check_password(password) and person.is_active:
+                auth = ResponsibleAuth(person)
+                person.last_login = datetime.utcnow()
+                person.login_count = (person.login_count or 0) + 1
+                if person.login_count >= 2:
+                    person.force_change_password = True
+                    auth.force_change_password = True
+                safe_commit()
+                login_user(auth, remember=True)
+                log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
+                log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
+                if auth.force_change_password:
+                    flash(_('You must change your password'), 'warning')
+                    return redirect(url_for('change_password'))
+                next_url = request.args.get('next')
+                if next_url:
+                    parsed = urlparse(next_url)
+                    if parsed.netloc and parsed.netloc != request.host:
+                        next_url = None
+                return redirect(next_url or url_for('floor_plan'))
+            log_system('WARNING', 'auth', f'Failed login attempt for {username}', source='login')
             flash(_('Invalid credentials'), 'error')
-            return render_template('login.html')
-        # Try User first
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password) and user.is_active_user:
-            login_user(user, remember=True)
-            # Track login count
-            user.login_count = (user.login_count or 0) + 1
-            if user.login_count >= 2 and user.role != 'admin':
-                user.force_change_password = True
-            safe_commit()
-            log_user_activity('login', page='/login', details=f'User {username} logged in')
-            log_system('INFO', 'auth', f'User {username} logged in', source='login')
-            # Force password change after 2 logins
-            if user.force_change_password:
-                flash(_('You must change your password'), 'warning')
-                return redirect(url_for('change_password'))
-            next_url = request.args.get('next')
-            if next_url:
-                parsed = urlparse(next_url)
-                if parsed.netloc and parsed.netloc != request.host:
-                    next_url = None
-            return redirect(next_url or url_for('index'))
-        # Try Verantwoordelijke by username, email or naam
-        person = Verantwoordelijke.query.filter(
-            (Verantwoordelijke.username == username) | (Verantwoordelijke.email == username) | (Verantwoordelijke.naam == username)
-        ).first()
-        if person and person.check_password(password) and person.is_active:
-            auth = ResponsibleAuth(person)
-            person.last_login = datetime.utcnow()
-            person.login_count = (person.login_count or 0) + 1
-            if person.login_count >= 2:
-                person.force_change_password = True
-                auth.force_change_password = True
-            safe_commit()
-            login_user(auth, remember=True)
-            log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
-            log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
-            if auth.force_change_password:
-                flash(_('You must change your password'), 'warning')
-                return redirect(url_for('change_password'))
-            next_url = request.args.get('next')
-            if next_url:
-                parsed = urlparse(next_url)
-                if parsed.netloc and parsed.netloc != request.host:
-                    next_url = None
-            return redirect(next_url or url_for('floor_plan'))
-        log_system('WARNING', 'auth', f'Failed login attempt for {username}', source='login')
-        flash(_('Invalid credentials'), 'error')
-    return render_template('login.html')
+        return render_template('login.html')
+    except Exception as _login_err:
+        import traceback as _tb
+        _trace = _tb.format_exc()
+        # Write to a file so we can read it from the server
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'login_error.log'), 'a') as _f:
+                _f.write(f"\n{'='*60}\n{datetime.utcnow().isoformat()}\n{_trace}\n")
+        except Exception:
+            pass
+        flash(f'Login error: {_login_err}', 'error')
+        db.session.rollback()
+        return render_template('login.html')
 
 @app.route('/logout')
 @login_required
@@ -5800,12 +5813,11 @@ def purchase_request_reject(request_id):
 @login_required
 @role_required('admin', 'director', 'technician')
 def schedule_list():
-    if current_user.has_role('admin', 'director'):
-        users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).all()
-    else:
-        users = [current_user]
-    schedules = WorkSchedule.query.filter(WorkSchedule.user_id.in_([u.id for u in users])).all()
-    return render_template('schedule.html', users=users, schedules=schedules)
+    monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    # Only monteurs with linked user accounts can have schedules
+    monteur_user_ids = [m.user_id for m in monteurs if m.user_id]
+    schedules = WorkSchedule.query.filter(WorkSchedule.user_id.in_(monteur_user_ids)).all() if monteur_user_ids else []
+    return render_template('schedule.html', monteurs=monteurs, schedules=schedules)
 
 @app.route('/schedule/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -5832,7 +5844,7 @@ def schedule_user(user_id):
 
 @app.route('/schedule/<int:user_id>/delete', methods=['POST'])
 @login_required
-@role_required('admin')
+@role_required('admin', 'director')
 def schedule_delete(user_id):
     user = User.query.get_or_404(user_id)
     deleted = WorkSchedule.query.filter_by(user_id=user.id).delete()

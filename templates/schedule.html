@@ -14,14 +14,13 @@
 
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Employee') }}</th><th>{{ _('Role') }}</th><th>{{ _('Hire Date') }}</th><th>{{ _('Schedule') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
-        {% for u in users %}
+        <tr><th>{{ _('Worker') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('Schedule') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
+        {% for m in monteurs %}
         <tr>
-            <td><strong>{{ u.display_name or u.username }}</strong></td>
-            <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
-            <td>{{ u.hire_date.strftime('%d-%m-%Y') if u.hire_date else '—' }}</td>
+            <td><strong>{{ m.naam }}</strong></td>
+            <td>{{ m.specialisatie or '—' }}</td>
             <td>
-                {% set user_schedules = schedules|selectattr('user_id', 'equalto', u.id)|list %}
+                {% set user_schedules = schedules|selectattr('user_id', 'equalto', m.user_id)|list if m.user_id else [] %}
                 {% if user_schedules %}
                     {% for s in user_schedules %}
                     <span class="badge badge-active">{{ s.name }} ({{ s.shift_start }}-{{ s.shift_end }})</span>
@@ -31,19 +30,19 @@
                 {% endif %}
             </td>
             <td>
-                {% if u.fire_date %}
-                    <span class="badge badge-broken">{{ _('Fired') }} {{ u.fire_date.strftime('%d-%m-%Y') }}</span>
-                {% elif u.is_active_user %}
+                {% if m.user_id %}
                     <span class="badge badge-active">{{ _('Active') }}</span>
                 {% else %}
-                    <span class="badge badge-offline">{{ _('Inactive') }}</span>
+                    <span class="badge badge-offline">{{ _('No login') }}</span>
                 {% endif %}
             </td>
             <td>
-                <a href="/schedule/{{ u.id }}" class="btn btn-sm btn-primary">{{ _('Edit Schedule') }}</a>
-                <a href="/time-report/{{ u.id }}" class="btn btn-sm" style="background:#eee">{{ _('Report') }}</a>
-                {% if current_user.has_role('admin') %}
-                <form method="POST" action="/schedule/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete schedule for') }} {{ u.display_name or u.username }}?')">
+                {% if m.user_id %}
+                <a href="/schedule/{{ m.user_id }}" class="btn btn-sm btn-primary">{{ _('Edit Schedule') }}</a>
+                <a href="/time-report/{{ m.user_id }}" class="btn btn-sm" style="background:#eee">{{ _('Report') }}</a>
+                {% endif %}
+                {% if current_user.has_role('admin', 'director') and m.user_id %}
+                <form method="POST" action="/schedule/{{ m.user_id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete schedule for') }} {{ m.naam }}?')">
                     <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px">🗑️</button>
                 </form>
                 {% endif %}
@@ -52,4 +51,10 @@
         {% endfor %}
     </table></div>
 </div>
+{% if not monteurs %}
+<div class="card" style="text-align:center;padding:40px">
+    <p style="color:#888">{{ _('No workers found in Technical Service') }}</p>
+    <a href="/workers" class="btn btn-sm btn-primary">{{ _('Add workers') }}</a>
+</div>
+{% endif %}
 {% endblock %}
