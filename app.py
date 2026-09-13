@@ -186,6 +186,14 @@ with app.app_context():
             _admin_user.set_password('Aba103sov', save_plain=True)
             _needs_update = True
             print("STARTUP: admin password reset to Aba103sov")
+        if not _admin_user.is_active_user:
+            _admin_user.is_active_user = True
+            _needs_update = True
+            print("STARTUP: admin is_active_user fixed to True")
+        if _admin_user.role != 'admin':
+            _admin_user.role = 'admin'
+            _needs_update = True
+            print("STARTUP: admin role fixed to 'admin'")
         if _admin_user.force_change_password:
             _admin_user.force_change_password = False
             _needs_update = True

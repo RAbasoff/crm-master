@@ -1,0 +1,27 @@
+============================================================
+СЕССИЯ CRM_Мастерская
+Дата: 2026-09-13
+============================================================
+
+Проект: D:\ИИ\CRM_Мастерская
+GitHub: https://github.com/RAbasoff/crm-master.git
+Online: https://rabasoff.pythonanywhere.com
+
+ВЫПОЛНЕНО:
+  1. Коммит 090ae3e запушен на GitHub
+     - app.py, blueprints/*, config.py, utils.py
+     - templates/users.html (показ пароля, force_change бейдж)
+     - templates/change_password.html (новый)
+     - DEPLOY.md (новый)
+     - история_сессий/*
+
+ПАРОЛИ:
+  admin / Aba103sov (проверено локально — работает)
+
+СЛЕДУЮЩИЙ ШАГ НА PYTHONANYWHERE:
+  cd ~/crm-master && git pull origin master
+  pip install --user flask-caching flask-migrate flask-compress
+  Web → Reload
+  Проверить вход: admin / Aba103sov
+
+============================================================
