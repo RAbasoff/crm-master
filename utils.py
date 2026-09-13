@@ -970,7 +970,7 @@ def add_work_report(entry_text):
 
 
 def check_tool_wear_notifications():
-    """Notify users with tool_wear access 2 days before knife replacement is due."""
+    """Notify users with tool_wear access when knife wear reaches 80%."""
     from models import ToolWear, User, Machine, Notification, GroupPermission, Verantwoordelijke, UserSectionAccess
     today = datetime.utcnow().date()
     tools = ToolWear.query.all()
@@ -983,7 +983,6 @@ def check_tool_wear_notifications():
         if u.role == 'admin':
             notify_user_ids.add(u.id)
             continue
-        # Check group permissions
         has_access = False
         if u.person_id:
             person = Verantwoordelijke.query.get(u.person_id)
@@ -991,11 +990,9 @@ def check_tool_wear_notifications():
                 perm = GroupPermission.query.filter_by(group_id=person.group_id, section_key='tool_wear').first()
                 if perm and perm.can_view:
                     has_access = True
-        # Check individual section access
         if not has_access:
             if UserSectionAccess.query.filter_by(user_id=u.id, section_key='tool_wear').first():
                 has_access = True
-        # Fallback: full access level
         if not has_access and u.access_level == 'full':
             has_access = True
         if has_access:
@@ -1013,16 +1010,12 @@ def check_tool_wear_notifications():
         cycle = t.cycle_days or 14
         if t.last_replaced:
             days_since = (today - t.last_replaced).days
-            remaining = cycle - days_since
+            wear = min(100.0, round((days_since / cycle) * 100, 1))
         else:
-            remaining = -1  # no date — overdue
-        # Notify when 2 days or less remaining (including overdue)
-        if remaining > 2:
+            wear = 100.0
+        if wear < 80:
             continue
-        if remaining >= 0:
-            msg = f"{t.machine_name}: {t.tool_name} — {_('replacement in')} {remaining} {_('days')}"
-        else:
-            msg = f"{t.machine_name}: {t.tool_name} — {_('OVERDUE by')} {abs(remaining)} {_('days')}"
+        msg = f"{t.machine_name}: {t.tool_name} — {wear}% {_('wear')}"
         for uid in notify_user_ids:
             if uid in existing_notifs:
                 continue

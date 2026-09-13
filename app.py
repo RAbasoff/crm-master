@@ -67,6 +67,18 @@ from flask_login import LoginManager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Flask-Compress — gzip responses
+from flask_compress import Compress
+Compress(app)
+
+# Flask-Caching — cache heavy queries
+from flask_caching import Cache
+cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
+
+# Flask-Migrate — safe DB migrations
+from flask_migrate import Migrate
+migrate = Migrate(app, db)
+
 # ============================================================
 # IMPROVEMENTS: Backup, Email, Cost Tracking
 # ============================================================
