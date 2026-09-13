@@ -104,6 +104,12 @@ def warehouse_list():
     cat = request.args.get('categorie', '')
     group_id = request.args.get('group', '')
     q = VoorraadItem.query
+
+    # Logistiek group: restrict to Oktopus warehouse group only
+    logistiek_group_id = _get_logistiek_warehouse_group_id()
+    if logistiek_group_id and not current_user.has_role('admin', 'director'):
+        group_id = str(logistiek_group_id)
+
     if cat: q = q.filter_by(categorie=cat)
     if group_id: q = q.filter_by(group_id=int(group_id))
     pagination = q.order_by(VoorraadItem.naam).paginate(page=page, per_page=25, error_out=False)
@@ -115,10 +121,23 @@ def warehouse_list():
         groups=groups, group_filter=int(group_id) if group_id else None, low_stock=laag, pagination=pagination)
 
 
+def _get_logistiek_warehouse_group_id():
+    """If current user belongs to Logistiek group, return the Oktopus warehouse group ID."""
+    try:
+        person = getattr(current_user, '_person', None) or getattr(current_user, 'person', None)
+        if person and person.resp_group and person.resp_group.name == 'Logistiek - Oktopus':
+            wg = WarehouseGroup.query.filter_by(name='Logistiek - Oktopus').first()
+            return wg.id if wg else None
+    except Exception:
+        pass
+    return None
+
+
 @bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def warehouse_new():
+    logistiek_wh_id = _get_logistiek_warehouse_group_id()
     if request.method == 'POST':
         # Parse group_id which comes as "g_123" or "c_123" from the form
         raw_group = request.form.get('group_id', '')
@@ -128,6 +147,10 @@ def warehouse_new():
             group_id = int(raw_group[2:])
         elif raw_group.startswith('c_'):
             contractor_id = int(raw_group[2:])
+        # Logistiek users: force Oktopus group
+        if logistiek_wh_id and not current_user.has_role('admin', 'director'):
+            group_id = logistiek_wh_id
+            contractor_id = None
         i = VoorraadItem(
             naam=request.form['naam'],
             description=request.form.get('description', ''),
@@ -243,6 +266,12 @@ def warehouse_delete(item_id):
 @role_required('admin', 'technician')
 def warehouse_move(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
+    # Logistiek users can only move items in their group
+    logistiek_wh_id = _get_logistiek_warehouse_group_id()
+    if logistiek_wh_id and not current_user.has_role('admin', 'director'):
+        if item.group_id != logistiek_wh_id:
+            flash(_('Access denied'), 'error')
+            return redirect(url_for('warehouse.warehouse_list'))
     mt = request.form.get('type', '')
     if mt not in ('inkomend', 'uitgaand'):
         flash(_('Invalid movement type'), 'error')

@@ -603,14 +603,25 @@ def run_data_migrations():
             print("Data migration: created group 'Logistiek - Oktopus'")
         safe_commit()
 
-        # Move Pablo and Paulina to Logistiek group
-        for pname in ('Pablo', 'Paulina'):
+        # Move Pablo and Paulina to Logistiek group + set login credentials
+        logistiek_creds = {'Pablo': ('pablo', 'pablo123'), 'Paulina': ('paulina', 'paulina123')}
+        for pname, (uname, pw) in logistiek_creds.items():
             p = Verantwoordelijke.query.filter_by(naam=pname).first()
-            if p and p.group_id != logistiek.id:
-                p.group_id = logistiek.id
-                p.access_level = 'floor'
-                print(f"Data migration: moved {pname} to Logistiek - Oktopus group")
-        safe_commit()
+            if p:
+                changed = False
+                if p.group_id != logistiek.id:
+                    p.group_id = logistiek.id
+                    changed = True
+                if p.access_level != 'floor':
+                    p.access_level = 'floor'
+                    changed = True
+                if p.username != uname:
+                    p.username = uname
+                    changed = True
+                if changed:
+                    p.set_password(pw)
+                    safe_commit()
+                    print(f"Data migration: configured {pname} login as '{uname}' in Logistiek group")
 
         # Create WarehouseGroup for Oktopus
         oktopus_wh = WarehouseGroup.query.filter_by(name='Logistiek - Oktopus').first()
