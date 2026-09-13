@@ -970,16 +970,41 @@ def add_work_report(entry_text):
 
 
 def check_tool_wear_notifications():
-    """Send notifications to users when their assigned machines have tools with wear >= 80%."""
-    from models import ToolWear, User, Machine, Notification
+    """Notify users with tool_wear access 2 days before knife replacement is due."""
+    from models import ToolWear, User, Machine, Notification, GroupPermission, Verantwoordelijke, UserSectionAccess
     today = datetime.utcnow().date()
     tools = ToolWear.query.all()
-    # Batch-fetch all machines by name
-    machine_names = set(t.machine_name for t in tools)
-    machines_by_name = {}
-    for m in Machine.query.filter(Machine.name.in_(machine_names)).all():
-        machines_by_name[m.name] = m
-    # Pre-fetch existing tool_wear notifications
+    if not tools:
+        return
+
+    # Collect all user IDs that should receive tool_wear notifications
+    notify_user_ids = set()
+    for u in User.query.filter_by(is_active_user=True).all():
+        if u.role == 'admin':
+            notify_user_ids.add(u.id)
+            continue
+        # Check group permissions
+        has_access = False
+        if u.person_id:
+            person = Verantwoordelijke.query.get(u.person_id)
+            if person and person.group_id:
+                perm = GroupPermission.query.filter_by(group_id=person.group_id, section_key='tool_wear').first()
+                if perm and perm.can_view:
+                    has_access = True
+        # Check individual section access
+        if not has_access:
+            if UserSectionAccess.query.filter_by(user_id=u.id, section_key='tool_wear').first():
+                has_access = True
+        # Fallback: full access level
+        if not has_access and u.access_level == 'full':
+            has_access = True
+        if has_access:
+            notify_user_ids.add(u.id)
+
+    if not notify_user_ids:
+        return
+
+    # Pre-fetch existing tool_wear notifications to avoid duplicates
     existing_notifs = set()
     for n in Notification.query.filter_by(type='tool_wear', link='/tool-wear').all():
         existing_notifs.add(n.user_id)
@@ -987,25 +1012,19 @@ def check_tool_wear_notifications():
     for t in tools:
         cycle = t.cycle_days or 14
         if t.last_replaced:
-            days = (today - t.last_replaced).days
-            wear = min(100.0, round((days / cycle) * 100, 1))
+            days_since = (today - t.last_replaced).days
+            remaining = cycle - days_since
         else:
-            wear = 100.0
-        if wear < 80:
+            remaining = -1  # no date — overdue
+        # Notify when 2 days or less remaining (including overdue)
+        if remaining > 2:
             continue
-        machine = machines_by_name.get(t.machine_name)
-        if not machine:
-            continue
-        for user in machine.assigned_users:
-            if not user.is_active_user:
+        if remaining >= 0:
+            msg = f"{t.machine_name}: {t.tool_name} — {_('replacement in')} {remaining} {_('days')}"
+        else:
+            msg = f"{t.machine_name}: {t.tool_name} — {_('OVERDUE by')} {abs(remaining)} {_('days')}"
+        for uid in notify_user_ids:
+            if uid in existing_notifs:
                 continue
-            if user.id in existing_notifs:
-                continue
-            create_notification(
-                user.id,
-                _('Knife replacement needed'),
-                f"{t.machine_name}: {t.tool_name} — {wear}% {_('wear')}",
-                'tool_wear',
-                '/tool-wear'
-            )
-            existing_notifs.add(user.id)
+            create_notification(uid, _('Knife replacement needed'), msg, 'tool_wear', '/tool-wear')
+            existing_notifs.add(uid)

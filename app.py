@@ -33,7 +33,8 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
 from utils import (role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
-                   log_user_activity, log_system, run_data_migrations, sanitize_like)
+                   log_user_activity, log_system, run_data_migrations, sanitize_like,
+                   check_tool_wear_notifications)
 
 # ============================================================
 # APP CONFIG
@@ -6440,15 +6441,10 @@ def tool_wear_reset(tool_id):
     tool.last_replaced = datetime.utcnow().date()
     tool.updated_by = current_user.id
     db.session.commit()
-    # Clear knife replacement notifications for users assigned to this machine
-    machine = Machine.query.filter_by(name=tool.machine_name).first()
-    if machine:
-        for user in machine.assigned_users:
-            Notification.query.filter_by(
-                user_id=user.id, type='tool_wear', link='/tool-wear'
-            ).delete()
-        db.session.commit()
-    add_work_report(f'🔪 Замена инструмента: {tool.machine_name} — {tool.tool_name} (износ сброшен)')
+    # Clear ALL tool_wear notifications (re-check will re-create if still needed)
+    Notification.query.filter_by(type='tool_wear', link='/tool-wear').delete()
+    db.session.commit()
+    log_system('INFO', 'tool_wear', f'Tool replaced: {tool.machine_name} — {tool.tool_name}', source='tool_wear')
     flash(_('Tool replaced, wear reset to 0%'), 'success')
     return redirect(url_for('tool_wear_page'))
 
