@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 
 from models import (db, VoorraadItem, VoorraadMutatie, WarehouseGroup, WarehouseReservation,
                     SupplierPrice, Machine, Contractor)
-from utils import role_required, log_audit, sanitize_like
+from utils import role_required, log_audit, sanitize_like, safe_commit
 
 bp = Blueprint('warehouse', __name__, url_prefix='/warehouse')
 
@@ -35,7 +35,7 @@ def warehouse_group_new():
             manufacturer=request.form.get('manufacturer', ''),
             description=request.form.get('description', '')
         )
-        db.session.add(g); db.session.commit()
+        db.session.add(g); safe_commit()
         flash(_('Group created'), 'success')
         return redirect(url_for('warehouse.warehouse_groups'))
     manufacturers = [m[0] for m in db.session.query(Machine.manufacturer).distinct().all() if m[0]]
@@ -51,7 +51,7 @@ def warehouse_group_edit(group_id):
         g.name = request.form['name']
         g.manufacturer = request.form.get('manufacturer', '')
         g.description = request.form.get('description', '')
-        db.session.commit()
+        safe_commit()
         flash(_('Group updated'), 'success')
         return redirect(url_for('warehouse.warehouse_groups'))
     manufacturers = [m[0] for m in db.session.query(Machine.manufacturer).distinct().all() if m[0]]
@@ -65,7 +65,7 @@ def warehouse_group_delete(group_id):
     g = WarehouseGroup.query.get_or_404(group_id)
     for item in g.items:
         item.group_id = None
-    db.session.delete(g); db.session.commit()
+    db.session.delete(g); safe_commit()
     flash(_('Group deleted'), 'success')
     return redirect(url_for('warehouse.warehouse_groups'))
 
@@ -89,7 +89,7 @@ def warehouse_groups_auto():
             g = WarehouseGroup(name=c.company_name, manufacturer=c.company_name, description=f'Contractor: {c.company_name} - {c.service_type or ""}')
             db.session.add(g)
             created += 1
-    db.session.commit()
+    safe_commit()
     flash(_('{} groups created').format(created), 'success')
     return redirect(url_for('warehouse.warehouse_groups'))
 
@@ -148,7 +148,7 @@ def warehouse_new():
             last_replacement=datetime.strptime(request.form['last_replacement'], '%Y-%m-%d').date() if request.form.get('last_replacement') else None,
             next_replacement=datetime.strptime(request.form['next_replacement'], '%Y-%m-%d').date() if request.form.get('next_replacement') else None,
         )
-        db.session.add(i); db.session.commit()
+        db.session.add(i); safe_commit()
         flash(_('Item added') + f': {i.naam}', 'success')
         return redirect(url_for('warehouse.warehouse_list', new_qr=i.id))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
@@ -188,7 +188,7 @@ def warehouse_edit(item_id):
         item.replacement_interval = request.form.get('replacement_interval','')
         item.last_replacement = datetime.strptime(request.form['last_replacement'], '%Y-%m-%d').date() if request.form.get('last_replacement') else None
         item.next_replacement = datetime.strptime(request.form['next_replacement'], '%Y-%m-%d').date() if request.form.get('next_replacement') else None
-        db.session.commit()
+        safe_commit()
         flash(_('Item updated'), 'success')
         return redirect(url_for('warehouse.warehouse_list'))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
@@ -230,7 +230,7 @@ def warehouse_delete(item_id):
         flash(_('Cannot delete item with movement history. Deactivate instead.'), 'error')
         return redirect(url_for('warehouse.warehouse_edit', item_id=item.id))
     db.session.delete(item)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'warehouse_item', item_id, name)
     flash(_('Item deleted') + f': {name}', 'success')
     return redirect(url_for('warehouse.warehouse_duplicates'))
@@ -264,7 +264,7 @@ def warehouse_move(item_id):
                         user_id=current_user.id)
     if mt == 'inkomend': item.hoeveelheid += qty
     else: item.hoeveelheid -= qty
-    db.session.add(m); db.session.commit()
+    db.session.add(m); safe_commit()
     flash(_('{} {} {} — {}').format(mt.capitalize(), qty, item.eenheid, item.naam), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
 
@@ -301,7 +301,7 @@ def warehouse_reserve(item_id):
         reserved_by=current_user.id,
         notes=request.form.get('notes', '')
     )
-    db.session.add(r); db.session.commit()
+    db.session.add(r); safe_commit()
     flash(_('Reserved {} {} for {}').format(qty, item.eenheid, r.reserved_for), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
 
@@ -311,7 +311,7 @@ def warehouse_reserve(item_id):
 @role_required('admin', 'technician')
 def warehouse_release(res_id):
     r = WarehouseReservation.query.get_or_404(res_id)
-    db.session.delete(r); db.session.commit()
+    db.session.delete(r); safe_commit()
     flash(_('Reservation released'), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
 
@@ -346,7 +346,7 @@ def warehouse_inventory_check():
             user_id=current_user.id
         )
         item.hoeveelheid = actual_qty
-        db.session.add(m); db.session.commit()
+        db.session.add(m); safe_commit()
     return jsonify({'ok': True, 'diff': diff})
 
 
@@ -378,7 +378,7 @@ def warehouse_price_add(item_id):
         min_order=float(request.form['min_order']) if request.form.get('min_order') else None,
         notes=request.form.get('notes', '')
     )
-    db.session.add(p); db.session.commit()
+    db.session.add(p); safe_commit()
     flash(_('Price added'), 'success')
     return redirect(url_for('warehouse.warehouse_prices', item_id=item_id))
 
@@ -414,7 +414,7 @@ def warehouse_import():
             )
             db.session.add(item)
             count += 1
-        db.session.commit()
+        safe_commit()
         flash(_('{} items imported').format(count), 'success')
         return redirect(url_for('warehouse.warehouse_list'))
     return render_template('warehouse_import.html')
@@ -531,7 +531,7 @@ def warehouse_qty_update():
             user_id=current_user.id
         )
         db.session.add(m)
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True, 'min_warning': qty <= item.minimum})
 
 

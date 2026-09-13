@@ -1,0 +1,60 @@
+============================================================
+АВТОСОХРАНЕНИЕ СЕССИИ
+============================================================
+Время: 2026-09-13 21:15 UTC
+Проверено: 2026-09-13 09:15 UTC — без изменений
+
+ПРОЕКТ: D:\ИИ\CRM_Мастерская
+GITHUB: https://github.com/RAbasoff/crm-master.git
+ONLINE: https://rabasoff.pythonanywhere.com
+
+ПОСЛЕДНИЙ КОММИТ: 16b3a71 "feat: add Flask-Compress, Flask-Caching, Flask-Migrate + fix tool_wear notifications to 80% threshold"
+
+ВЫПОЛНЕНО ЗА СЕССИЮ:
+  ✅ Запущен локальный сервер (python app.py, порт 5000)
+  ✅ Пароль admin изменён на Aba103sov (локально + в коде)
+  ✅ Startup-блок: сброс admin пароля + force_change_password + login_count
+  ✅ Фикс SECRET_KEY — фиксированный fallback
+  ✅ wsgi.py — правильный путь /home/rabasoff/crm-master
+  ✅ Модуль заточки: добавлен пропущенный import check_tool_wear_notifications
+  ✅ Уведомления о ножах: теперь для ВСЕХ с доступом (admin, director, technician)
+  ✅ Порог оповещений: 80% износа
+  ✅ Убрана несуществующая add_work_report → заменена на log_system
+  ✅ Flask-Compress — gzip ответов
+  ✅ Flask-Caching — SimpleCache, 300s TTL
+  ✅ Flask-Migrate — инициализирован migrations/
+  ✅ Gunicorn — уже был в requirements.txt и Procfile
+
+НЕЗАКОММИЧЕННЫЕ ИЗМЕНЕНИЯ:
+  📝 templates/users.html (+10 строк)
+     → Добавлен блок показа пароля пользователя (для не-admin ролей)
+     → Кликабельный •••• → показывает password_plain
+     → Бейдж force_change_password "Must change"
+     → Счётчик login_count
+  📝 история_сессий/session_2026-09-09_production_fix.md (форматирование)
+  📄 templates/change_password.html (новый файл)
+     → Страница смены пароля для пользователей с force_change_password
+     → С предупреждением "Вы должны сменить пароль"
+  📄 DEPLOY.md (новый файл)
+  📄 история_сессий/session_2026-01-15.txt (новый файл)
+  📄 история_сессий/session_2026-09-12_final.txt (новый файл)
+  📄 история_сессий/session_autosave.txt (этот файл)
+
+ВСЕГО КОММИТОВ СЕССИИ: 6
+  c143846 - fix: reset admin password to Aba103sov
+  f883c4b - fix: stable SECRET_KEY fallback
+  705f1b0 - fix: reset force_change_password + fix wsgi.py path
+  4aa3473 - fix: admin startup - always clear force_change_password
+  f19723a - fix: tool_wear notifications for all users
+  16b3a71 - feat: Flask-Compress, Flask-Caching, Flask-Migrate + tool_wear 80%
+
+ОЖИДАЕТ ДЕЙСТВИЯ НА PYTHONANYWHERE:
+  → cd ~/crm-master && git pull origin master
+  → pip install --user flask-caching flask-migrate flask-compress
+  → Web → Reload
+  → Проверить вход: admin / Aba103sov
+  → Проверить модуль заточки ножей
+
+ЛОКАЛЬНО ОЖИДАЕТ:
+  → Закоммитить изменённые файлы (users.html, change_password.html и др.)
+============================================================

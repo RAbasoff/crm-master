@@ -1,0 +1,214 @@
+============================================================
+CRM МАСТЕРСКАЯ — СЕССИЯ 2026-01-15
+============================================================
+
+ОЧЕРЕДЬ ЗАДАЧ:
+============================================================
+
+ЗАДАЧА 1: Роли и права доступа
+──────────────────────────────
+ЮЗЕР (role='user'):
+  - НЕ может создавать новый план ТО
+  - НЕ может распечатывать план ТО
+  - НЕ может сохранять план ТО
+  - Только ПРОСМОТР планов ТО
+  - При попытке зайти в закрытый отдел → сообщение:
+    "ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ."
+
+ДИРЕКТОР (role='director'):
+  Календарь ТО:
+    ✓ Просмотр
+    ✓ Добавление событий
+    ✓ Изменение событий
+    ✗ Удаление событий (ЗАПРЕЩЕНО)
+
+  Все станки (Machines):
+    ✓ Просмотр
+    ✓ Добавление
+    ✓ Изменение
+    ✗ Удаление (ЗАПРЕЩЕНО)
+
+  Муль ТО (Mule Maintenance):
+    ✓ Просмотр
+    ✓ Добавление
+    ✓ Изменение
+    ✗ Удаление (ЗАПРЕЩЕНО)
+
+  Заточка ножей (Tool Wear):
+    ✓ Просмотр
+    ✓ Добавление
+    ✓ Изменение
+    ✗ Удаление (ЗАПРЕЩЕНО)
+
+  Другие устройства (Equipment):
+    ✓ Просмотр
+    ✓ Добавление
+    ✓ Изменение
+    ✗ Удаление (ЗАПРЕЩЕНО)
+
+  Staff:           полный доступ
+  Werkorders:      полный доступ
+  Verantwoordelijk: полный доступ
+  Technische dienst: полный доступ
+  Contractors:     полный доступ
+  Magazijn (Warehouse): НЕ может перемещать товары
+  Analytics:       полный доступ
+
+ЗАДАЧА 2: Сохранить всю сессию в txt файл
+  → Выполнено (этот файл)
+
+============================================================
+
+АНАЛИЗ КОДОВОЙ БАЗЫ (выполнено):
+============================================================
+
+Структура проекта: Flask + SQLAlchemy + Flask-Login
+Роли: admin, director, technician, user, responsible
+
+Файлы для изменения:
+  - app.py          — маршруты, @role_required декораторы
+  - utils.py        — role_required(), user_has_section_access(), run_data_migrations()
+  - models.py       — User, GroupPermission, MaintenancePlan, Equipment, ToolWear
+  - blueprints/     — warehouse.py, faults.py, monteurs.py, contractors.py, gas.py, electricity.py
+  - config.py       — SECTION_KEYS
+  - templates/      — HTML шаблоны (для кнопок удаления, сообщений)
+
+Текущие маршруты (ключевые):
+  /machines/new          → @role_required('admin')           ← РАСШИРИТЬ до director
+  /machines/<id>/edit    → @role_required('admin')           ← РАСШИРИТЬ до director
+  /machines              → machines_list()                    ← director уже видит все
+  /floor                 → floor_plan()                       ← director уже видит все
+  /sections/new          → @role_required('admin')           ← оставить admin-only
+  /map-editor            → @role_required('admin')           ← оставить admin-only
+
+Групповые разрешения (GroupPermission):
+  Director group в run_data_migrations():
+    'maintenance': (True, True, True, False)  — view/create/edit, NO delete ✓
+    'maintenance_plans': (True, False, False, False) — VIEW ONLY ← нужно create+edit
+    'machines': нет явного — будет fallback через access_level=full
+
+  User group в run_data_migrations():
+    'maintenance_plans': нет явного — нужен view-only
+    'maintenance': нет явного — нужен view-only
+
+============================================================
+
+ПЛАН РЕАЛИЗАЦИИ:
+============================================================
+
+1. ЮЗЕР — ограничения:
+   a. GroupPermission для User: maintenance_plans → can_view=True, can_create=False, can_edit=False, can_delete=False
+   b. GroupPermission для User: maintenance → can_view=True, can_create=False, can_edit=False, can_delete=False
+   c. Добавить проверку section_access_required на маршруты создания/сохранения/печати планов ТО
+   d. При попытке доступа к закрытому разделу → flash("ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.")
+
+2. ДИРЕКТОР — разрешения:
+   a. machines: view+create+edit, NO delete → @role_required('admin', 'director') для new/edit
+   b. maintenance_plans: view+create+edit, NO delete
+   c. maintenance (calendar): view+create+edit, NO delete
+   d. equipment: view+create+edit, NO delete
+   e. tool_wear: view+create+edit, NO delete
+   f. warehouse: view+create+edit, NO move (mutations blocked)
+   g. staff, werkorders, verantwoordelijk, technische dienst, contractors: full access
+   h. analytics: full access
+
+3. Запрет удаления для director:
+   a. Добавить декоратор/проверку no_delete_for_director
+   b. Скрыть кнопки удаления в шаблонах для director
+
+4. Запрет перемещений на складе для director:
+   a. Проверка role в warehouse mutation routes
+
+============================================================
+
+СТАТУС: РЕАЛИЗАЦИЯ ЗАВЕРШЕНА
+============================================================
+
+ИЗМЕНЁННЫЕ ФАЙЛЫ:
+============================================================
+
+1. app.py — Маршруты:
+   ✓ /machines/new          → @role_required('admin', 'director')
+   ✓ /machines/<id>/edit    → @role_required('admin', 'director')
+   ✓ /maintenance-plans/new → @role_required('admin', 'director', 'technician')
+   ✓ /maintenance-plans/<id>/edit → @role_required('admin', 'director', 'technician')
+   ✓ /equipment/new         → @role_required('admin', 'director', 'technician')
+   ✓ /equipment/<id>/edit   → @role_required('admin', 'director', 'technician')
+   ✓ /tool-wear/add         → @role_required('admin', 'director', 'technician')
+   ✓ /tool-wear/update/<id> → @role_required('admin', 'director', 'technician')
+   ✓ /tool-wear/reset/<id>  → @role_required('admin', 'director', 'technician')
+   ✗ /machines/<id>/delete  → ОСТАЁТСЯ @role_required('admin') — director НЕ может удалять
+   ✗ /equipment/<id>/delete → ОСТАЁТСЯ @role_required('admin') — director НЕ может удалять
+   ✗ /tool-wear/delete/<id> → ОСТАЁТСЯ @role_required('admin') — director НЕ может удалять
+   ✗ /maintenance-plans/<id>/delete → ОСТАЁТСЯ @role_required('admin')
+
+2. blueprints/warehouse.py — Склад:
+   ✓ /<id>/move             → @role_required('admin', 'technician') — director УБРАН
+   ✓ /reserve/<id>          → @role_required('admin', 'technician') — director УБРАН
+   ✓ /reserve/<id>/release  → @role_required('admin', 'technician') — director УБРАН
+   ✓ /api/qty               → @role_required('admin', 'technician') — director УБРАН
+
+3. utils.py — Декораторы и миграции:
+   ✓ role_required() → flash('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.')
+   ✓ section_access_required() → flash('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.')
+   ✓ Director group permissions: machines, maintenance_plans, equipment, tool_wear → view+create+edit, NO delete
+   ✓ Director: staff, workers, clients, statistics, schedule, vacations, time_tracking → FULL
+   ✓ User group permissions: maintenance_plans, maintenance, machines, equipment, tool_wear → VIEW ONLY
+
+4. templates/maintenance_plans.html:
+   ✓ "New plan" кнопка → has_role('admin', 'director', 'technician')
+   ✓ Edit кнопки → has_role('admin', 'director', 'technician')
+
+5. templates/maintenance_plan_detail.html:
+   ✓ Edit кнопка → has_role('admin', 'director', 'technician')
+
+6. templates/maintenance_calendar.html:
+   ✓ "New Plan" кнопка → has_role('admin', 'director', 'technician')
+
+7. templates/machines.html:
+   ✓ Edit кнопка → has_role('admin', 'director')
+
+8. templates/machine_detail.html:
+   ✓ Edit кнопка → has_role('admin', 'director')
+
+9. templates/tool_wear.html:
+   ✓ "Add Tool" кнопка → has_role('admin', 'director', 'technician')
+   ✓ Edit/Reset кнопки → has_role('admin', 'director', 'technician')
+   ✓ Delete кнопка → has_role('admin') — ТОЛЬКО admin
+
+10. templates/equipment.html:
+    ✓ "New Record" / "Order Parts" → has_role('admin', 'director', 'technician')
+    ✓ Edit кнопка → has_role('admin', 'director', 'technician')
+    ✓ Delete кнопка → has_role('admin') — ТОЛЬКО admin
+
+МАТРИЦА ПРАВ:
+============================================================
+
+                    | Admin | Director | Technician | User
+--------------------|-------|----------|------------|------
+Машин (view)        | ✓     | ✓        | ✓          | ✓ (assigned)
+Машин (add/edit)    | ✓     | ✓        | ✗          | ✗
+Машин (delete)      | ✓     | ✗        | ✗          | ✗
+План ТО (view)      | ✓     | ✓        | ✓          | ✓ (view only)
+План ТО (add/edit)  | ✓     | ✓        | ✓          | ✗
+План ТО (delete)    | ✓     | ✗        | ✗          | ✗
+Муль ТО (view)      | ✓     | ✓        | ✓          | ✗
+Муль ТО (add/edit)  | ✓     | ✓        | ✓          | ✗
+Муль ТО (delete)    | ✓     | ✗        | ✗          | ✗
+Заточка ножей(view) | ✓     | ✓        | ✓          | ✗
+Заточка (add/edit)  | ✓     | ✓        | ✓          | ✗
+Заточка (delete)    | ✓     | ✗        | ✗          | ✗
+Склад (view)        | ✓     | ✓        | ✓          | ✗
+Склад (перемещ.)    | ✓     | ✗        | ✓          | ✗
+Staff               | ✓     | FULL     | ✗          | ✗
+Werkorders          | ✓     | FULL     | ✓          | ✓
+Contractors         | ✓     | FULL     | ✗          | ✗
+Analytics           | ✓     | FULL     | ✗          | ✗
+
+СООБЩЕНИЕ ОБ ОШИБКЕ:
+  "ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ."
+  Показывается при попытке доступа к закрытому разделу.
+
+============================================================
+АВТОСОХРАНЕНИЕ: каждые 15 минут (cron job b7df3cef)
+============================================================

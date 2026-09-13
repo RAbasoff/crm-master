@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 
 from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
                     CylinderOrder, EquipmentRepair, User)
-from utils import role_required, log_audit, create_notification
+from utils import role_required, log_audit, create_notification, safe_commit
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
 
@@ -91,7 +91,7 @@ def cylinder_new():
         if request.form.get('received_at'):
             c.received_at = datetime.strptime(request.form['received_at'], '%Y-%m-%d')
         db.session.add(c)
-        db.session.commit()
+        safe_commit()
 
         log = CylinderLog(
             cylinder_id=c.id,
@@ -101,7 +101,7 @@ def cylinder_new():
             notes=f'New {c.gas_type} cylinder added'
         )
         db.session.add(log)
-        db.session.commit()
+        safe_commit()
 
         log_audit('create', 'gas_cylinder', c.id, f'{c.gas_type} #{c.cylinder_number}')
         flash(_('Cylinder added'), 'success')
@@ -125,7 +125,7 @@ def cylinder_edit(cyl_id):
             c.received_at = datetime.strptime(request.form['received_at'], '%Y-%m-%d')
         if request.form.get('installed_at'):
             c.installed_at = datetime.strptime(request.form['installed_at'], '%Y-%m-%d')
-        db.session.commit()
+        safe_commit()
 
         if old_status != c.status:
             log = CylinderLog(
@@ -135,7 +135,7 @@ def cylinder_edit(cyl_id):
                 notes=f'Status: {old_status} → {c.status}'
             )
             db.session.add(log)
-            db.session.commit()
+            safe_commit()
 
         log_audit('update', 'gas_cylinder', c.id, f'{c.gas_type} #{c.cylinder_number}')
         flash(_('Cylinder updated'), 'success')
@@ -151,7 +151,7 @@ def cylinder_delete(cyl_id):
     c = GasCylinder.query.get_or_404(cyl_id)
     name = f'{c.gas_type} #{c.cylinder_number}'
     db.session.delete(c)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'gas_cylinder', cyl_id, name)
     flash(_('Cylinder deleted'), 'success')
     return redirect(url_for('gas.gas_dashboard'))
@@ -172,7 +172,7 @@ def cylinder_status(cyl_id):
     c.status = new_status
     if new_status == 'in_use' and not c.installed_at:
         c.installed_at = datetime.utcnow()
-    db.session.commit()
+    safe_commit()
 
     log = CylinderLog(
         cylinder_id=c.id,
@@ -181,7 +181,7 @@ def cylinder_status(cyl_id):
         notes=f'Status: {old_status} → {new_status}'
     )
     db.session.add(log)
-    db.session.commit()
+    safe_commit()
 
     log_audit('status_change', 'gas_cylinder', c.id,
               f'{c.gas_type} #{c.cylinder_number}: {old_status} → {new_status}')
@@ -201,7 +201,7 @@ def cylinder_swap(cyl_id):
     old_number = c.cylinder_number
     c.status = 'empty'
     c.installed_at = None
-    db.session.commit()
+    safe_commit()
 
     log = CylinderLog(
         cylinder_id=c.id,
@@ -211,7 +211,7 @@ def cylinder_swap(cyl_id):
         notes=f'Cylinder removed from service'
     )
     db.session.add(log)
-    db.session.commit()
+    safe_commit()
 
     log_audit('swap', 'gas_cylinder', c.id, f'{c.gas_type} #{old_number} swapped')
     flash(_('Cylinder marked as empty. Add a new cylinder to replace it.'), 'info')
@@ -250,7 +250,7 @@ def component_new():
         if request.form.get('next_check'):
             c.next_check = datetime.strptime(request.form['next_check'], '%Y-%m-%d').date()
         db.session.add(c)
-        db.session.commit()
+        safe_commit()
         log_audit('create', 'gas_component', c.id, f'{c.component_type}: {c.name}')
         flash(_('Component added'), 'success')
         return redirect(url_for('gas.components_list'))
@@ -273,7 +273,7 @@ def component_edit(comp_id):
             c.last_check = datetime.strptime(request.form['last_check'], '%Y-%m-%d').date()
         if request.form.get('next_check'):
             c.next_check = datetime.strptime(request.form['next_check'], '%Y-%m-%d').date()
-        db.session.commit()
+        safe_commit()
         log_audit('update', 'gas_component', c.id, f'{c.component_type}: {c.name}')
         flash(_('Component updated'), 'success')
         return redirect(url_for('gas.components_list'))
@@ -288,7 +288,7 @@ def component_delete(comp_id):
     c = GasSystemComponent.query.get_or_404(comp_id)
     name = f'{c.component_type}: {c.name}'
     db.session.delete(c)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'gas_component', comp_id, name)
     flash(_('Component deleted'), 'success')
     return redirect(url_for('gas.components_list'))
@@ -320,7 +320,7 @@ def order_new():
             ordered_by=current_user.id
         )
         db.session.add(o)
-        db.session.commit()
+        safe_commit()
         log_audit('create', 'cylinder_order', o.id, f'{o.gas_type} x{o.quantity}')
         flash(_('Order created'), 'success')
         return redirect(url_for('gas.orders_list'))
@@ -337,7 +337,7 @@ def order_status(order_id):
     o.status = new_status
     if new_status == 'delivered':
         o.delivered_at = datetime.utcnow()
-    db.session.commit()
+    safe_commit()
     flash(_('Order status updated'), 'success')
     return redirect(url_for('gas.orders_list'))
 
@@ -382,7 +382,7 @@ def api_cylinder_update(cyl_id):
         c.status = data['status']
     if 'notes' in data:
         c.notes = data['notes']
-    db.session.commit()
+    safe_commit()
 
     if old_status != c.status:
         log = CylinderLog(
@@ -392,6 +392,6 @@ def api_cylinder_update(cyl_id):
             notes=data.get('reason', f'Status: {old_status} → {c.status}')
         )
         db.session.add(log)
-        db.session.commit()
+        safe_commit()
 
     return jsonify({'ok': True, 'status': c.status})

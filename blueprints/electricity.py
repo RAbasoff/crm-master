@@ -8,7 +8,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
 from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument
-from utils import role_required
+from utils import role_required, safe_commit
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
 
@@ -77,7 +77,7 @@ def cabinet_new():
             request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             c.photo = filename
         db.session.add(c)
-        db.session.commit()
+        safe_commit()
         flash(_('Cabinet created'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     return render_template('cabinet_form.html', cabinet=None)
@@ -110,7 +110,7 @@ def cabinet_edit(cabinet_id):
             filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
             request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             c.photo = filename
-        db.session.commit()
+        safe_commit()
         flash(_('Cabinet updated'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     return render_template('cabinet_form.html', cabinet=c)
@@ -122,7 +122,7 @@ def cabinet_edit(cabinet_id):
 def cabinet_delete(cabinet_id):
     c = ElectricalCabinet.query.get_or_404(cabinet_id)
     c.is_active = False
-    db.session.commit()
+    safe_commit()
     flash(_('Cabinet deleted'), 'success')
     return redirect(url_for('electricity.electricity_list'))
 
@@ -149,7 +149,7 @@ def breaker_new(cabinet_id):
             position=int(request.form.get('position', 1))
         )
         db.session.add(b)
-        db.session.commit()
+        safe_commit()
         flash(_('Breaker added'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     return render_template('breaker_form.html', cabinet=c, breaker=None)
@@ -173,7 +173,7 @@ def breaker_edit(breaker_id):
         b.notes = request.form.get('notes', '')
         b.row = int(request.form.get('row', 1))
         b.position = int(request.form.get('position', 1))
-        db.session.commit()
+        safe_commit()
         flash(_('Breaker updated'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=b.cabinet_id))
     return render_template('breaker_form.html', cabinet=b.cabinet, breaker=b)
@@ -185,7 +185,7 @@ def breaker_edit(breaker_id):
 def breaker_toggle(breaker_id):
     b = CircuitBreaker.query.get_or_404(breaker_id)
     b.status = 'off' if b.status == 'on' else 'on'
-    db.session.commit()
+    safe_commit()
     return jsonify({'status': b.status})
 
 
@@ -196,7 +196,7 @@ def breaker_delete(breaker_id):
     b = CircuitBreaker.query.get_or_404(breaker_id)
     cabinet_id = b.cabinet_id
     db.session.delete(b)
-    db.session.commit()
+    safe_commit()
     flash(_('Breaker deleted'), 'success')
     return redirect(url_for('electricity.cabinet_detail', cabinet_id=cabinet_id))
 
@@ -239,7 +239,7 @@ def switch_log_add(cabinet_id):
         performed_by=current_user.id
     )
     db.session.add(log)
-    db.session.commit()
+    safe_commit()
     flash(_('Switch logged'), 'success')
     return redirect(url_for('electricity.switch_log', cabinet_id=c.id))
 
@@ -250,7 +250,7 @@ def switch_log_add(cabinet_id):
 def switch_log_delete(log_id):
     log = ElectricalSwitchLog.query.get_or_404(log_id)
     db.session.delete(log)
-    db.session.commit()
+    safe_commit()
     flash(_('Log entry deleted'), 'success')
     return redirect(url_for('electricity.switch_log_global'))
 
@@ -276,7 +276,7 @@ def document_upload(cabinet_id):
         uploaded_by=current_user.id
     )
     db.session.add(doc)
-    db.session.commit()
+    safe_commit()
     flash(_('Document uploaded'), 'success')
     return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
 
@@ -290,7 +290,7 @@ def document_delete(doc_id):
     if os.path.exists(filepath):
         os.remove(filepath)
     db.session.delete(doc)
-    db.session.commit()
+    safe_commit()
     flash(_('Document deleted'), 'success')
     return redirect(url_for('electricity.electricity_list'))
 
@@ -320,7 +320,7 @@ def document_upload_global():
         uploaded_by=current_user.id
     )
     db.session.add(doc)
-    db.session.commit()
+    safe_commit()
     flash(_('Document uploaded for {}').format(c.name), 'success')
     return redirect(url_for('electricity.electricity_list'))
 
@@ -357,6 +357,6 @@ def switch_log_add_global():
         performed_by=current_user.id
     )
     db.session.add(log)
-    db.session.commit()
+    safe_commit()
     flash(_('Switch logged'), 'success')
     return redirect(url_for('electricity.switch_log_global'))

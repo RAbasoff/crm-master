@@ -34,7 +34,7 @@ from utils import (role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
                    log_user_activity, log_system, run_data_migrations, sanitize_like,
-                   check_tool_wear_notifications)
+                   check_tool_wear_notifications, safe_commit)
 
 # ============================================================
 # APP CONFIG
@@ -62,6 +62,22 @@ app.register_blueprint(gas_bp)
 
 csrf = CSRFProtect(app)
 db.init_app(app)
+
+# SQLite concurrency: enable WAL mode + busy_timeout on every new connection
+from sqlalchemy import event, text
+from sqlalchemy.pool import Pool
+
+@event.listens_for(Pool, "connect")
+def _set_sqlite_pragma(dbapi_conn, connection_record):
+    import sqlite3
+    if isinstance(dbapi_conn, sqlite3.Connection):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
+        cursor.close()
+
 from flask_login import LoginManager
 
 login_manager = LoginManager(app)
@@ -140,7 +156,7 @@ with app.app_context():
         _old_role = _admin.role
         if _old_role != 'admin':
             _admin.role = 'admin'
-            db.session.commit()
+            safe_commit()
             print(f"APP STARTUP: Fixed admin role from '{_old_role}' to 'admin'")
         # Also force via raw attribute for this request
         _admin.role = 'admin'
@@ -177,7 +193,7 @@ with app.app_context():
             _admin_user.login_count = 0
             _needs_update = True
         if _needs_update:
-            db.session.commit()
+            safe_commit()
     if User.query.count() == 0:
         import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
@@ -189,7 +205,7 @@ with app.app_context():
         director = User(username='director', display_name='Director', role='director')
         director.set_password('director123')
         db.session.add_all([admin, tech, user, director])
-        db.session.commit()
+        safe_commit()
 
 def get_current_locale():
     return session.get('lang', 'ru')
@@ -208,7 +224,7 @@ def before_request():
         current_user.role = 'admin'
         try:
             User.query.filter_by(username='admin').update({'role': 'admin'})
-            db.session.commit()
+            safe_commit()
         except Exception:
             db.session.rollback()
     
@@ -326,7 +342,7 @@ def login():
             user.login_count = (user.login_count or 0) + 1
             if user.login_count >= 2 and user.role != 'admin':
                 user.force_change_password = True
-            db.session.commit()
+            safe_commit()
             log_user_activity('login', page='/login', details=f'User {username} logged in')
             log_system('INFO', 'auth', f'User {username} logged in', source='login')
             # Force password change after 2 logins
@@ -350,7 +366,7 @@ def login():
             if person.login_count >= 2:
                 person.force_change_password = True
                 auth.force_change_password = True
-            db.session.commit()
+            safe_commit()
             login_user(auth, remember=True)
             log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
             log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
@@ -406,7 +422,7 @@ def profile():
             current_user.set_password(new_pass)
             current_user.force_change_password = False
 
-        db.session.commit()
+        safe_commit()
         flash(_('Profile updated'), 'success')
     return render_template('profile.html')
 
@@ -424,7 +440,7 @@ def change_password():
         else:
             current_user.set_password(new_pass)
             current_user.force_change_password = False
-            db.session.commit()
+            safe_commit()
             flash(_('Password changed'), 'success')
             return redirect(url_for('index'))
     return render_template('change_password.html')
@@ -461,7 +477,7 @@ def user_change_password(user_id):
         flash(_('Passwords do not match'), 'error')
     else:
         u.set_password(new_pass)
-        db.session.commit()
+        safe_commit()
         flash(_('Password changed for %(username)s', username=u.username), 'success')
     return redirect(url_for('user_cabinet', user_id=u.id))
 
@@ -507,7 +523,7 @@ def user_cabinet_update(user_id):
         m = Machine.query.get(int(mid))
         if m:
             u.assigned_machines.append(m)
-    db.session.commit()
+    safe_commit()
     flash(_('User updated'), 'success')
     return redirect(url_for('users_list'))
 
@@ -560,7 +576,7 @@ def user_delete(user_id):
     UserSectionAccess.query.filter_by(user_id=uid).delete()
     # Delete user
     db.session.delete(u)
-    db.session.commit()
+    safe_commit()
     flash(_('User %(username)s deleted', username=username), 'success')
     return redirect(url_for('index'))
 
@@ -591,7 +607,7 @@ def user_new():
             m = Machine.query.get(int(mid))
             if m:
                 u.assigned_machines.append(m)
-        db.session.commit()
+        safe_commit()
         flash(_('User created'), 'success')
         return redirect(url_for('users_list'))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -634,7 +650,7 @@ def user_edit(user_id):
             m = Machine.query.get(int(mid))
             if m:
                 u.assigned_machines.append(m)
-        db.session.commit()
+        safe_commit()
         flash(_('User updated'), 'success')
         return redirect(url_for('users_list'))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -691,7 +707,7 @@ def machine_new():
             u = User.query.get(int(uid))
             if u:
                 m.assigned_users.append(u)
-        db.session.commit()
+        safe_commit()
         flash(_('Machine created'), 'success')
         return redirect(url_for('machine_detail', machine_id=m.id))
     users = User.query.filter(User.is_active_user == True).all()
@@ -728,7 +744,7 @@ def machine_link_consumable(machine_id):
         notes=request.form.get('notes', '')
     )
     db.session.add(mc)
-    db.session.commit()
+    safe_commit()
     item = VoorraadItem.query.get(item_id)
     flash(_('Linked consumable: {}').format(item.naam if item else ''), 'success')
     return redirect(url_for('machine_detail', machine_id=m.id))
@@ -754,7 +770,7 @@ def machine_consume_consumable(machine_id, cons_id):
         user_id=current_user.id
     )
     db.session.add(mutatie)
-    db.session.commit()
+    safe_commit()
     flash(_('Written off {} {} {} for {}').format(qty, item.eenheid, item.naam, mc.machine.name), 'success')
     return redirect(url_for('machine_detail', machine_id=machine_id))
 
@@ -766,7 +782,7 @@ def machine_unlink_consumable(machine_id, cons_id):
     mc = MachineConsumable.query.get_or_404(cons_id)
     name = mc.warehouse_item.naam if mc.warehouse_item else ''
     db.session.delete(mc)
-    db.session.commit()
+    safe_commit()
     flash(_('Unlinked consumable: {}').format(name), 'success')
     return redirect(url_for('machine_detail', machine_id=machine_id))
 
@@ -781,7 +797,7 @@ def machine_consumable_update_date(machine_id, cons_id):
         mc.last_issued_at = datetime.strptime(date_str, '%Y-%m-%d')
     else:
         mc.last_issued_at = None
-    db.session.commit()
+    safe_commit()
     flash(_('Date updated'), 'success')
     return redirect(url_for('machine_detail', machine_id=machine_id))
 
@@ -829,7 +845,7 @@ def machine_edit(machine_id):
             u = User.query.get(int(uid))
             if u:
                 m.assigned_users.append(u)
-        db.session.commit()
+        safe_commit()
         flash(_('Machine updated'), 'success')
         return redirect(url_for('machine_detail', machine_id=m.id))
     users = User.query.filter(User.is_active_user == True).all()
@@ -861,7 +877,7 @@ def machine_delete(machine_id):
     MachineSparePart.query.filter_by(machine_id=m.id).delete()
     m.assigned_users = []
     db.session.delete(m)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'machine', machine_id, name)
     flash(_('Machine deleted') + f': {name}', 'success')
     return redirect(url_for('machines_list'))
@@ -885,7 +901,7 @@ def machine_upload_document(machine_id):
         uploaded_by=current_user.id
     )
     db.session.add(doc)
-    db.session.commit()
+    safe_commit()
     flash(_('Document uploaded'), 'success')
     return redirect(url_for('machine_detail', machine_id=m.id))
 
@@ -907,7 +923,7 @@ def machine_add_maintenance(machine_id):
             notes=request.form.get('notes', '')
         )
         db.session.add(mr)
-        db.session.commit()
+        safe_commit()
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
                 if photo.filename:
@@ -915,7 +931,7 @@ def machine_add_maintenance(machine_id):
                     photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
                     mp = MaintenancePhoto(maintenance_id=mr.id, filename=fn)
                     db.session.add(mp)
-            db.session.commit()
+            safe_commit()
         flash(_('Maintenance record added'), 'success')
         return redirect(url_for('machine_detail', machine_id=m.id))
     return render_template('maintenance_form.html', machine=m, now=datetime.utcnow())
@@ -1035,7 +1051,7 @@ def section_new():
         person_ids = request.form.getlist('responsible_person_ids')
         s.responsible_persons = [Verantwoordelijke.query.get(int(pid)) for pid in person_ids if pid]
         db.session.add(s)
-        db.session.commit()
+        safe_commit()
         flash(_('Section created'), 'success')
         return redirect(url_for('sections_list'))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -1059,7 +1075,7 @@ def section_edit(section_id):
         s.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
         person_ids = request.form.getlist('responsible_person_ids')
         s.responsible_persons = [Verantwoordelijke.query.get(int(pid)) for pid in person_ids if pid]
-        db.session.commit()
+        safe_commit()
         flash(_('Section updated'), 'success')
         return redirect(url_for('sections_list'))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -1074,7 +1090,7 @@ def section_delete(section_id):
     for m in s.machines:
         m.section_id = None
     db.session.delete(s)
-    db.session.commit()
+    safe_commit()
     flash(_('Section deleted'), 'success')
     return redirect(url_for('sections_list'))
 
@@ -1192,7 +1208,7 @@ def settings_user_access(user_id):
     # Update active status
     if 'is_active' in data:
         u.is_active_user = data['is_active']
-    db.session.commit()
+    safe_commit()
     log_audit('update', 'user_access', u.id, f'Updated access for {u.username}')
     return jsonify({'ok': True})
 
@@ -1221,7 +1237,7 @@ def settings_responsible_access():
                 user_id=0,  # 0 = responsible person (not a real user)
                 section_key=f'resp_{resp_id}:{section_key}'
             ))
-    db.session.commit()
+    safe_commit()
     log_audit('update', 'responsible_access', 0, f'Updated access for {len(data)} responsible persons')
     return jsonify({'ok': True})
 
@@ -1243,7 +1259,7 @@ def settings_section_update(section_id):
         s.width = data['width']
     if 'height' in data:
         s.height = data['height']
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/settings/machine/<int:machine_id>/move-section', methods=['POST'])
@@ -1258,7 +1274,7 @@ def settings_machine_move_section(machine_id):
         m.section_id = int(new_section_id)
     else:
         m.section_id = None
-    db.session.commit()
+    safe_commit()
     log_audit('move', 'machine', m.id, f'{m.name} → section {new_section_id}')
     return jsonify({'ok': True})
 
@@ -1279,7 +1295,7 @@ def settings_machine_assign_user(machine_id):
         u = User.query.get(int(user_id))
         if u and m in u.assigned_machines:
             u.assigned_machines.remove(m)
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/api/map/save-section', methods=['POST'])
@@ -1315,7 +1331,7 @@ def api_map_save_section():
         db.session.flush()
         resp_ids = data.get('responsible_ids', [])
         s.responsible_persons = [Verantwoordelijke.query.get(int(pid)) for pid in resp_ids if pid]
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True, 'id': s.id})
 
 @app.route('/api/map/delete-section', methods=['POST'])
@@ -1327,7 +1343,7 @@ def api_map_delete_section():
     for m in s.machines:
         m.section_id = None
     db.session.delete(s)
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/api/map/save-machine-pos', methods=['POST'])
@@ -1338,7 +1354,7 @@ def api_map_save_machine_pos():
     m = Machine.query.get_or_404(data.get('machine_id') or data.get('id'))
     m.floor_x = data.get('floor_x') or data.get('x')
     m.floor_y = data.get('floor_y') or data.get('y')
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/api/map/assign-machine', methods=['POST'])
@@ -1348,7 +1364,7 @@ def api_map_assign_machine():
     data = request.get_json()
     m = Machine.query.get_or_404(data['machine_id'])
     m.section_id = data.get('section_id')
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/api/map/all')
@@ -1400,7 +1416,7 @@ def machine_parts(machine_id):
             existing = Notification.query.filter_by(user_id=target_user_id, is_read=False, title=notif_title).first()
             if not existing:
                 create_notification(target_user_id, notif_title, notif_msg, 'warning', url_for('machine_parts', machine_id=m.id))
-    db.session.commit()
+    safe_commit()
 
     users = User.query.filter(User.is_active_user == True, User.role.in_(['admin', 'technician'])).all()
     return render_template('machine_parts.html', machine=m, parts=parts, today=today, users=users)
@@ -1430,7 +1446,7 @@ def machine_part_new(machine_id):
             responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
         )
         db.session.add(p)
-        db.session.commit()
+        safe_commit()
         flash(_('Part added'), 'success')
         return redirect(url_for('machine_parts', machine_id=m.id))
     users = User.query.filter(User.is_active_user == True, User.role.in_(['admin', 'technician'])).all()
@@ -1461,7 +1477,7 @@ def machine_part_edit(machine_id, part_id):
         if installed and p.maintenance_interval_days:
             p.next_maintenance = date_plus_days(installed, p.maintenance_interval_days)
 
-        db.session.commit()
+        safe_commit()
         flash(_('Part updated'), 'success')
         return redirect(url_for('machine_parts', machine_id=m.id))
     users = User.query.filter(User.is_active_user == True, User.role.in_(['admin', 'technician'])).all()
@@ -1501,7 +1517,7 @@ def machine_part_log(machine_id, part_id):
         if p.maintenance_interval_days:
             p.next_maintenance = date_plus_days(today.date(), p.maintenance_interval_days)
     
-    db.session.commit()
+    safe_commit()
     flash(_('Maintenance log added'), 'success')
     return redirect(url_for('machine_parts', machine_id=m.id))
 
@@ -1513,7 +1529,7 @@ def machine_part_delete(machine_id, part_id):
     p = MachinePart.query.get_or_404(part_id)
     PartMaintenanceLog.query.filter_by(part_id=p.id).delete()
     db.session.delete(p)
-    db.session.commit()
+    safe_commit()
     flash(_('Part deleted'), 'success')
     return redirect(url_for('machine_parts', machine_id=m.id))
 
@@ -1740,7 +1756,7 @@ def maintenance_calendar_complete():
         if plan:
             plan.status = 'completed'
             plan.actual_end = datetime.utcnow().date()
-            db.session.commit()
+            safe_commit()
             flash(_('Plan marked as completed'), 'success')
 
     elif ev_type in ('replacement', 'maintenance') and part_id:
@@ -1765,7 +1781,7 @@ def maintenance_calendar_complete():
                 if part.maintenance_interval_days:
                     part.next_maintenance = date_plus_days(datetime.utcnow().date(), part.maintenance_interval_days)
             part.status = 'ok'
-            db.session.commit()
+            safe_commit()
             flash(_('Maintenance marked as completed'), 'success')
 
     elif ev_type == 'machine_maintenance' and plan_id:
@@ -1774,7 +1790,7 @@ def maintenance_calendar_complete():
         if plan:
             plan.status = 'completed'
             plan.actual_end = datetime.utcnow().date()
-            db.session.commit()
+            safe_commit()
             flash(_('Maintenance marked as completed'), 'success')
 
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
@@ -1927,7 +1943,7 @@ def maintenance_plan_new():
             request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
             p.work_act_file = fn
         db.session.add(p)
-        db.session.commit()
+        safe_commit()
         
         # Check if TWO should be created
         create_two = request.form.get('create_two') == 'yes'
@@ -1949,7 +1965,7 @@ def maintenance_plan_new():
             worker = Monteur.query.get(worker_id)
             if worker:
                 two.workers.append(worker)
-            db.session.commit()
+            safe_commit()
             log_audit('create', 'two_from_plan', two.id, f'{two.number} from plan {p.id}')
             flash(_('Maintenance plan created with TWO') + f': {two.number}', 'success')
         else:
@@ -2001,7 +2017,7 @@ def maintenance_plan_edit(plan_id):
             fn = secure_filename(f"act_{request.files['work_act_file'].filename}")
             request.files['work_act_file'].save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
             p.work_act_file = fn
-        db.session.commit()
+        safe_commit()
 
         # Auto-create next recurring plan on completion
         if p.status == 'completed' and old_status != 'completed' and p.recurrence and p.recurrence != 'none':
@@ -2046,7 +2062,7 @@ def maintenance_plan_edit(plan_id):
                     created_by=current_user.id
                 )
                 db.session.add(new_plan)
-                db.session.commit()
+                safe_commit()
                 flash(_('Maintenance plan updated') + f'. {_("Next")}: {new_date.strftime("%d-%m-%Y")}', 'success')
             else:
                 flash(_('Maintenance plan updated'), 'success')
@@ -2064,7 +2080,7 @@ def maintenance_plan_edit(plan_id):
 def maintenance_plan_delete(plan_id):
     p = MaintenancePlan.query.get_or_404(plan_id)
     db.session.delete(p)
-    db.session.commit()
+    safe_commit()
     flash(_('Maintenance plan deleted'), 'success')
     return redirect(url_for('maintenance_plans_list'))
 
@@ -2252,7 +2268,7 @@ def equipment_new():
                     length=comp_lengths[i] if i < len(comp_lengths) else '',
                     quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1
                 ))
-        db.session.commit()
+        safe_commit()
         log_audit('create', 'equipment', eq.id, f'{eq.number} — {eq.name}')
         flash(_('Equipment maintenance recorded'), 'success')
         return redirect(url_for('equipment_list'))
@@ -2313,7 +2329,7 @@ def equipment_edit(eq_id):
                     length=comp_lengths[i] if i < len(comp_lengths) else '',
                     quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1
                 ))
-        db.session.commit()
+        safe_commit()
         flash(_('Equipment maintenance updated'), 'success')
         return redirect(url_for('equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
@@ -2326,7 +2342,7 @@ def equipment_edit(eq_id):
 def equipment_delete(eq_id):
     eq = EquipmentMaintenance.query.get_or_404(eq_id)
     db.session.delete(eq)
-    db.session.commit()
+    safe_commit()
     flash(_('Equipment maintenance deleted'), 'success')
     return redirect(url_for('equipment_list'))
 
@@ -2346,7 +2362,7 @@ def equipment_order():
         created_by=current_user.id
     )
     db.session.add(o)
-    db.session.commit()
+    safe_commit()
     flash(_('Part order created'), 'success')
     return redirect(url_for('equipment_list'))
 
@@ -2360,7 +2376,7 @@ def equipment_order_status(order_id):
         o.status = new_status
         if new_status == 'delivered':
             o.delivered_at = datetime.utcnow()
-    db.session.commit()
+    safe_commit()
     return redirect(url_for('equipment_list'))
 
 # ============================================================
@@ -2448,7 +2464,7 @@ def assets_new():
         if cert and cert.filename:
             eq.certificate_file = save_uploaded_file(cert, 'equipment')
         db.session.add(eq)
-        db.session.commit()
+        safe_commit()
         log_audit('create', 'equipment_asset', eq.id, eq.name)
         flash(_('Equipment added'), 'success')
         return redirect(url_for('assets_detail', eq_id=eq.id))
@@ -2525,7 +2541,7 @@ def assets_edit(eq_id):
         cert = request.files.get('certificate_file')
         if cert and cert.filename:
             eq.certificate_file = save_uploaded_file(cert, 'equipment')
-        db.session.commit()
+        safe_commit()
         flash(_('Equipment updated'), 'success')
         return redirect(url_for('assets_detail', eq_id=eq.id))
     sections = FactorySection.query.order_by(FactorySection.name).all()
@@ -2540,7 +2556,7 @@ def assets_edit(eq_id):
 def assets_delete(eq_id):
     eq = Equipment.query.get_or_404(eq_id)
     db.session.delete(eq)
-    db.session.commit()
+    safe_commit()
     flash(_('Equipment deleted'), 'success')
     return redirect(url_for('assets_list'))
 
@@ -2563,7 +2579,7 @@ def assets_add_service(eq_id):
         eq.next_service_date = log.next_date
     eq.last_service_date = log.date.date() if isinstance(log.date, datetime) else log.date
     db.session.add(log)
-    db.session.commit()
+    safe_commit()
     flash(_('Service record added'), 'success')
     return redirect(url_for('assets_detail', eq_id=eq.id))
 
@@ -2622,7 +2638,7 @@ def repair_new():
                 comp.status = 'ok'
                 comp.installed_at = r.date_installed
         db.session.add(r)
-        db.session.commit()
+        safe_commit()
         flash(_('Repair record created'), 'success')
         return redirect(url_for('repairs_list'))
     components = GasSystemComponent.query.order_by(GasSystemComponent.gas_type, GasSystemComponent.component_type).all()
@@ -2653,7 +2669,7 @@ def repair_edit(repair_id):
                 comp.installed_at = r.date_installed
             elif r.status == 'broken':
                 comp.status = 'faulty'
-        db.session.commit()
+        safe_commit()
         flash(_('Repair record updated'), 'success')
         return redirect(url_for('repairs_list'))
     components = GasSystemComponent.query.order_by(GasSystemComponent.gas_type, GasSystemComponent.component_type).all()
@@ -2679,7 +2695,7 @@ def repair_status(repair_id):
             if comp:
                 comp.status = 'ok'
                 comp.installed_at = r.date_installed
-        db.session.commit()
+        safe_commit()
     flash(_('Status updated'), 'success')
     return redirect(url_for('repairs_list'))
 
@@ -2825,7 +2841,7 @@ def two_new():
                         text=text.strip(), sort_order=j
                     ))
 
-        db.session.commit()
+        safe_commit()
         # Handle photos
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
@@ -2833,7 +2849,7 @@ def two_new():
                     fn = secure_filename(f"two_{two.id}_{photo.filename}")
                     photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
                     db.session.add(TWOPhoto(two_id=two.id, filename=fn))
-            db.session.commit()
+            safe_commit()
         log_audit('create', 'two', two.id, two.number)
         flash(_('TWO created') + f': {two.number}', 'success')
         return redirect(url_for('two_detail', two_id=two.id))
@@ -3043,7 +3059,7 @@ def two_checklist_add(two_id):
         max_order = max([i.sort_order for i in two.checklist_items], default=0)
         item = TWOChecklistItem(two_id=two_id, text=text, sort_order=max_order + 1)
         db.session.add(item)
-        db.session.commit()
+        safe_commit()
     return redirect(url_for('two_detail', two_id=two_id))
 
 @app.route('/two/checklist/<int:item_id>/toggle', methods=['POST'])
@@ -3054,7 +3070,7 @@ def two_checklist_toggle(item_id):
     item.is_done = not item.is_done
     item.done_at = datetime.utcnow() if item.is_done else None
     item.done_by = current_user.id if item.is_done else None
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True, 'is_done': item.is_done, 'done_at': item.done_at.strftime('%d.%m.%Y %H:%M') if item.done_at else None})
 
 @app.route('/two/checklist/<int:item_id>/delete', methods=['POST'])
@@ -3064,7 +3080,7 @@ def two_checklist_delete(item_id):
     item = TWOChecklistItem.query.get_or_404(item_id)
     two_id = item.two_id
     db.session.delete(item)
-    db.session.commit()
+    safe_commit()
     return redirect(url_for('two_detail', two_id=two_id))
 
 @app.route('/two/<int:two_id>/signature', methods=['POST'])
@@ -3079,7 +3095,7 @@ def two_add_signature(two_id):
         db.session.add(sig)
         two.status = 'completed'
         two.completed_at = datetime.utcnow()
-        db.session.commit()
+        safe_commit()
         flash(_('Signature saved'), 'success')
     return redirect(url_for('two_detail', two_id=two_id))
 
@@ -3163,7 +3179,7 @@ def two_edit(two_id):
                     fn = secure_filename(f"two_{two.id}_{photo.filename}")
                     photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
                     db.session.add(TWOPhoto(two_id=two.id, filename=fn))
-        db.session.commit()
+        safe_commit()
         log_audit('update', 'two', two.id, two.number)
         flash(_('TWO updated'), 'success')
         return redirect(url_for('two_detail', two_id=two.id))
@@ -3182,7 +3198,7 @@ def two_complete(two_id):
     two.completed_at = datetime.utcnow()
     two.result = request.form.get('result', two.result)
     # Do NOT auto-resolve linked fault — close manually
-    db.session.commit()
+    safe_commit()
     log_audit('complete', 'two', two.id, two.number)
     flash(_('TWO completed'), 'success')
     return redirect(url_for('two_detail', two_id=two.id))
@@ -3193,7 +3209,7 @@ def two_complete(two_id):
 def two_delete(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     db.session.delete(two)
-    db.session.commit()
+    safe_commit()
     flash(_('TWO deleted'), 'success')
     return redirect(url_for('two_list'))
 
@@ -3277,7 +3293,7 @@ def message_new():
                 url_for('messages_list')
             )
             sent += 1
-        db.session.commit()
+        safe_commit()
         msg = _('Message sent to') + f' {sent} ' + _('users')
         if skipped:
             msg += f'. {_("No user account for")}: {", ".join(skipped)}'
@@ -3298,7 +3314,7 @@ def message_detail(message_id):
         abort(403)
     if m.receiver_id == current_user.id:
         m.is_read = True
-        db.session.commit()
+        safe_commit()
     return render_template('message_detail.html', message=m)
 
 @app.route('/messages/<int:message_id>/delete', methods=['POST'])
@@ -3309,7 +3325,7 @@ def message_delete(message_id):
         from flask import abort
         abort(403)
     db.session.delete(m)
-    db.session.commit()
+    safe_commit()
     flash(_('Message deleted'), 'success')
     return redirect(url_for('messages_list'))
 
@@ -3335,14 +3351,14 @@ def notification_read(notif_id):
     n = Notification.query.get_or_404(notif_id)
     if n.user_id == current_user.id:
         n.is_read = True
-        db.session.commit()
+        safe_commit()
     return jsonify({'success': True})
 
 @app.route('/notifications/read-all', methods=['POST'])
 @login_required
 def notifications_read_all():
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
-    db.session.commit()
+    safe_commit()
     return jsonify({'success': True})
 
 @app.route('/consumable-reminders')
@@ -4022,7 +4038,7 @@ def order_new():
             status='aangenomen'
         )
         db.session.add(o)
-        db.session.commit()
+        safe_commit()
         flash(_('Work Order created') + f' {o.nummer}', 'success')
         return redirect(url_for('order_detail', order_id=o.id))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -4058,7 +4074,7 @@ def order_edit(order_id):
             elif ns == 'gereed' and not order.gereed: order.gereed = datetime.utcnow()
             elif ns == 'afgeleverd' and not order.afgeleverd: order.afgeleverd = datetime.utcnow()
             order.status = ns
-        db.session.commit()
+        safe_commit()
         flash(_('Work Order updated'), 'success')
         return redirect(url_for('order_detail', order_id=order.id))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -4073,7 +4089,7 @@ def order_delete(order_id):
     nummer = order.nummer
     VoorraadMutatie.query.filter_by(opdracht_id=order.id).update({'opdracht_id': None})
     db.session.delete(order)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'opdracht', order_id, nummer)
     flash(_('Work Order deleted') + f': {nummer}', 'success')
     return redirect(url_for('orders_list'))
@@ -4125,7 +4141,7 @@ def responsible_groups():
 def responsible_group_new():
     if request.method == 'POST':
         g = ResponsibleGroup(name=request.form['name'], description=request.form.get('description', ''))
-        db.session.add(g); db.session.commit()
+        db.session.add(g); safe_commit()
         flash(_('Group created'), 'success')
         return redirect(url_for('responsible_groups'))
     return render_template('responsible_group_form.html', group=None)
@@ -4145,7 +4161,7 @@ def responsible_group_edit(group_id):
     if request.method == 'POST':
         g.name = request.form['name']
         g.description = request.form.get('description', '')
-        db.session.commit()
+        safe_commit()
         flash(_('Group updated'), 'success')
         return redirect(url_for('responsible_groups'))
     return render_template('responsible_group_form.html', group=g)
@@ -4157,7 +4173,7 @@ def responsible_group_delete(group_id):
     g = ResponsibleGroup.query.get_or_404(group_id)
     for m in g.members:
         m.group_id = None
-    db.session.delete(g); db.session.commit()
+    db.session.delete(g); safe_commit()
     flash(_('Group deleted'), 'success')
     return redirect(url_for('responsible_groups'))
 
@@ -4242,7 +4258,7 @@ def group_permissions(group_id):
                 )
                 db.session.add(perm)
         
-        db.session.commit()
+        safe_commit()
         flash(_('Permissions updated'), 'success')
         return redirect(url_for('responsible_groups'))
     
@@ -4288,7 +4304,7 @@ def responsible_new():
             s = FactorySection.query.get(int(sid))
             if s:
                 c.resp_sections.append(s)
-        db.session.commit()
+        safe_commit()
         flash(_('Responsible person added') + f': {c.naam}', 'success')
         return redirect(url_for('responsible_list'))
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
@@ -4323,7 +4339,7 @@ def responsible_assign_group(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
     data = request.get_json()
     c.group_id = data.get('group_id')
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/responsible/<int:resp_id>/assign-sections', methods=['POST'])
@@ -4338,7 +4354,7 @@ def responsible_assign_sections(resp_id):
         s = FactorySection.query.get(int(sid))
         if s:
             c.resp_sections.append(s)
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/responsible/<int:resp_id>/quick-edit', methods=['POST'])
@@ -4385,7 +4401,7 @@ def responsible_quick_edit(resp_id):
             flash(_('Passwords do not match'), 'error')
             return redirect(url_for('responsible_list'))
         c.set_password(password)
-    db.session.commit()
+    safe_commit()
     flash(_('Responsible person updated'), 'success')
     return redirect(url_for('responsible_list'))
 
@@ -4412,7 +4428,7 @@ def responsible_delete(resp_id):
         pass
     db.session.flush()
     db.session.delete(c)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'responsible', cid, name)
     flash(_('Responsible person deleted') + f': {name}', 'success')
     return redirect(url_for('responsible_list'))
@@ -4435,7 +4451,7 @@ def responsible_quick_add():
         if password:
             c.set_password(password)
         db.session.add(c)
-        db.session.commit()
+        safe_commit()
         flash(_('Responsible person added'), 'success')
     return redirect(url_for('responsible_list'))
 
@@ -4458,7 +4474,7 @@ def section_assign_machine(section_id):
         if machine:
             machine.section_id = section_id
             assigned += 1
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True, 'assigned': assigned})
 
 @app.route('/sections/<int:section_id>/remove-machine/<int:machine_id>', methods=['POST'])
@@ -4468,7 +4484,7 @@ def section_remove_machine(section_id, machine_id):
     machine = Machine.query.get_or_404(machine_id)
     if machine.section_id == section_id:
         machine.section_id = None
-        db.session.commit()
+        safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/responsible/<int:resp_id>/edit', methods=['GET', 'POST'])
@@ -4517,7 +4533,7 @@ def responsible_edit(resp_id):
             s = FactorySection.query.get(int(sid))
             if s:
                 c.resp_sections.append(s)
-        db.session.commit()
+        safe_commit()
         flash(_('Responsible person updated'), 'success')
         return redirect(url_for('responsible_list'))
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
@@ -4544,7 +4560,7 @@ def worker_new():
                     tarief_per_uur=float(request.form.get('tarief_per_uur',0)),
                     user_id=int(request.form['user_id']) if request.form.get('user_id') else None,
                     group_id=int(request.form['group_id']) if request.form.get('group_id') else None)
-        db.session.add(w); db.session.commit()
+        db.session.add(w); safe_commit()
         flash(_('Worker added') + f': {w.naam}', 'success')
         return redirect(url_for('workers_list'))
     users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).order_by(User.display_name).all()
@@ -4563,7 +4579,7 @@ def worker_edit(worker_id):
         w.actief = 'actief' in request.form
         w.user_id = int(request.form['user_id']) if request.form.get('user_id') else None
         w.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
-        db.session.commit()
+        safe_commit()
         flash(_('Worker updated'), 'success')
         return redirect(url_for('workers_list'))
     users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).order_by(User.display_name).all()
@@ -4577,7 +4593,7 @@ def worker_delete(worker_id):
     w = Monteur.query.get_or_404(worker_id)
     name = w.naam
     db.session.delete(w)
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'worker', worker_id, name)
     flash(_('Worker deleted') + f': {name}', 'success')
     return redirect(url_for('workers_list'))
@@ -4614,7 +4630,7 @@ def worker_create_user(worker_id):
     db.session.flush()
     
     w.user_id = u.id
-    db.session.commit()
+    safe_commit()
     
     log_audit('create', 'user_from_worker', u.id, f'{w.naam} -> {username} (technician)')
     flash(_('Login created for') + f' {w.naam}: {username}', 'success')
@@ -4650,7 +4666,7 @@ def invoice_new():
             created_by=current_user.id
         )
         db.session.add(inv)
-        db.session.commit()
+        safe_commit()
         # Add items
         descriptions = request.form.getlist('item_desc[]')
         quantities = request.form.getlist('item_qty[]')
@@ -4664,7 +4680,7 @@ def invoice_new():
                     quantity=qty, unit_price=price, total_price=qty * price
                 )
                 db.session.add(item)
-        db.session.commit()
+        safe_commit()
         flash(_('Invoice created'), 'success')
         return redirect(url_for('invoice_detail', invoice_id=inv.id))
     items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
@@ -4703,7 +4719,7 @@ def invoice_edit(invoice_id):
                     quantity=qty, unit_price=price, total_price=qty * price
                 )
                 db.session.add(item)
-        db.session.commit()
+        safe_commit()
         flash(_('Invoice updated'), 'success')
         return redirect(url_for('invoice_detail', invoice_id=inv.id))
     items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
@@ -4717,7 +4733,7 @@ def invoice_approve(invoice_id):
     inv.status = 'approved'
     inv.signed_by = current_user.id
     inv.signed_at = datetime.utcnow()
-    db.session.commit()
+    safe_commit()
     flash(_('Invoice approved for payment'), 'success')
     return redirect(url_for('invoice_detail', invoice_id=inv.id))
 
@@ -4730,7 +4746,7 @@ def invoice_reject(invoice_id):
     inv.rejection_reason = request.form.get('rejection_reason', '')
     inv.signed_by = current_user.id
     inv.signed_at = datetime.utcnow()
-    db.session.commit()
+    safe_commit()
     flash(_('Invoice rejected'), 'error')
     return redirect(url_for('invoice_detail', invoice_id=inv.id))
 
@@ -4740,7 +4756,7 @@ def invoice_reject(invoice_id):
 def invoice_pay(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     inv.status = 'paid'
-    db.session.commit()
+    safe_commit()
     flash(_('Invoice marked as paid'), 'success')
     return redirect(url_for('invoice_detail', invoice_id=inv.id))
 
@@ -4750,7 +4766,7 @@ def invoice_pay(invoice_id):
 def invoice_delete(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     db.session.delete(inv)
-    db.session.commit()
+    safe_commit()
     flash(_('Invoice deleted'), 'success')
     return redirect(url_for('invoices_list'))
 
@@ -5663,7 +5679,7 @@ def purchase_request_new():
             reason=request.form.get('reason', '')
         )
         db.session.add(pr)
-        db.session.commit()
+        safe_commit()
         
         log_audit('create', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name} (срочность: {pr.urgency})')
         add_work_report(f'🛒 Новая заявка: {pr.part_name} x{pr.quantity} — {pr.machine.name} (срочность: {pr.urgency})')
@@ -5705,7 +5721,7 @@ def purchase_request_approve(request_id):
     pr.status = 'approved'
     pr.reviewed_at = datetime.utcnow()
     pr.reviewer_id = current_user.id
-    db.session.commit()
+    safe_commit()
     
     log_audit('approve', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name}')
     add_work_report(f'✅ Заявка одобрена: {pr.part_name} x{pr.quantity} — {pr.machine.name}')
@@ -5729,7 +5745,7 @@ def purchase_request_reject(request_id):
     pr.status = 'rejected'
     pr.reviewed_at = datetime.utcnow()
     pr.reviewer_id = current_user.id
-    db.session.commit()
+    safe_commit()
     
     log_audit('reject', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name}')
     add_work_report(f'❌ Заявка отклонена: {pr.part_name} x{pr.quantity} — {pr.machine.name}')
@@ -5778,7 +5794,7 @@ def schedule_user(user_id):
             work_days=work_days or '1,2,3,4,5'
         )
         db.session.add(s)
-        db.session.commit()
+        safe_commit()
         flash(_('Schedule created'), 'success')
     schedules = WorkSchedule.query.filter_by(user_id=user.id).all()
     return render_template('schedule_user.html', user=user, schedules=schedules)
@@ -5789,7 +5805,7 @@ def schedule_user(user_id):
 def schedule_delete(user_id):
     user = User.query.get_or_404(user_id)
     deleted = WorkSchedule.query.filter_by(user_id=user.id).delete()
-    db.session.commit()
+    safe_commit()
     flash(_('Schedule deleted for') + ' ' + (user.display_name or user.username) + f' ({deleted})', 'success')
     return redirect(url_for('schedule_list'))
 
@@ -5917,7 +5933,7 @@ def schedule_monthly_shift():
     elif action == 'remove' and existing:
         db.session.delete(existing)
 
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True})
 
 @app.route('/schedule/monthly/delete', methods=['POST'])
@@ -5938,7 +5954,7 @@ def schedule_monthly_delete():
         WeekendShift.date >= first_day,
         WeekendShift.date <= last_day
     ).delete()
-    db.session.commit()
+    safe_commit()
     return jsonify({'ok': True, 'deleted': deleted})
 
 @app.route('/time-tracking')
@@ -5980,7 +5996,7 @@ def clock_in():
             status='present'
         )
         db.session.add(entry)
-    db.session.commit()
+    safe_commit()
     flash(_('Clocked in at') + ' ' + datetime.utcnow().strftime('%H:%M'), 'success')
     return redirect(url_for('time_tracking'))
 
@@ -6005,7 +6021,7 @@ def clock_out():
     if entry.hours_worked > 8:
         entry.overtime_hours = round(entry.hours_worked - 8, 2)
     
-    db.session.commit()
+    safe_commit()
     flash(_('Clocked out at') + ' ' + entry.clock_out.strftime('%H:%M') + '. ' + _('Hours worked') + ': ' + str(entry.hours_worked), 'success')
     return redirect(url_for('time_tracking'))
 
@@ -6035,7 +6051,7 @@ def time_tracking_manual():
         if entry.hours_worked > 8:
             entry.overtime_hours = round(entry.hours_worked - 8, 2)
     
-    db.session.commit()
+    safe_commit()
     flash(_('Time entry saved'), 'success')
     return redirect(url_for('time_tracking'))
 
@@ -6066,7 +6082,7 @@ def vacation_new():
             reason=request.form.get('reason', '')
         )
         db.session.add(v)
-        db.session.commit()
+        safe_commit()
         
         admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
         for admin in admins:
@@ -6089,7 +6105,7 @@ def vacation_approve(vacation_id):
     v = Vacation.query.get_or_404(vacation_id)
     v.status = 'approved'
     v.approved_by = current_user.id
-    db.session.commit()
+    safe_commit()
     create_notification(v.user_id, _('Vacation approved'), f"{v.vacation_type} {v.date_from} - {v.date_to}", 'info')
     flash(_('Vacation approved'), 'success')
     return redirect(url_for('vacations_list'))
@@ -6101,7 +6117,7 @@ def vacation_reject(vacation_id):
     v = Vacation.query.get_or_404(vacation_id)
     v.status = 'rejected'
     v.approved_by = current_user.id
-    db.session.commit()
+    safe_commit()
     create_notification(v.user_id, _('Vacation rejected'), f"{v.vacation_type} {v.date_from} - {v.date_to}", 'warning')
     flash(_('Vacation rejected'), 'error')
     return redirect(url_for('vacations_list'))
@@ -6351,7 +6367,7 @@ def work_report_add():
         entry=entry_text
     )
     db.session.add(entry)
-    db.session.commit()
+    safe_commit()
     flash(_('Entry added'), 'success')
     return redirect(url_for('work_report_page'))
 
@@ -6361,7 +6377,7 @@ def work_report_add():
 def work_report_delete(entry_id):
     entry = WorkReportEntry.query.get_or_404(entry_id)
     db.session.delete(entry)
-    db.session.commit()
+    safe_commit()
     flash(_('Entry deleted'), 'success')
     return redirect(url_for('work_report_page'))
 
@@ -6385,7 +6401,7 @@ def tool_wear_page():
         for m in default_machines:
             t = ToolWear(machine_name=m, tool_name='Ножи / Фреза', cycle_days=14, last_replaced=datetime.utcnow().date())
             db.session.add(t)
-        db.session.commit()
+        safe_commit()
         tools = ToolWear.query.order_by(ToolWear.machine_name).all()
     
     # Auto-calculate wear based on days since last replacement
@@ -6413,7 +6429,7 @@ def tool_wear_add():
     if machine_name:
         t = ToolWear(machine_name=machine_name, tool_name=tool_name, cycle_days=cycle_days, last_replaced=datetime.utcnow().date())
         db.session.add(t)
-        db.session.commit()
+        safe_commit()
         flash(_('Tool added'), 'success')
     return redirect(url_for('tool_wear_page'))
 
@@ -6430,7 +6446,7 @@ def tool_wear_update(tool_id):
         tool.last_replaced = datetime.strptime(date_str, '%Y-%m-%d').date()
     tool.notes = request.form.get('notes', tool.notes)
     tool.updated_by = current_user.id
-    db.session.commit()
+    safe_commit()
     flash(_('Tool updated'), 'success')
     return redirect(url_for('tool_wear_page'))
 
@@ -6440,7 +6456,7 @@ def tool_wear_update(tool_id):
 def tool_wear_delete(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     db.session.delete(tool)
-    db.session.commit()
+    safe_commit()
     flash(_('Tool deleted'), 'success')
     return redirect(url_for('tool_wear_page'))
 
@@ -6452,10 +6468,10 @@ def tool_wear_reset(tool_id):
     tool.wear_percent = 0
     tool.last_replaced = datetime.utcnow().date()
     tool.updated_by = current_user.id
-    db.session.commit()
+    safe_commit()
     # Clear ALL tool_wear notifications (re-check will re-create if still needed)
     Notification.query.filter_by(type='tool_wear', link='/tool-wear').delete()
-    db.session.commit()
+    safe_commit()
     log_system('INFO', 'tool_wear', f'Tool replaced: {tool.machine_name} — {tool.tool_name}', source='tool_wear')
     flash(_('Tool replaced, wear reset to 0%'), 'success')
     return redirect(url_for('tool_wear_page'))
@@ -6546,7 +6562,7 @@ def archive_create():
     entries_data = [{'id': e.id, 'user_id': e.user_id, 'date': e.date.strftime('%Y-%m-%d'), 'hours': e.hours_worked or 0, 'notes': e.notes or ''} for e in entries]
     db.session.add(MonthlyArchive(archive_month=month_str, section='time_entries', data_json=json.dumps(entries_data, ensure_ascii=False), created_by=current_user.id))
     
-    db.session.commit()
+    safe_commit()
     flash(_('Month archived successfully'), 'success')
     return redirect(url_for('archive_page'))
 
@@ -6818,7 +6834,7 @@ if __name__ == '__main__':
                 FactorySection(name='Storage', description='Raw materials and finished goods storage', section_type='storage', color='#95a5a6', floor_x=75, floor_y=50, width=20, height=30, responsible_user_id=None),
             ]
             db.session.add_all(sections)
-            db.session.commit()
+            safe_commit()
             
             # Create demo machines
             machines = [
@@ -6830,11 +6846,11 @@ if __name__ == '__main__':
                 Machine(name='Drill DP20', description='Radial drill press', serial_number='DP-2024-006', machine_type='Drilling', floor_x=55, floor_y=65, status='active', section_id=4),
             ]
             db.session.add_all(machines)
-            db.session.commit()
+            safe_commit()
             
             # Assign machines to user
             user.assigned_machines = [machines[0], machines[1], machines[2]]
-            db.session.commit()
+            safe_commit()
             
             # Demo data
             demo = [
@@ -6855,7 +6871,7 @@ if __name__ == '__main__':
                 VoorraadItem(naam='V-snaar', categorie='Onderdelen', eenheid='st', hoeveelheid=3, minimum=2, prijs=25),
             ]
             db.session.add_all(demo + demo_w + demo_i)
-            db.session.commit()
+            safe_commit()
             
             demo_o = [
                 Opdracht(nummer='WO-20260809-0001', responsible_id=1, monteur_id=1, apparaat='Smartphone', model='iPhone 12',
@@ -6871,7 +6887,7 @@ if __name__ == '__main__':
                          probleem='WiFi werkt niet, traag', status='aangenomen', arbeidskosten=0, onderdelenkosten=0, totaal=0),
             ]
             db.session.add_all(demo_o)
-            db.session.commit()
+            safe_commit()
             
             # Demo fault report
             fault = FaultReport(
@@ -6882,7 +6898,7 @@ if __name__ == '__main__':
                 reporter_id=3  # user
             )
             db.session.add(fault)
-            db.session.commit()
+            safe_commit()
             
             print("\n" + "=" * 50)
             print("Demo data loaded! Generated credentials:")

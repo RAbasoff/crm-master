@@ -60,6 +60,16 @@
                     <input type="password" name="confirm_password" placeholder="{{ _('Repeat') }}" style="padding:6px 8px;font-size:13px">
                 </div>
             </div>
+            {% if u.role != 'admin' %}
+            <div style="margin-bottom:12px;padding:8px 12px;background:#f0f7ff;border-radius:6px;font-size:12px;display:flex;gap:12px;align-items:center">
+                <span style="color:#888">{{ _('Password') }}:</span>
+                <code style="background:#e8f4fd;padding:2px 8px;border-radius:4px;font-size:13px;color:#2c3e50;cursor:pointer"
+                    onclick="this.textContent=this.textContent==='••••'?'{{ u.password_plain or '—' }}':'••••'">••••</code>
+                <span style="font-size:10px;color:#aaa">({{ _('click to show') }})</span>
+                {% if u.force_change_password %}<span class="badge badge-offline" style="font-size:10px">{{ _('Must change') }}</span>{% endif %}
+                <span style="font-size:10px;color:#aaa">{{ _('Logins') }}: {{ u.login_count or 0 }}</span>
+            </div>
+            {% endif %}
 
             <!-- ROW 2: Name + Role + Status -->
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">

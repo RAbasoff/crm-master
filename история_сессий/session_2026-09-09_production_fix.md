@@ -1,44 +1,48 @@
 # Сессия 2026-09-09: Исправление production-проблем CRM
 
 ## Проблема
-Онлайн-версия (PythonAnywhere) не обновилась:
 - Техники висят в списке «Ответственные»
-- Lukash не удалён из persons
-- Tim до сих пор в пользователях (нужно удалить)
-- Maico/Aris/Filip были системными пользователями, а должны быть только персонами
+- Lukash не удалён, Tim в пользователях
+- Maico/Aris/Filip были system users, а должны быть только персонами
+- Maico/Filip отсутствовали в workers (Technische dienst)
+- В заявках (faults) нельзя было выбрать оборудование — только машины
 
-## Архитектура (правильная)
-### Системные пользователи (user table) — только 4:
+## Архитектура
+### System users (user table) — только 3:
 1. admin (Руслан) — Администратор
 2. director — Директор
 3. technician — Technicien
-4. user — User (generic)
 
-### Персоны (client table) — Technische dienst:
-- Maico, Aris, Filip и др. — только в client, без system accounts
+### Persons (client table):
+- Directeur → Director group
+- Technicus, Maico, Aris, Filip → (no group) = Technische dienst
+- Bartek, Pablo, Javier, Hashem, Paulina → User group
+
+### Workers (Monteur table):
+- Aristidis, Maico, Filip, Ruslan — активные работники
 
 ## Изменения
 
-### Fix 1: Bump marker v10→v11→v12 (utils.py:715)
-Каждое изменение миграции — новый маркер, чтобы перезапустить на продакшене.
+### Миграции (utils.py)
+1. Marker v10→v11→v12 — перезапуск миграции
+2. Сначала User, потом persons (FK-порядок)
+3. Case-insensitive удаление (func.lower)
+4. Очистка User.person_id перед удалением person
+5. Удаление maico/aris/filip из user table
+6. Только director + technician как system users
+7. Peter, Rusln в names_to_remove
 
-### Fix 2: Порядок удаления — сначала User, потом persons
-FK-ссылки переписываются на admin перед удалением.
+### Заявки + оборудование (fault reports)
+- `equipment_id` добавлен в FaultReport (nullable)
+- `machine_id` стал nullable (был required)
+- Миграция: `ALTER TABLE fault_report ADD COLUMN equipment_id`
+- `target_name` property — единый доступ к имени машины/оборудования
+- Dropdown: оптгруппы «🏭 Машины» и «⚙️ Оборудование»
+- Штрихкод: M00001=машина, E00001=оборудование
+- QR: `{type:'equipment', id:N}`
+- Обновлены все шаблоны и routes
 
-### Fix 3: Case-insensitive удаление (func.lower)
+### Workers (fix_now.py)
+- Добавлены Maico, Filip, Aris в workers table
 
-### Fix 4: Очистка User.person_id перед удалением person
-
-### Fix 5: Удаление tech system users (maico, aris, filip)
-- Из таблицы user удаляются maico, aris, filip
-- FK-ссылки переписываются на admin
-- Worker-привязки очищаются
-- Персоны в client остаются (в Technische dienst)
-
-### Fix 6: Создаются только director + technician system users
-- Убрано создание maico/aris/filip как system users
-
-### Fix 7: Добавлен Peter в names_to_remove
-- Удалён с продакшена по просьбе пользователя
-
-## Статус: v12 — готов к push
+## Статус: запушено (8074fcd)

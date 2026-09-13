@@ -6,6 +6,23 @@ from datetime import datetime, timedelta
 from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry
 import os
 from werkzeug.utils import secure_filename
+import time as _time
+
+
+def safe_commit(retries=3, delay=0.5):
+    """Commit with retry on SQLite lock. Returns True on success."""
+    for attempt in range(retries):
+        try:
+            db.session.commit()
+            return True
+        except Exception as e:
+            if 'database is locked' in str(e) and attempt < retries - 1:
+                db.session.rollback()
+                _time.sleep(delay * (attempt + 1))
+            else:
+                db.session.rollback()
+                return False
+    return False
 
 # Role hierarchy: admin > director > technician > user
 # admin: full access, can modify program settings
@@ -84,7 +101,7 @@ def section_access_required(section_key, action='view'):
 def create_notification(user_id, title, message, ntype='info', link=None):
     n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
     db.session.add(n)
-    db.session.commit()
+    safe_commit()
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:
@@ -94,7 +111,7 @@ def log_audit(action, entity_type=None, entity_id=None, details=None):
             details=details, ip_address=request.remote_addr
         )
         db.session.add(log)
-        db.session.commit()
+        safe_commit()
     except Exception:
         db.session.rollback()
 
@@ -118,7 +135,7 @@ def log_user_activity(action, page=None, method=None, entity_type=None, entity_i
             status_code=status_code
         )
         db.session.add(log)
-        db.session.commit()
+        safe_commit()
     except Exception:
         db.session.rollback()
 
@@ -136,7 +153,7 @@ def log_system(level, category, message, details=None, source=None):
             ip_address=request.remote_addr if request else None
         )
         db.session.add(log)
-        db.session.commit()
+        safe_commit()
     except Exception:
         db.session.rollback()
 
@@ -558,7 +575,7 @@ def run_data_migrations():
         if admin_user and admin_user.role != 'admin':
             print(f"Data migration: FIXING admin role from '{admin_user.role}' to 'admin'")
             admin_user.role = 'admin'
-            db.session.commit()
+            safe_commit()
 
         # ── 1. Ensure 4 standard groups exist ───────────────────────────
         groups_spec = [
@@ -574,7 +591,7 @@ def run_data_migrations():
                 db.session.add(g)
                 db.session.flush()
                 print(f"Data migration: created group '{name}'")
-        db.session.commit()
+        safe_commit()
 
         # ── 2. Base group permissions (view on all modules) ─────────────
         all_sections = [
@@ -722,12 +739,12 @@ def run_data_migrations():
         except Exception:
             pass
 
-        db.session.commit()
+        safe_commit()
 
         # ── 6b. Clean stale data in client table ────────────────────────
         try:
             db.session.execute(text("UPDATE client SET password_plain=NULL, position=NULL, notities=NULL"))
-            db.session.commit()
+            safe_commit()
             print("Data migration: cleared password_plain and stale fields from client table")
         except Exception:
             db.session.rollback()
@@ -846,7 +863,7 @@ def run_data_migrations():
             db.session.delete(u)
             print(f"Data migration: removed system user '{username}' (ID={u.id}), FKs -> admin")
 
-        db.session.commit()
+        safe_commit()
 
         # 7c. Ensure desired persons exist with correct groups
         for name, (group_name, access_level) in desired_persons.items():
@@ -867,7 +884,7 @@ def run_data_migrations():
                 if person.access_level != access_level:
                     person.access_level = access_level
 
-        db.session.commit()
+        safe_commit()
 
         # 7d. Delete technician system users (maico, aris, filip) — they should be persons only
         for tech_username in ['maico', 'aris', 'filip']:
@@ -941,7 +958,7 @@ def run_data_migrations():
 
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))
-        db.session.commit()
+        safe_commit()
         print("Data migration: user cleanup complete.")
 
     except Exception as e:
@@ -964,7 +981,7 @@ def add_work_report(entry_text):
             entry=entry_text
         )
         db.session.add(entry)
-        db.session.commit()
+        safe_commit()
     except Exception:
         db.session.rollback()
 

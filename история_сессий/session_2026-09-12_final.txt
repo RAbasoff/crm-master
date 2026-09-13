@@ -1,0 +1,65 @@
+============================================================
+ИТОГОВЫЙ ОТЧЁТ СЕССИИ — 2026-09-12
+============================================================
+СТАТУС: ВСЁ РАБОТАЕТ ✅
+
+КАЛЕНДАРЬ ТО — ИТОГ:
+  ✅ Завершённые события → салатовый (#27ae60)
+  ✅ Пропущенные события → оригинальный цвет
+  ✅ Просроченные → красный
+  ✅ В работе → оранжевый
+  ✅ Запланированные → фиолетовый
+  ✅ Кнопка "Done" (✅) рядом с каждым событием
+  ✅ При нажатии → PartMaintenanceLog создаётся
+  ✅ Строка становится салатовой с галочкой
+  ✅ Легенда обновлена
+
+КОММИТЫ КАЛЕНДАРЯ:
+  179bc6f — completed events green, missed keep original color
+  d7832b5 — .get() fix for ev.done and ev.status
+  e6db166 — Jinja2 is defined + green row + checkmark
+  265ffb5 — Done button + /maintenance-calendar/complete route
+
+ДРУГИЕ ИСПРАВЛЕНИЯ ЗА СЕССИЮ (22 коммита):
+
+РОЛИ И ПРАВА:
+  ✓ Director: view+edit+add на machines/maintenance_plans
+  ✓ Director: view-only на mule/tool_wear/repairs
+  ✓ Director: NO delete, NO warehouse moves
+  ✓ User: view-only на maintenance_plans
+  ✓ Gas/Electricity: has_access() вместо hardcoded admin
+  ✓ Role-switcher: ПОЛНОСТЬЮ УДАЛЁН
+  ✓ Admin role: авто-починка на каждом запуске
+
+БЕЗОПАСНОСТЬ:
+  ✓ Пароли не хранятся в открытом виде
+  ✓ Минимум пароля 8 символов
+  ✓ LIKE injection в QR lookup — исправлен
+  ✓ XSS в PDF экспорте — html.escape()
+  ✓ IDOR user_cabinet — @role_required добавлен
+  ✓ Gas cylinder API — валидация статуса
+  ✓ /reset-role — @login_required
+
+ПРОИЗВОДИТЕЛЬНОСТЬ:
+  ✓ N+1 settings (3N → 1 запрос)
+  ✓ N+1 stats_full (5N → 1+1)
+  ✓ N+1 maintenance_calendar (N → 1)
+  ✓ N+1 tool_wear notifications (3N → 3)
+  ✓ Пагинация на faults, machines, orders, warehouse
+
+ФУНКЦИИ:
+  ✓ Удаление станков /machines/<id>/delete
+  ✓ Удаление заказов /orders/<id>/delete
+  ✓ Кнопки удаления в detail шаблонах
+  ✓ Календарь ТО: зелёный цвет + кнопка Done
+
+МЁРТВЫЙ КОД УДАЛЁН:
+  ✓ Chat модели (ChatGroup, ChatMessage)
+  ✓ Дублированные маршруты /monteurs
+  ✓ SECTION_KEYS дублирование
+  ✓ calculate_fault_cost()
+  ✓ /switch-role маршрут
+  ✓ save_plain=True во всех местах
+
+ИТОГО КОММИТОВ: 22
+============================================================

@@ -7,7 +7,7 @@ from flask_babel import gettext as _
 
 from models import db, User, Machine, UserSectionAccess
 from config import SECTION_KEYS
-from utils import role_required
+from utils import role_required, safe_commit
 
 bp = Blueprint('monteurs', __name__)
 
@@ -52,6 +52,6 @@ def monteur_permissions(user_id):
     new_pass = request.form.get('password')
     if new_pass:
         u.set_password(new_pass)
-    db.session.commit()
+    safe_commit()
     flash(_('Permissions updated for') + ' ' + (u.display_name or u.username), 'success')
     return redirect(url_for('monteurs.monteurs_list'))

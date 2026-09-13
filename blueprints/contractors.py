@@ -7,7 +7,7 @@ from flask_login import login_required
 from flask_babel import gettext as _
 
 from models import db, Contractor, ContractorEmployee
-from utils import role_required, log_audit
+from utils import role_required, log_audit, safe_commit
 
 bp = Blueprint('contractors', __name__, url_prefix='/contractors')
 
@@ -47,7 +47,7 @@ def contractor_new():
             notes=request.form.get('notes', '')
         )
         db.session.add(c)
-        db.session.commit()
+        safe_commit()
         log_audit('create', 'contractor', c.id, c.company_name)
         flash(_('Contractor added'), 'success')
         return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
@@ -88,7 +88,7 @@ def contractor_edit(contractor_id):
         c.contract_start = datetime.strptime(request.form['contract_start'], '%Y-%m-%d').date() if request.form.get('contract_start') else None
         c.contract_end = datetime.strptime(request.form['contract_end'], '%Y-%m-%d').date() if request.form.get('contract_end') else None
         c.notes = request.form.get('notes', '')
-        db.session.commit()
+        safe_commit()
         log_audit('update', 'contractor', c.id, c.company_name)
         flash(_('Contractor updated'), 'success')
         return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
@@ -101,7 +101,7 @@ def contractor_edit(contractor_id):
 def contractor_delete(contractor_id):
     c = Contractor.query.get_or_404(contractor_id)
     c.is_active = False
-    db.session.commit()
+    safe_commit()
     log_audit('delete', 'contractor', c.id, c.company_name)
     flash(_('Contractor deactivated'), 'success')
     return redirect(url_for('contractors.contractors_list'))
@@ -121,7 +121,7 @@ def contractor_add_employee(contractor_id):
         notes=request.form.get('notes', '')
     )
     db.session.add(emp)
-    db.session.commit()
+    safe_commit()
     flash(_('Employee added'), 'success')
     return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
 
@@ -133,6 +133,6 @@ def contractor_delete_employee(emp_id):
     emp = ContractorEmployee.query.get_or_404(emp_id)
     cid = emp.contractor_id
     db.session.delete(emp)
-    db.session.commit()
+    safe_commit()
     flash(_('Employee removed'), 'success')
     return redirect(url_for('contractors.contractor_detail', contractor_id=cid))

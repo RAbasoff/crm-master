@@ -21,10 +21,15 @@ class Config:
     if SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # SQLite concurrency: WAL mode allows concurrent reads + one writer
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'connect_args': {'timeout': 30},
+        'pool_pre_ping': True,
+    }
     BABEL_DEFAULT_LOCALE = 'nl'
     BABEL_SUPPORTED_LOCALES = ['nl', 'en', 'ru', 'pl']
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
-    MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
 
 LANGUAGES = {'nl': 'Nederlands', 'en': 'English', 'ru': 'Русский', 'pl': 'Polski'}
 
