@@ -661,6 +661,35 @@ def run_data_migrations():
                 ))
         safe_commit()
 
+        # ── 1c. Create User accounts for Monteurs without one ──────────
+        from models import Monteur
+        monteurs = Monteur.query.filter_by(actief=True).all()
+        for m in monteurs:
+            if not m.user_id:
+                # Create a User account for this monteur
+                uname = m.naam.lower().replace(' ', '.').replace('..', '.')
+                # Ensure unique username
+                base_uname = uname
+                counter = 1
+                while User.query.filter_by(username=uname).first():
+                    uname = f"{base_uname}{counter}"
+                    counter += 1
+                mu = User(username=uname, display_name=m.naam, role='technician',
+                          is_active_user=True)
+                mu.set_password(f'{uname}123')
+                db.session.add(mu)
+                db.session.flush()
+                m.user_id = mu.id
+                safe_commit()
+                print(f"Data migration: created User '{uname}' for Monteur '{m.naam}'")
+            elif m.user_id:
+                # Ensure existing user has technician role
+                linked = User.query.get(m.user_id)
+                if linked and linked.role != 'technician' and linked.role != 'admin':
+                    linked.role = 'technician'
+                    safe_commit()
+                    print(f"Data migration: fixed role for Monteur user '{linked.username}' -> technician")
+
         # ── 2. Base group permissions (view on all modules) ─────────────
         all_sections = [
             'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
