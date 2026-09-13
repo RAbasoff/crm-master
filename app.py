@@ -5904,7 +5904,9 @@ def schedule_monthly():
     if month < 1: month = 12; year -= 1
     if month > 12: month = 1; year += 1
 
-    all_users = User.query.filter(User.is_active_user == True, User.role.in_(['technician'])).order_by(User.display_name).all()
+    all_monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    # Only monteurs with linked user accounts can appear in schedule
+    all_users = [m.user for m in all_monteurs if m.user and m.user.is_active_user]
     if filter_user:
         users = [u for u in all_users if str(u.id) == filter_user]
     else:
