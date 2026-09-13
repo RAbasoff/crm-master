@@ -17,9 +17,12 @@ def _get_secret_key():
 class Config:
     SECRET_KEY = _get_secret_key()
     
-    # MySQL on PythonAnywhere (via env var), SQLite for local development
+    # MySQL on Railway/PA (via env var), SQLite for local development
     _db_url = os.environ.get('DATABASE_URL', '')
     if _db_url:
+        # Railway gives mysql:// — convert to mysql+pymysql://
+        if _db_url.startswith('mysql://'):
+            _db_url = _db_url.replace('mysql://', 'mysql+pymysql://', 1)
         SQLALCHEMY_DATABASE_URI = _db_url
     else:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'werkplaats.db')
@@ -35,6 +38,10 @@ class Config:
     # SQLite-specific options (only when using SQLite)
     if 'sqlite' in SQLALCHEMY_DATABASE_URI:
         SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'timeout': 30}
+    # MySQL-specific options
+    elif 'mysql' in SQLALCHEMY_DATABASE_URI:
+        SQLALCHEMY_ENGINE_OPTIONS['pool_recycle'] = 280
+        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 5
     BABEL_DEFAULT_LOCALE = 'nl'
     BABEL_SUPPORTED_LOCALES = ['nl', 'en', 'ru', 'pl']
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
