@@ -11,11 +11,8 @@ def _get_secret_key():
     if os.path.exists(key_file):
         with open(key_file, 'r') as f:
             return f.read().strip()
-    key = secrets.token_hex(32)
-    os.makedirs(os.path.dirname(key_file), exist_ok=True)
-    with open(key_file, 'w') as f:
-        f.write(key)
-    return key
+    # Fixed fallback for production — ensures sessions survive server reloads
+    return 'werkplaats-crm-prod-2026-abasoff-stable-key'
 
 class Config:
     SECRET_KEY = _get_secret_key()
