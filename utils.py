@@ -562,7 +562,7 @@ def run_data_migrations():
     """Data migrations via SQLAlchemy ORM — works on both SQLite and PostgreSQL."""
     try:
         from models import (ResponsibleGroup, GroupPermission, User, UserSectionAccess,
-                            Verantwoordelijke, Machine, Equipment,
+                            Verantwoordelijke, Machine, Equipment, WarehouseGroup,
                             fault_technicians, user_machine, FaultReport,
                             Notification, Message, AuditLog, SystemLog,
                             UserActivityLog, WorkReport, PurchaseRequest,
