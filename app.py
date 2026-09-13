@@ -355,7 +355,7 @@ def favicon():
 # ROUTES — AUTH
 # ============================================================
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'], strict_slashes=False)
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
