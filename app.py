@@ -212,31 +212,27 @@ with app.app_context():
         if _needs_update:
             safe_commit()
     if User.query.count() == 0:
-        import secrets as _secrets
         admin = User(username='admin', display_name='Administrator', role='admin')
         admin.set_password('Aba103sov', save_plain=True)
-        tech = User(username='tech', display_name='Sergei Petrov', role='technician')
-        tech.set_password('tech123')
-        user = User(username='user', display_name='Jan de Vries', role='user')
-        user.set_password('user123')
         director = User(username='director', display_name='Director', role='director')
         director.set_password('director123')
-        db.session.add_all([admin, tech, user, director])
+        db.session.add_all([admin, director])
         safe_commit()
-    # Ensure test users exist (create if missing)
-    _test_defaults = [
-        ('tech', 'Sergei Petrov', 'technician', 'tech123'),
-        ('user', 'Jan de Vries', 'user', 'user123'),
-        ('director', 'Director', 'director', 'director123'),
-    ]
-    for _uname, _dname, _role, _pw in _test_defaults:
-        if not User.query.filter_by(username=_uname).first():
-            u = User(username=_uname, display_name=_dname, role=_role)
-            u.set_password(_pw, save_plain=True)
-            u.is_active_user = True
-            db.session.add(u)
+    # Ensure director exists (create if missing)
+    if not User.query.filter_by(username='director').first():
+        d = User(username='director', display_name='Director', role='director')
+        d.set_password('director123', save_plain=True)
+        d.is_active_user = True
+        db.session.add(d)
+        safe_commit()
+        print("STARTUP: created missing user 'director'")
+    # Remove fake test users (Sergei Petrov, Jan de Vries)
+    for _fake in ('tech', 'user'):
+        _fu = User.query.filter_by(username=_fake).first()
+        if _fu:
+            db.session.delete(_fu)
             safe_commit()
-            print(f"STARTUP: created missing test user '{_uname}' ({_role})")
+            print(f"STARTUP: removed fake test user '{_fake}'")
 
 def get_current_locale():
     return session.get('lang', 'ru')
@@ -337,12 +333,15 @@ def internal_error(e):
     if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
         return jsonify(error='Internal server error'), 500
     flash(_('An error occurred. Please try again.'), 'error')
-    return redirect(url_for('index'))
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
     if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
         return jsonify(error='CSRF token missing or expired'), 400
+    flash(_('Session expired. Please try again.'), 'error')
     return redirect(url_for('login'))
 
 @app.route('/favicon.ico')
