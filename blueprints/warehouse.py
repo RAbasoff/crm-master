@@ -265,6 +265,15 @@ def warehouse_move(item_id):
     if mt == 'inkomend': item.hoeveelheid += qty
     else: item.hoeveelheid -= qty
     db.session.add(m); safe_commit()
+    # Low-stock notification for admin
+    if item.minimum and item.hoeveelheid <= item.minimum:
+        from utils import create_notification
+        from models import User
+        admins = User.query.filter_by(role='admin', is_active_user=True).all()
+        level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+        msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
+        for a in admins:
+            create_notification(a.id, msg, link='/warehouse/')
     flash(_('{} {} {} — {}').format(mt.capitalize(), qty, item.eenheid, item.naam), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
 
@@ -532,6 +541,15 @@ def warehouse_qty_update():
         )
         db.session.add(m)
     safe_commit()
+    # Low-stock notification for admin
+    if item.minimum and item.hoeveelheid <= item.minimum:
+        from utils import create_notification
+        from models import User
+        admins = User.query.filter_by(role='admin', is_active_user=True).all()
+        level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+        msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
+        for a in admins:
+            create_notification(a.id, msg, link='/warehouse/')
     return jsonify({'ok': True, 'min_warning': qty <= item.minimum})
 
 

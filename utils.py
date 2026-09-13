@@ -3,7 +3,7 @@ from flask import flash, redirect, url_for, request, session
 from flask_login import current_user
 from flask_babel import gettext as _
 from datetime import datetime, timedelta
-from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry
+from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry, WarehouseGroup
 import os
 from werkzeug.utils import secure_filename
 import time as _time
@@ -593,6 +593,63 @@ def run_data_migrations():
                 print(f"Data migration: created group '{name}'")
         safe_commit()
 
+        # ── 1b. Logistiek - Oktopus group ────────────────────────────
+        logistiek = ResponsibleGroup.query.filter_by(name='Logistiek - Oktopus').first()
+        if not logistiek:
+            logistiek = ResponsibleGroup(name='Logistiek - Oktopus', access_level='technician',
+                                         description='Logistics team for Oktopus spare parts')
+            db.session.add(logistiek)
+            db.session.flush()
+            print("Data migration: created group 'Logistiek - Oktopus'")
+        safe_commit()
+
+        # Move Pablo and Paulina to Logistiek group
+        for pname in ('Pablo', 'Paulina'):
+            p = Verantwoordelijke.query.filter_by(naam=pname).first()
+            if p and p.group_id != logistiek.id:
+                p.group_id = logistiek.id
+                p.access_level = 'floor'
+                print(f"Data migration: moved {pname} to Logistiek - Oktopus group")
+        safe_commit()
+
+        # Create WarehouseGroup for Oktopus
+        oktopus_wh = WarehouseGroup.query.filter_by(name='Logistiek - Oktopus').first()
+        if not oktopus_wh:
+            oktopus_wh = WarehouseGroup(name='Logistiek - Oktopus', description='Oktopus spare parts inventory')
+            db.session.add(oktopus_wh)
+            safe_commit()
+            print("Data migration: created warehouse group 'Logistiek - Oktopus'")
+
+        # Logistiek group permissions — full warehouse CRUD + notifications + purchase_requests
+        logistiek_perms = {
+            'warehouse': (True, True, True, False),
+            'consumables': (True, True, True, False),
+            'purchase_requests': (True, True, True, False),
+            'notifications': (True, True, True, False),
+            'messages': (True, True, True, False),
+            'dashboard': (True, False, False, False),
+            'machines': (True, False, False, False),
+            'equipment': (True, False, False, False),
+            'faults': (True, True, False, False),
+            'reports': (True, False, False, False),
+        }
+        for section, (v, c, e, d) in logistiek_perms.items():
+            p = GroupPermission.query.filter_by(group_id=logistiek.id, section_key=section).first()
+            if p:
+                changed = False
+                if p.can_view != v: p.can_view = v; changed = True
+                if p.can_create != c: p.can_create = c; changed = True
+                if p.can_edit != e: p.can_edit = e; changed = True
+                if p.can_delete != d: p.can_delete = d; changed = True
+                if changed:
+                    print(f"Data migration: updated Logistiek perm '{section}'")
+            else:
+                db.session.add(GroupPermission(
+                    group_id=logistiek.id, section_key=section,
+                    can_view=v, can_create=c, can_edit=e, can_delete=d
+                ))
+        safe_commit()
+
         # ── 2. Base group permissions (view on all modules) ─────────────
         all_sections = [
             'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
@@ -776,9 +833,9 @@ def run_data_migrations():
             'Aris':    ('Technician', 'floor'),
             'Filip':   ('Technician', 'floor'),
             'Bartek':  ('User', 'floor'),
-            'Pablo':   ('User', 'floor'),
+            'Pablo':   ('Logistiek - Oktopus', 'floor'),
             'Hashem':  ('User', 'floor'),
-            'Paulina': ('User', 'floor'),
+            'Paulina': ('Logistiek - Oktopus', 'floor'),
         }
 
         # Names to remove (if they exist and are NOT in desired list)
