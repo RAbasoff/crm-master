@@ -117,6 +117,7 @@
                                 <input type="hidden" name="type" value="{{ ev.type }}">
                                 <input type="hidden" name="part_id" value="{{ ev.part_id or '' }}">
                                 <input type="hidden" name="plan_id" value="{{ ev.plan_id or '' }}">
+                                <input type="hidden" name="date" value="{{ ev.date.strftime('%Y-%m-%d') }}">
                                 <input type="hidden" name="month" value="{{ month }}">
                                 <button type="submit" style="background:#27ae60;color:white;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Mark completed') }}">✅</button>
                             </form>
@@ -182,6 +183,7 @@
                     <input type="hidden" name="type" value="{{ ev.type }}">
                     <input type="hidden" name="part_id" value="{{ ev.part_id or '' }}">
                     <input type="hidden" name="plan_id" value="{{ ev.plan_id or '' }}">
+                    <input type="hidden" name="date" value="{{ ev.date.strftime('%Y-%m-%d') }}">
                     <input type="hidden" name="month" value="{{ month }}">
                     <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;padding:2px 6px;font-size:11px">✅ {{ _('Done') }}</button>
                 </form>

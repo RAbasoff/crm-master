@@ -1705,13 +1705,19 @@ def maintenance_calendar():
                 'done': done
             })
         # Периодические повторения (виртуальные события)
-        if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
+        if pl.recurrence and pl.recurrence != 'none':
             d = pl.planned_start
             limit = month_end + timedelta(days=1)
             for _ in range(200):
                 if d >= limit:
                     break
                 if d >= month_start and d != pl.planned_start:
+                    # Check if this specific occurrence was completed
+                    occ_done = False
+                    for mr in maint_by_machine.get(pl.machine_id, []):
+                        if mr.next_maintenance and mr.next_maintenance.date() == d:
+                            occ_done = True
+                            break
                     events.append({
                         'date': d,
                         'type': 'plan',
@@ -1720,10 +1726,10 @@ def maintenance_calendar():
                         'machine_id': pl.machine_id,
                         'part_id': None,
                         'category': pl.maintenance_type,
-                        'overdue': d < today,
+                        'overdue': d < today and not occ_done,
                         'plan_id': pl.id,
-                        'status': pl.status,
-                        'done': False
+                        'status': 'completed' if occ_done else pl.status,
+                        'done': occ_done
                     })
                 # Следующая дата
                 if pl.recurrence == 'daily':
@@ -1798,10 +1804,26 @@ def maintenance_calendar_complete():
     if ev_type == 'plan' and plan_id:
         plan = MaintenancePlan.query.get(int(plan_id))
         if plan:
-            plan.status = 'completed'
-            plan.actual_end = datetime.utcnow().date()
-            safe_commit()
-            flash(_('Plan marked as completed'), 'success')
+            event_date = request.form.get('date')
+            if plan.recurrence and plan.recurrence != 'none' and event_date:
+                # Recurring plan — create MaintenanceRecord for this specific date
+                mr = MaintenanceRecord(
+                    machine_id=plan.machine_id,
+                    maintenance_type=plan.maintenance_type,
+                    description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
+                    performed_by=current_user.id,
+                    date_performed=datetime.strptime(event_date, '%Y-%m-%d'),
+                    next_maintenance=datetime.strptime(event_date, '%Y-%m-%d') + timedelta(days=7) if plan.recurrence == 'weekly' else None,
+                    cost=0
+                )
+                db.session.add(mr)
+                safe_commit()
+                flash(_('Recurring event marked as completed'), 'success')
+            else:
+                plan.status = 'completed'
+                plan.actual_end = datetime.utcnow().date()
+                safe_commit()
+                flash(_('Plan marked as completed'), 'success')
 
     elif ev_type in ('replacement', 'maintenance') and part_id:
         part = MachinePart.query.get(int(part_id))
