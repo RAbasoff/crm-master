@@ -157,6 +157,32 @@ def send_email(to_email, subject, body):
 
 # Auto-create database tables and seed data on import (for WSGI deployment)
 with app.app_context():
+    # DEBUG: print DB diagnostics to error log on startup
+    import sqlite3 as _diag_sqlite3
+    _diag_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+    print(f"=== DB DIAGNOSTIC ===")
+    print(f"  DB path: {_diag_path}")
+    print(f"  DB exists: {os.path.exists(_diag_path)}")
+    if os.path.exists(_diag_path):
+        print(f"  DB size: {os.path.getsize(_diag_path)} bytes")
+        try:
+            _dc = _diag_sqlite3.connect(_diag_path)
+            _dcur = _dc.cursor()
+            _dcur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+            _tables = [r[0] for r in _dcur.fetchall()]
+            print(f"  Tables: {len(_tables)}")
+            for _t in _tables:
+                _dcur.execute(f"SELECT COUNT(*) FROM [{_t}]")
+                _cnt = _dcur.fetchone()[0]
+                if _cnt > 0:
+                    print(f"    {_t}: {_cnt}")
+            _dc.close()
+        except Exception as _diag_err:
+            print(f"  DB read error: {_diag_err}")
+    else:
+        print(f"  WARNING: DB FILE DOES NOT EXIST — will create empty!")
+    print(f"=== END DIAGNOSTIC ===")
+
     db.create_all()
     run_migrations()
     run_data_migrations()
