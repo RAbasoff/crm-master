@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Передача ТМЦ — CRM Werkplaats</title>
+<title>Overdracht goederen — CRM Werkplaats</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 20px 30px; }
@@ -38,26 +38,26 @@ tr:nth-child(even) { background: #f8f9fa; }
 <body>
 
 <div class="no-print" style="margin-bottom:16px;text-align:center">
-    <button onclick="window.print()" style="padding:10px 24px;background:#1a1a2e;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ Печать</button>
-    <button onclick="window.close()" style="padding:10px 24px;background:#eee;color:#333;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px">✕ Закрыть</button>
+    <button onclick="window.print()" style="padding:10px 24px;background:#1a1a2e;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ Afdrukken</button>
+    <button onclick="window.close()" style="padding:10px 24px;background:#eee;color:#333;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px">✕ Sluiten</button>
 </div>
 
 <div class="header">
-    <h1>АКТ ПЕРЕДАЧИ ТМЦ ПОДОТЧЁТНОМУ ЛИЦУ</h1>
-    <div class="date">Дата: {{ now.strftime('%d.%m.%Y') }}</div>
+    <h1>OVERDRACHT GOEDEREN AAN VERANTWOORDELIJKE</h1>
+    <div class="date">Datum: {{ now.strftime('%d-%m-%Y') }}</div>
 </div>
 
 <div class="meta">
     <div class="meta-block">
-        <label>Передал (склад):</label>
+        <label>Afgever (magazijn):</label>
         <div class="line">{{ current_user.display_name or current_user.username }}</div>
     </div>
     <div class="meta-block">
-        <label>Получил (подотчётное лицо):</label>
+        <label>Ontvanger (verantwoordelijke):</label>
         <div class="line">&nbsp;</div>
     </div>
     <div class="meta-block">
-        <label>Основание:</label>
+        <label>Reden:</label>
         <div class="line">&nbsp;</div>
     </div>
 </div>
@@ -65,12 +65,12 @@ tr:nth-child(even) { background: #f8f9fa; }
 <table>
     <thead>
         <tr>
-            <th>№</th>
-            <th>Наименование</th>
-            <th>Артикул</th>
-            <th>Кол-во</th>
-            <th>Ед.</th>
-            <th>Примечание</th>
+            <th>Nr</th>
+            <th>Naam</th>
+            <th>Artikelnr</th>
+            <th>Aantal</th>
+            <th>Eenh.</th>
+            <th>Opmerking</th>
         </tr>
     </thead>
     <tbody>
@@ -88,25 +88,25 @@ tr:nth-child(even) { background: #f8f9fa; }
 </table>
 
 <div style="margin-bottom:8px;font-size:12px">
-    <strong>Итого позиций:</strong> {{ items|length }}&nbsp;&nbsp;&nbsp;
-    <strong>Общая стоимость:</strong> €{{ "%.2f"|format(items|sum(attribute='prijs')) }}
+    <strong>Totaal artikelen:</strong> {{ items|length }}&nbsp;&nbsp;&nbsp;
+    <strong>Totaalwaarde:</strong> €{{ "%.2f"|format(items|sum(attribute='prijs')) }}
 </div>
 
 <div class="signatures">
     <div class="sig-block">
-        <div class="title">Передал</div>
+        <div class="title">Afgever</div>
         <div class="line">&nbsp;</div>
-        <div class="hint">подпись / ФИО</div>
+        <div class="hint">handtekening / naam</div>
     </div>
     <div class="sig-block">
-        <div class="title">Получил</div>
+        <div class="title">Ontvanger</div>
         <div class="line">&nbsp;</div>
-        <div class="hint">подпись / ФИО</div>
+        <div class="hint">handtekening / naam</div>
     </div>
 </div>
 
 <div class="footer">
-    CRM Werkplaats — {{ now.strftime('%d.%m.%Y %H:%M') }} — Стр. 1
+    CRM Werkplaats — {{ now.strftime('%d-%m-%Y %H:%M') }} — Pag. 1
 </div>
 
 </body>
