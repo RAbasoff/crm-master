@@ -72,12 +72,15 @@ from sqlalchemy.pool import Pool
 def _set_sqlite_pragma(dbapi_conn, connection_record):
     import sqlite3
     if isinstance(dbapi_conn, sqlite3.Connection):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA busy_timeout=30000")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
-        cursor.close()
+        try:
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA journal_mode=DELETE")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
+            cursor.close()
+        except Exception:
+            pass
 
 from flask_login import LoginManager
 
@@ -157,6 +160,16 @@ def send_email(to_email, subject, body):
 
 # Auto-create database tables and seed data on import (for WSGI deployment)
 with app.app_context():
+    # Clean up WAL/SHM files from previous sessions (causes crashes on PA)
+    _db_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+    for _ext in ('-wal', '-shm'):
+        _wal = _db_file + _ext
+        if os.path.exists(_wal):
+            try:
+                os.remove(_wal)
+                print(f"STARTUP: removed {_ext} file")
+            except Exception:
+                pass
     # DEBUG: print DB diagnostics to error log on startup
     import sqlite3 as _diag_sqlite3
     _diag_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
