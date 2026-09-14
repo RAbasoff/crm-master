@@ -58,6 +58,9 @@
     <span id="whSearchCount" style="font-size:12px;color:#888"></span>
     <button class="btn btn-sm" style="background:#2c3e50;color:white;margin-left:auto" onclick="printSelectedQR()">🖨️ {{ _('Print QR Selected') }}</button>
     <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="printTransfer()">📋 {{ _('Transfer to person') }}</button>
+    {% if current_user.has_role('admin', 'director') %}
+    <button class="btn btn-sm" style="background:#e67e22;color:white" onclick="transferToOktopus()">→ Logistiek</button>
+    {% endif %}
 </div>
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
@@ -103,7 +106,38 @@
     </table></div>
 </div>
 
-<!-- BARCODE MODAL -->
+{% if current_user.has_role('admin', 'director') and oktopus_items %}
+<div class="card" style="padding:0;border-left:4px solid #e67e22">
+    <div style="padding:12px 16px;background:#fff8f0;display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0;font-size:16px">📦 Logistiek — Oktopus ({{ oktopus_items|length }})</h2>
+        <form method="POST" action="/warehouse/transfer-from-oktopus" style="display:inline" id="returnForm">
+            <input type="hidden" name="ids" id="returnIds">
+            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" onclick="returnSelectedFromOktopus()">← {{ _('Return to main') }}</button>
+        </form>
+    </div>
+    <div class="table-wrap"><table>
+        <tr><th style="width:30px"><input type="checkbox" id="selectAllReturn" onclick="toggleAllReturn(this)"></th><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
+        {% for i in oktopus_items %}
+        <tr class="wh-row-oktopus" data-name="{{ i.naam|lower }}">
+            <td><input type="checkbox" class="return-check" data-id="{{ i.id }}"></td>
+            <td>{{ i.naam }}</td>
+            <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
+            <td>{{ i.categorie or '—' }}</td>
+            <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">{{ i.hoeveelheid }}</td>
+            <td>{{ i.eenheid }}</td>
+            <td>€{{ "%.2f"|format(i.prijs) }}</td>
+            <td style="white-space:nowrap">
+                <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                <form method="POST" action="/warehouse/transfer-from-oktopus" style="display:inline">
+                    <input type="hidden" name="ids" value="{{ i.id }}">
+                    <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;padding:4px 8px" title="{{ _('Return to main warehouse') }}">←</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
 <div id="barcodeModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center">
     <div style="background:white;border-radius:16px;padding:24px;max-width:420px;width:90%;text-align:center">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -343,6 +377,38 @@ function printTransfer() {
     var ids = [];
     checked.forEach(function(cb) { ids.push(cb.dataset.id); });
     window.open('/warehouse/transfer-print?ids=' + ids.join(','), '_blank');
+}
+
+function transferToOktopus() {
+    var checked = document.querySelectorAll('.qr-check:checked');
+    if (!checked.length) { alert('{{ _("Select items first") }}'); return; }
+    if (!confirm('{{ _("Transfer selected items to Logistiek-Oktopus?") }}')) return;
+    var ids = [];
+    checked.forEach(function(cb) { ids.push(cb.dataset.id); });
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/warehouse/transfer-to-oktopus';
+    var input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'ids'; input.value = ids.join(',');
+    form.appendChild(input);
+    var token = document.querySelector('meta[name="csrf-token"]');
+    if (token) { var c = document.createElement('input'); c.type='hidden'; c.name='csrf_token'; c.value=token.content; form.appendChild(c); }
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function toggleAllReturn(master) {
+    document.querySelectorAll('.return-check').forEach(function(cb) {
+        cb.checked = master.checked;
+    });
+}
+
+function returnSelectedFromOktopus() {
+    var checked = document.querySelectorAll('.return-check:checked');
+    if (!checked.length) { alert('{{ _("Select items first") }}'); return; }
+    var ids = [];
+    checked.forEach(function(cb) { ids.push(cb.dataset.id); });
+    document.getElementById('returnIds').value = ids.join(',');
 }
 </script>
 

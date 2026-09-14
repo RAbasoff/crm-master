@@ -117,8 +117,14 @@ def warehouse_list():
     cats = [c[0] for c in db.session.query(VoorraadItem.categorie).distinct().all() if c[0]]
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
     laag = [i for i in items if i.hoeveelheid <= i.minimum]
+    # Logistiek-Oktopus items for admin/director view
+    logistiek_id = _get_logistiek_warehouse_group_id()
+    oktopus_items = []
+    if logistiek_id and current_user.has_role('admin', 'director'):
+        oktopus_items = VoorraadItem.query.filter_by(group_id=logistiek_id).order_by(VoorraadItem.naam).all()
     return render_template('warehouse.html', items=items, categories=cats, category_filter=cat,
-        groups=groups, group_filter=int(group_id) if group_id else None, low_stock=laag, pagination=pagination)
+        groups=groups, group_filter=int(group_id) if group_id else None, low_stock=laag, pagination=pagination,
+        oktopus_items=oktopus_items, logistiek_group_id=logistiek_id)
 
 
 def _get_logistiek_warehouse_group_id():
@@ -303,6 +309,7 @@ def warehouse_move(item_id):
         msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
         for a in admins:
             create_notification(a.id, msg, link='/warehouse/')
+        _notify_logistiek_low_stock(item)
     flash(_('{} {} {} — {}').format(mt.capitalize(), qty, item.eenheid, item.naam), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
 
@@ -579,6 +586,7 @@ def warehouse_qty_update():
         msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
         for a in admins:
             create_notification(a.id, msg, link='/warehouse/')
+        _notify_logistiek_low_stock(item)
     return jsonify({'ok': True, 'min_warning': qty <= item.minimum})
 
 
@@ -607,3 +615,79 @@ def warehouse_transfer_print():
     item_ids = [int(x) for x in ids.split(',') if x.strip()]
     items = VoorraadItem.query.filter(VoorraadItem.id.in_(item_ids)).all()
     return render_template('warehouse_transfer.html', items=items, now=datetime.utcnow())
+
+
+def _get_logistiek_group_id():
+    """Return the Logistiek - Oktopus WarehouseGroup ID."""
+    wg = WarehouseGroup.query.filter_by(name='Logistiek - Oktopus').first()
+    return wg.id if wg else None
+
+
+def _notify_logistiek_low_stock(item):
+    """Notify Logistiek-Oktopus responsible persons about low stock."""
+    from models import Verantwoordelijke, User
+    from utils import create_notification
+    logistiek_group_id = _get_logistiek_group_id()
+    if not logistiek_group_id or item.group_id != logistiek_group_id:
+        return
+    # Find responsible persons in Logistiek group
+    persons = Verantwoordelijke.query.filter_by(group_id=None).all()
+    from models import ResponsibleGroup
+    logistiek_resp = ResponsibleGroup.query.filter_by(name='Logistiek - Oktopus').first()
+    if not logistiek_resp:
+        return
+    persons = Verantwoordelijke.query.filter_by(group_id=logistiek_resp.id).all()
+    level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+    msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
+    for p in persons:
+        if p.username:
+            user = User.query.filter_by(username=p.username).first()
+            if user:
+                create_notification(user.id, f'⚠️ Склад Oktopus: {msg}', link='/warehouse/')
+
+
+@bp.route('/transfer-to-oktopus', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def warehouse_transfer_to_oktopus():
+    """Transfer items from main warehouse to Logistiek-Oktopus."""
+    ids = request.form.get('ids', '')
+    if not ids:
+        flash(_('Select items first'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
+    logistiek_id = _get_logistiek_group_id()
+    if not logistiek_id:
+        flash(_('Logistiek-Oktopus group not found'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
+    item_ids = [int(x) for x in ids.split(',') if x.strip()]
+    count = 0
+    for item_id in item_ids:
+        item = VoorraadItem.query.get(item_id)
+        if item and item.group_id != logistiek_id:
+            item.group_id = logistiek_id
+            count += 1
+    safe_commit()
+    flash(_('{} items transferred to Logistiek-Oktopus').format(count), 'success')
+    return redirect(url_for('warehouse.warehouse_list'))
+
+
+@bp.route('/transfer-from-oktopus', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def warehouse_transfer_from_oktopus():
+    """Transfer items from Logistiek-Oktopus back to main warehouse."""
+    ids = request.form.get('ids', '')
+    if not ids:
+        flash(_('Select items first'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
+    logistiek_id = _get_logistiek_group_id()
+    item_ids = [int(x) for x in ids.split(',') if x.strip()]
+    count = 0
+    for item_id in item_ids:
+        item = VoorraadItem.query.get(item_id)
+        if item and item.group_id == logistiek_id:
+            item.group_id = None
+            count += 1
+    safe_commit()
+    flash(_('{} items returned to main warehouse').format(count), 'success')
+    return redirect(url_for('warehouse.warehouse_list'))
