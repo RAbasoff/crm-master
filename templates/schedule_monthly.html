@@ -19,6 +19,12 @@
     </div>
 </div>
 
+<!-- PRINT HEADER (visible only when printing) -->
+<div class="print-header" style="display:none;text-align:center;margin-bottom:12px">
+    <h1 style="font-size:18px;font-weight:700;margin:0">📅 {{ _('Monthly Schedule') }}</h1>
+    <div style="font-size:16px;font-weight:600;margin-top:4px">{{ ['','Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'][month] }} {{ year }}</div>
+</div>
+
 <!-- LEGEND -->
 <div style="display:flex;gap:12px;margin-bottom:6px;font-size:10px;flex-wrap:wrap" id="noPrint">
     <span>✓ {{ _('Work') }}</span>
@@ -130,6 +136,7 @@
     .main-wrap { margin-left: 0 !important; }
     .card { box-shadow: none !important; border: 1px solid #ddd !important; page-break-inside: avoid; }
     .print-only { display: block !important; }
+    .print-header { display: block !important; }
     table { width: 100% !important; }
     table th { font-size: 11px !important; padding: 4px 3px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     table td { font-size: 11px !important; padding: 4px 3px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
