@@ -594,3 +594,16 @@ def warehouse_labels():
     else:
         items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
     return render_template('warehouse_labels.html', items=items)
+
+
+@bp.route('/transfer-print')
+@login_required
+def warehouse_transfer_print():
+    """Print selected items for transfer to a responsible person."""
+    ids = request.args.get('ids', '')
+    if not ids:
+        flash(_('Select items first'), 'error')
+        return redirect(url_for('warehouse.warehouse_list'))
+    item_ids = [int(x) for x in ids.split(',') if x.strip()]
+    items = VoorraadItem.query.filter(VoorraadItem.id.in_(item_ids)).all()
+    return render_template('warehouse_transfer.html', items=items, now=datetime.utcnow())

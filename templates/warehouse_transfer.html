@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Передача ТМЦ — CRM Werkplaats</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 20px 30px; }
+.header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1a1a2e; padding-bottom: 16px; }
+.header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.header .date { font-size: 13px; color: #555; }
+.meta { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 20px; }
+.meta-block { flex: 1; }
+.meta-block label { display: block; font-weight: 600; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+.meta-block .line { border-bottom: 1px solid #999; min-height: 20px; padding: 2px 0; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th { background: #1a1a2e; color: white; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; }
+th:first-child { width: 35px; text-align: center; }
+th:nth-child(4) { width: 80px; text-align: center; }
+th:nth-child(5) { width: 50px; text-align: center; }
+td { padding: 7px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px; }
+td:first-child { text-align: center; color: #888; }
+td:nth-child(4) { text-align: center; font-weight: 600; }
+td:nth-child(5) { text-align: center; color: #555; }
+tr:nth-child(even) { background: #f8f9fa; }
+.signatures { display: flex; justify-content: space-between; margin-top: 40px; gap: 40px; }
+.sig-block { flex: 1; }
+.sig-block .title { font-weight: 600; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 40px; }
+.sig-block .line { border-bottom: 1px solid #333; margin-bottom: 4px; }
+.sig-block .hint { font-size: 10px; color: #888; }
+.footer { margin-top: 30px; text-align: center; font-size: 10px; color: #aaa; border-top: 1px solid #e0e0e0; padding-top: 8px; }
+@media print {
+    body { padding: 10px 15px; }
+    .no-print { display: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="no-print" style="margin-bottom:16px;text-align:center">
+    <button onclick="window.print()" style="padding:10px 24px;background:#1a1a2e;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ Печать</button>
+    <button onclick="window.close()" style="padding:10px 24px;background:#eee;color:#333;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px">✕ Закрыть</button>
+</div>
+
+<div class="header">
+    <h1>АКТ ПЕРЕДАЧИ ТМЦ ПОДОТЧЁТНОМУ ЛИЦУ</h1>
+    <div class="date">Дата: {{ now.strftime('%d.%m.%Y') }}</div>
+</div>
+
+<div class="meta">
+    <div class="meta-block">
+        <label>Передал (склад):</label>
+        <div class="line">{{ current_user.display_name or current_user.username }}</div>
+    </div>
+    <div class="meta-block">
+        <label>Получил (подотчётное лицо):</label>
+        <div class="line">&nbsp;</div>
+    </div>
+    <div class="meta-block">
+        <label>Основание:</label>
+        <div class="line">&nbsp;</div>
+    </div>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Наименование</th>
+            <th>Артикул</th>
+            <th>Кол-во</th>
+            <th>Ед.</th>
+            <th>Примечание</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ item.naam }}{% if item.categorie %} <span style="color:#888;font-size:10px">({{ item.categorie }})</span>{% endif %}</td>
+            <td style="color:#888">{{ item.supplier_part_number or '—' }}</td>
+            <td>{{ item.hoeveelheid }}</td>
+            <td>{{ item.eenheid }}</td>
+            <td>&nbsp;</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-bottom:8px;font-size:12px">
+    <strong>Итого позиций:</strong> {{ items|length }}&nbsp;&nbsp;&nbsp;
+    <strong>Общая стоимость:</strong> €{{ "%.2f"|format(items|sum(attribute='prijs')) }}
+</div>
+
+<div class="signatures">
+    <div class="sig-block">
+        <div class="title">Передал</div>
+        <div class="line">&nbsp;</div>
+        <div class="hint">подпись / ФИО</div>
+    </div>
+    <div class="sig-block">
+        <div class="title">Получил</div>
+        <div class="line">&nbsp;</div>
+        <div class="hint">подпись / ФИО</div>
+    </div>
+</div>
+
+<div class="footer">
+    CRM Werkplaats — {{ now.strftime('%d.%m.%Y %H:%M') }} — Стр. 1
+</div>
+
+</body>
+</html>
