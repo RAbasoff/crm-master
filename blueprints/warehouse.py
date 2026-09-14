@@ -105,26 +105,34 @@ def warehouse_list():
     group_id = request.args.get('group', '')
     q = VoorraadItem.query
 
-    # Logistiek group: restrict to Oktopus warehouse group only
     logistiek_group_id = _get_logistiek_warehouse_group_id()
+
+    # Logistiek group: restrict to Oktopus warehouse group only
     if logistiek_group_id and not current_user.has_role('admin', 'director'):
         group_id = str(logistiek_group_id)
 
     if cat: q = q.filter_by(categorie=cat)
-    if group_id: q = q.filter_by(group_id=int(group_id))
+    if group_id:
+        q = q.filter_by(group_id=int(group_id))
+    else:
+        # For admin/director: exclude Logistiek-Oktopus items from main list (shown separately)
+        if logistiek_group_id and current_user.has_role('admin', 'director'):
+            q = q.filter((VoorraadItem.group_id != logistiek_group_id) | (VoorraadItem.group_id.is_(None)))
+
     pagination = q.order_by(VoorraadItem.naam).paginate(page=page, per_page=25, error_out=False)
     items = pagination.items
     cats = [c[0] for c in db.session.query(VoorraadItem.categorie).distinct().all() if c[0]]
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
     laag = [i for i in items if i.hoeveelheid <= i.minimum]
     # Logistiek-Oktopus items for admin/director view
-    logistiek_id = _get_logistiek_warehouse_group_id()
     oktopus_items = []
-    if logistiek_id and current_user.has_role('admin', 'director'):
-        oktopus_items = VoorraadItem.query.filter_by(group_id=logistiek_id).order_by(VoorraadItem.naam).all()
+    oktopus_low = []
+    if logistiek_group_id and current_user.has_role('admin', 'director'):
+        oktopus_items = VoorraadItem.query.filter_by(group_id=logistiek_group_id).order_by(VoorraadItem.naam).all()
+        oktopus_low = [i for i in oktopus_items if i.minimum and i.hoeveelheid <= i.minimum]
     return render_template('warehouse.html', items=items, categories=cats, category_filter=cat,
         groups=groups, group_filter=int(group_id) if group_id else None, low_stock=laag, pagination=pagination,
-        oktopus_items=oktopus_items, logistiek_group_id=logistiek_id)
+        oktopus_items=oktopus_items, oktopus_low=oktopus_low, logistiek_group_id=logistiek_group_id)
 
 
 def _get_logistiek_warehouse_group_id():

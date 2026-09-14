@@ -15,6 +15,9 @@
         <a href="/warehouse/inventory" class="btn btn-sm" style="background:#27ae60;color:white">📋 {{ _('Inventory') }}</a>
         <a href="/warehouse/import" class="btn btn-sm" style="background:#9b59b6;color:white">📥 {{ _('Import CSV') }}</a>
         {% endif %}
+        {% if current_user.has_role('admin', 'director') and logistiek_group_id %}
+        <a href="/warehouse?group={{ logistiek_group_id }}" class="btn btn-sm" style="background:#e67e22;color:white">📦 Logistiek-Oktopus</a>
+        {% endif %}
         <a href="/warehouse/new" class="btn btn-primary">+ {{ _('New Item') }}</a>
     </div>
 </div>
@@ -109,11 +112,17 @@
 {% if current_user.has_role('admin', 'director') and oktopus_items %}
 <div class="card" style="padding:0;border-left:4px solid #e67e22">
     <div style="padding:12px 16px;background:#fff8f0;display:flex;justify-content:space-between;align-items:center">
-        <h2 style="margin:0;font-size:16px">📦 Logistiek — Oktopus ({{ oktopus_items|length }})</h2>
-        <form method="POST" action="/warehouse/transfer-from-oktopus" style="display:inline" id="returnForm">
-            <input type="hidden" name="ids" id="returnIds">
-            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" onclick="returnSelectedFromOktopus()">← {{ _('Return to main') }}</button>
-        </form>
+        <div>
+            <h2 style="margin:0;font-size:16px;display:inline">📦 Logistiek — Oktopus ({{ oktopus_items|length }})</h2>
+            {% if oktopus_low %}<span style="color:#e74c3c;font-size:12px;margin-left:8px">⚠ {{ oktopus_low|length }} {{ _('low stock') }}</span>{% endif %}
+        </div>
+        <div style="display:flex;gap:6px">
+            <a href="/warehouse?group={{ logistiek_group_id }}" class="btn btn-sm" style="background:#e67e22;color:white">{{ _('Open all') }}</a>
+            <form method="POST" action="/warehouse/transfer-from-oktopus" style="display:inline" id="returnForm">
+                <input type="hidden" name="ids" id="returnIds">
+                <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" onclick="returnSelectedFromOktopus()">← {{ _('Return to main') }}</button>
+            </form>
+        </div>
     </div>
     <div class="table-wrap"><table>
         <tr><th style="width:30px"><input type="checkbox" id="selectAllReturn" onclick="toggleAllReturn(this)"></th><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Price') }}</th><th></th></tr>
