@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 17:12 UTC
+Время: 2026-09-15 17:22 UTC
 ============================================================
 
-Последний коммит: 7221b37 feat: gas dashboard - dynamic arrow to active cylinder, spare list left, counts right, low-stock warning
+Последний коммит: c1e5ec5 fix: gas dashboard compact - both installations fit without scroll
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
