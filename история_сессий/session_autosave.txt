@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 17:22 UTC
+Время: 2026-09-15 17:30 UTC
 ============================================================
 
-Последний коммит: c1e5ec5 fix: gas dashboard compact - both installations fit without scroll
+Последний коммит: 8cdd57a fix: gas dashboard mobile responsive - stacks vertically, compact on small screens
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
