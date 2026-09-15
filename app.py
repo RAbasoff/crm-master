@@ -5969,18 +5969,21 @@ def schedule_monthly():
     if month < 1: month = 12; year -= 1
     if month > 12: month = 1; year += 1
 
-    all_monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
-    # Only monteurs with linked user accounts can appear in schedule
-    all_users = [m.user for m in all_monteurs if m.user and m.user.is_active_user]
-    if filter_user:
-        users = [u for u in all_users if str(u.id) == filter_user]
-    else:
-        users = all_users
     first_day = datetime(year, month, 1).date()
     if month == 12:
         last_day = datetime(year + 1, 1, 1).date() - timedelta(days=1)
     else:
         last_day = datetime(year, month + 1, 1).date() - timedelta(days=1)
+
+    all_monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    # Only monteurs with linked user accounts can appear in schedule
+    # Exclude workers fired before the start of the displayed month
+    all_users = [m.user for m in all_monteurs if m.user and m.user.is_active_user
+                 and not (m.fire_date and m.fire_date < first_day)]
+    if filter_user:
+        users = [u for u in all_users if str(u.id) == filter_user]
+    else:
+        users = all_users
 
     # Get all weekend shifts for this month
     shifts = WeekendShift.query.filter(
