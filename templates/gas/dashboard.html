@@ -11,206 +11,314 @@
     </div>
 </div>
 
-{% set n2_active = n2_cylinders|selectattr('status','in',['full','in_use'])|list %}
-{% set co2_active = co2_cylinders|selectattr('status','in',['full','in_use'])|list %}
+<!-- N₂ SYSTEM -->
+<div class="card" style="padding:24px;margin-bottom:24px;border-top:4px solid #3498db">
+    <h2 style="margin:0 0 20px;text-align:center;color:#3498db">N₂ Nitrogen</h2>
+    <div style="display:grid;grid-template-columns:200px 1fr 200px;gap:24px;align-items:start">
 
-<!-- MAIN LAYOUT: 4 cylinders LEFT + gas system RIGHT -->
-<div style="display:grid;grid-template-columns:340px 1fr;gap:24px;margin-bottom:24px">
-
-    <!-- LEFT: 4 CYLINDERS -->
-    <div>
-        <h3 style="margin:0 0 16px;text-align:center;color:#555">{{ _('Cylinders') }}</h3>
-        <div style="display:flex;gap:20px;justify-content:center">
-            <!-- N₂ Column -->
-            <div style="text-align:center">
-                <div style="font-size:12px;font-weight:700;color:#3498db;margin-bottom:10px">N₂</div>
-                {% for cyl in n2_cylinders if cyl.status in ('in_use','full') %}
-                {% if loop.index <= 2 %}
-                <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="{{ cyl.gas_type }}" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-                     style="cursor:pointer;transition:all 0.2s;text-align:center;margin-bottom:14px"
-                     onmouseover="this.style.transform='translateY(-2px)'"
-                     onmouseout="this.style.transform=''">
-                    <div style="position:relative;width:80px;height:160px;margin:0 auto 6px">
-                        <div style="position:absolute;bottom:14px;left:16px;width:48px;height:124px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:linear-gradient(to top, {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}45, transparent)"></div>
-                        <div style="position:absolute;top:22px;left:30px;width:20px;height:22px;background:#888;border-radius:3px 3px 0 0"></div>
-                        <div style="position:absolute;top:12px;left:22px;width:36px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
-                        <div style="position:absolute;top:46px;right:2px;width:26px;height:26px;border-radius:50%;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">
-                            {% if cyl.status=='in_use' %}50%{% else %}100%{% endif %}
-                        </div>
-                    </div>
-                    <div style="font-weight:700;font-size:12px">{{ cyl.cylinder_number }}</div>
-                    <div style="font-size:10px;padding:2px 10px;border-radius:12px;font-weight:600;display:inline-block;margin-top:2px;{% if cyl.status=='in_use' %}background:#f39c12;color:white{% else %}background:#27ae60;color:white{% endif %}">
-                        {% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}
+        <!-- N₂ Left Cylinder -->
+        <div style="text-align:center">
+            {% for cyl in n2_cylinders if cyl.status in ('in_use','full') %}
+            {% if loop.index == 1 %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                 style="cursor:pointer;transition:all 0.2s"
+                 onmouseover="this.style.transform='translateY(-2px)'"
+                 onmouseout="this.style.transform=''">
+                <div style="position:relative;width:80px;height:160px;margin:0 auto 6px">
+                    <div style="position:absolute;bottom:14px;left:16px;width:48px;height:124px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:linear-gradient(to top, {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}45, transparent)"></div>
+                    <div style="position:absolute;top:22px;left:30px;width:20px;height:22px;background:#888;border-radius:3px 3px 0 0"></div>
+                    <div style="position:absolute;top:12px;left:22px;width:36px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
+                    <div style="position:absolute;top:46px;right:2px;width:26px;height:26px;border-radius:50%;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">
+                        {% if cyl.status=='in_use' %}50%{% else %}100%{% endif %}
                     </div>
                 </div>
-                {% endif %}
-                {% endfor %}
+                <div style="font-weight:700;font-size:13px">{{ cyl.cylinder_number }}</div>
+                <div style="font-size:10px;padding:3px 12px;border-radius:12px;font-weight:600;display:inline-block;margin-top:3px;{% if cyl.status=='in_use' %}background:#f39c12;color:white{% else %}background:#27ae60;color:white{% endif %}">
+                    {% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}
+                </div>
             </div>
-            <!-- CO₂ Column -->
-            <div style="text-align:center">
-                <div style="font-size:12px;font-weight:700;color:#e74c3c;margin-bottom:10px">CO₂</div>
-                {% for cyl in co2_cylinders if cyl.status in ('in_use','full') %}
-                {% if loop.index <= 2 %}
-                <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="{{ cyl.gas_type }}" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-                     style="cursor:pointer;transition:all 0.2s;text-align:center;margin-bottom:14px"
-                     onmouseover="this.style.transform='translateY(-2px)'"
-                     onmouseout="this.style.transform=''">
-                    <div style="position:relative;width:80px;height:160px;margin:0 auto 6px">
-                        <div style="position:absolute;bottom:14px;left:16px;width:48px;height:124px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:linear-gradient(to top, {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}45, transparent)"></div>
-                        <div style="position:absolute;top:22px;left:30px;width:20px;height:22px;background:#888;border-radius:3px 3px 0 0"></div>
-                        <div style="position:absolute;top:12px;left:22px;width:36px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
-                        <div style="position:absolute;top:46px;right:2px;width:26px;height:26px;border-radius:50%;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">
-                            {% if cyl.status=='in_use' %}50%{% else %}100%{% endif %}
-                        </div>
-                    </div>
-                    <div style="font-weight:700;font-size:12px">{{ cyl.cylinder_number }}</div>
-                    <div style="font-size:10px;padding:2px 10px;border-radius:12px;font-weight:600;display:inline-block;margin-top:2px;{% if cyl.status=='in_use' %}background:#f39c12;color:white{% else %}#27ae60;color:white{% endif %}">
-                        {% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- N₂ Distribution SVG -->
+        <svg viewBox="0 0 300 500" style="width:100%;max-width:300px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
+            <!-- Main pipeline top -->
+            <line x1="80" y1="30" x2="220" y2="30" stroke="#3498db" stroke-width="5" stroke-linecap="round"/>
+            <text x="150" y="20" text-anchor="middle" font-size="10" font-weight="bold" fill="#3498db">PIPELINE</text>
+
+            <!-- Left branch -->
+            <line x1="100" y1="30" x2="100" y2="90" stroke="#3498db" stroke-width="3"/>
+            <!-- Right branch -->
+            <line x1="200" y1="30" x2="200" y2="90" stroke="#3498db" stroke-width="3"/>
+
+            <!-- Left Manometer -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="100" cy="110" r="22" fill="white" stroke="#3498db" stroke-width="2.5"/>
+                <circle cx="100" cy="110" r="16" fill="#f0f7ff" stroke="#3498db" stroke-width="1"/>
+                <line x1="100" y1="110" x2="110" y2="100" stroke="#e74c3c" stroke-width="1.5"/>
+                <text x="100" y="114" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">BAR</text>
+            </g>
+            <!-- Right Manometer -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="200" cy="110" r="22" fill="white" stroke="#3498db" stroke-width="2.5"/>
+                <circle cx="200" cy="110" r="16" fill="#f0f7ff" stroke="#3498db" stroke-width="1"/>
+                <line x1="200" y1="110" x2="210" y2="100" stroke="#e74c3c" stroke-width="1.5"/>
+                <text x="200" y="114" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">BAR</text>
+            </g>
+            <text x="150" y="148" text-anchor="middle" font-size="9" fill="#888">{{ _('Manometer') }}</text>
+
+            <!-- Switching valve between manometers -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="150" cy="110" r="18" fill="white" stroke="#f39c12" stroke-width="2.5"/>
+                <text x="150" y="114" text-anchor="middle" font-size="7" fill="#f39c12" font-weight="bold">SW</text>
+                <line x1="118" y1="110" x2="132" y2="110" stroke="#555" stroke-width="1.5"/>
+                <line x1="168" y1="110" x2="182" y2="110" stroke="#555" stroke-width="1.5"/>
+                <!-- Arrow pointing left -->
+                <polygon points="140,110 148,106 148,114" fill="#27ae60"/>
+            </g>
+
+            <!-- Left Heater (blue) -->
+            <g class="component" style="cursor:pointer">
+                <rect x="80" y="170" width="40" height="30" rx="6" fill="#e8f4fd" stroke="#3498db" stroke-width="2"/>
+                <text x="100" y="189" text-anchor="middle" font-size="10" fill="#3498db">🔥</text>
+            </g>
+            <line x1="100" y1="132" x2="100" y2="170" stroke="#3498db" stroke-width="2.5"/>
+            <!-- Right Heater (blue) -->
+            <g class="component" style="cursor:pointer">
+                <rect x="180" y="170" width="40" height="30" rx="6" fill="#e8f4fd" stroke="#3498db" stroke-width="2"/>
+                <text x="200" y="189" text-anchor="middle" font-size="10" fill="#3498db">🔥</text>
+            </g>
+            <line x1="200" y1="132" x2="200" y2="170" stroke="#3498db" stroke-width="2.5"/>
+            <text x="150" y="215" text-anchor="middle" font-size="9" fill="#888">{{ _('Heater') }}</text>
+
+            <!-- Left Shut-off Valve (round) -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="100" cy="250" r="16" fill="white" stroke="#3498db" stroke-width="2.5"/>
+                <line x1="100" y1="238" x2="100" y2="262" stroke="#3498db" stroke-width="2"/>
+                <line x1="88" y1="250" x2="112" y2="250" stroke="#3498db" stroke-width="1.5"/>
+            </g>
+            <line x1="100" y1="200" x2="100" y2="234" stroke="#3498db" stroke-width="2.5"/>
+            <!-- Right Shut-off Valve (round) -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="200" cy="250" r="16" fill="white" stroke="#3498db" stroke-width="2.5"/>
+                <line x1="200" y1="238" x2="200" y2="262" stroke="#3498db" stroke-width="2"/>
+                <line x1="188" y1="250" x2="212" y2="250" stroke="#3498db" stroke-width="1.5"/>
+            </g>
+            <line x1="200" y1="200" x2="200" y2="234" stroke="#3498db" stroke-width="2.5"/>
+            <text x="150" y="282" text-anchor="middle" font-size="9" fill="#888">{{ _('Shut-off') }}</text>
+
+            <!-- Left Relief Valve -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="65" cy="250" r="10" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="65" y="253" text-anchor="middle" font-size="6" fill="#95a5a6">RV</text>
+                <line x1="75" y1="250" x2="84" y2="250" stroke="#95a5a6" stroke-width="1"/>
+            </g>
+            <!-- Right Relief Valve -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="235" cy="250" r="10" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="235" y="253" text-anchor="middle" font-size="6" fill="#95a5a6">RV</text>
+                <line x1="216" y1="250" x2="225" y2="250" stroke="#95a5a6" stroke-width="1"/>
+            </g>
+
+            <!-- Left Hose -->
+            <path d="M100,266 Q100,320 100,360" stroke="#888" stroke-width="3" fill="none" stroke-dasharray="6,3"/>
+            <!-- Right Hose -->
+            <path d="M200,266 Q200,320 200,360" stroke="#888" stroke-width="3" fill="none" stroke-dasharray="6,3"/>
+            <text x="150" y="380" text-anchor="middle" font-size="9" fill="#888">{{ _('Hoses') }}</text>
+
+            <!-- Left Cylinder box -->
+            <rect x="75" y="390" width="50" height="70" rx="6" fill="#f0f7ff" stroke="#3498db" stroke-width="2"/>
+            <text x="100" y="420" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">N₂</text>
+            <text x="100" y="435" text-anchor="middle" font-size="7" fill="#888">LEFT</text>
+            <line x1="100" y1="360" x2="100" y2="390" stroke="#888" stroke-width="2.5"/>
+
+            <!-- Right Cylinder box -->
+            <rect x="175" y="390" width="50" height="70" rx="6" fill="#f0f7ff" stroke="#3498db" stroke-width="2"/>
+            <text x="200" y="420" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">N₂</text>
+            <text x="200" y="435" text-anchor="middle" font-size="7" fill="#888">RIGHT</text>
+            <line x1="200" y1="360" x2="200" y2="390" stroke="#888" stroke-width="2.5"/>
+        </svg>
+
+        <!-- N₂ Right Cylinder -->
+        <div style="text-align:center">
+            {% for cyl in n2_cylinders if cyl.status in ('in_use','full') %}
+            {% if loop.index == 2 %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                 style="cursor:pointer;transition:all 0.2s"
+                 onmouseover="this.style.transform='translateY(-2px)'"
+                 onmouseout="this.style.transform=''">
+                <div style="position:relative;width:80px;height:160px;margin:0 auto 6px">
+                    <div style="position:absolute;bottom:14px;left:16px;width:48px;height:124px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:linear-gradient(to top, {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}45, transparent)"></div>
+                    <div style="position:absolute;top:22px;left:30px;width:20px;height:22px;background:#888;border-radius:3px 3px 0 0"></div>
+                    <div style="position:absolute;top:12px;left:22px;width:36px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
+                    <div style="position:absolute;top:46px;right:2px;width:26px;height:26px;border-radius:50%;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">
+                        {% if cyl.status=='in_use' %}50%{% else %}100%{% endif %}
                     </div>
                 </div>
-                {% endif %}
-                {% endfor %}
+                <div style="font-weight:700;font-size:13px">{{ cyl.cylinder_number }}</div>
+                <div style="font-size:10px;padding:3px 12px;border-radius:12px;font-weight:600;display:inline-block;margin-top:3px;{% if cyl.status=='in_use' %}background:#f39c12;color:white{% else %}background:#27ae60;color:white{% endif %}">
+                    {% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}
+                </div>
             </div>
+            {% endif %}
+            {% endfor %}
         </div>
     </div>
+</div>
 
-    <!-- RIGHT: GAS DISTRIBUTION SYSTEM DIAGRAM -->
-    <div class="card" style="padding:20px">
-        <h3 style="margin:0 0 16px;text-align:center">{{ _('Gas Distribution System') }}</h3>
-        <svg viewBox="0 0 600 700" style="width:100%;max-width:600px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <marker id="arrowRight" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#27ae60"/>
-                </marker>
-                <marker id="arrowLeft" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
-                    <polygon points="8 0, 0 3, 8 6" fill="#27ae60"/>
-                </marker>
-            </defs>
+<!-- CO₂ SYSTEM -->
+<div class="card" style="padding:24px;margin-bottom:24px;border-top:4px solid #e74c3c">
+    <h2 style="margin:0 0 20px;text-align:center;color:#e74c3c">CO₂ Carbon Dioxide</h2>
+    <div style="display:grid;grid-template-columns:200px 1fr 200px;gap:24px;align-items:start">
 
-            <!-- MAIN PIPELINE (top) -->
-            <line x1="150" y1="40" x2="450" y2="40" stroke="#555" stroke-width="6" stroke-linecap="round"/>
-            <text x="300" y="30" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">{{ _('MAIN PIPELINE') }}</text>
-            <!-- Arrow showing gas flow direction -->
-            <polygon points="340,40 330,34 330,46" fill="#555"/>
+        <!-- CO₂ Left Cylinder -->
+        <div style="text-align:center">
+            {% for cyl in co2_cylinders if cyl.status in ('in_use','full') %}
+            {% if loop.index == 1 %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                 style="cursor:pointer;transition:all 0.2s"
+                 onmouseover="this.style.transform='translateY(-2px)'"
+                 onmouseout="this.style.transform=''">
+                <div style="position:relative;width:80px;height:160px;margin:0 auto 6px">
+                    <div style="position:absolute;bottom:14px;left:16px;width:48px;height:124px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:linear-gradient(to top, {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}45, transparent)"></div>
+                    <div style="position:absolute;top:22px;left:30px;width:20px;height:22px;background:#888;border-radius:3px 3px 0 0"></div>
+                    <div style="position:absolute;top:12px;left:22px;width:36px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
+                    <div style="position:absolute;top:46px;right:2px;width:26px;height:26px;border-radius:50%;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">
+                        {% if cyl.status=='in_use' %}50%{% else %}100%{% endif %}
+                    </div>
+                </div>
+                <div style="font-weight:700;font-size:13px">{{ cyl.cylinder_number }}</div>
+                <div style="font-size:10px;padding:3px 12px;border-radius:12px;font-weight:600;display:inline-block;margin-top:3px;background:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};color:white">
+                    {% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
 
-            <!-- LEFT BRANCH (from manometer to main) -->
-            <line x1="150" y1="40" x2="150" y2="120" stroke="#555" stroke-width="4"/>
+        <!-- CO₂ Distribution SVG -->
+        <svg viewBox="0 0 300 500" style="width:100%;max-width:300px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
+            <!-- Main pipeline top -->
+            <line x1="80" y1="30" x2="220" y2="30" stroke="#e74c3c" stroke-width="5" stroke-linecap="round"/>
+            <text x="150" y="20" text-anchor="middle" font-size="10" font-weight="bold" fill="#e74c3c">PIPELINE</text>
 
-            <!-- RIGHT BRANCH (from manometer to main) -->
-            <line x1="450" y1="40" x2="450" y2="120" stroke="#555" stroke-width="4"/>
+            <!-- Left branch -->
+            <line x1="100" y1="30" x2="100" y2="90" stroke="#e74c3c" stroke-width="3"/>
+            <!-- Right branch -->
+            <line x1="200" y1="30" x2="200" y2="90" stroke="#e74c3c" stroke-width="3"/>
 
-            <!-- LEFT MANOMETER -->
-            <g class="component" data-type="manometer" data-side="left" style="cursor:pointer" onclick="showComponentMenu('manometer','left')">
-                <circle cx="150" cy="140" r="28" fill="white" stroke="#3498db" stroke-width="3"/>
-                <circle cx="150" cy="140" r="20" fill="#f0f7ff" stroke="#3498db" stroke-width="1"/>
-                <line x1="150" y1="140" x2="162" y2="128" stroke="#e74c3c" stroke-width="2"/>
-                <text x="150" y="145" text-anchor="middle" font-size="8" fill="#3498db" font-weight="bold">BAR</text>
-                <text x="150" y="185" text-anchor="middle" font-size="10" fill="#555">{{ _('Manometer') }}</text>
+            <!-- Left Manometer -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="100" cy="110" r="22" fill="white" stroke="#e74c3c" stroke-width="2.5"/>
+                <circle cx="100" cy="110" r="16" fill="#fff0f0" stroke="#e74c3c" stroke-width="1"/>
+                <line x1="100" y1="110" x2="110" y2="100" stroke="#e74c3c" stroke-width="1.5"/>
+                <text x="100" y="114" text-anchor="middle" font-size="7" fill="#e74c3c" font-weight="bold">BAR</text>
+            </g>
+            <!-- Right Manometer -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="200" cy="110" r="22" fill="white" stroke="#e74c3c" stroke-width="2.5"/>
+                <circle cx="200" cy="110" r="16" fill="#fff0f0" stroke="#e74c3c" stroke-width="1"/>
+                <line x1="200" y1="110" x2="210" y2="100" stroke="#e74c3c" stroke-width="1.5"/>
+                <text x="200" y="114" text-anchor="middle" font-size="7" fill="#e74c3c" font-weight="bold">BAR</text>
+            </g>
+            <text x="150" y="148" text-anchor="middle" font-size="9" fill="#888">{{ _('Manometer') }}</text>
+
+            <!-- Switching valve -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="150" cy="110" r="18" fill="white" stroke="#f39c12" stroke-width="2.5"/>
+                <text x="150" y="114" text-anchor="middle" font-size="7" fill="#f39c12" font-weight="bold">SW</text>
+                <line x1="118" y1="110" x2="132" y2="110" stroke="#555" stroke-width="1.5"/>
+                <line x1="168" y1="110" x2="182" y2="110" stroke="#555" stroke-width="1.5"/>
+                <polygon points="140,110 148,106 148,114" fill="#27ae60"/>
             </g>
 
-            <!-- RIGHT MANOMETER -->
-            <g class="component" data-type="manometer" data-side="right" style="cursor:pointer" onclick="showComponentMenu('manometer','right')">
-                <circle cx="450" cy="140" r="28" fill="white" stroke="#e74c3c" stroke-width="3"/>
-                <circle cx="450" cy="140" r="20" fill="#fff0f0" stroke="#e74c3c" stroke-width="1"/>
-                <line x1="450" y1="140" x2="462" y2="128" stroke="#e74c3c" stroke-width="2"/>
-                <text x="450" y="145" text-anchor="middle" font-size="8" fill="#e74c3c" font-weight="bold">BAR</text>
-                <text x="450" y="185" text-anchor="middle" font-size="10" fill="#555">{{ _('Manometer') }}</text>
+            <!-- Left Heater (blue) -->
+            <g class="component" style="cursor:pointer">
+                <rect x="80" y="170" width="40" height="30" rx="6" fill="#e8f4fd" stroke="#e74c3c" stroke-width="2"/>
+                <text x="100" y="189" text-anchor="middle" font-size="10" fill="#e74c3c">🔥</text>
+            </g>
+            <line x1="100" y1="132" x2="100" y2="170" stroke="#e74c3c" stroke-width="2.5"/>
+            <!-- Right Heater (blue) -->
+            <g class="component" style="cursor:pointer">
+                <rect x="180" y="170" width="40" height="30" rx="6" fill="#e8f4fd" stroke="#e74c3c" stroke-width="2"/>
+                <text x="200" y="189" text-anchor="middle" font-size="10" fill="#e74c3c">🔥</text>
+            </g>
+            <line x1="200" y1="132" x2="200" y2="170" stroke="#e74c3c" stroke-width="2.5"/>
+            <text x="150" y="215" text-anchor="middle" font-size="9" fill="#888">{{ _('Heater') }}</text>
+
+            <!-- Left Shut-off Valve (round) -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="100" cy="250" r="16" fill="white" stroke="#e74c3c" stroke-width="2.5"/>
+                <line x1="100" y1="238" x2="100" y2="262" stroke="#e74c3c" stroke-width="2"/>
+                <line x1="88" y1="250" x2="112" y2="250" stroke="#e74c3c" stroke-width="1.5"/>
+            </g>
+            <line x1="100" y1="200" x2="100" y2="234" stroke="#e74c3c" stroke-width="2.5"/>
+            <!-- Right Shut-off Valve (round) -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="200" cy="250" r="16" fill="white" stroke="#e74c3c" stroke-width="2.5"/>
+                <line x1="200" y1="238" x2="200" y2="262" stroke="#e74c3c" stroke-width="2"/>
+                <line x1="188" y1="250" x2="212" y2="250" stroke="#e74c3c" stroke-width="1.5"/>
+            </g>
+            <line x1="200" y1="200" x2="200" y2="234" stroke="#e74c3c" stroke-width="2.5"/>
+            <text x="150" y="282" text-anchor="middle" font-size="9" fill="#888">{{ _('Shut-off') }}</text>
+
+            <!-- Left Relief Valve -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="65" cy="250" r="10" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="65" y="253" text-anchor="middle" font-size="6" fill="#95a5a6">RV</text>
+                <line x1="75" y1="250" x2="84" y2="250" stroke="#95a5a6" stroke-width="1"/>
+            </g>
+            <!-- Right Relief Valve -->
+            <g class="component" style="cursor:pointer">
+                <circle cx="235" cy="250" r="10" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="235" y="253" text-anchor="middle" font-size="6" fill="#95a5a6">RV</text>
+                <line x1="216" y1="250" x2="225" y2="250" stroke="#95a5a6" stroke-width="1"/>
             </g>
 
-            <!-- SWITCHING VALVE (between manometers) -->
-            <g class="component" data-type="shut_off" data-side="center" style="cursor:pointer" onclick="showComponentMenu('shut_off','center')">
-                <rect x="260" y="115" width="80" height="50" rx="8" fill="white" stroke="#f39c12" stroke-width="3"/>
-                <text x="300" y="138" text-anchor="middle" font-size="9" fill="#f39c12" font-weight="bold">{{ _('SWITCH') }}</text>
-                <text x="300" y="152" text-anchor="middle" font-size="8" fill="#888">{{ _('VALVE') }}</text>
-                <!-- Arrow pointing LEFT (showing N2 is active) -->
-                <line x1="330" y1="140" x2="270" y2="140" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowLeft)"/>
-            </g>
-            <!-- Lines from switching valve to manometers -->
-            <line x1="260" y1="140" x2="178" y2="140" stroke="#555" stroke-width="2"/>
-            <line x1="340" y1="140" x2="422" y2="140" stroke="#555" stroke-width="2"/>
+            <!-- Left Hose -->
+            <path d="M100,266 Q100,320 100,360" stroke="#888" stroke-width="3" fill="none" stroke-dasharray="6,3"/>
+            <!-- Right Hose -->
+            <path d="M200,266 Q200,320 200,360" stroke="#888" stroke-width="3" fill="none" stroke-dasharray="6,3"/>
+            <text x="150" y="380" text-anchor="middle" font-size="9" fill="#888">{{ _('Hoses') }}</text>
 
-            <!-- LEFT HEATER -->
-            <g class="component" data-type="heater" data-side="left" style="cursor:pointer" onclick="showComponentMenu('heater','left')">
-                <rect x="125" y="220" width="50" height="40" rx="6" fill="white" stroke="#e67e22" stroke-width="2"/>
-                <text x="150" y="237" text-anchor="middle" font-size="14">🔥</text>
-                <text x="150" y="252" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">HEAT</text>
-                <text x="150" y="280" text-anchor="middle" font-size="10" fill="#555">{{ _('Heater') }}</text>
-            </g>
-            <!-- Line from left manometer to heater -->
-            <line x1="150" y1="168" x2="150" y2="220" stroke="#555" stroke-width="3"/>
+            <!-- Left Cylinder box -->
+            <rect x="75" y="390" width="50" height="70" rx="6" fill="#fff0f0" stroke="#e74c3c" stroke-width="2"/>
+            <text x="100" y="420" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">CO₂</text>
+            <text x="100" y="435" text-anchor="middle" font-size="7" fill="#888">LEFT</text>
+            <line x1="100" y1="360" x2="100" y2="390" stroke="#888" stroke-width="2.5"/>
 
-            <!-- RIGHT HEATER -->
-            <g class="component" data-type="heater" data-side="right" style="cursor:pointer" onclick="showComponentMenu('heater','right')">
-                <rect x="425" y="220" width="50" height="40" rx="6" fill="white" stroke="#e67e22" stroke-width="2"/>
-                <text x="450" y="237" text-anchor="middle" font-size="14">🔥</text>
-                <text x="450" y="252" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">HEAT</text>
-                <text x="450" y="280" text-anchor="middle" font-size="10" fill="#555">{{ _('Heater') }}</text>
-            </g>
-            <line x1="450" y1="168" x2="450" y2="220" stroke="#555" stroke-width="3"/>
-
-            <!-- LEFT SHUT-OFF VALVE -->
-            <g class="component" data-type="valve" data-side="left" style="cursor:pointer" onclick="showComponentMenu('valve','left')">
-                <rect x="125" y="310" width="50" height="45" rx="6" fill="white" stroke="#3498db" stroke-width="2"/>
-                <line x1="150" y1="315" x2="150" y2="350" stroke="#3498db" stroke-width="3"/>
-                <line x1="135" y1="332" x2="165" y2="332" stroke="#3498db" stroke-width="2"/>
-                <text x="150" y="375" text-anchor="middle" font-size="10" fill="#555">{{ _('Shut-off') }}</text>
-            </g>
-            <line x1="150" y1="260" x2="150" y2="310" stroke="#555" stroke-width="3"/>
-
-            <!-- RIGHT SHUT-OFF VALVE -->
-            <g class="component" data-type="valve" data-side="right" style="cursor:pointer" onclick="showComponentMenu('valve','right')">
-                <rect x="425" y="310" width="50" height="45" rx="6" fill="white" stroke="#e74c3c" stroke-width="2"/>
-                <line x1="450" y1="315" x2="450" y2="350" stroke="#e74c3c" stroke-width="3"/>
-                <line x1="435" y1="332" x2="465" y2="332" stroke="#e74c3c" stroke-width="2"/>
-                <text x="450" y="375" text-anchor="middle" font-size="10" fill="#555">{{ _('Shut-off') }}</text>
-            </g>
-            <line x1="450" y1="260" x2="450" y2="310" stroke="#555" stroke-width="3"/>
-
-            <!-- LEFT RELIEF VALVE -->
-            <g class="component" data-type="valve" data-side="left" style="cursor:pointer" onclick="showComponentMenu('valve','left_relief')">
-                <rect x="90" y="340" width="30" height="25" rx="4" fill="white" stroke="#95a5a6" stroke-width="2"/>
-                <text x="105" y="357" text-anchor="middle" font-size="8" fill="#95a5a6">RV</text>
-                <line x1="120" y1="352" x2="125" y2="340" stroke="#95a5a6" stroke-width="1"/>
-                <text x="105" y="380" text-anchor="middle" font-size="8" fill="#888">{{ _('Relief') }}</text>
-            </g>
-
-            <!-- RIGHT RELIEF VALVE -->
-            <g class="component" data-type="valve" data-side="right" style="cursor:pointer" onclick="showComponentMenu('valve','right_relief')">
-                <rect x="480" y="340" width="30" height="25" rx="4" fill="white" stroke="#95a5a6" stroke-width="2"/>
-                <text x="495" y="357" text-anchor="middle" font-size="8" fill="#95a5a6">RV</text>
-                <line x1="480" y1="352" x2="475" y2="340" stroke="#95a5a6" stroke-width="1"/>
-                <text x="495" y="380" text-anchor="middle" font-size="8" fill="#888">{{ _('Relief') }}</text>
-            </g>
-
-            <!-- LEFT HOSE -->
-            <path d="M150,355 Q150,420 150,460" stroke="#888" stroke-width="4" fill="none" stroke-dasharray="8,4"/>
-            <text x="150" y="480" text-anchor="middle" font-size="10" fill="#888">{{ _('Hose') }} N₂</text>
-
-            <!-- RIGHT HOSE -->
-            <path d="M450,355 Q450,420 450,460" stroke="#888" stroke-width="4" fill="none" stroke-dasharray="8,4"/>
-            <text x="450" y="480" text-anchor="middle" font-size="10" fill="#888">{{ _('Hose') }} CO₂</text>
-
-            <!-- LEFT CYLINDER CONNECTION -->
-            <rect x="120" y="500" width="60" height="90" rx="8" fill="#f0f7ff" stroke="#3498db" stroke-width="2"/>
-            <text x="150" y="540" text-anchor="middle" font-size="10" fill="#3498db" font-weight="bold">N₂</text>
-            <text x="150" y="555" text-anchor="middle" font-size="8" fill="#888">{{ _('CYL') }}</text>
-            <line x1="150" y1="460" x2="150" y2="500" stroke="#888" stroke-width="3"/>
-
-            <!-- RIGHT CYLINDER CONNECTION -->
-            <rect x="420" y="500" width="60" height="90" rx="8" fill="#fff0f0" stroke="#e74c3c" stroke-width="2"/>
-            <text x="450" y="540" text-anchor="middle" font-size="10" fill="#e74c3c" font-weight="bold">CO₂</text>
-            <text x="450" y="555" text-anchor="middle" font-size="8" fill="#888">{{ _('CYL') }}</text>
-            <line x1="450" y1="460" x2="450" y2="500" stroke="#888" stroke-width="3"/>
-
-            <!-- STATUS INDICATORS -->
-            <rect x="20" y="610" width="560" height="70" rx="8" fill="#f8f9fa" stroke="#eee" stroke-width="1"/>
-            <text x="300" y="630" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">{{ _('System Status') }}</text>
-            <text x="100" y="655" text-anchor="middle" font-size="10" fill="#27ae60">● {{ _('Active') }}</text>
-            <text x="230" y="655" text-anchor="middle" font-size="10" fill="#f39c12">● {{ _('Standby') }}</text>
-            <text x="370" y="655" text-anchor="middle" font-size="10" fill="#e74c3c">● {{ _('Alarm') }}</text>
-            <text x="500" y="655" text-anchor="middle" font-size="10" fill="#95a5a6">● {{ _('Off') }}</text>
-            <text x="300" y="672" text-anchor="middle" font-size="9" fill="#aaa">{{ _('Click any component for details') }}</text>
+            <!-- Right Cylinder box -->
+            <rect x="175" y="390" width="50" height="70" rx="6" fill="#fff0f0" stroke="#e74c3c" stroke-width="2"/>
+            <text x="200" y="420" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">CO₂</text>
+            <text x="200" y="435" text-anchor="middle" font-size="7" fill="#888">RIGHT</text>
+            <line x1="200" y1="360" x2="200" y2="390" stroke="#888" stroke-width="2.5"/>
         </svg>
+
+        <!-- CO₂ Right Cylinder -->
+        <div style="text-align:center">
+            {% for cyl in co2_cylinders if cyl.status in ('in_use','full') %}
+            {% if loop.index == 2 %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                 style="cursor:pointer;transition:all 0.2s"
+                 onmouseover="this.style.transform='translateY(-2px)'"
+                 onmouseout="this.style.transform=''">
+                <div style="position:relative;width:80px;height:160px;margin:0 auto 6px">
+                    <div style="position:absolute;bottom:14px;left:16px;width:48px;height:124px;border-radius:8px 8px 4px 4px;border:3px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:linear-gradient(to top, {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}45, transparent)"></div>
+                    <div style="position:absolute;top:22px;left:30px;width:20px;height:22px;background:#888;border-radius:3px 3px 0 0"></div>
+                    <div style="position:absolute;top:12px;left:22px;width:36px;height:12px;background:#666;border-radius:4px 4px 0 0"></div>
+                    <div style="position:absolute;top:46px;right:2px;width:26px;height:26px;border-radius:50%;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">
+                        {% if cyl.status=='in_use' %}50%{% else %}100%{% endif %}
+                    </div>
+                </div>
+                <div style="font-weight:700;font-size:13px">{{ cyl.cylinder_number }}</div>
+                <div style="font-size:10px;padding:3px 12px;border-radius:12px;font-weight:600;display:inline-block;margin-top:3px;background:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};color:white">
+                    {% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
     </div>
 </div>
 
@@ -251,19 +359,6 @@
     </div>
 </div>
 
-<!-- Component Detail Popup -->
-<div id="componentMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000">
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:14px;padding:28px;min-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.3)">
-        <h3 id="compTitle" style="margin:0 0 16px;font-size:18px"></h3>
-        <div id="compStatus" style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px"></div>
-        <div id="compDetails" style="margin-bottom:16px;font-size:13px;color:#555"></div>
-        <div style="display:flex;gap:8px">
-            <a id="compEditLink" href="/gas/components" class="btn btn-sm" style="flex:1;background:#3498db;color:white;text-align:center;text-decoration:none;padding:10px;border-radius:8px">✏️ {{ _('Edit') }}</a>
-            <button onclick="closeCompMenu()" class="btn btn-sm" style="flex:1;background:#eee;padding:10px;border-radius:8px">{{ _('Close') }}</button>
-        </div>
-    </div>
-</div>
-
 <!-- Cylinder Status Popup -->
 <div id="cylinderMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:14px;padding:28px;min-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.3)">
@@ -282,7 +377,6 @@
 </div>
 
 <script>
-// Cylinder popup
 var currentCylId = null;
 document.addEventListener('click', function(e) {
     var card = e.target.closest('.cylinder-card');
@@ -306,21 +400,7 @@ function setCylinderStatus(status) {
     .then(function(d) { if (d.ok) { closeCylMenu(); location.reload(); } else alert(d.error||'Error'); })
     .catch(function(e) { alert('Error: ' + e.message); });
 }
-
-// Component popup
-function showComponentMenu(type, side) {
-    var labels = {manometer:'Manometer', heater:'Heater', valve:'Shut-off Valve', shut_off:'Switching Valve'};
-    var icons = {manometer:'📊', heater:'🔥', valve:'🔩', shut_off:'🔒'};
-    document.getElementById('compTitle').textContent = (icons[type]||'🔧') + ' ' + (labels[type]||type) + ' (' + side + ')';
-    document.getElementById('compStatus').innerHTML = '<span style="font-size:13px">{{ _("Component") }}: <b>' + (labels[type]||type) + '</b></span>';
-    document.getElementById('compDetails').textContent = '{{ _("Click Edit to view full component details and maintenance history.") }}';
-    document.getElementById('compEditLink').href = '/gas/components';
-    document.getElementById('componentMenu').style.display = 'block';
-}
-function closeCompMenu() { document.getElementById('componentMenu').style.display = 'none'; }
-
 document.getElementById('cylinderMenu').addEventListener('click', function(e) { if (e.target === this) closeCylMenu(); });
-document.getElementById('componentMenu').addEventListener('click', function(e) { if (e.target === this) closeCompMenu(); });
 </script>
 
 <!-- Components Table -->
