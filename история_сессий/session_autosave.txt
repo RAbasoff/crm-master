@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 13:39 UTC
+Время: 2026-09-15 14:14 UTC
 ============================================================
 
-Последний коммит: ca82945 feat: auto-backup system + restore script + expanded archive
+Последний коммит: 619a9d0 feat: gas dashboard - active pairs, legend with counts, monthly statistics, auto-switch on empty
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
