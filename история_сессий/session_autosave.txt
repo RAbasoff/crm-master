@@ -1,19 +1,12 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 06:46 UTC
+Время: 2026-09-15 06:47 UTC
 ============================================================
 
-Последний коммит: 3eb0209 feat: add hire_date and fire_date fields to Worker (Monteur)
+Последний коммит: 3a11dcc fix: exclude fired workers from monthly schedule
+Git status: clean
+Бэкап БД: instance/werkplaats_backup_20260915_083658.db (532 KB)
 
-НЕЗАКОММИЧЕННЫЕ ИЗМЕНЕНИЯ (2 файла):
-  M  app.py — schedule_monthly(): уволенные мастера исключены из графика
-  M  история_сессий/session_autosave.txt
-
-ЧТО СДЕЛАНО:
-  - В schedule_monthly() фильтр: если fire_date < first_day — мастер не показывается
-  - first_day/last_day перемещены перед фильтрацией (исправление порядка)
-
-ОЖИДЕТ ДЕЙСТВИЙ:
-  - git add / commit / push (app.py + session_autosave.txt)
+ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
 
 ============================================================
