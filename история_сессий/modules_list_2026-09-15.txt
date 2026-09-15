@@ -1,0 +1,487 @@
+============================================================
+МОДУЛИ CRM_Мастерская (ProMaster)
+Обновлено: 2026-09-15
+============================================================
+
+Стек: Flask + SQLAlchemy + SQLite/MySQL + Flask-Login + Flask-Babel (NL/EN/RU/PL)
+Деплой: PythonAnywhere — https://rabasoff.pythonanywhere.com
+
+============================================================
+1. АВТОРИЗАЦИЯ И ПОЛЬЗОВАТЕЛИ
+============================================================
+
+Маршруты: /login, /logout, /profile, /change-password, /reset-role
+Шаблоны: login.html, profile.html, change_password.html
+Модели: User, UserSectionAccess
+
+Назначение:
+  - Вход по логину/паролю (User или Verantwoordelijke)
+  - Роли: admin, director, technician, user, responsible
+  - Принудительная смена пароля после 2 логинов (force_change_password)
+  - Показ пароля для админа (password_plain)
+  - Группы ответственных + права доступа по секциям (GroupPermission)
+  - Отслеживание входов (login_count, last_login)
+
+============================================================
+2. УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ (Admin)
+============================================================
+
+Маршруты: /users, /users/new, /users/<id>/edit, /users/<id>/delete
+Шаблоны: users.html, user_form.html, user_cabinet.html
+Модели: User, UserSectionAccess
+
+Назначение:
+  - CRUD пользователей
+  - Привязка к секциям и станкам
+  - Кабинет пользователя (просмотр/редактирование)
+  - Назначение ролей и уровней доступа
+
+============================================================
+3. КАРТА ЦЕХА (Floor Plan)
+============================================================
+
+Маршруты: /floor, /map-editor
+Шаблоны: floor_plan.html, map_editor.html
+Модели: FactorySection, Machine
+
+Назначение:
+  - Интерактивная карта цеха с цветными секциями
+  - Маркеры станков с формами (circle, square, diamond)
+  - Drag & drop редактор расположения
+  - Фильтрация по секциям и ответственным
+
+============================================================
+4. СТАНКИ (Machines)
+============================================================
+
+Маршруты: /machines, /machines/new, /machines/<id>, /machines/<id>/edit
+Шаблоны: machines.html, machine_form.html, machine_detail.html, machine_parts.html
+Модели: Machine, MachinePart, MachineDocument, MachineConsumable, MachineSparePart
+
+Назначение:
+  - CRUD станков с фото и документами
+  - Привязка запчастей и расходников
+  - QR-коды для станков (machine_qr_label.html)
+  - Списание расходников со склада
+  - Отчёт по станкам за период
+
+============================================================
+5. ОБОРУДОВАНИЕ (Equipment)
+============================================================
+
+Маршруты: /equipment, /equipment/new, /equipment/<id>/edit
+Шаблоны: equipment.html, equipment_form.html, asset_detail.html
+Модели: Equipment, EquipmentDocument, EquipmentServiceLog
+
+Назначение:
+  - Учёт отдельного оборудования (не привязанного к станкам)
+  - Сервисные журналы и документы
+  - Гарантийные сроки и интервалы обслуживания
+
+============================================================
+6. ЗАЯВКИ НА ПОЛОМКИ (Fault Reports)
+============================================================
+
+Маршруты: /faults, /faults/new, /faults/<id>, /faults/<id>/edit
+Шаблоны: faults.html, fault_form.html, fault_detail.html
+Модели: FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory
+
+Назначение:
+  - Создание заявок с фото/видео
+  - Приоритеты: low, normal, high, critical
+  - Статусы: open → accepted → in_progress → resolved → closed
+  - Назначение техников (несколько)
+  - История изменений статуса
+  - Привязка к станку или оборудованию
+
+============================================================
+7. ТЕХНИЧЕСКИЕ НАРЯД-ЗАКАЗЫ (TWO)
+============================================================
+
+Маршруты: /two, /two/new, /two/<id>, /two/<id>/edit, /two/<id>/complete
+Шаблоны: two_list.html, two_form.html, two_detail.html, two_print.html
+Модели: TechnicalWorkOrder, TWOPhoto, TWOChecklistItem, TWOSignature, TWOAssignment
+
+Назначение:
+  - Создание наряд-заказов на основе заявок или самостоятельно
+  - Назначение работников ТОЛЬКО из технической службы
+  - Привязка к секциям и станкам с чек-листами
+  - Подписи (base64 PNG)
+  - Печатная форма (two_print.html)
+
+============================================================
+8. ОТЧЁТЫ О РАБОТЕ (Work Reports)
+============================================================
+
+Маршруты: /work-reports/new, /work-reports/<id>
+Шаблоны: work_report_form.html, work_report_page.html
+Модели: WorkReport, WorkReportPhoto, WorkReportEntry
+
+Назначение:
+  - Отчёты техников о проделанной работе
+  - Фото результатов
+  - Привязка к заявкам
+
+============================================================
+9. ОБСЛУЖИВАНИЕ (Maintenance)
+============================================================
+
+Маршруты: /machines/<id>/add-maintenance
+Шаблоны: maintenance_form.html
+Модели: MaintenanceRecord, MaintenancePhoto
+
+Назначение:
+  - Журнал обслуживания станков
+  - Типы: preventive, corrective, predictive
+  - Стоимость и использованные запчасти
+
+============================================================
+10. ПЛАНЫ ОБСЛУЖИВАНИЯ (Maintenance Plans)
+============================================================
+
+Маршруты: /maintenance-plans, /maintenance-plans/new, /maintenance-plans/<id>/edit
+Шаблоны: maintenance_plans.html, maintenance_plan_form.html, maintenance_plan_detail.html
+Модели: MaintenancePlan
+
+Назначение:
+  - Планирование ТО с датами
+  - Периодичность: weekly, biweekly, monthly, quarterly, yearly
+  - Внешние подрядчики (company_name, contact)
+  - Календарь обслуживания (maintenance_calendar.html)
+
+============================================================
+11. РЕМОНТ ОБОРУДОВАНИЯ (Equipment Repairs)
+============================================================
+
+Маршруты: /repairs, /repairs/new, /repairs/<id>/edit
+Шаблоны: repairs.html, repair_form.html, repairs_stats.html
+Модели: EquipmentRepair, GasSystemComponent
+
+Назначение:
+  - Ремонт компонентов газовой системы (вентили, редукторы, манометры)
+  - Статусы: broken → in_repair → repaired → installed
+  - Стоимость и сроки ремонта
+
+============================================================
+12. ГАЗОВАЯ СИСТЕМА (Gas System)
+============================================================
+
+Маршруты: /gas, /gas/cylinders, /gas/cylinders/new
+Шаблоны: gas/ (папка с шаблонами)
+Модели: GasCylinder, GasSystemComponent, CylinderLog, CylinderOrder
+
+Назначение:
+  - Учёт баллонов (N2, CO2)
+  - Замена и заказ баллонов
+  - Компоненты системы с проверками
+
+============================================================
+13. ЭЛЕКТРИКА (Electricity)
+============================================================
+
+Маршруты: /electricity, /electricity/cabinets, /electricity/schematic
+Шаблоны: electricity.html, cabinet_form.html, breaker_form.html, electricity_schematic.html
+Модели: ElectricalCabinet, CircuitBreaker
+
+Назначение:
+  - Электрошкафы с автоматами
+  - Схема электрики (визуальная)
+  - Лог переключений
+
+============================================================
+14. СКЛАД (Warehouse)
+============================================================
+
+Маршруты: /warehouse, /warehouse/new, /warehouse/<id>/edit, /warehouse/groups
+Шаблоны: warehouse.html, warehouse_form.html, warehouse_group_form.html,
+         warehouse_movements.html, warehouse_import.html, warehouse_inventory.html,
+         warehouse_labels.html, warehouse_prices.html, warehouse_search.html,
+         warehouse_transfer.html, warehouse_duplicates.html
+Модели: WarehouseGroup, VoorraadItem, VoorraadMutatie, WarehouseReservation,
+        SupplierPrice
+
+Назначение:
+  - Учёт товаров с категориями и группами
+  - Движения (приход/расход)
+  - Инвентаризация, баркоды, этикетки
+  - Резервирование товаров
+  - Цены от разных поставщиков
+  - Logistiek-Oktopus (подразделение склада)
+  - Трансферы между складами
+  - Уведомления о низких остатках
+
+============================================================
+15. ИНВОЙСЫ (Invoices)
+============================================================
+
+Маршруты: /invoices, /invoices/new, /invoices/<id>, /invoices/<id>/edit
+Шаблоны: invoices.html, invoice_form.html, invoice_detail.html
+Модели: Invoice, InvoiceItem
+
+Назначение:
+  - Создание и подписание инвойсов
+  - Статусы: draft, pending, approved, rejected
+  - Привязка к складским позициям
+
+============================================================
+16. ЗАКУПКИ (Purchase Requests)
+============================================================
+
+Маршруты: /purchase-requests, /purchase-requests/new, /purchase-requests/<id>
+Шаблоны: purchase_requests.html, purchase_request_form.html, purchase_request_detail.html
+Модели: PurchaseRequest
+
+Назначение:
+  - Запросы на закупку запчастей
+  - Срочность: normal, urgent, critical
+  - Статусы: pending, approved, rejected, ordered, received
+
+============================================================
+17. ПОДРЯДЧИКИ (Contractors)
+============================================================
+
+Маршруты: /contractors, /contractors/new, /contractors/<id>, /contractors/<id>/edit
+Шаблоны: contractors.html, contractor_form.html, contractor_detail.html
+Модели: Contractor, ContractorEmployee
+
+Назначение:
+  - База подрядчиков с сотрудниками
+  - Договоры, реквизиты, контакты
+  - Привязка к станкам и складским позициям
+
+============================================================
+18. МАСТЕРА (Workers / Monteurs)
+============================================================
+
+Маршруты: /workers, /workers/new, /workers/<id>/edit
+Шаблоны: workers.html, worker_form.html
+Модели: Monteur
+
+Назначение:
+  - База мастеров технической службы
+  - Специализация, ставка/час
+  - Дата приёма (hire_date) и увольнения (fire_date)
+  - Привязка к User-аккаунту и группе ответственных
+  - Создание логина для мастера
+
+============================================================
+19. ОТВЕТСТВЕННЫЕ (Responsible Persons)
+============================================================
+
+Маршруты: /responsible, /responsible/new, /responsible/<id>/edit,
+         /responsible-groups, /responsible-groups/new
+Шаблоны: responsible.html, responsible_form.html, responsible_detail.html,
+         responsible_groups.html, responsible_group_form.html, responsible_group_detail.html,
+         group_permissions.html
+Модели: Verantwoordelijke, ResponsibleGroup, GroupPermission, ResponsibleAuth
+
+Назначение:
+  - Управление ответственными лицами
+  - Группы с настраиваемыми правами доступа
+  - Вход в систему для ответственных (ResponsibleAuth)
+  - Привязка к секциям цеха
+
+============================================================
+20. ГРАФИК РАБОТ (Schedule)
+============================================================
+
+Маршруты: /schedule, /schedule/monthly, /schedule/user/<id>
+Шаблоны: schedule.html, schedule_monthly.html, schedule_user.html,
+         maintenance_calendar.html, maintenance_calendar_print.html
+Модели: WorkSchedule, WeekendShift
+
+Назначение:
+  - Месячный график мастеров
+  - Уволенные мастера исключены из графика следующего месяца
+  - Выходные смены
+  - Календарь обслуживания
+  - Печать графика (с названием месяца на голландском)
+
+============================================================
+21. УЧЁТ ВРЕМЕНИ (Time Tracking)
+============================================================
+
+Маршруты: /time-tracking, /time-tracking/clock-in, /time-tracking/clock-out,
+         /time-tracking/manual
+Шаблоны: time_tracking.html, time_report.html
+Модели: TimeEntry
+
+Назначение:
+  - Приход/уход сотрудников
+  - Переработки (свыше 8 часов)
+  - Ручной ввод для админа
+  - Отчёт по времени за период
+
+============================================================
+22. ОТПУСКА (Vacations)
+============================================================
+
+Маршруты: /vacations, /vacations/new, /vacations/<id>/approve, /vacations/<id>/reject
+Шаблоны: vacations.html, vacation_form.html
+Модели: Vacation
+
+Назначение:
+  - Заявки на отпуск
+  - Типы: vacation, sick, personal, unpaid
+  - Утверждение/отклонение
+
+============================================================
+23. СООБЩЕНИЯ (Messages)
+============================================================
+
+Маршруты: /messages, /messages/new, /messages/<id>
+Шаблоны: messages.html, message_form.html, message_detail.html
+Модели: Message
+
+Назначение:
+  - Внутренняя переписка между пользователями
+  - Привязка к заявкам на поломки
+
+============================================================
+24. УВЕДОМЛЕНИЯ (Notifications)
+============================================================
+
+Маршруты: /notifications
+Шаблоны: notifications.html
+Модели: Notification
+
+Назначение:
+  - Системные уведомления
+  - Типы: info, warning, error, success
+  - Ссылки на связанные объекты
+
+============================================================
+25. ИЗНОС ИНСТРУМЕНТА (Tool Wear)
+============================================================
+
+Маршруты: /tool-wear
+Шаблоны: tool_wear.html
+Модели: ToolWear
+
+Назначение:
+  - Отслеживание износа инструментов
+  - Процент износа и критический порог
+  - Уведомления при достижении порога
+
+============================================================
+26. ЗАКАЗЫ (Orders / Opdrachten)
+============================================================
+
+Маршруты: /orders, /orders/new, /orders/<id>
+Шаблоны: orders.html, order_form.html, order_detail.html
+Модели: Opdracht
+
+Назначение:
+  - Заказы на ремонт оборудования
+  - Статусы: aangenomen → gestart → gereed → afgeleverd
+  - Стоимость работ и запчастей
+
+============================================================
+27. ОТЧЁТЫ И АНАЛИТИКА (Reports)
+============================================================
+
+Маршруты: /reports, /reports/advanced, /reports/worker/<id>, /stats/full,
+         /stats/faults, /stats/parts, /machines/report
+Шаблоны: reports.html, reports_advanced.html, report_period.html,
+         report_worker.html, stats_full.html, stats_faults.html,
+         stats_parts.html, machines_report.html
+
+Назначение:
+  - Отчёты по периодам (DOCX, PDF, Excel)
+  - Статистика поломок по приоритетам
+  - Статистика запчастей
+  - Отчёт по станкам
+  - Отчёт по работникам
+
+============================================================
+28. АРХИВ (Monthly Archive)
+============================================================
+
+Маршруты: /archive, /archive/<id>
+Шаблоны: archive.html, archive_detail.html
+Модели: MonthlyArchive
+
+Назначение:
+  - Ежемесячный архив данных
+  - JSON-хранилище для каждого раздела
+
+============================================================
+29. АУДИТ И ЛОГИ (Audit & Logs)
+============================================================
+
+Маршруты: /audit-log, /settings/access
+Шаблоны: audit_log.html, switch_log.html, settings_access.html
+Модели: AuditLog, UserActivityLog, SystemLog
+
+Назначение:
+  - Аудит-лог всех действий
+  - Лог активности пользователей
+  - Системный лог (INFO, WARNING, ERROR)
+
+============================================================
+30. НАСТРОЙКИ (Settings)
+============================================================
+
+Маршруты: /settings, /settings/access, /sections, /sections/new
+Шаблоны: settings.html, settings_access.html, sections.html, section_form.html
+Модели: FactorySection, GroupPermission
+
+Назначение:
+  - Настройки системы
+  - Управление секциями цеха
+  - Права доступа по группам
+
+============================================================
+31. ПОИСК (Search)
+============================================================
+
+Маршруты: /search
+Шаблоны: search.html
+
+Назначение:
+  - Полнотекстовый поиск по всем модулям
+
+============================================================
+32. QR-КОДЫ (QR Codes)
+============================================================
+
+Маршруты: /qr/scan, /machines/<id>/qr
+Шаблоны: qr_scan.html, machine_qr_label.html, machines_qr_labels.html
+
+Назначение:
+  - Генерация QR-кодов для станков
+  - Сканирование для быстрого доступа
+
+============================================================
+33. ТЕЛЕФОННЫЙ СПРАВОЧНИК (Phone Directory)
+============================================================
+
+Маршруты: /phone-directory
+Шаблоны: phone_directory.html
+
+Назначение:
+  - Список контактов сотрудников и подрядчиков
+
+============================================================
+BLUEPRINTS (модульные маршруты)
+============================================================
+
+blueprints/electricity.py  — Электрика (шкафы, автоматы, схема)
+blueprints/monteurs.py     — Монтажники/доступ
+blueprints/contractors.py  — Подрядчики
+blueprints/warehouse.py    — Склад (Logistiek-Oktopus)
+blueprints/faults.py       — Заявки на поломки (API)
+blueprints/gas.py          — Газовая система
+
+============================================================
+ВСПОМОГАТЕЛЬНЫЕ ФАЙЛЫ
+============================================================
+
+config.py     — Конфигурация (SECRET_KEY, БД, языки, SECTION_KEYS)
+models.py     — Все модели SQLAlchemy (~40 моделей, ~77 таблиц)
+utils.py      — Утилиты, миграции, декораторы, логирование
+app.py        — Основное приложение (~7100 строк, ~284 маршрута)
+requirements.txt — Зависимости Python
+DEPLOY.md     — Инструкция деплоя на PythonAnywhere
+
+============================================================

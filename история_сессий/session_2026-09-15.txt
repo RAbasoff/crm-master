@@ -1,0 +1,108 @@
+============================================================
+СЕССИЯ CRM_Мастерская
+Дата: 2026-09-15
+============================================================
+
+Проект: D:\ИИ\CRM_Мастерская
+GitHub: https://github.com/RAbasoff/crm-master.git
+Online: https://rabasoff.pythonanywhere.com
+
+============================================================
+ИЗМЕНЕНИЯ, СДЕЛАННЫЕ ЗА СЕССИЮ 2026-09-15
+============================================================
+
+--- 1. Дата приёма и увольнения для мастеров ---
+Коммит: 3eb0209 feat: add hire_date and fire_date fields to Worker (Monteur)
+
+  Файлы: models.py, app.py, templates/worker_form.html, templates/workers.html, utils.py
+
+  Что сделано:
+  - Добавлены поля hire_date (дата приёма) и fire_date (дата увольнения) в модель Monteur
+  - Обновлена форма создания/редактирования мастера — добавлены поля ввода дат
+  - В таблице списка мастеров добавлена колонка "Hire Date"
+  - Добавлены миграции для автоматического создания колонок в БД
+
+--- 2. Уволенные мастера исключены из графика ---
+Коммит: 3a11dcc fix: exclude fired workers from monthly schedule
+
+  Файлы: app.py
+
+  Что сделано:
+  - В schedule_monthly() добавлена фильтрация: если fire_date мастера < first_day
+    отображаемого месяца — мастер не показывается в графике
+  - first_day/last_day перемещены перед фильтрацией (исправление порядка вычислений)
+
+--- 3. TWO — только мастера из технической службы ---
+Коммит: bb24c47 feat: TWO worker list filtered to technical service only
+
+  Файлы: app.py
+
+  Что сделано:
+  - В two_new() и two_edit() список Workers фильтруется:
+    только мастера из группы Technician (access_level='technician')
+    ИЛИ с привязанным User, у которого role='technician' и is_active_user=True
+  - Проверено тестом — все 4 мастера корректно отображаются
+
+--- 4. Исправление багов — try/except для strptime/int ---
+Коммит: ccf5549 fix: wrap unprotected strptime/int calls in try/except to prevent 500 errors
+
+  Файлы: app.py
+
+  Что сделано:
+  - Исправлено 13 маршрутов (18 strptime + 5 int)
+  - Все незащищённые вызовы datetime.strptime(request.form[...]) обёрнуты в try/except
+  - Все незащищённые вызовы int(request.form[...]) обёрнуты в try/except
+  - При ошибке пользователь видит flash-сообщение вместо краша 500
+  - Данные не теряются, программа продолжает работать
+
+  Список исправленных маршрутов:
+    - machine_add_maintenance (date_performed)
+    - machine_link_consumable (int warehouse_item_id)
+    - maintenance_plan_new (int machine_id + planned_start)
+    - maintenance_plan_edit (int machine_id + planned_start)
+    - equipment_new (date)
+    - equipment_edit (date)
+    - repair_new (date_broken)
+    - repair_edit (date_broken)
+    - two_edit (started_at + completed_at)
+    - invoice_new (invoice_date)
+    - invoice_edit (invoice_date)
+    - report_period (date_from + date_to)
+    - time_tracking_manual (int user_id + date + clock_in/clock_out)
+    - vacation_new (date_from + date_to)
+    - purchase_request_new (int machine_id)
+
+--- 5. Аудит безопасности ---
+Выполнен полный аудит кодовой базы:
+
+  Проверено:
+  - SQL-инъекции: найдены 3 места в миграциях (utils.py) — не критично, внутренний код
+  - XSS: шаблоны НЕ используют |safe — уязвимостей нет
+  - CSRF: включён глобально, WTF_CSRF_TIME_LIMIT=None для длинных сессий
+  - Авторизация: @login_required на всех защищённых маршрутах
+  - Все коммиты через safe_commit() — нет потери данных
+  - Синтаксис проверен: Syntax OK, App loaded OK, 284 routes
+  - Endpoint-тесты: все 10 страниц возвращают 200 OK
+
+--- 6. Проверка работоспособности ---
+  - Login (admin/Aba103sov): OK
+  - Dashboard, Machines, Workers, Warehouse, Faults, TWO, Floor, Schedule: все OK
+  - /two/new: 4 worker checkboxes (только тех.служба)
+  - /workers/1/edit: поле hire_date присутствует
+  - Templates: 114 файлов
+  - Migrations: OK
+
+============================================================
+СТАТУС НА КОНЕЦ СЕССИИ
+============================================================
+
+Git status: clean
+Последний коммит: 404ceca chore: session autosave
+Всего коммитов за сессию: 6 (feat + fix + chore)
+Бэкап БД: instance/werkplaats_backup_20260915_083658.db (532 KB)
+
+Деплой на PythonAnywhere:
+  cd ~/crm-master && git pull origin master
+  Web → Reload
+
+============================================================
