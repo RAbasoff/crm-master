@@ -1,300 +1,233 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Gas System') }} — CRM{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h1>{{ _('Gas Cylinders') }}</h1>
-    <div style="display:flex;gap:8px">
-        <a href="/gas/cylinders/new" class="btn btn-primary">+ {{ _('Add Cylinder') }}</a>
-        <a href="/gas/orders/new" class="btn btn-sm" style="background:#eee">+ {{ _('Order Cylinders') }}</a>
-        <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">{{ _('All Cylinders') }}</a>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <h1 style="margin:0;font-size:18px">{{ _('Gas Cylinders') }}</h1>
+    <div style="display:flex;gap:6px">
+        <a href="/gas/cylinders/new" class="btn btn-primary btn-sm">+ {{ _('Add') }}</a>
+        <a href="/gas/orders/new" class="btn btn-sm" style="background:#eee">📦 {{ _('Order') }}</a>
+        <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">{{ _('All') }}</a>
     </div>
 </div>
 
 {% set n2a = [] %}
-{% for c in n2_cylinders if c.status in ('in_use','full') %}
-  {% if n2a|length < 2 %}{% if n2a.append(c) %}{% endif %}{% endif %}
-{% endfor %}
+{% for c in n2_cylinders if c.status in ('in_use','full') %}{% if n2a|length < 2 %}{% if n2a.append(c) %}{% endif %}{% endif %}{% endfor %}
 {% set co2a = [] %}
-{% for c in co2_cylinders if c.status in ('in_use','full') %}
-  {% if co2a|length < 2 %}{% if co2a.append(c) %}{% endif %}{% endif %}
-{% endfor %}
+{% for c in co2_cylinders if c.status in ('in_use','full') %}{% if co2a|length < 2 %}{% if co2a.append(c) %}{% endif %}{% endif %}{% endfor %}
 
-<!-- LOW STOCK WARNING -->
 {% if low_stock %}
-<div style="background:#fff3cd;border:2px solid #f39c12;border-radius:10px;padding:12px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
-    <span style="font-size:24px">⚠️</span>
-    <div>
-        <div style="font-weight:700;color:#e67e22;font-size:14px">{{ _('LOW STOCK WARNING') }}</div>
-        <div style="font-size:12px;color:#555">{{ _('Only 1 full cylinder remaining') }}: <b>{{ low_stock|join(', ') }}</b> — {{ _('order new cylinders!') }}</div>
+<div style="background:#fff3cd;border:2px solid #f39c12;border-radius:8px;padding:8px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:18px">⚠️</span>
+    <div style="flex:1">
+        <span style="font-weight:700;color:#e67e22;font-size:12px">{{ _('LOW STOCK') }}:</span>
+        <span style="font-size:11px;color:#555"> {{ low_stock|join(', ') }} — {{ _('order new cylinders!') }}</span>
     </div>
-    <a href="/gas/orders/new" class="btn btn-sm" style="background:#f39c12;color:white;margin-left:auto">📦 {{ _('Order Now') }}</a>
+    <a href="/gas/orders/new" class="btn btn-sm" style="background:#f39c12;color:white;font-size:11px">📦 {{ _('Order') }}</a>
 </div>
 {% endif %}
 
-<!-- ═══════ N₂ INSTALLATION ═══════ -->
-<div class="card" style="padding:14px;border-top:4px solid #3498db;margin-bottom:16px">
-    <h3 style="margin:0 0 10px;text-align:center;color:#3498db;font-size:13px">N₂ Nitrogen</h3>
-    <div style="display:grid;grid-template-columns:160px 1fr 120px;gap:12px;align-items:start">
+<!-- N₂ + CO₂ side by side -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
 
-        <!-- LEFT: Spare cylinders list -->
-        <div style="font-size:11px">
-            <div style="font-weight:700;color:#3498db;margin-bottom:6px">{{ _('Spare N₂') }} ({{ n2_spare|length }})</div>
-            {% for cyl in n2_spare %}
+<!-- ═══ N₂ ═══ -->
+<div class="card" style="padding:10px;border-top:3px solid #3498db">
+    <h3 style="margin:0 0 8px;text-align:center;color:#3498db;font-size:12px">N₂ Nitrogen</h3>
+    <div style="display:grid;grid-template-columns:110px 1fr 90px;gap:6px;align-items:start">
+        <!-- LEFT: Spare -->
+        <div style="font-size:10px">
+            <div style="font-weight:700;color:#3498db;margin-bottom:4px;font-size:10px">{{ _('Spare') }} ({{ n2_spare|length }})</div>
+            {% for cyl in n2_spare[:8] %}
             <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-                 style="cursor:pointer;padding:3px 6px;border-radius:4px;border:1px solid #ddd;background:#fafafa;margin-bottom:3px;font-size:10px;transition:all 0.1s"
+                 style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #ddd;background:#fafafa;margin-bottom:2px;font-size:9px"
                  onmouseover="this.style.borderColor='#3498db'" onmouseout="this.style.borderColor='#ddd'">
-                <span style="font-weight:600">{{ cyl.cylinder_number }}</span>
-                <span style="color:#c0392b;font-size:9px">EMPTY</span>
+                {{ cyl.cylinder_number }} <span style="color:#c0392b">E</span>
             </div>
             {% endfor %}
-            {% if not n2_spare %}
-            <div style="color:#999;font-size:10px">—</div>
-            {% endif %}
+            {% if n2_spare|length > 8 %}<div style="font-size:8px;color:#999">+{{ n2_spare|length - 8 }} {{ _('more') }}</div>{% endif %}
         </div>
-
-        <!-- CENTER: SVG Installation -->
-        <svg viewBox="0 0 340 200" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
-            {% set n2_active_left = n2a|length > 0 and n2a[0].status == 'in_use' %}
-            {% set n2_active_right = n2a|length > 1 and n2a[1].status == 'in_use' %}
-
-            <!-- PIPELINE -->
-            <line x1="100" y1="8" x2="240" y2="8" stroke="#3498db" stroke-width="5" stroke-linecap="round"/>
-            <text x="170" y="6" text-anchor="middle" font-size="8" font-weight="bold" fill="#3498db">PIPELINE</text>
-
-            <line x1="120" y1="8" x2="120" y2="24" stroke="#3498db" stroke-width="2"/>
-            <line x1="220" y1="8" x2="220" y2="24" stroke="#3498db" stroke-width="2"/>
-
+        <!-- CENTER: SVG -->
+        {% set n2_active_left = n2a|length > 0 and n2a[0].status == 'in_use' %}
+        {% set n2_active_right = n2a|length > 1 and n2a[1].status == 'in_use' %}
+        <svg viewBox="0 0 300 150" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+            <line x1="85" y1="5" x2="215" y2="5" stroke="#3498db" stroke-width="4" stroke-linecap="round"/>
+            <text x="150" y="4" text-anchor="middle" font-size="6" font-weight="bold" fill="#3498db">PIPELINE</text>
+            <line x1="105" y1="5" x2="105" y2="16" stroke="#3498db" stroke-width="1.5"/>
+            <line x1="195" y1="5" x2="195" y2="16" stroke="#3498db" stroke-width="1.5"/>
             <!-- Manometers -->
-            <circle cx="120" cy="36" r="14" fill="white" stroke="#3498db" stroke-width="2"/>
-            <circle cx="120" cy="36" r="10" fill="#f0f7ff" stroke="#3498db" stroke-width="0.5"/>
-            <line x1="120" y1="36" x2="128" y2="28" stroke="#e74c3c" stroke-width="1.5"/>
-            <text x="120" y="39" text-anchor="middle" font-size="5" fill="#3498db" font-weight="bold">BAR</text>
-            <circle cx="220" cy="36" r="14" fill="white" stroke="#3498db" stroke-width="2"/>
-            <circle cx="220" cy="36" r="10" fill="#f0f7ff" stroke="#3498db" stroke-width="0.5"/>
-            <line x1="220" y1="36" x2="228" y2="28" stroke="#e74c3c" stroke-width="1.5"/>
-            <text x="220" y="39" text-anchor="middle" font-size="5" fill="#3498db" font-weight="bold">BAR</text>
-
-            <!-- Switching valve — arrow points to ACTIVE cylinder -->
-            <circle cx="170" cy="36" r="14" fill="white" stroke="#f39c12" stroke-width="2.5"/>
-            <text x="170" y="39" text-anchor="middle" font-size="6" fill="#f39c12" font-weight="bold">SW</text>
-            <line x1="134" y1="36" x2="156" y2="36" stroke="#555" stroke-width="1.5"/>
-            <line x1="184" y1="36" x2="206" y2="36" stroke="#555" stroke-width="1.5"/>
+            <circle cx="105" cy="24" r="10" fill="white" stroke="#3498db" stroke-width="1.5"/>
+            <line x1="105" y1="24" x2="111" y2="18" stroke="#e74c3c" stroke-width="1"/>
+            <text x="105" y="27" text-anchor="middle" font-size="4" fill="#3498db" font-weight="bold">BAR</text>
+            <circle cx="195" cy="24" r="10" fill="white" stroke="#3498db" stroke-width="1.5"/>
+            <line x1="195" y1="24" x2="201" y2="18" stroke="#e74c3c" stroke-width="1"/>
+            <text x="195" y="27" text-anchor="middle" font-size="4" fill="#3498db" font-weight="bold">BAR</text>
+            <!-- Switching valve -->
+            <circle cx="150" cy="24" r="10" fill="white" stroke="#f39c12" stroke-width="2"/>
+            <text x="150" y="27" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
+            <line x1="115" y1="24" x2="140" y2="24" stroke="#555" stroke-width="1"/>
+            <line x1="160" y1="24" x2="185" y2="24" stroke="#555" stroke-width="1"/>
             {% if n2_active_left %}
-            <!-- Arrow points LEFT (left cylinder active) -->
-            <polygon points="130,36 145,28 145,44" fill="#27ae60" stroke="#1e8449" stroke-width="1"/>
-            <line x1="145" y1="36" x2="156" y2="36" stroke="#27ae60" stroke-width="3"/>
+            <polygon points="115,24 128,18 128,30" fill="#27ae60" stroke="#1e8449" stroke-width="0.8"/>
+            <line x1="128" y1="24" x2="140" y2="24" stroke="#27ae60" stroke-width="2.5"/>
             {% elif n2_active_right %}
-            <!-- Arrow points RIGHT (right cylinder active) -->
-            <polygon points="210,36 195,28 195,44" fill="#27ae60" stroke="#1e8449" stroke-width="1"/>
-            <line x1="184" y1="36" x2="195" y2="36" stroke="#27ae60" stroke-width="3"/>
+            <polygon points="185,24 172,18 172,30" fill="#27ae60" stroke="#1e8449" stroke-width="0.8"/>
+            <line x1="160" y1="24" x2="172" y2="24" stroke="#27ae60" stroke-width="2.5"/>
             {% endif %}
-
             <!-- Heaters -->
-            <rect x="105" y="58" width="30" height="18" rx="4" fill="#e8f4fd" stroke="#3498db" stroke-width="1.5"/>
-            <text x="120" y="71" text-anchor="middle" font-size="8" fill="#3498db">🔥</text>
-            <line x1="120" y1="50" x2="120" y2="58" stroke="#3498db" stroke-width="2"/>
-            <rect x="205" y="58" width="30" height="18" rx="4" fill="#e8f4fd" stroke="#3498db" stroke-width="1.5"/>
-            <text x="220" y="71" text-anchor="middle" font-size="8" fill="#3498db">🔥</text>
-            <line x1="220" y1="50" x2="220" y2="58" stroke="#3498db" stroke-width="2"/>
-
-            <!-- Shut-off valves (butterfly) -->
-            <line x1="120" y1="76" x2="120" y2="96" stroke="#3498db" stroke-width="3"/>
-            <rect x="104" y="82" width="32" height="8" rx="3" fill="white" stroke="#3498db" stroke-width="2"/>
-            <rect x="108" y="79" width="24" height="14" rx="2" fill="none" stroke="#3498db" stroke-width="1.5"/>
-            <line x1="220" y1="76" x2="220" y2="96" stroke="#3498db" stroke-width="3"/>
-            <rect x="204" y="82" width="32" height="8" rx="3" fill="white" stroke="#3498db" stroke-width="2"/>
-            <rect x="208" y="79" width="24" height="14" rx="2" fill="none" stroke="#3498db" stroke-width="1.5"/>
-
-            <!-- Relief valves BELOW shut-off -->
-            <circle cx="120" cy="110" r="8" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
-            <text x="120" y="113" text-anchor="middle" font-size="5" fill="#95a5a6" font-weight="bold">RV</text>
-            <line x1="120" y1="96" x2="120" y2="102" stroke="#95a5a6" stroke-width="1.5"/>
-            <circle cx="220" cy="110" r="8" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
-            <text x="220" y="113" text-anchor="middle" font-size="5" fill="#95a5a6" font-weight="bold">RV</text>
-            <line x1="220" y1="96" x2="220" y2="102" stroke="#95a5a6" stroke-width="1.5"/>
-
+            <rect x="92" y="40" width="26" height="14" rx="3" fill="#e8f4fd" stroke="#3498db" stroke-width="1.2"/>
+            <text x="105" y="51" text-anchor="middle" font-size="6" fill="#3498db">🔥</text>
+            <line x1="105" y1="34" x2="105" y2="40" stroke="#3498db" stroke-width="1.5"/>
+            <rect x="182" y="40" width="26" height="14" rx="3" fill="#e8f4fd" stroke="#3498db" stroke-width="1.2"/>
+            <text x="195" y="51" text-anchor="middle" font-size="6" fill="#3498db">🔥</text>
+            <line x1="195" y1="34" x2="195" y2="40" stroke="#3498db" stroke-width="1.5"/>
+            <!-- Shut-off valves -->
+            <line x1="105" y1="54" x2="105" y2="68" stroke="#3498db" stroke-width="2.5"/>
+            <rect x="92" y="58" width="26" height="6" rx="2" fill="white" stroke="#3498db" stroke-width="1.5"/>
+            <rect x="95" y="56" width="20" height="10" rx="2" fill="none" stroke="#3498db" stroke-width="1"/>
+            <line x1="195" y1="54" x2="195" y2="68" stroke="#3498db" stroke-width="2.5"/>
+            <rect x="182" y="58" width="26" height="6" rx="2" fill="white" stroke="#3498db" stroke-width="1.5"/>
+            <rect x="185" y="56" width="20" height="10" rx="2" fill="none" stroke="#3498db" stroke-width="1"/>
+            <!-- Relief valves -->
+            <circle cx="105" cy="78" r="6" fill="white" stroke="#95a5a6" stroke-width="1.2"/>
+            <text x="105" y="80" text-anchor="middle" font-size="4" fill="#95a5a6" font-weight="bold">RV</text>
+            <line x1="105" y1="68" x2="105" y2="72" stroke="#95a5a6" stroke-width="1"/>
+            <circle cx="195" cy="78" r="6" fill="white" stroke="#95a5a6" stroke-width="1.2"/>
+            <text x="195" y="80" text-anchor="middle" font-size="4" fill="#95a5a6" font-weight="bold">RV</text>
+            <line x1="195" y1="68" x2="195" y2="72" stroke="#95a5a6" stroke-width="1"/>
             <!-- Hoses -->
-            <line x1="120" y1="118" x2="120" y2="142" stroke="#888" stroke-width="2.5" stroke-dasharray="5,3"/>
-            <line x1="220" y1="118" x2="220" y2="142" stroke="#888" stroke-width="2.5" stroke-dasharray="5,3"/>
-
+            <line x1="105" y1="84" x2="105" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+            <line x1="195" y1="84" x2="195" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
             <!-- Cylinders -->
-            <rect x="98" y="144" width="44" height="50" rx="6" fill="{% if n2_active_left %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="2"/>
-            <text x="120" y="166" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">N₂</text>
-            <text x="120" y="178" text-anchor="middle" font-size="5" fill="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_left %}●IN USE{% else %}●FULL{% endif %}</text>
-
-            <rect x="198" y="144" width="44" height="50" rx="6" fill="{% if n2_active_right %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="2"/>
-            <text x="220" y="166" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">N₂</text>
-            <text x="220" y="178" text-anchor="middle" font-size="5" fill="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_right %}●IN USE{% else %}●FULL{% endif %}</text>
+            <rect x="87" y="102" width="36" height="42" rx="5" fill="{% if n2_active_left %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="1.5"/>
+            <text x="105" y="120" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">N₂</text>
+            <text x="105" y="132" text-anchor="middle" font-size="4" fill="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_left %}●USE{% else %}●FULL{% endif %}</text>
+            <rect x="177" y="102" width="36" height="42" rx="5" fill="{% if n2_active_right %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="1.5"/>
+            <text x="195" y="120" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">N₂</text>
+            <text x="195" y="132" text-anchor="middle" font-size="4" fill="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_right %}●USE{% else %}●FULL{% endif %}</text>
         </svg>
-
-        <!-- RIGHT: Cylinder counts -->
-        <div style="font-size:11px;padding-top:20px">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                <div style="width:10px;height:10px;border-radius:50%;background:#27ae60"></div>
-                <span style="font-weight:600">{{ _('Full') }}: <b style="color:#27ae60">{{ stats.n2_full }}</b></span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                <div style="width:10px;height:10px;border-radius:50%;background:#f39c12"></div>
-                <span style="font-weight:600">{{ _('In Use') }}: <b style="color:#f39c12">{{ stats.n2_in_use }}</b></span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                <div style="width:10px;height:10px;border-radius:50%;background:#c0392b"></div>
-                <span style="font-weight:600">{{ _('Empty') }}: <b style="color:#c0392b">{{ stats.n2_empty }}</b></span>
-            </div>
-            <div style="border-top:1px solid #eee;padding-top:6px;margin-top:6px;font-size:10px;color:#888">
-                {{ _('Total') }}: {{ n2_cylinders|length }}
-            </div>
+        <!-- RIGHT: Counts -->
+        <div style="font-size:10px;padding-top:10px">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ stats.n2_full }}</b> {{ _('Full') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ stats.n2_in_use }}</b> {{ _('Use') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#c0392b"></div><b style="color:#c0392b">{{ stats.n2_empty }}</b> {{ _('Empty') }}</div>
+            <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin-top:3px">{{ _('Total') }}: {{ n2_cylinders|length }}</div>
         </div>
     </div>
-
-    <!-- N₂ clickable cards -->
-    <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
-        {% for cyl in n2_cylinders if cyl.status in ('in_use','full') %}
-        {% if loop.index <= 2 %}
+    <!-- Clickable cards -->
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
+        {% for cyl in n2_cylinders if cyl.status in ('in_use','full') %}{% if loop.index <= 2 %}
         <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-             style="cursor:pointer;padding:4px 10px;border-radius:6px;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% else %}#f0fff0{% endif %};text-align:center;font-size:11px;transition:all 0.15s"
+             style="cursor:pointer;padding:3px 8px;border-radius:5px;border:1.5px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% else %}#f0fff0{% endif %};text-align:center;font-size:10px"
              onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform=''">
-            <div style="font-weight:700">{{ cyl.cylinder_number }}</div>
-            <div style="font-size:8px;padding:1px 6px;border-radius:6px;display:inline-block;{% if cyl.status=='in_use' %}background:#f39c12;color:white{% else %}background:#27ae60;color:white{% endif %}">{% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}</div>
+            <b>{{ cyl.cylinder_number }}</b>
+            <span style="font-size:8px;padding:1px 5px;border-radius:4px;display:inline-block;{% if cyl.status=='in_use' %}background:#f39c12;color:white{% else %}background:#27ae60;color:white{% endif %}">{% if cyl.status=='in_use' %}USE{% else %}FULL{% endif %}</span>
         </div>
-        {% endif %}
-        {% endfor %}
+        {% endif %}{% endfor %}
     </div>
 </div>
 
-<!-- ═══════ CO₂ INSTALLATION ═══════ -->
-<div class="card" style="padding:14px;border-top:4px solid #e74c3c;margin-bottom:16px">
-    <h3 style="margin:0 0 10px;text-align:center;color:#e74c3c;font-size:13px">CO₂ Carbon Dioxide</h3>
-    <div style="display:grid;grid-template-columns:160px 1fr 120px;gap:12px;align-items:start">
-
-        <!-- LEFT: Spare cylinders list -->
-        <div style="font-size:11px">
-            <div style="font-weight:700;color:#e74c3c;margin-bottom:6px">{{ _('Spare CO₂') }} ({{ co2_spare|length }})</div>
-            {% for cyl in co2_spare %}
+<!-- ═══ CO₂ ═══ -->
+<div class="card" style="padding:10px;border-top:3px solid #e74c3c">
+    <h3 style="margin:0 0 8px;text-align:center;color:#e74c3c;font-size:12px">CO₂ Carbon Dioxide</h3>
+    <div style="display:grid;grid-template-columns:110px 1fr 90px;gap:6px;align-items:start">
+        <!-- LEFT: Spare -->
+        <div style="font-size:10px">
+            <div style="font-weight:700;color:#e74c3c;margin-bottom:4px;font-size:10px">{{ _('Spare') }} ({{ co2_spare|length }})</div>
+            {% for cyl in co2_spare[:8] %}
             <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-                 style="cursor:pointer;padding:3px 6px;border-radius:4px;border:1px solid #ddd;background:#fafafa;margin-bottom:3px;font-size:10px;transition:all 0.1s"
+                 style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #ddd;background:#fafafa;margin-bottom:2px;font-size:9px"
                  onmouseover="this.style.borderColor='#e74c3c'" onmouseout="this.style.borderColor='#ddd'">
-                <span style="font-weight:600">{{ cyl.cylinder_number }}</span>
-                <span style="color:#c0392b;font-size:9px">EMPTY</span>
+                {{ cyl.cylinder_number }} <span style="color:#c0392b">E</span>
             </div>
             {% endfor %}
-            {% if not co2_spare %}
-            <div style="color:#999;font-size:10px">—</div>
-            {% endif %}
+            {% if co2_spare|length > 8 %}<div style="font-size:8px;color:#999">+{{ co2_spare|length - 8 }} {{ _('more') }}</div>{% endif %}
         </div>
-
-        <!-- CENTER: SVG Installation -->
-        <svg viewBox="0 0 340 200" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
-            {% set co2_active_left = co2a|length > 0 and co2a[0].status == 'in_use' %}
-            {% set co2_active_right = co2a|length > 1 and co2a[1].status == 'in_use' %}
-
-            <line x1="100" y1="8" x2="240" y2="8" stroke="#e74c3c" stroke-width="5" stroke-linecap="round"/>
-            <text x="170" y="6" text-anchor="middle" font-size="8" font-weight="bold" fill="#e74c3c">PIPELINE</text>
-            <line x1="120" y1="8" x2="120" y2="24" stroke="#e74c3c" stroke-width="2"/>
-            <line x1="220" y1="8" x2="220" y2="24" stroke="#e74c3c" stroke-width="2"/>
-
-            <circle cx="120" cy="36" r="14" fill="white" stroke="#e74c3c" stroke-width="2"/>
-            <circle cx="120" cy="36" r="10" fill="#fff0f0" stroke="#e74c3c" stroke-width="0.5"/>
-            <line x1="120" y1="36" x2="128" y2="28" stroke="#e74c3c" stroke-width="1.5"/>
-            <text x="120" y="39" text-anchor="middle" font-size="5" fill="#e74c3c" font-weight="bold">BAR</text>
-            <circle cx="220" cy="36" r="14" fill="white" stroke="#e74c3c" stroke-width="2"/>
-            <circle cx="220" cy="36" r="10" fill="#fff0f0" stroke="#e74c3c" stroke-width="0.5"/>
-            <line x1="220" y1="36" x2="228" y2="28" stroke="#e74c3c" stroke-width="1.5"/>
-            <text x="220" y="39" text-anchor="middle" font-size="5" fill="#e74c3c" font-weight="bold">BAR</text>
-
-            <!-- Switching valve — dynamic arrow -->
-            <circle cx="170" cy="36" r="14" fill="white" stroke="#f39c12" stroke-width="2.5"/>
-            <text x="170" y="39" text-anchor="middle" font-size="6" fill="#f39c12" font-weight="bold">SW</text>
-            <line x1="134" y1="36" x2="156" y2="36" stroke="#555" stroke-width="1.5"/>
-            <line x1="184" y1="36" x2="206" y2="36" stroke="#555" stroke-width="1.5"/>
+        <!-- CENTER: SVG -->
+        {% set co2_active_left = co2a|length > 0 and co2a[0].status == 'in_use' %}
+        {% set co2_active_right = co2a|length > 1 and co2a[1].status == 'in_use' %}
+        <svg viewBox="0 0 300 150" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+            <line x1="85" y1="5" x2="215" y2="5" stroke="#e74c3c" stroke-width="4" stroke-linecap="round"/>
+            <text x="150" y="4" text-anchor="middle" font-size="6" font-weight="bold" fill="#e74c3c">PIPELINE</text>
+            <line x1="105" y1="5" x2="105" y2="16" stroke="#e74c3c" stroke-width="1.5"/>
+            <line x1="195" y1="5" x2="195" y2="16" stroke="#e74c3c" stroke-width="1.5"/>
+            <circle cx="105" cy="24" r="10" fill="white" stroke="#e74c3c" stroke-width="1.5"/>
+            <line x1="105" y1="24" x2="111" y2="18" stroke="#e74c3c" stroke-width="1"/>
+            <text x="105" y="27" text-anchor="middle" font-size="4" fill="#e74c3c" font-weight="bold">BAR</text>
+            <circle cx="195" cy="24" r="10" fill="white" stroke="#e74c3c" stroke-width="1.5"/>
+            <line x1="195" y1="24" x2="201" y2="18" stroke="#e74c3c" stroke-width="1"/>
+            <text x="195" y="27" text-anchor="middle" font-size="4" fill="#e74c3c" font-weight="bold">BAR</text>
+            <circle cx="150" cy="24" r="10" fill="white" stroke="#f39c12" stroke-width="2"/>
+            <text x="150" y="27" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
+            <line x1="115" y1="24" x2="140" y2="24" stroke="#555" stroke-width="1"/>
+            <line x1="160" y1="24" x2="185" y2="24" stroke="#555" stroke-width="1"/>
             {% if co2_active_left %}
-            <polygon points="130,36 145,28 145,44" fill="#27ae60" stroke="#1e8449" stroke-width="1"/>
-            <line x1="145" y1="36" x2="156" y2="36" stroke="#27ae60" stroke-width="3"/>
+            <polygon points="115,24 128,18 128,30" fill="#27ae60" stroke="#1e8449" stroke-width="0.8"/>
+            <line x1="128" y1="24" x2="140" y2="24" stroke="#27ae60" stroke-width="2.5"/>
             {% elif co2_active_right %}
-            <polygon points="210,36 195,28 195,44" fill="#27ae60" stroke="#1e8449" stroke-width="1"/>
-            <line x1="184" y1="36" x2="195" y2="36" stroke="#27ae60" stroke-width="3"/>
+            <polygon points="185,24 172,18 172,30" fill="#27ae60" stroke="#1e8449" stroke-width="0.8"/>
+            <line x1="160" y1="24" x2="172" y2="24" stroke="#27ae60" stroke-width="2.5"/>
             {% endif %}
-
-            <rect x="105" y="58" width="30" height="18" rx="4" fill="#e8f4fd" stroke="#e74c3c" stroke-width="1.5"/>
-            <text x="120" y="71" text-anchor="middle" font-size="8" fill="#e74c3c">🔥</text>
-            <line x1="120" y1="50" x2="120" y2="58" stroke="#e74c3c" stroke-width="2"/>
-            <rect x="205" y="58" width="30" height="18" rx="4" fill="#e8f4fd" stroke="#e74c3c" stroke-width="1.5"/>
-            <text x="220" y="71" text-anchor="middle" font-size="8" fill="#e74c3c">🔥</text>
-            <line x1="220" y1="50" x2="220" y2="58" stroke="#e74c3c" stroke-width="2"/>
-
-            <line x1="120" y1="76" x2="120" y2="96" stroke="#e74c3c" stroke-width="3"/>
-            <rect x="104" y="82" width="32" height="8" rx="3" fill="white" stroke="#e74c3c" stroke-width="2"/>
-            <rect x="108" y="79" width="24" height="14" rx="2" fill="none" stroke="#e74c3c" stroke-width="1.5"/>
-            <line x1="220" y1="76" x2="220" y2="96" stroke="#e74c3c" stroke-width="3"/>
-            <rect x="204" y="82" width="32" height="8" rx="3" fill="white" stroke="#e74c3c" stroke-width="2"/>
-            <rect x="208" y="79" width="24" height="14" rx="2" fill="none" stroke="#e74c3c" stroke-width="1.5"/>
-
-            <circle cx="120" cy="110" r="8" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
-            <text x="120" y="113" text-anchor="middle" font-size="5" fill="#95a5a6" font-weight="bold">RV</text>
-            <line x1="120" y1="96" x2="120" y2="102" stroke="#95a5a6" stroke-width="1.5"/>
-            <circle cx="220" cy="110" r="8" fill="white" stroke="#95a5a6" stroke-width="1.5"/>
-            <text x="220" y="113" text-anchor="middle" font-size="5" fill="#95a5a6" font-weight="bold">RV</text>
-            <line x1="220" y1="96" x2="220" y2="102" stroke="#95a5a6" stroke-width="1.5"/>
-
-            <line x1="120" y1="118" x2="120" y2="142" stroke="#888" stroke-width="2.5" stroke-dasharray="5,3"/>
-            <line x1="220" y1="118" x2="220" y2="142" stroke="#888" stroke-width="2.5" stroke-dasharray="5,3"/>
-
-            <rect x="98" y="144" width="44" height="50" rx="6" fill="{% if co2_active_left %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_left %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="2"/>
-            <text x="120" y="166" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">CO₂</text>
-            <text x="120" y="178" text-anchor="middle" font-size="5" fill="{% if co2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_left %}●IN USE{% else %}●FULL{% endif %}</text>
-
-            <rect x="198" y="144" width="44" height="50" rx="6" fill="{% if co2_active_right %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_right %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="2"/>
-            <text x="220" y="166" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">CO₂</text>
-            <text x="220" y="178" text-anchor="middle" font-size="5" fill="{% if co2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_right %}●IN USE{% else %}●FULL{% endif %}</text>
+            <rect x="92" y="40" width="26" height="14" rx="3" fill="#e8f4fd" stroke="#e74c3c" stroke-width="1.2"/>
+            <text x="105" y="51" text-anchor="middle" font-size="6" fill="#e74c3c">🔥</text>
+            <line x1="105" y1="34" x2="105" y2="40" stroke="#e74c3c" stroke-width="1.5"/>
+            <rect x="182" y="40" width="26" height="14" rx="3" fill="#e8f4fd" stroke="#e74c3c" stroke-width="1.2"/>
+            <text x="195" y="51" text-anchor="middle" font-size="6" fill="#e74c3c">🔥</text>
+            <line x1="195" y1="34" x2="195" y2="40" stroke="#e74c3c" stroke-width="1.5"/>
+            <line x1="105" y1="54" x2="105" y2="68" stroke="#e74c3c" stroke-width="2.5"/>
+            <rect x="92" y="58" width="26" height="6" rx="2" fill="white" stroke="#e74c3c" stroke-width="1.5"/>
+            <rect x="95" y="56" width="20" height="10" rx="2" fill="none" stroke="#e74c3c" stroke-width="1"/>
+            <line x1="195" y1="54" x2="195" y2="68" stroke="#e74c3c" stroke-width="2.5"/>
+            <rect x="182" y="58" width="26" height="6" rx="2" fill="white" stroke="#e74c3c" stroke-width="1.5"/>
+            <rect x="185" y="56" width="20" height="10" rx="2" fill="none" stroke="#e74c3c" stroke-width="1"/>
+            <circle cx="105" cy="78" r="6" fill="white" stroke="#95a5a6" stroke-width="1.2"/>
+            <text x="105" y="80" text-anchor="middle" font-size="4" fill="#95a5a6" font-weight="bold">RV</text>
+            <line x1="105" y1="68" x2="105" y2="72" stroke="#95a5a6" stroke-width="1"/>
+            <circle cx="195" cy="78" r="6" fill="white" stroke="#95a5a6" stroke-width="1.2"/>
+            <text x="195" y="80" text-anchor="middle" font-size="4" fill="#95a5a6" font-weight="bold">RV</text>
+            <line x1="195" y1="68" x2="195" y2="72" stroke="#95a5a6" stroke-width="1"/>
+            <line x1="105" y1="84" x2="105" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+            <line x1="195" y1="84" x2="195" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+            <rect x="87" y="102" width="36" height="42" rx="5" fill="{% if co2_active_left %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_left %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="1.5"/>
+            <text x="105" y="120" text-anchor="middle" font-size="7" fill="#e74c3c" font-weight="bold">CO₂</text>
+            <text x="105" y="132" text-anchor="middle" font-size="4" fill="{% if co2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_left %}●USE{% else %}●FULL{% endif %}</text>
+            <rect x="177" y="102" width="36" height="42" rx="5" fill="{% if co2_active_right %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_right %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="1.5"/>
+            <text x="195" y="120" text-anchor="middle" font-size="7" fill="#e74c3c" font-weight="bold">CO₂</text>
+            <text x="195" y="132" text-anchor="middle" font-size="4" fill="{% if co2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_right %}●USE{% else %}●FULL{% endif %}</text>
         </svg>
-
-        <!-- RIGHT: Cylinder counts -->
-        <div style="font-size:11px;padding-top:20px">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                <div style="width:10px;height:10px;border-radius:50%;background:#27ae60"></div>
-                <span style="font-weight:600">{{ _('Full') }}: <b style="color:#27ae60">{{ stats.co2_full }}</b></span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                <div style="width:10px;height:10px;border-radius:50%;background:#f39c12"></div>
-                <span style="font-weight:600">{{ _('In Use') }}: <b style="color:#f39c12">{{ stats.co2_in_use }}</b></span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                <div style="width:10px;height:10px;border-radius:50%;background:#c0392b"></div>
-                <span style="font-weight:600">{{ _('Empty') }}: <b style="color:#c0392b">{{ stats.co2_empty }}</b></span>
-            </div>
-            <div style="border-top:1px solid #eee;padding-top:6px;margin-top:6px;font-size:10px;color:#888">
-                {{ _('Total') }}: {{ co2_cylinders|length }}
-            </div>
+        <!-- RIGHT: Counts -->
+        <div style="font-size:10px;padding-top:10px">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ stats.co2_full }}</b> {{ _('Full') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ stats.co2_in_use }}</b> {{ _('Use') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#c0392b"></div><b style="color:#c0392b">{{ stats.co2_empty }}</b> {{ _('Empty') }}</div>
+            <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin-top:3px">{{ _('Total') }}: {{ co2_cylinders|length }}</div>
         </div>
     </div>
-
-    <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
-        {% for cyl in co2_cylinders if cyl.status in ('in_use','full') %}
-        {% if loop.index <= 2 %}
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
+        {% for cyl in co2_cylinders if cyl.status in ('in_use','full') %}{% if loop.index <= 2 %}
         <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-             style="cursor:pointer;padding:4px 10px;border-radius:6px;border:2px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% else %}#f0fff0{% endif %};text-align:center;font-size:11px;transition:all 0.15s"
+             style="cursor:pointer;padding:3px 8px;border-radius:5px;border:1.5px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% else %}#f0fff0{% endif %};text-align:center;font-size:10px"
              onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform=''">
-            <div style="font-weight:700">{{ cyl.cylinder_number }}</div>
-            <div style="font-size:8px;padding:1px 6px;border-radius:6px;display:inline-block;background:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};color:white">{% if cyl.status=='in_use' %}IN USE{% else %}FULL{% endif %}</div>
+            <b>{{ cyl.cylinder_number }}</b>
+            <span style="font-size:8px;padding:1px 5px;border-radius:4px;display:inline-block;background:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};color:white">{% if cyl.status=='in_use' %}USE{% else %}FULL{% endif %}</span>
         </div>
-        {% endif %}
-        {% endfor %}
+        {% endif %}{% endfor %}
     </div>
 </div>
 
-<!-- Cylinder Popup -->
+</div>
+
+<!-- Popup -->
 <div id="cylinderMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000">
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:14px;padding:24px;min-width:280px;box-shadow:0 12px 40px rgba(0,0,0,0.3)">
-        <h3 id="cylTitle" style="margin:0 0 12px;font-size:16px"></h3>
-        <div id="cylStatus" style="margin-bottom:12px;padding:8px;background:#f8f9fa;border-radius:8px;font-size:13px"></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-            <button onclick="setCylinderStatus('full')" style="padding:10px;border:2px solid #27ae60;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#27ae60">🟢 {{ _('Full') }}</button>
-            <button onclick="setCylinderStatus('in_use')" style="padding:10px;border:2px solid #f39c12;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#f39c12">🟠 {{ _('In Use') }}</button>
-            <button onclick="setCylinderStatus('empty')" style="padding:10px;border:2px solid #c0392b;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#c0392b">🔴 {{ _('Empty') }}</button>
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:20px;min-width:260px;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+        <h3 id="cylTitle" style="margin:0 0 10px;font-size:15px"></h3>
+        <div id="cylStatus" style="margin-bottom:10px;padding:6px;background:#f8f9fa;border-radius:6px;font-size:12px"></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+            <button onclick="setCylinderStatus('full')" style="padding:8px;border:2px solid #27ae60;background:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;color:#27ae60">🟢 {{ _('Full') }}</button>
+            <button onclick="setCylinderStatus('in_use')" style="padding:8px;border:2px solid #f39c12;background:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;color:#f39c12">🟠 {{ _('In Use') }}</button>
+            <button onclick="setCylinderStatus('empty')" style="padding:8px;border:2px solid #c0392b;background:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;color:#c0392b">🔴 {{ _('Empty') }}</button>
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px">
-            <a id="cylEditLink" href="#" class="btn btn-sm" style="flex:1;background:#3498db;color:white;text-align:center;padding:8px;border-radius:8px;text-decoration:none">✏️</a>
-            <button onclick="closeCylMenu()" class="btn btn-sm" style="flex:1;background:#eee;padding:8px;border-radius:8px">✕</button>
+        <div style="display:flex;gap:6px;margin-top:10px">
+            <a id="cylEditLink" href="#" class="btn btn-sm" style="flex:1;background:#3498db;color:white;text-align:center;padding:6px;border-radius:6px;text-decoration:none">✏️</a>
+            <button onclick="closeCylMenu()" class="btn btn-sm" style="flex:1;background:#eee;padding:6px;border-radius:6px">✕</button>
         </div>
     </div>
 </div>
@@ -324,10 +257,10 @@ document.getElementById('cylinderMenu').addEventListener('click', function(e) { 
 </script>
 
 {% if components %}
-<div class="card" style="margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h2 style="font-size:14px;margin:0">🔧 {{ _('Components') }}</h2>
-        <a href="/gas/components" class="btn btn-sm" style="background:#eee;font-size:11px">{{ _('All') }}</a>
+<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h2 style="font-size:13px;margin:0">🔧 {{ _('Components') }}</h2>
+        <a href="/gas/components" class="btn btn-sm" style="background:#eee;font-size:10px">{{ _('All') }}</a>
     </div>
     <div class="table-wrap"><table>
         <tr><th>{{ _('Type') }}</th><th>{{ _('Name') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Status') }}</th><th>{{ _('Next Check') }}</th></tr>
@@ -346,9 +279,9 @@ document.getElementById('cylinderMenu').addEventListener('click', function(e) { 
 
 {% if orders %}
 <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h2 style="font-size:14px;margin:0">📦 {{ _('Orders') }}</h2>
-        <a href="/gas/orders" class="btn btn-sm" style="background:#eee;font-size:11px">{{ _('All') }}</a>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h2 style="font-size:13px;margin:0">📦 {{ _('Orders') }}</h2>
+        <a href="/gas/orders" class="btn btn-sm" style="background:#eee;font-size:10px">{{ _('All') }}</a>
     </div>
     <div class="table-wrap"><table>
         <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th></tr>
