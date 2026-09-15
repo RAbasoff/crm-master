@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 16:44 UTC
+Время: 2026-09-15 17:12 UTC
 ============================================================
 
-Последний коммит: f8c10db fix: gas SVG - bigger arrow to active cylinder, butterfly shut-off valves, RV below valves
+Последний коммит: 7221b37 feat: gas dashboard - dynamic arrow to active cylinder, spare list left, counts right, low-stock warning
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
