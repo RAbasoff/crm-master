@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 16:32 UTC
+Время: 2026-09-15 16:44 UTC
 ============================================================
 
-Последний коммит: bfc01dd feat: gas dashboard - compact vertical installations, 5cm each, N2 left CO2 right
+Последний коммит: f8c10db fix: gas SVG - bigger arrow to active cylinder, butterfly shut-off valves, RV below valves
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
