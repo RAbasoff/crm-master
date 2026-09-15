@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-15 15:14 UTC
+Время: 2026-09-15 15:31 UTC
 ============================================================
 
-Последний коммит: d7c04da feat: gas dashboard - 4 cylinders left + interactive SVG distribution system right
+Последний коммит: 7c45bc2 feat: gas dashboard - separate N2/CO2 systems, round valves, blue heaters, 2 cylinders each side
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
