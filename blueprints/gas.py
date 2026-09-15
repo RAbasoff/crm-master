@@ -74,13 +74,27 @@ def gas_dashboard():
     stats['co2_consumed_month'] = co2_consumed
     stats['total_consumed_month'] = n2_consumed + co2_consumed
 
+    # Spare cylinders (empty, available for replacement)
+    n2_spare = [c for c in n2_cylinders if c.status == 'empty']
+    co2_spare = [c for c in co2_cylinders if c.status == 'empty']
+
+    # Low stock warning: when only1 full cylinder remains per gas type
+    low_stock = []
+    if stats['n2_full'] <= 1 and stats['n2_full'] + stats['n2_in_use'] <= 2:
+        low_stock.append('N₂')
+    if stats['co2_full'] <= 1 and stats['co2_full'] + stats['co2_in_use'] <= 2:
+        low_stock.append('CO₂')
+
     return render_template('gas/dashboard.html',
                            cylinders=cylinders,
                            n2_cylinders=n2_cylinders,
                            co2_cylinders=co2_cylinders,
+                           n2_spare=n2_spare,
+                           co2_spare=co2_spare,
                            components=components,
                            orders=orders,
-                           stats=stats)
+                           stats=stats,
+                           low_stock=low_stock)
 
 
 # ============================================================
