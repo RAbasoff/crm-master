@@ -2959,7 +2959,14 @@ def two_new():
         flash(_('TWO created') + f': {two.number}', 'success')
         return redirect(url_for('two_detail', two_id=two.id))
     faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).order_by(FaultReport.created_at.desc()).all()
-    workers = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    # Only workers from technical service (Technician group or linked user with technician role)
+    workers = Monteur.query.filter_by(actief=True).filter(
+        (Monteur.group_id != None) & (Monteur.group_id.in_(
+            db.session.query(ResponsibleGroup.id).filter_by(access_level='technician')
+        )) | (Monteur.user_id != None) & (Monteur.user_id.in_(
+            db.session.query(User.id).filter_by(role='technician', is_active_user=True)
+        ))
+    ).order_by(Monteur.naam).all()
     machines = Machine.query.order_by(Machine.name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
     return render_template('two_form.html', two=None, faults=faults, workers=workers, machines=machines, sections=sections)
@@ -3289,7 +3296,14 @@ def two_edit(two_id):
         flash(_('TWO updated'), 'success')
         return redirect(url_for('two_detail', two_id=two.id))
     faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).order_by(FaultReport.created_at.desc()).all()
-    workers = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    # Only workers from technical service (Technician group or linked user with technician role)
+    workers = Monteur.query.filter_by(actief=True).filter(
+        (Monteur.group_id != None) & (Monteur.group_id.in_(
+            db.session.query(ResponsibleGroup.id).filter_by(access_level='technician')
+        )) | (Monteur.user_id != None) & (Monteur.user_id.in_(
+            db.session.query(User.id).filter_by(role='technician', is_active_user=True)
+        ))
+    ).order_by(Monteur.naam).all()
     machines = Machine.query.order_by(Machine.name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
     return render_template('two_form.html', two=two, faults=faults, workers=workers, machines=machines, sections=sections)
