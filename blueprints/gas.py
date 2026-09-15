@@ -40,7 +40,6 @@ def gas_dashboard():
         GasSystemComponent.gas_type, GasSystemComponent.component_type).all()
     orders = CylinderOrder.query.order_by(CylinderOrder.ordered_at.desc()).limit(10).all()
 
-    # Stats
     n2_cylinders = [c for c in cylinders if c.gas_type == 'nitrogen']
     co2_cylinders = [c for c in cylinders if c.gas_type == 'co2']
 
@@ -48,10 +47,32 @@ def gas_dashboard():
         'n2_full': len([c for c in n2_cylinders if c.status == 'full']),
         'n2_in_use': len([c for c in n2_cylinders if c.status == 'in_use']),
         'n2_empty': len([c for c in n2_cylinders if c.status == 'empty']),
+        'n2_maintenance': len([c for c in n2_cylinders if c.status == 'maintenance']),
         'co2_full': len([c for c in co2_cylinders if c.status == 'full']),
         'co2_in_use': len([c for c in co2_cylinders if c.status == 'in_use']),
         'co2_empty': len([c for c in co2_cylinders if c.status == 'empty']),
+        'co2_maintenance': len([c for c in co2_cylinders if c.status == 'maintenance']),
+        'total_full': len([c for c in cylinders if c.status == 'full']),
+        'total_in_use': len([c for c in cylinders if c.status == 'in_use']),
+        'total_empty': len([c for c in cylinders if c.status == 'empty']),
+        'total_maintenance': len([c for c in cylinders if c.status == 'maintenance']),
+        'total': len(cylinders),
     }
+
+    # Monthly consumption: count cylinders that became empty this month
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    consumed_logs = CylinderLog.query.filter(
+        CylinderLog.action.like('%_to_empty%'),
+        CylinderLog.date >= month_start
+    ).all()
+    consumed_ids = set(l.cylinder_id for l in consumed_logs)
+    n2_consumed = len([cid for cid in consumed_ids if any(c.id == cid and c.gas_type == 'nitrogen' for c in cylinders)])
+    co2_consumed = len([cid for cid in consumed_ids if any(c.id == cid and c.gas_type == 'co2' for c in cylinders)])
+
+    stats['n2_consumed_month'] = n2_consumed
+    stats['co2_consumed_month'] = co2_consumed
+    stats['total_consumed_month'] = n2_consumed + co2_consumed
 
     return render_template('gas/dashboard.html',
                            cylinders=cylinders,
@@ -161,7 +182,7 @@ def cylinder_delete(cyl_id):
 @login_required
 @role_required('admin', 'technician')
 def cylinder_status(cyl_id):
-    """Quick status change from dashboard"""
+    """Quick status change from dashboard — with auto-switch logic"""
     c = GasCylinder.query.get_or_404(cyl_id)
     data = request.get_json() if request.is_json else request.form
     new_status = data.get('status')
@@ -172,19 +193,42 @@ def cylinder_status(cyl_id):
     c.status = new_status
     if new_status == 'in_use' and not c.installed_at:
         c.installed_at = datetime.utcnow()
+    if new_status == 'empty':
+        c.installed_at = None
+
+    # Auto-switch: when setting to "full", the other cylinder of same gas type
+    # that is currently "in_use" stays in_use. This cylinder becomes backup.
+    # When setting to "empty", the "full" backup automatically becomes "in_use".
+    if new_status == 'empty' and old_status == 'in_use':
+        # Find the backup (full) cylinder of same gas type
+        backup = GasCylinder.query.filter(
+            GasCylinder.gas_type == c.gas_type,
+            GasCylinder.status == 'full',
+            GasCylinder.id != c.id
+        ).first()
+        if backup:
+            backup.status = 'in_use'
+            backup.installed_at = datetime.utcnow()
+            db.session.add(CylinderLog(
+                cylinder_id=backup.id,
+                action='status_full_to_in_use',
+                performed_by=current_user.id,
+                notes='Auto-switch: backup activated after %s emptied' % c.cylinder_number
+            ))
+
     safe_commit()
 
     log = CylinderLog(
         cylinder_id=c.id,
-        action=f'status_{old_status}_to_{new_status}',
+        action='status_%s_to_%s' % (old_status, new_status),
         performed_by=current_user.id,
-        notes=f'Status: {old_status} → {new_status}'
+        notes='Status: %s -> %s' % (old_status, new_status)
     )
     db.session.add(log)
     safe_commit()
 
     log_audit('status_change', 'gas_cylinder', c.id,
-              f'{c.gas_type} #{c.cylinder_number}: {old_status} → {new_status}')
+              '%s #%s: %s -> %s' % (c.gas_type, c.cylinder_number, old_status, new_status))
 
     if request.is_json:
         return jsonify({'ok': True, 'old': old_status, 'new': new_status})
