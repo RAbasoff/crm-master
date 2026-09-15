@@ -815,7 +815,11 @@ def machine_detail(machine_id):
 @role_required('admin', 'technician')
 def machine_link_consumable(machine_id):
     m = Machine.query.get_or_404(machine_id)
-    item_id = int(request.form['warehouse_item_id'])
+    try:
+        item_id = int(request.form['warehouse_item_id'])
+    except (ValueError, KeyError):
+        flash(_('Invalid warehouse item'), 'error')
+        return redirect(url_for('machine_detail', machine_id=m.id))
     existing = MachineConsumable.query.filter_by(machine_id=m.id, warehouse_item_id=item_id).first()
     if existing:
         flash(_('This item is already linked to this machine'), 'warning')
@@ -994,12 +998,17 @@ def machine_upload_document(machine_id):
 def machine_add_maintenance(machine_id):
     m = Machine.query.get_or_404(machine_id)
     if request.method == 'POST':
+        try:
+            date_performed = datetime.strptime(request.form['date_performed'], '%Y-%m-%d')
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('machine_add_maintenance', machine_id=m.id))
         mr = MaintenanceRecord(
             machine_id=m.id,
             maintenance_type=request.form['maintenance_type'],
             description=request.form['description'],
             performed_by=current_user.id,
-            date_performed=datetime.strptime(request.form['date_performed'], '%Y-%m-%d'),
+            date_performed=date_performed,
             next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d') if request.form.get('next_maintenance') else None,
             cost=float(request.form.get('cost', 0)),
             parts_used=request.form.get('parts_used', '[]'),
@@ -2018,13 +2027,19 @@ def maintenance_plans_list():
 @role_required('admin', 'director', 'technician')
 def maintenance_plan_new():
     if request.method == 'POST':
+        try:
+            machine_id = int(request.form['machine_id'])
+            planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid machine or date'), 'error')
+            return redirect(url_for('maintenance_plan_new'))
         p = MaintenancePlan(
-            machine_id=int(request.form['machine_id']),
+            machine_id=machine_id,
             title=request.form['title'],
             description=request.form.get('description', ''),
             maintenance_type=request.form.get('maintenance_type', 'preventive'),
             status=request.form.get('status', 'planned'),
-            planned_start=datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date(),
+            planned_start=planned_start,
             planned_end=datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None,
             is_external='is_external' in request.form,
             company_name=request.form.get('company_name', ''),
@@ -2093,12 +2108,16 @@ def maintenance_plan_detail(plan_id):
 def maintenance_plan_edit(plan_id):
     p = MaintenancePlan.query.get_or_404(plan_id)
     if request.method == 'POST':
-        p.machine_id = int(request.form['machine_id'])
+        try:
+            p.machine_id = int(request.form['machine_id'])
+            p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid machine or date'), 'error')
+            return redirect(url_for('maintenance_plan_edit', plan_id=p.id))
         p.title = request.form['title']
         p.description = request.form.get('description', '')
         p.maintenance_type = request.form.get('maintenance_type', p.maintenance_type)
         p.status = request.form.get('status', p.status)
-        p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
         p.planned_end = datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None
         p.actual_start = datetime.strptime(request.form['actual_start'], '%Y-%m-%d').date() if request.form.get('actual_start') else None
         p.actual_end = datetime.strptime(request.form['actual_end'], '%Y-%m-%d').date() if request.form.get('actual_end') else None
@@ -2320,12 +2339,17 @@ def equipment_list():
 @role_required('admin', 'technician')
 def equipment_new():
     if request.method == 'POST':
+        try:
+            date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('equipment_new'))
         eq = EquipmentMaintenance(
             number=gen_eq_number(),
             name=request.form['name'],
             serial=request.form.get('serial', ''),
             machine_id=int(request.form['machine_id']) if request.form.get('machine_id') else None,
-            date=datetime.strptime(request.form['date'], '%Y-%m-%d').date(),
+            date=date,
             reason=request.form['reason'],
             next_date=datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None,
             periodicity=request.form.get('periodicity', ''),
@@ -2387,10 +2411,14 @@ def equipment_new():
 def equipment_edit(eq_id):
     eq = EquipmentMaintenance.query.get_or_404(eq_id)
     if request.method == 'POST':
+        try:
+            eq.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('equipment_edit', eq_id=eq.id))
         eq.name = request.form['name']
         eq.serial = request.form.get('serial', '')
         eq.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
-        eq.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
         eq.reason = request.form['reason']
         eq.next_date = datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None
         eq.periodicity = request.form.get('periodicity', '')
@@ -2719,10 +2747,15 @@ def repair_new():
         comp_id = int(comp_id)
         comp = GasSystemComponent.query.get(comp_id)
         cost_str = request.form.get('repair_cost', '').strip()
+        try:
+            date_broken = datetime.strptime(request.form['date_broken'], '%Y-%m-%dT%H:%M')
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('repair_new'))
         r = EquipmentRepair(
             component_id=comp_id,
             fault_description=request.form['fault_description'],
-            date_broken=datetime.strptime(request.form['date_broken'], '%Y-%m-%dT%H:%M'),
+            date_broken=date_broken,
             repair_company=request.form.get('repair_company', ''),
             repair_description=request.form.get('repair_description', ''),
             repair_cost=float(cost_str) if cost_str else 0,
@@ -2755,8 +2788,12 @@ def repair_new():
 def repair_edit(repair_id):
     r = EquipmentRepair.query.get_or_404(repair_id)
     if request.method == 'POST':
+        try:
+            r.date_broken = datetime.strptime(request.form['date_broken'], '%Y-%m-%dT%H:%M')
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('repair_edit', repair_id=r.id))
         r.fault_description = request.form['fault_description']
-        r.date_broken = datetime.strptime(request.form['date_broken'], '%Y-%m-%dT%H:%M')
         r.repair_company = request.form.get('repair_company', '')
         r.repair_description = request.form.get('repair_description', '')
         cost_str = request.form.get('repair_cost', '').strip()
@@ -3229,9 +3266,15 @@ def two_edit(two_id):
         two.time_spent_hours = float(request.form.get('time_spent_hours', 0))
         two.notes = request.form.get('notes', '')
         if request.form.get('started_at'):
-            two.started_at = datetime.strptime(request.form['started_at'], '%Y-%m-%dT%H:%M')
+            try:
+                two.started_at = datetime.strptime(request.form['started_at'], '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash(_('Invalid start date format'), 'error')
         if request.form.get('completed_at'):
-            two.completed_at = datetime.strptime(request.form['completed_at'], '%Y-%m-%dT%H:%M')
+            try:
+                two.completed_at = datetime.strptime(request.form['completed_at'], '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash(_('Invalid completion date format'), 'error')
         # Update workers
         two.workers = []
         for wid in request.form.getlist('worker_ids'):
@@ -4778,10 +4821,15 @@ def invoices_list():
 @role_required('admin', 'director')
 def invoice_new():
     if request.method == 'POST':
+        try:
+            invoice_date = datetime.strptime(request.form['invoice_date'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid invoice date'), 'error')
+            return redirect(url_for('invoice_new'))
         inv = Invoice(
             invoice_number=request.form['invoice_number'],
             supplier=request.form['supplier'],
-            invoice_date=datetime.strptime(request.form['invoice_date'], '%Y-%m-%d').date(),
+            invoice_date=invoice_date,
             due_date=datetime.strptime(request.form['due_date'], '%Y-%m-%d').date() if request.form.get('due_date') else None,
             total=float(request.form.get('total', 0)),
             status='pending',
@@ -4822,9 +4870,13 @@ def invoice_detail(invoice_id):
 def invoice_edit(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     if request.method == 'POST':
+        try:
+            inv.invoice_date = datetime.strptime(request.form['invoice_date'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid invoice date'), 'error')
+            return redirect(url_for('invoice_edit', invoice_id=inv.id))
         inv.invoice_number = request.form['invoice_number']
         inv.supplier = request.form['supplier']
-        inv.invoice_date = datetime.strptime(request.form['invoice_date'], '%Y-%m-%d').date()
         inv.due_date = datetime.strptime(request.form['due_date'], '%Y-%m-%d').date() if request.form.get('due_date') else None
         inv.total = float(request.form.get('total', 0))
         inv.notes = request.form.get('notes', '')
@@ -5259,8 +5311,12 @@ tr:nth-child(even) {{ background: #f9f9f9; }}
 @role_required('admin', 'director', 'technician')
 def report_period():
     if request.method == 'POST':
-        d_from = datetime.strptime(request.form['date_from'], '%Y-%m-%d')
-        d_to = datetime.strptime(request.form['date_to'], '%Y-%m-%d') + timedelta(days=1)
+        try:
+            d_from = datetime.strptime(request.form['date_from'], '%Y-%m-%d')
+            d_to = datetime.strptime(request.form['date_to'], '%Y-%m-%d') + timedelta(days=1)
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('report_period'))
     else:
         d_to = datetime.utcnow()
         d_from = d_to - timedelta(days=30)
@@ -5787,9 +5843,14 @@ def purchase_requests_list():
 @role_required('admin', 'director', 'technician')
 def purchase_request_new():
     if request.method == 'POST':
+        try:
+            machine_id = int(request.form['machine_id'])
+        except (ValueError, KeyError):
+            flash(_('Invalid machine'), 'error')
+            return redirect(url_for('purchase_request_new'))
         pr = PurchaseRequest(
             fault_id=request.form.get('fault_id') or None,
-            machine_id=int(request.form['machine_id']),
+            machine_id=machine_id,
             requester_id=current_user.id,
             machine_serial=request.form.get('machine_serial', ''),
             fault_number=request.form.get('fault_number', ''),
@@ -6156,8 +6217,12 @@ def clock_out():
 @login_required
 @role_required('admin', 'director')
 def time_tracking_manual():
-    user_id = int(request.form['user_id'])
-    date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+    try:
+        user_id = int(request.form['user_id'])
+        date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+    except (ValueError, KeyError):
+        flash(_('Invalid user or date'), 'error')
+        return redirect(url_for('time_tracking'))
     status = request.form.get('status', 'present')
     
     entry = TimeEntry.query.filter_by(user_id=user_id, date=date).first()
@@ -6169,8 +6234,12 @@ def time_tracking_manual():
     entry.notes = request.form.get('notes', '')
     
     if status == 'present':
-        entry.clock_in = datetime.combine(date, datetime.strptime(request.form['clock_in'], '%H:%M').time())
-        entry.clock_out = datetime.combine(date, datetime.strptime(request.form['clock_out'], '%H:%M').time())
+        try:
+            entry.clock_in = datetime.combine(date, datetime.strptime(request.form['clock_in'], '%H:%M').time())
+            entry.clock_out = datetime.combine(date, datetime.strptime(request.form['clock_out'], '%H:%M').time())
+        except (ValueError, KeyError):
+            flash(_('Invalid time format (use HH:MM)'), 'error')
+            return redirect(url_for('time_tracking'))
         delta = entry.clock_out - entry.clock_in
         hours = delta.total_seconds() / 3600
         entry.break_minutes = int(request.form.get('break_minutes', 60))
@@ -6197,8 +6266,12 @@ def vacations_list():
 @role_required('admin', 'director', 'technician')
 def vacation_new():
     if request.method == 'POST':
-        d_from = datetime.strptime(request.form['date_from'], '%Y-%m-%d').date()
-        d_to = datetime.strptime(request.form['date_to'], '%Y-%m-%d').date()
+        try:
+            d_from = datetime.strptime(request.form['date_from'], '%Y-%m-%d').date()
+            d_to = datetime.strptime(request.form['date_to'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('vacation_new'))
         days = (d_to - d_from).days + 1
         v = Vacation(
             user_id=current_user.id,
