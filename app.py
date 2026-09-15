@@ -113,19 +113,21 @@ except ImportError:
 # ============================================================
 
 def backup_database():
-    """Create automatic backup of the database"""
+    """Create automatic backup of the database — daily rotation, 30-day retention"""
     import shutil
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    backup_path = os.path.join(backup_dir, f'werkplaats_{timestamp}.db')
+    # Daily backup — one file per day, overwrite if same day
+    date_str = datetime.now().strftime('%Y%m%d')
+    backup_path = os.path.join(backup_dir, f'werkplaats_{date_str}.db')
     if os.path.exists(db_path):
         shutil.copy2(db_path, backup_path)
-        # Keep only last 10 backups
+        # Keep only last 30 backups
         backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
-        for old in backups[:-10]:
+        for old in backups[:-30]:
             os.remove(os.path.join(backup_dir, old))
+        print(f"BACKUP: created {backup_path}")
         return backup_path
     return None
 
@@ -195,6 +197,9 @@ with app.app_context():
     else:
         print(f"  WARNING: DB FILE DOES NOT EXIST — will create empty!")
     print(f"=== END DIAGNOSTIC ===")
+
+    # Auto-backup on startup (daily)
+    backup_database()
 
     db.create_all()
     run_migrations()
@@ -6761,6 +6766,21 @@ def archive_create():
     entries = TimeEntry.query.filter(TimeEntry.date >= d_from.date(), TimeEntry.date < d_to.date()).all()
     entries_data = [{'id': e.id, 'user_id': e.user_id, 'date': e.date.strftime('%Y-%m-%d'), 'hours': e.hours_worked or 0, 'notes': e.notes or ''} for e in entries]
     db.session.add(MonthlyArchive(archive_month=month_str, section='time_entries', data_json=json.dumps(entries_data, ensure_ascii=False), created_by=current_user.id))
+    
+    # Archive warehouse movements
+    movements = VoorraadMutatie.query.filter(VoorraadMutatie.aangemaakt >= d_from, VoorraadMutatie.aangemaakt < d_to).all()
+    wh_data = [{'id': m.id, 'item_id': m.item_id, 'type': m.type, 'qty': m.hoeveelheid, 'note': m.opmerking or '', 'date': m.aangemaakt.strftime('%Y-%m-%d %H:%M')} for m in movements]
+    db.session.add(MonthlyArchive(archive_month=month_str, section='warehouse', data_json=json.dumps(wh_data, ensure_ascii=False), created_by=current_user.id))
+    
+    # Archive maintenance plans
+    plans = MaintenancePlan.query.filter(MaintenancePlan.created_at >= d_from, MaintenancePlan.created_at < d_to).all()
+    plans_data = [{'id': p.id, 'title': p.title, 'machine': p.machine.name if p.machine else '', 'status': p.status, 'planned_start': p.planned_start.strftime('%Y-%m-%d'), 'cost': float(p.cost or 0)} for p in plans]
+    db.session.add(MonthlyArchive(archive_month=month_str, section='maintenance_plans', data_json=json.dumps(plans_data, ensure_ascii=False), created_by=current_user.id))
+    
+    # Archive equipment maintenance (mule)
+    eq_maint = EquipmentMaintenance.query.filter(EquipmentMaintenance.created_at >= d_from, EquipmentMaintenance.created_at < d_to).all()
+    eq_data = [{'id': e.id, 'number': e.number, 'name': e.name, 'serial': e.serial or '', 'date': e.date.strftime('%Y-%m-%d'), 'status': e.status} for e in eq_maint]
+    db.session.add(MonthlyArchive(archive_month=month_str, section='equipment_maintenance', data_json=json.dumps(eq_data, ensure_ascii=False), created_by=current_user.id))
     
     safe_commit()
     flash(_('Month archived successfully'), 'success')
