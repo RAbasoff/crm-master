@@ -4663,6 +4663,8 @@ def worker_new():
         w = Monteur(naam=request.form['naam'], telefoon=request.form.get('telefoon',''),
                     specialisatie=request.form.get('specialisatie',''),
                     tarief_per_uur=float(request.form.get('tarief_per_uur',0)),
+                    hire_date=datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else None,
+                    fire_date=datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None,
                     user_id=int(request.form['user_id']) if request.form.get('user_id') else None,
                     group_id=int(request.form['group_id']) if request.form.get('group_id') else None)
         db.session.add(w); safe_commit()
@@ -4681,6 +4683,8 @@ def worker_edit(worker_id):
         w.naam = request.form['naam']; w.telefoon = request.form.get('telefoon','')
         w.specialisatie = request.form.get('specialisatie','')
         w.tarief_per_uur = float(request.form.get('tarief_per_uur',0))
+        w.hire_date = datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else w.hire_date
+        w.fire_date = datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None
         w.actief = 'actief' in request.form
         w.user_id = int(request.form['user_id']) if request.form.get('user_id') else None
         w.group_id = int(request.form['group_id']) if request.form.get('group_id') else None

@@ -12,6 +12,10 @@
             <div class="form-group"><label>{{ _('Specialization') }}</label><input type="text" name="specialisatie" value="{{ worker.specialisatie if worker else '' }}" placeholder="{{ _('Electronics, mechanics...') }}"></div>
             <div class="form-group"><label>{{ _('Hourly Rate') }} (€/h)</label><input type="number" name="tarief_per_uur" value="{{ worker.tarief_per_uur if worker else 0 }}" step="5"></div>
         </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Hire Date') }}</label><input type="date" name="hire_date" value="{{ worker.hire_date.strftime('%Y-%m-%d') if worker and worker.hire_date else '' }}"></div>
+            <div class="form-group"><label>{{ _('Fire Date') }}</label><input type="date" name="fire_date" value="{{ worker.fire_date.strftime('%Y-%m-%d') if worker and worker.fire_date else '' }}"></div>
+        </div>
         <div class="form-group">
             <label>{{ _('User group') }}</label>
             <select name="user_id">

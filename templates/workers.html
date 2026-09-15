@@ -12,11 +12,12 @@
 </div>
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Name') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('User group') }}</th><th>{{ _('Responsible group') }}</th><th>{{ _('Hourly Rate') }}</th><th>{{ _('Orders') }}</th><th>{{ _('Status') }}</th><th></th></tr>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('Hire Date') }}</th><th>{{ _('User group') }}</th><th>{{ _('Responsible group') }}</th><th>{{ _('Hourly Rate') }}</th><th>{{ _('Orders') }}</th><th>{{ _('Status') }}</th><th></th></tr>
         {% for w in workers %}
         <tr>
             <td>{{ w.naam }}</td>
             <td>{{ w.specialisatie or '—' }}</td>
+            <td>{{ w.hire_date.strftime('%d-%m-%Y') if w.hire_date else '—' }}</td>
             <td>{% if w.user %}{{ w.user.display_name or w.user.username }}{% else %}—{% endif %}</td>
             <td>{% if w.resp_group %}{{ w.resp_group.name }}{% else %}—{% endif %}</td>
             <td>€{{ "%.0f"|format(w.tarief_per_uur) }}/h</td>

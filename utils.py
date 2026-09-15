@@ -510,6 +510,8 @@ def run_migrations():
         ("circuit_breaker.schematic_y", "ALTER TABLE circuit_breaker ADD COLUMN schematic_y FLOAT"),
         ("client.login_count", "ALTER TABLE client ADD COLUMN login_count INTEGER DEFAULT 0"),
         ("client.force_change_password", "ALTER TABLE client ADD COLUMN force_change_password BOOLEAN DEFAULT 0"),
+        ("worker.hire_date", "ALTER TABLE worker ADD COLUMN hire_date DATE"),
+        ("worker.fire_date", "ALTER TABLE worker ADD COLUMN fire_date DATE"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

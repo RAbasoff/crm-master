@@ -1,72 +1,25 @@
 ============================================================
-АВТОСОХРАНЕНИЕ СЕССИИ — ФИНАЛЬНОЕ
-============================================================
-Время: 2026-09-14 01:00 UTC
-
-ПРОЕКТ: D:\ИИ\CRM_Мастерская
-GITHUB: https://github.com/RAbasoff/crm-master.git
-ONLINE: https://rabasoff.pythonanywhere.com (SQLite — ломается)
-
-ПОСЛЕДНИЙ КОММИТ: a191e0f "feat: Railway.app deployment config + MySQL migration script"
-
-============================================================
-ЧТО СДЕЛАНО ЗА СЕССИЮ (16 коммитов):
+АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
+Время: 2026-09-15 06:31 UTC
 ============================================================
 
-1. ИСПРАВЛЕНИЯ ОШИБОК:
-   - flask_compress/caching/migrate сделаны опциональными
-   - strict_slashes=False на /login (терял POST данные)
-   - Login form явный action
-   - CSRF flash message + WTF_CSRF_SSL_STRICT=False
-   - 500 handler redirect для неавторизованных → /login
-   - Login try/except + логирование в файл
+Последний коммит: da60348 feat: monthly schedule print header shows month name (Dutch)
 
-2. ПОЛЬЗОВАТЕЛИ:
-   - Удалены фейковые tech/user (Sergei Petrov, Jan de Vries)
-   - Director может создавать TWO и удалять расписание
+НЕЗАКОММИЧЕННЫЕ ИЗМЕНЕНИЯ (6 файлов):
+  M  app.py — worker_new/worker_edit: добавлены hire_date, fire_date
+  M  models.py — Monteur: добавлены поля hire_date, fire_date
+  M  templates/worker_form.html — поля ввода Hire Date, Fire Date
+  M  templates/workers.html — колонка Hire Date в списке мастеров
+  M  utils.py — миграции для worker.hire_date, worker.fire_date
+  M  история_сессий/session_autosave.txt
 
-3. ГРАФИК РАБОТЫ:
-   - Schedule показывает Monteurs (тех. служба), не Users
-   - Director может удалять расписание
-   - Monthly Schedule показывает Monteurs (auto User accounts)
+ЧТО СДЕЛАНО:
+  - Добавлены hire_date и fire_date в модель Monteur (мастер)
+  - Обновлены формы создания/редактирования мастера
+  - Добавлена колонка "Hire Date" в список мастеров
+  - Добавлены миграции для новых полей
 
-4. LOGISTIEK-OKTOPUS:
-   - Группа доступа ResponsibleGroup
-   - WarehouseGroup для запчастей
-   - Pablo (pablo/pablo123) и Paulina (paulina/paulina123)
-   - Фильтрация: видят только свой склад
-   - Low-stock notifications админу
-
-5. КАЛЕНДАРЬ ТО:
-   - Recurring events показываются после completion
-   - Per-occurrence done tracking (MaintenanceRecord per date)
-
-6. ПОДГОТОВКА К ПЕРЕНОСУ:
-   - MySQL support в config.py
-   - railway.json + Procfile для Railway.app
-   - migrate_to_railway.py (экспорт SQLite → JSON → MySQL)
-   - repair_db.py (ремонт повреждённой SQLite на PA)
-   - create_logistiek.py (создание Logistiek группы)
-
-============================================================
-ЗАВТРАШНИЙ ПЛАН — ПЕРЕНОС НА RAILWAY.APP:
-============================================================
-
-1. Локально: python migrate_to_railway.py export
-2. railway.app → New Project → MySQL → скопировать DATABASE_URL
-3. railway.app → + New → GitHub Repo → RAbasoff/crm-master
-4. Variables: DATABASE_URL + SECRET_KEY
-5. Деплой автоматический
-6. python migrate_to_railway.py import <DATABASE_URL>
-7. python create_logistiek.py
-8. Проверить сайт
-
-============================================================
-ПАРОЛИ:
-   admin / Aba103sov
-   director / director123
-   pablo / pablo123
-   paulina / paulina123
-   (Monteur accounts создаются автоматически: имя.lower.123)
+ОЖИДЕТ ДЕЙСТВИЙ:
+  - git add / commit / push изменений
 
 ============================================================

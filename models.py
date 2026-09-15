@@ -448,6 +448,8 @@ class Monteur(db.Model):
     telefoon = db.Column(db.String(50))
     specialisatie = db.Column(db.String(200))
     tarief_per_uur = db.Column(Numeric(10, 2), default=0)
+    hire_date = db.Column(db.Date)
+    fire_date = db.Column(db.Date)
     actief = db.Column(db.Boolean, default=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     group_id = db.Column(db.Integer, db.ForeignKey('responsible_group.id'))
