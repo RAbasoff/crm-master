@@ -1,5 +1,5 @@
 ============================================================
-СЕССИЯ CRM_Мастерская — 2026-09-16
+СЕССИЯ CRM_Мастерская — 2026-09-16 (полный день)
 ============================================================
 
 Проект: D:\ИИ\CRM_Мастерская
@@ -7,81 +7,67 @@ GitHub: https://github.com/RAbasoff/crm-master.git
 Online: https://rabasoff.pythonanywhere.com
 
 ============================================================
-КОММИТОВ ЗА СЕССИЮ: 8 (без autosave)
+КОММИТОВ ЗА СЕССИЮ: 9 (без autosave)
 ============================================================
 
-1. 9da74c6 feat: machines export to Excel (.xlsx) and PDF/HTML - all fields in table
+1. 9da74c6 feat: machines export to Excel (.xlsx) and PDF/HTML
 2. be1bc67 feat: electricity schematic - embed floor plan PDF with toggle views
 3. 5d00ce4 feat: add floor plan PDF for electricity schematic
-4. f671ab4 fix: machines export - xlsx works, PDF/HTML forces download + electricity floorplan with draggable cabinets
-5. c69a27c feat: gas cylinder barcode scanning - scan barcode, select gas type + side, auto-install/replace
+4. f671ab4 fix: machines export xlsx works + electricity floorplan with draggable cabinets
+5. c69a27c feat: gas cylinder barcode scanning - scan barcode, select gas type + side
 6. 00d2fb2 fix: fault creation - try/except protection, validate title+description
-7. 875275b fix: fault creation for equipment - empty string was truthy causing int('') ValueError
-8. b867736 fix: fault_report.machine_id NOT NULL constraint - rebuild table to allow equipment-only faults
+7. 875275b fix: fault creation for equipment - empty string int('') ValueError
+8. b867736 fix: fault_report.machine_id NOT NULL - rebuild table for equipment-only faults
+9. 41b7c80 feat: warehouse scan unknown barcode - Add New / Ignore options
 
 ============================================================
 ЧТО СДЕЛАНО
 ============================================================
 
---- СТАНКИ (Machines) — ЭКСПОРТ ---
+--- СТАНКИ — ЭКСПОРТ ---
   - Кнопки Excel + PDF на странице /machines
-  - Excel: openpyxl (.xlsx) → fallback на CSV если не установлен
-  - PDF: HTML-файл с Content-Disposition: attachment (скачивание, не открытие в браузере)
+  - Excel: openpyxl (.xlsx) → fallback CSV
+  - PDF: HTML с Content-Disposition: attachment (скачивание)
   - Все поля: ID, Name, Type, Serial, Manufacturer, Year, Location, Section,
     Responsible, Contractor, Status, Faults, Created
 
---- ЭЛЕКТРИКА (Electricity) — ПЛАН ЭТАЖА ---
-  - Новый маршрут /electricity/floorplan
-  - PDF плана этажа (grondplan.pdf) встроен как background
-  - Интерактивные маркеры шкафов поверх плана (18 шкафов)
+--- ЭЛЕКТРИКА — ПЛАН ЭТАЖА ---
+  - /electricity/floorplan — PDF плана + интерактивные маркеры шкафов
   - 3 режима: Schematic / Floor Plan / Both
-  - Drag & Drop позиционирование шкафов (admin)
-  - Цвет маркеров: зелёный = все автоматы ON, красный = есть OFF
-  - Клик по маркеру → popup со списком автоматов + toggle
-  - Позиции сохраняются через API /cabinet/<id>/position
+  - Drag & Drop позиционирование (admin)
+  - Цвет: зелёный=ON, красный=OFF
+  - Toggle автоматов прямо на плане
+  - 18 шкафов привязаны к плану
 
---- БАЛЛОНЫ (Gas) — СКАНИРОВАНИЕ ШТРИХ-КОДОВ ---
-  - Новый маршрут /gas/scan
-  - Камера сканирует штрих-код (html5-qrcode) или ручной ввод
-  - Выбор газа (N₂ / CO₂) и стороны (левый / правый)
-  - Сканированный баллон → IN USE на выбранной стороне
-  - Предыдущий IN USE → EMPTY автоматически
-  - Новый баллон создаётся в системе при первом сканировании
-  - Кнопка "Scan" на дашборде баллонов
-  - Миграция: gas_cylinder.barcode добавлена
+--- БАЛЛОНЫ — СКАНИРОВАНИЕ ШТРИХ-КОДОВ ---
+  - /gas/scan — камера сканирует штрих-код
+  - Выбор газа (N₂/CO₂) + стороны (левый/правый)
+  - Сканированный → IN USE, предыдущий → EMPTY
+  - Новый баллон создаётся при первом сканировании
+  - Миграция: gas_cylinder.barcode
 
---- ЗАЯВКИ НА НЕИСПРАВНОСТИ (Fault Reports) — ИСПРАВЛЕНИЯ ---
-  - POST-хендл создания заявки обёрнут в try/except
-  - Валидация: title и description обязательны
-  - При ошибке — flash-сообщение вместо краша 500
-  - Исправлен баг: equipment_id приходил как пустая строка "" (truthy)
-    → int("") → ValueError. Добавлен .strip()
-  - Исправлен баг: fault_report.machine_id имел NOT NULL constraint в SQLite
-    → таблица пересоздана с nullable=True для equipment-only faults
+--- ЗАЯВКИ НА НЕИСПРАВНОСТИ — 3 ИСПРАВЛЕНИЯ ---
+  - try/except обёртка + валидация title/description
+  - Пустая строка equipment_id → .strip() → falsy → None
+  - machine_id NOT NULL → таблица пересоздана с nullable=True
+  - Заявки на оборудование теперь работают
+
+--- СКЛАД — СКАНИРОВАНИЕ НЕИЗВЕСТНОГО ШТРИХ-КОДА ---
+  - При unknown barcode → кнопки "Добавить новый" / "Игнорировать"
+  - Barcode предзаполняется в форме warehouse_new
 
 ============================================================
-СТАТУС НА КОНЕЦ СЕССИИ
+СТАТУС
 ============================================================
 
 Git status: clean
-Последний коммит: fa57899 chore: session autosave (autosave)
-Последний feat/fix: b867736 fix: fault_report.machine_id NOT NULL constraint
+Последний коммит: 919742e chore: session autosave
 Всего маршрутов: 289
 Всего таблиц: 77
-Бэкап БД: backups/werkplaats_20260916.db
+Бэкап: backups/werkplaats_20260916.db
 
-ДЕПЛОЙ НА PA:
+ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master
   Web → Reload
-
-============================================================
-ИЗВЕСТНЫЕ ПРОБЛЕМЫ / TODO
-============================================================
-
-  - Старые баги (18 strptime + 5 int) — исправлены в сессии 15-09
-  - Электрика: маркеры шкафов на плане нужно подвинуть вручную
-    (Drag Mode → перетащить на нужные позиции на плане этажа)
-  - Архив данных: данные хранятся вечно, автоархивация настроена
-  - Бэкап: ежедневный при старте, 30 дней ротация
 
 ============================================================
