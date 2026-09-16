@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-16 03:38 UTC
+Время: 2026-09-16 04:09 UTC
 ============================================================
 
-Последний коммит: f671ab4 fix: machines export - xlsx works, PDF/HTML forces download + electricity floorplan with draggable cabinets
+Последний коммит: c69a27c feat: gas cylinder barcode scanning - scan barcode, select gas type + side, auto-install/replace
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
