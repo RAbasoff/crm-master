@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-16 10:24 UTC
+Время: 2026-09-16 10:51 UTC
 ============================================================
 
-Последний коммит: 875275b fix: fault creation for equipment - empty string was truthy causing int('') ValueError
+Последний коммит: b867736 fix: fault_report.machine_id NOT NULL constraint - rebuild table to allow equipment-only faults
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
