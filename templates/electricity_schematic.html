@@ -5,6 +5,7 @@
     <h1>🗺️ {{ _('Interactive Electrical Schematic') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/electricity" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="/electricity/floorplan" class="btn btn-sm" style="background:#27ae60;color:white">🗺️ {{ _('Floor Plan') }}</a>
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/electricity/cabinet/new" class="btn btn-sm btn-primary">+ {{ _('New Cabinet') }}</a>
         {% endif %}

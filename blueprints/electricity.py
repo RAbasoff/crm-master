@@ -208,6 +208,27 @@ def electricity_schematic():
     return render_template('electricity_schematic.html', cabinets=cabinets)
 
 
+@bp.route('/floorplan')
+@login_required
+def electricity_floorplan():
+    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    return render_template('electricity_floorplan.html', cabinets=cabinets)
+
+
+@bp.route('/cabinet/<int:cabinet_id>/position', methods=['POST'])
+@login_required
+@role_required('admin')
+def cabinet_position(cabinet_id):
+    """Save cabinet position on floor plan (drag & drop)"""
+    from flask import request, jsonify
+    data = request.get_json()
+    c = ElectricalCabinet.query.get_or_404(cabinet_id)
+    c.schematic_x = int(data.get('x', 0))
+    c.schematic_y = int(data.get('y', 0))
+    safe_commit()
+    return jsonify({'ok': True})
+
+
 # ── SWITCH LOG ──────────────────────────────────────────────
 
 @bp.route('/cabinet/<int:cabinet_id>/switch-log')
