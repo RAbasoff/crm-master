@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-16 09:47 UTC
+Время: 2026-09-16 10:24 UTC
 ============================================================
 
-Последний коммит: 00d2fb2 fix: fault creation - try/except protection, validate title+description
+Последний коммит: 875275b fix: fault creation for equipment - empty string was truthy causing int('') ValueError
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
