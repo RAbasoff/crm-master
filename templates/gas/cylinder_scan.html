@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Scan Cylinder') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Scan Cylinder Barcode') }}</h1>
+    <a href="/gas/" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<!-- Step 1: Select gas type and side -->
+<div class="card" id="step1" style="margin-bottom:16px">
+    <h3 style="margin:0 0 12px;font-size:14px">1️⃣ {{ _('Select gas type and side') }}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+            <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Gas Type') }}</label>
+            <select id="gasType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+                <option value="nitrogen">N₂ Nitrogen</option>
+                <option value="co2">CO₂ Carbon Dioxide</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Side') }}</label>
+            <select id="side" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+                <option value="left">{{ _('Left') }}</option>
+                <option value="right">{{ _('Right') }}</option>
+            </select>
+        </div>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:#888">
+        {{ _('Scanned cylinder will be set as IN USE on the selected side. Current cylinder on that side will become EMPTY.') }}
+    </div>
+</div>
+
+<!-- Step 2: Scan or enter barcode -->
+<div class="card" id="step2" style="margin-bottom:16px">
+    <h3 style="margin:0 0 12px;font-size:14px">2️⃣ {{ _('Scan barcode or enter number') }}</h3>
+    <div id="reader" style="width:100%;max-width:400px;margin:0 auto;border-radius:10px;overflow:hidden"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+        <input type="text" id="manualCode" placeholder="{{ _('Enter cylinder number...') }}" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+        <button class="btn btn-primary" onclick="processCode(document.getElementById('manualCode').value)">{{ _('Submit') }}</button>
+    </div>
+    <div style="text-align:center;margin-top:8px">
+        <button id="btnScan" class="btn btn-sm" style="background:#27ae60;color:white" onclick="startScanner()">{{ _('📷 Start Camera') }}</button>
+        <button id="btnStop" class="btn btn-sm" style="background:#e74c3c;color:white;display:none" onclick="stopScanner()">{{ _('⏹ Stop Camera') }}</button>
+    </div>
+</div>
+
+<!-- Step 3: Result -->
+<div class="card" id="step3" style="display:none;margin-bottom:16px">
+    <h3 style="margin:0 0 12px;font-size:14px">3️⃣ {{ _('Result') }}</h3>
+    <div id="resultContent"></div>
+</div>
+
+<!-- Current active cylinders -->
+<div class="card">
+    <h3 style="margin:0 0 12px;font-size:14px">{{ _('Current Active Cylinders') }}</h3>
+    <div id="currentCylinders" style="font-size:12px"></div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+let scanner = null;
+let lastScanned = '';
+
+function loadCurrent() {
+    fetch('/gas/api/cylinders')
+    .then(r => r.json())
+    .then(data => {
+        let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+        data.filter(c => c.status === 'in_use' || c.status === 'full').forEach(c => {
+            const gas = c.gas_type === 'nitrogen' ? 'N₂' : 'CO₂';
+            const color = c.status === 'in_use' ? '#f39c12' : '#27ae60';
+            html += '<div style="padding:6px 10px;border-radius:6px;border:1px solid ' + color + ';background:' + color + '11">';
+            html += '<b>' + gas + '</b> ' + c.number + ' <span style="color:' + color + ';font-weight:700">' + c.status.toUpperCase().replace('_',' ') + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+        document.getElementById('currentCylinders').innerHTML = html;
+    });
+}
+
+function startScanner() {
+    if (scanner) return;
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        (text) => {
+            if (text !== lastScanned) {
+                lastScanned = text;
+                processCode(text);
+            }
+        },
+        () => {}
+    ).then(() => {
+        document.getElementById('btnScan').style.display = 'none';
+        document.getElementById('btnStop').style.display = '';
+    }).catch(() => {
+        document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">{{ _("Camera not available. Use manual entry.") }}</div>';
+        document.getElementById('step3').style.display = '';
+        scanner = null;
+    });
+}
+
+function stopScanner() {
+    if (scanner) {
+        scanner.stop().then(() => { scanner.clear(); scanner = null; });
+        document.getElementById('btnScan').style.display = '';
+        document.getElementById('btnStop').style.display = 'none';
+    }
+}
+
+function processCode(code) {
+    if (!code || !code.trim()) return;
+    code = code.trim();
+    const gasType = document.getElementById('gasType').value;
+    const side = document.getElementById('side').value;
+
+    csrfFetch('/gas/api/cylinders/scan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({code: code, gas_type: gasType, side: side})
+    })
+    .then(r => r.json())
+    .then(d => {
+        const step3 = document.getElementById('step3');
+        step3.style.display = '';
+        if (d.ok) {
+            const gas = gasType === 'nitrogen' ? 'N₂' : 'CO₂';
+            step3.querySelector('h3').innerHTML = '✅ {{ _("Success") }}';
+            document.getElementById('resultContent').innerHTML =
+                '<div style="padding:12px;background:#f0fff0;border-radius:8px;border:1px solid #27ae60">' +
+                '<b>' + gas + ' ' + code + '</b> — {{ _("installed on") }} <b>' + side.toUpperCase() + '</b> side<br>' +
+                '<span style="font-size:12px;color:#888">{{ _("Status set to IN USE") }}</span>' +
+                '</div>';
+            loadCurrent();
+            lastScanned = '';
+        } else {
+            step3.querySelector('h3').innerHTML = '⚠️ {{ _("Error") }}';
+            document.getElementById('resultContent').innerHTML =
+                '<div style="padding:12px;background:#fff0f0;border-radius:8px;border:1px solid #e74c3c">' +
+                (d.error || 'Unknown error') +
+                '</div>';
+        }
+    })
+    .catch(e => {
+        document.getElementById('step3').style.display = '';
+        document.getElementById('step3').querySelector('h3').innerHTML = '❌ {{ _("Error") }}';
+        document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">' + e.message + '</div>';
+    });
+}
+
+loadCurrent();
+</script>
+{% endblock %}

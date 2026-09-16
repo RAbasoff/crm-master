@@ -615,6 +615,7 @@ class GasCylinder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     gas_type = db.Column(db.String(20), nullable=False)
     cylinder_number = db.Column(db.String(50), nullable=False)
+    barcode = db.Column(db.String(100))
     status = db.Column(db.String(20), default='full')
     received_at = db.Column(db.DateTime)
     installed_at = db.Column(db.DateTime)

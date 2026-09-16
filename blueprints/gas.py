@@ -453,3 +453,105 @@ def api_cylinder_update(cyl_id):
         safe_commit()
 
     return jsonify({'ok': True, 'status': c.status})
+
+
+# ============================================================
+# BARCODE SCANNING — cylinder install/replace
+# ============================================================
+
+@bp.route('/scan')
+@login_required
+def cylinder_scan_page():
+    """Barcode scanning page for cylinder install/replace"""
+    return render_template('gas/cylinder_scan.html')
+
+
+@bp.route('/api/cylinders/scan', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def cylinder_scan_install():
+    """Scan barcode → install cylinder on selected gas type + side.
+    Logic:
+    1. Find or create cylinder by barcode
+    2. Set scanned cylinder to 'in_use' on selected side
+    3. Set previous 'in_use' cylinder of same gas type to 'empty'
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+
+    code = (data.get('code') or '').strip()
+    gas_type = data.get('gas_type', 'nitrogen')
+    side = data.get('side', 'left')
+
+    if not code:
+        return jsonify({'error': 'No barcode scanned'}), 400
+    if gas_type not in ('nitrogen', 'co2'):
+        return jsonify({'error': 'Invalid gas type'}), 400
+    if side not in ('left', 'right'):
+        return jsonify({'error': 'Invalid side'}), 400
+
+    # Find cylinder by barcode or cylinder_number
+    cylinder = GasCylinder.query.filter(
+        (GasCylinder.barcode == code) | (GasCylinder.cylinder_number == code)
+    ).first()
+
+    if not cylinder:
+        # Create new cylinder from scan
+        cylinder = GasCylinder(
+            gas_type=gas_type,
+            cylinder_number=code,
+            barcode=code,
+            status='full',
+            received_at=datetime.utcnow()
+        )
+        db.session.add(cylinder)
+        safe_commit()
+        db.session.add(CylinderLog(
+            cylinder_id=cylinder.id,
+            action='created',
+            new_cylinder_number=code,
+            performed_by=current_user.id,
+            notes='Created via barcode scan'
+        ))
+        safe_commit()
+
+    # Set current in_use cylinder of same gas type to empty
+    active = GasCylinder.query.filter(
+        GasCylinder.gas_type == gas_type,
+        GasCylinder.status == 'in_use',
+        GasCylinder.id != cylinder.id
+    ).first()
+    if active:
+        active.status = 'empty'
+        active.installed_at = None
+        db.session.add(CylinderLog(
+            cylinder_id=active.id,
+            action='status_in_use_to_empty',
+            performed_by=current_user.id,
+            notes='Auto-emptied: replaced by %s (scanned)' % code
+        ))
+
+    # Install scanned cylinder
+    old_status = cylinder.status
+    cylinder.status = 'in_use'
+    cylinder.gas_type = gas_type
+    cylinder.installed_at = datetime.utcnow()
+    safe_commit()
+
+    db.session.add(CylinderLog(
+        cylinder_id=cylinder.id,
+        action='status_%s_to_in_use' % old_status,
+        performed_by=current_user.id,
+        notes='Installed via scan on %s side (%s)' % (side, gas_type)
+    ))
+    safe_commit()
+
+    return jsonify({
+        'ok': True,
+        'cylinder_id': cylinder.id,
+        'cylinder_number': cylinder.cylinder_number,
+        'gas_type': gas_type,
+        'side': side,
+        'old_status': old_status
+    })

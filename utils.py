@@ -512,6 +512,7 @@ def run_migrations():
         ("client.force_change_password", "ALTER TABLE client ADD COLUMN force_change_password BOOLEAN DEFAULT 0"),
         ("worker.hire_date", "ALTER TABLE worker ADD COLUMN hire_date DATE"),
         ("worker.fire_date", "ALTER TABLE worker ADD COLUMN fire_date DATE"),
+        ("gas_cylinder.barcode", "ALTER TABLE gas_cylinder ADD COLUMN barcode VARCHAR(100)"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
