@@ -12,11 +12,50 @@
 </div>
 
 {% if cabinets %}
-<div class="card" style="padding:0;overflow:auto">
+<!-- Toggle buttons -->
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button id="btnSchematic" class="btn btn-sm" style="background:#3498db;color:white" onclick="showView('schematic')">⚡ {{ _('Schematic') }}</button>
+    <button id="btnFloorplan" class="btn btn-sm" style="background:#eee" onclick="showView('floorplan')">🗺️ {{ _('Floor Plan') }}</button>
+    <button id="btnBoth" class="btn btn-sm" style="background:#eee" onclick="showView('both')">📐 {{ _('Both') }}</button>
+</div>
+
+<!-- Schematic view -->
+<div id="viewSchematic" class="card" style="padding:0;overflow:auto">
     <div id="fullSchematic" style="min-height:500px;background:#0d1117;padding:20px">
         <svg id="fullSvg" xmlns="http://www.w3.org/2000/svg" style="width:100%"></svg>
     </div>
 </div>
+
+<!-- Floor plan view (PDF embedded) -->
+<div id="viewFloorplan" class="card" style="padding:0;overflow:auto;display:none">
+    <iframe src="/static/uploads/grondplan.pdf" style="width:100%;height:700px;border:none"></iframe>
+</div>
+
+<!-- Both view -->
+<div id="viewBoth" style="display:none">
+    <div class="card" style="padding:0;overflow:auto;margin-bottom:16px">
+        <iframe src="/static/uploads/grondplan.pdf" style="width:100%;height:500px;border:none"></iframe>
+    </div>
+    <div class="card" style="padding:0;overflow:auto">
+        <div id="fullSchematic2" style="min-height:400px;background:#0d1117;padding:20px">
+            <svg id="fullSvg2" xmlns="http://www.w3.org/2000/svg" style="width:100%"></svg>
+        </div>
+    </div>
+</div>
+
+<script>
+function showView(view) {
+    document.getElementById('viewSchematic').style.display = view === 'schematic' || view === 'both' ? '' : 'none';
+    document.getElementById('viewFloorplan').style.display = view === 'floorplan' ? '' : 'none';
+    document.getElementById('viewBoth').style.display = view === 'both' ? '' : 'none';
+    document.getElementById('btnSchematic').style.background = view === 'schematic' ? '#3498db' : '#eee';
+    document.getElementById('btnSchematic').style.color = view === 'schematic' ? 'white' : '#333';
+    document.getElementById('btnFloorplan').style.background = view === 'floorplan' ? '#3498db' : '#eee';
+    document.getElementById('btnFloorplan').style.color = view === 'floorplan' ? 'white' : '#333';
+    document.getElementById('btnBoth').style.background = view === 'both' ? '#3498db' : '#eee';
+    document.getElementById('btnBoth').style.color = view === 'both' ? 'white' : '#333';
+}
+</script>
 
 <div style="margin-top:12px;display:flex;gap:16px;font-size:12px;color:#666;flex-wrap:wrap">
     <span>🟢 {{ _('Breaker ON') }}</span>
