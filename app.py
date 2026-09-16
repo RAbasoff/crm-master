@@ -1091,6 +1091,107 @@ def machines_report():
                          date_from=date_from, date_to=date_to, all_machines=Machine.query.all(),
                          selected_machines=machine_ids)
 
+@app.route('/machines/export/<format_type>')
+@login_required
+@role_required('admin', 'director')
+def machines_export(format_type):
+    """Export machines list to Excel or PDF"""
+    machines = Machine.query.order_by(Machine.name).all()
+
+    headers = ['ID', _('Name'), _('Type'), _('Serial Number'), _('Manufacturer'),
+               _('Year'), _('Location'), _('Section'), _('Responsible'),
+               _('Contractor'), _('Status'), _('Faults'), _('Created')]
+
+    rows = []
+    for m in machines:
+        resp = []
+        if m.responsible_person:
+            resp.append(m.responsible_person.naam)
+        if m.responsible_user:
+            resp.append(m.responsible_user.display_name or m.responsible_user.username)
+        rows.append([
+            m.id, m.name, m.machine_type or '', m.serial_number or '',
+            m.manufacturer or '', m.year_of_manufacture or '',
+            m.installation_location or '', m.section.name if m.section else '',
+            ' | '.join(resp) if resp else '', m.contractor_rel.company_name if m.contractor_rel else '',
+            m.status, len(m.fault_reports),
+            m.created_at.strftime('%d-%m-%Y') if m.created_at else ''
+        ])
+
+    if format_type == 'xlsx':
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Machines'
+
+        header_font = Font(bold=True, color='FFFFFF', size=11)
+        header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin'))
+
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+
+        for r_idx, row in enumerate(rows, 2):
+            for c_idx, val in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx, value=val)
+                cell.border = thin_border
+
+        for col in range(1, len(headers) + 1):
+            max_len = max(len(str(ws.cell(row=r, column=col).value or '')) for r in range(1, len(rows) + 2))
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = min(max_len + 4, 35)
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                         download_name='machines_%s.xlsx' % datetime.now().strftime('%Y%m%d'), as_attachment=True)
+
+    elif format_type == 'pdf':
+        date_str = datetime.now().strftime('%d-%m-%Y %H:%M')
+        html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        html += '<style>'
+        html += 'body{font-family:Arial;font-size:8px;padding:20px}'
+        html += 'h1{font-size:14px;margin-bottom:5px}'
+        html += 'p{color:#666;font-size:10px;margin-bottom:15px}'
+        html += 'table{width:100%%;border-collapse:collapse;font-size:7px}'
+        html += 'th{background:#2c3e50;color:white;padding:4px 5px;text-align:left;font-weight:bold}'
+        html += 'td{padding:3px 5px;border-bottom:1px solid #eee}'
+        html += 'tr:nth-child(even){background:#f9f9f9}'
+        html += '.ok{color:#27ae60}.warn{color:#f39c12}.err{color:#e74c3c}'
+        html += '</style></head><body>'
+        html += '<h1>Machines — ProMaster</h1>'
+        html += '<p>%s — %d machines</p>' % (date_str, len(machines))
+        html += '<table><tr>'
+
+        for h in headers:
+            html += '<th>%s</th>' % h
+        html += '</tr>'
+        for row in rows:
+            html += '<tr>'
+            for i, val in enumerate(row):
+                cls = ''
+                if i == 10:
+                    cls = ' class="%s"' % ('ok' if val == 'active' else 'err' if val == 'broken' else 'warn')
+                html += '<td%s>%s</td>' % (cls, val)
+            html += '</tr>'
+        html += '</table></body></html>'
+
+        buf = io.BytesIO()
+        buf.write(html.encode('utf-8'))
+        buf.seek(0)
+        return send_file(buf, mimetype='text/html',
+                         download_name='machines_%s.html' % datetime.now().strftime('%Y%m%d'), as_attachment=True)
+
+    flash(_('Unsupported format'), 'error')
+    return redirect(url_for('machines_list'))
+
 @app.route('/floor')
 @login_required
 def floor_plan():

@@ -4,6 +4,8 @@
 <div class="page-header">
     <h1>⚙️ {{ _('Machines') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/machines/export/xlsx" class="btn btn-sm" style="background:#27ae60;color:white">📊 Excel</a>
+        <a href="/machines/export/pdf" class="btn btn-sm" style="background:#e74c3c;color:white">📄 PDF</a>
         <a href="/tool-wear" class="btn btn-sm" style="background:#e67e22;color:white">🔪 {{ _('Tool Wear') }}</a>
         {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/report" class="btn btn-sm" style="background:#9b59b6;color:white">📊 {{ _('Report') }}</a>
