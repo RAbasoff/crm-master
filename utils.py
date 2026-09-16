@@ -538,6 +538,34 @@ def run_migrations():
     except Exception as e:
         pass
 
+    # Fix fault_report.machine_id to be nullable (for equipment-only faults)
+    try:
+        cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='fault_report'")
+        row = cur.fetchone()
+        if row and 'NOT NULL' in (row[0] or '') and 'machine_id' in (row[0] or ''):
+            cur.execute("ALTER TABLE fault_report RENAME TO fault_report_old")
+            cur.execute("""CREATE TABLE fault_report (
+                id INTEGER PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                description TEXT NOT NULL,
+                priority VARCHAR(20),
+                status VARCHAR(20),
+                machine_id INTEGER REFERENCES machine(id),
+                reporter_id INTEGER NOT NULL REFERENCES user(id),
+                technician_id INTEGER REFERENCES user(id),
+                created_at DATETIME,
+                accepted_at DATETIME,
+                resolved_at DATETIME,
+                contractor_id INTEGER REFERENCES contractor(id),
+                equipment_id INTEGER REFERENCES equipment(id)
+            )""")
+            cur.execute("INSERT INTO fault_report SELECT * FROM fault_report_old")
+            cur.execute("DROP TABLE fault_report_old")
+            conn.commit()
+            print("Migration: fixed fault_report.machine_id to nullable")
+    except Exception as e:
+        pass
+
     for col_name, sql in migrations:
         try:
             if 'CREATE TABLE' in sql:
