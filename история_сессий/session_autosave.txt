@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-16 11:14 UTC
+Время: 2026-09-16 12:05 UTC
 ============================================================
 
-Последний коммит: b867736 fix: fault_report.machine_id NOT NULL constraint - rebuild table to allow equipment-only faults
+Последний коммит: 41b7c80 feat: warehouse scan unknown barcode - offer Add New / Ignore options + prefill barcode in form
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
