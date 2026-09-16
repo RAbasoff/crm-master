@@ -38,8 +38,8 @@ def faults_list():
 def fault_new():
     if request.method == 'POST':
         try:
-            machine_id = request.form.get('machine_id')
-            equipment_id = request.form.get('equipment_id')
+            machine_id = request.form.get('machine_id', '').strip()
+            equipment_id = request.form.get('equipment_id', '').strip()
             if not request.form.get('title') or not request.form.get('description'):
                 flash(_('Title and description are required'), 'error')
                 return redirect(url_for('faults.fault_new'))
