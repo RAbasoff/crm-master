@@ -155,13 +155,14 @@ function renderFullSchematic() {
         cab._width = Math.max(cabinetWidth, maxBreakersInRow * (breakerW + breakerGap) + cabinetPadding * 2);
         cab._height = 60 + numRows * (breakerH + rowGap) + cabinetPadding;
         cab._rows = rows;
-        cab._x = ci * (cab._width + cabinetGap);
-        cab._y = 0;
-        totalWidth = cab._x + cab._width;
-        if (cab._height > totalHeight) totalHeight = cab._height;
+        // Use floor plan positions (schematic_x/y) for layout
+        cab._x = (cab.x || ci * 320);
+        cab._y = (cab.y || 0);
+        totalWidth = Math.max(totalWidth, cab._x + cab._width);
+        totalHeight = Math.max(totalHeight, cab._y + cab._height);
     });
 
-    totalWidth += 20;
+    totalWidth += 40;
     totalHeight += 40;
 
     svg.setAttribute('width', totalWidth);
@@ -169,19 +170,43 @@ function renderFullSchematic() {
     svg.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
     svg.innerHTML = '';
 
-    // Global mains line
+    // Background grid for reference
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    pattern.setAttribute('id', 'grid');
+    pattern.setAttribute('width', '50');
+    pattern.setAttribute('height', '50');
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    const gridLine1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    gridLine1.setAttribute('x1', '50'); gridLine1.setAttribute('y1', '0');
+    gridLine1.setAttribute('x2', '50'); gridLine1.setAttribute('y2', '50');
+    gridLine1.setAttribute('stroke', '#1a1a2e'); gridLine1.setAttribute('stroke-width', '0.5');
+    pattern.appendChild(gridLine1);
+    const gridLine2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    gridLine2.setAttribute('x1', '0'); gridLine2.setAttribute('y1', '50');
+    gridLine2.setAttribute('x2', '50'); gridLine2.setAttribute('y2', '50');
+    gridLine2.setAttribute('stroke', '#1a1a2e'); gridLine2.setAttribute('stroke-width', '0.5');
+    pattern.appendChild(gridLine2);
+    defs.appendChild(pattern);
+    svg.appendChild(defs);
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('width', totalWidth); bg.setAttribute('height', totalHeight);
+    bg.setAttribute('fill', 'url(#grid)');
+    svg.appendChild(bg);
+
+    // Global mains line (horizontal across top)
     const mainsLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     mainsLine.setAttribute('x1', 10);
-    mainsLine.setAttribute('y1', 15);
+    mainsLine.setAttribute('y1', 5);
     mainsLine.setAttribute('x2', totalWidth - 10);
-    mainsLine.setAttribute('y2', 15);
+    mainsLine.setAttribute('y2', 5);
     mainsLine.setAttribute('stroke', '#f39c12');
-    mainsLine.setAttribute('stroke-width', 4);
+    mainsLine.setAttribute('stroke-width', 3);
     svg.appendChild(mainsLine);
 
     const mainsLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     mainsLabel.setAttribute('x', 10);
-    mainsLabel.setAttribute('y', 10);
+    mainsLabel.setAttribute('y', 18);
     mainsLabel.setAttribute('fill', '#f39c12');
     mainsLabel.setAttribute('font-size', '10');
     mainsLabel.setAttribute('font-weight', '700');
@@ -206,16 +231,16 @@ function renderFullSchematic() {
 
     cabinetsData.forEach((cab, ci) => {
         const cx = cab._x + 10;
-        const cy = 30;
+        const cy = cab._y + 10;
 
-        // Connection to mains
+        // Connection to mains (short line from top)
         const connToMain = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         connToMain.setAttribute('x1', cx + cab._width / 2);
-        connToMain.setAttribute('y1', 15);
+        connToMain.setAttribute('y1', cy);
         connToMain.setAttribute('x2', cx + cab._width / 2);
-        connToMain.setAttribute('y2', cy);
+        connToMain.setAttribute('y2', cy - 10);
         connToMain.setAttribute('stroke', '#f39c12');
-        connToMain.setAttribute('stroke-width', 3);
+        connToMain.setAttribute('stroke-width', 2);
         svg.appendChild(connToMain);
 
         // Cabinet frame
