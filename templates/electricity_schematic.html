@@ -20,10 +20,15 @@
     <button id="btnBoth" class="btn btn-sm" style="background:#eee" onclick="showView('both')">📐 {{ _('Both') }}</button>
 </div>
 
-<!-- Schematic view -->
-<div id="viewSchematic" class="card" style="padding:0;overflow:auto">
-    <div id="fullSchematic" style="min-height:500px;background:#0d1117;padding:20px">
-        <svg id="fullSvg" xmlns="http://www.w3.org/2000/svg" style="width:100%"></svg>
+<!-- Schematic view: PDF floor plan background + interactive breaker overlay -->
+<div id="viewSchematic" class="card" style="padding:0;overflow:auto;position:relative">
+    <!-- PDF floor plan as background -->
+    <object id="schematicPdf" data="/static/uploads/grondplan.pdf" type="application/pdf" style="width:100%;min-height:800px;display:block;opacity:0.3;pointer-events:none">
+        <embed src="/static/uploads/grondplan.pdf" type="application/pdf" style="width:100%;height:800px"/>
+    </object>
+    <!-- SVG overlay with breakers -->
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">
+        <svg id="fullSvg" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;pointer-events:auto"></svg>
     </div>
 </div>
 
@@ -63,25 +68,34 @@ function showView(view) {
     <span>🔴 {{ _('Breaker OFF') }}</span>
     <span>🖱️ {{ _('Click breaker to toggle') }}</span>
     <span>📋 {{ _('Click cabinet name for details') }}</span>
+    <span style="color:#3498db">🗺️ {{ _('PDF plan shown as background — match breaker labels to floor points') }}</span>
 </div>
 
-<!-- Cabinet cards below schematic -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:20px">
-    {% for cab in cabinets %}
-    <div class="card" style="cursor:pointer" onclick="window.location='/electricity/cabinet/{{ cab.id }}'">
-        <h2 style="display:flex;align-items:center;gap:8px">
-            ⚡ {{ cab.name }}
-            <span class="badge badge-active" style="font-size:11px">{{ cab.breakers|length }} {{ _('breakers') }}</span>
-        </h2>
-        <div style="font-size:13px;color:#666;margin-top:4px">{{ cab.location or '' }} · {{ cab.voltage or '' }}</div>
-        <div style="display:flex;gap:12px;margin-top:8px;font-size:12px">
-            <span style="color:#27ae60">● {{ cab.breakers|selectattr('status','equalto','on')|list|length }} ON</span>
-            {% if cab.breakers|selectattr('status','equalto','off')|list|length > 0 %}
-            <span style="color:#e74c3c">● {{ cab.breakers|selectattr('status','equalto','off')|list|length }} OFF</span>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
+<!-- Breaker-to-Point mapping table -->
+<div class="card" style="margin-top:16px">
+    <h3 style="margin:0 0 12px;font-size:14px">📍 {{ _('Breaker → Floor Point Mapping') }}</h3>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Cabinet') }}</th><th>{{ _('Breaker') }}</th><th>{{ _('Description') }}</th><th>{{ _('Connected To') }}</th><th>{{ _('Status') }}</th></tr>
+        {% for cab in cabinets %}
+        {% for b in cab.breakers|sort(attribute='row,position') %}
+        {% if b.connected_to or b.description %}
+        <tr>
+            <td><a href="/electricity/cabinet/{{ cab.id }}" style="color:#3498db">{{ cab.name }}</a></td>
+            <td><strong>{{ b.label }}</strong> {{ b.amperage }}A</td>
+            <td>{{ b.description or '' }}</td>
+            <td><span style="color:#27ae60">{{ b.connected_to or '—' }}</span></td>
+            <td>
+                {% if b.status == 'on' %}
+                <span style="color:#27ae60;font-weight:700">● ON</span>
+                {% else %}
+                <span style="color:#e74c3c;font-weight:700">● OFF</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+    </table></div>
 </div>
 
 <script>
