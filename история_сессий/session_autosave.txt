@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-16 09:13 UTC
+Время: 2026-09-16 09:40 UTC
 ============================================================
 
-Последний коммит: c69a27c feat: gas cylinder barcode scanning - scan barcode, select gas type + side, auto-install/replace
+Последний коммит: 00d2fb2 fix: fault creation - try/except protection, validate title+description
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
