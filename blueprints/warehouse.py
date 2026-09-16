@@ -190,7 +190,8 @@ def warehouse_new():
         return redirect(url_for('warehouse.warehouse_list', new_qr=i.id))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
     contractors = Contractor.query.order_by(Contractor.company_name).all()
-    return render_template('warehouse_form.html', item=None, groups=groups, contractors=contractors)
+    prefill_barcode = request.args.get('barcode', '')
+    return render_template('warehouse_form.html', item=None, groups=groups, contractors=contractors, prefill_barcode=prefill_barcode)
 
 
 @bp.route('/<int:item_id>/edit', methods=['GET', 'POST'])

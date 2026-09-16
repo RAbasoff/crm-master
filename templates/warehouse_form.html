@@ -46,7 +46,7 @@
             <div class="form-group"><label>{{ _('Category') }}</label><input type="text" name="categorie" id="fieldCategorie" value="{{ item.categorie if item else '' }}" placeholder="{{ _('Parts, consumables...') }}"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>Supplier Part Number</label><input type="text" name="supplier_part_number" id="fieldSPN" value="{{ item.supplier_part_number if item and item.supplier_part_number else '' }}" placeholder="e.g. 6ES7214-1AG40-0XB0"></div>
+            <div class="form-group"><label>Supplier Part Number</label><input type="text" name="supplier_part_number" id="fieldSPN" value="{{ item.supplier_part_number if item and item.supplier_part_number else (prefill_barcode or '') }}" placeholder="e.g. 6ES7214-1AG40-0XB0"></div>
             <div class="form-group"><label>{{ _('Group') }} ({{ _('manufacturer / supplier') }})</label>
                 <select name="group_id" id="fieldGroup">
                     <option value="">{{ _('No group') }}</option>

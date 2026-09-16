@@ -260,8 +260,13 @@ function startWhScan() {
                             }
                         });
                     } else {
-                        document.getElementById('whScanResult').style.background = '#fff5f0';
-                        document.getElementById('whScanResult').textContent = 'Not found: ' + text;
+                        document.getElementById('whScanResult').style.background = '#fff3cd';
+                        document.getElementById('whScanResult').innerHTML =
+                            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+                            '<strong>❓ ' + text + '</strong> — {{ _("Unknown barcode") }}' +
+                            '<a href="/warehouse/new?barcode=' + encodeURIComponent(text) + '" class="btn btn-sm" style="background:#27ae60;color:white;text-decoration:none">+ {{ _("Add New") }}</a>' +
+                            '<button class="btn btn-sm" style="background:#eee" onclick="document.getElementById(\'whScanResult\').style.display=\'none\'">{{ _("Ignore") }}</button>' +
+                            '</div>';
                     }
                 }).catch(function(err) {
                     document.getElementById('whScanResult').style.background = '#fdf0f0';
