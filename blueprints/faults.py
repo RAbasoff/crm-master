@@ -37,87 +37,95 @@ def faults_list():
 @login_required
 def fault_new():
     if request.method == 'POST':
-        machine_id = request.form.get('machine_id')
-        equipment_id = request.form.get('equipment_id')
-        f = FaultReport(
-            title=request.form['title'],
-            description=request.form['description'],
-            priority=request.form.get('priority', 'normal'),
-            machine_id=int(machine_id) if machine_id else None,
-            equipment_id=int(equipment_id) if equipment_id else None,
-            reporter_id=current_user.id
-        )
-        db.session.add(f)
-        db.session.flush()
+        try:
+            machine_id = request.form.get('machine_id')
+            equipment_id = request.form.get('equipment_id')
+            if not request.form.get('title') or not request.form.get('description'):
+                flash(_('Title and description are required'), 'error')
+                return redirect(url_for('faults.fault_new'))
+            f = FaultReport(
+                title=request.form['title'],
+                description=request.form['description'],
+                priority=request.form.get('priority', 'normal'),
+                machine_id=int(machine_id) if machine_id else None,
+                equipment_id=int(equipment_id) if equipment_id else None,
+                reporter_id=current_user.id
+            )
+            db.session.add(f)
+            db.session.flush()
 
-        tech_ids = request.form.getlist('technician_ids')
-        for tid in tech_ids:
-            tech = User.query.get(int(tid))
-            if tech:
-                f.assigned_technicians.append(tech)
-        if tech_ids:
-            f.technician_id = int(tech_ids[0])
-            f.status = 'accepted'
-            f.accepted_at = datetime.utcnow()
+            tech_ids = request.form.getlist('technician_ids')
+            for tid in tech_ids:
+                tech = User.query.get(int(tid))
+                if tech:
+                    f.assigned_technicians.append(tech)
+            if tech_ids:
+                f.technician_id = int(tech_ids[0])
+                f.status = 'accepted'
+                f.accepted_at = datetime.utcnow()
 
-        safe_commit()
-
-        target = f.target_name
-
-        if 'photos' in request.files:
-            for photo in request.files.getlist('photos'):
-                if photo.filename:
-                    filename = secure_filename(f"fault_{f.id}_{photo.filename}")
-                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                    fp = FaultPhoto(fault_id=f.id, filename=filename)
-                    db.session.add(fp)
-
-        if 'videos' in request.files:
-            for video in request.files.getlist('videos'):
-                if video.filename:
-                    filename = secure_filename(f"fault_{f.id}_video_{video.filename}")
-                    video.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                    fv = FaultVideo(fault_id=f.id, filename=filename)
-                    db.session.add(fv)
             safe_commit()
 
-        for tech in f.assigned_technicians:
-            create_notification(
-                tech.id,
-                _('Fault assigned to you'),
-                f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority})",
-                'fault',
-                url_for('faults.fault_detail', fault_id=f.id)
-            )
-        if not f.assigned_technicians:
-            for tech in User.query.filter_by(role='technician', is_active_user=True).all():
+            target = f.target_name
+
+            if 'photos' in request.files:
+                for photo in request.files.getlist('photos'):
+                    if photo.filename:
+                        filename = secure_filename(f"fault_{f.id}_{photo.filename}")
+                        photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                        fp = FaultPhoto(fault_id=f.id, filename=filename)
+                        db.session.add(fp)
+
+            if 'videos' in request.files:
+                for video in request.files.getlist('videos'):
+                    if video.filename:
+                        filename = secure_filename(f"fault_{f.id}_video_{video.filename}")
+                        video.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                        fv = FaultVideo(fault_id=f.id, filename=filename)
+                        db.session.add(fv)
+                safe_commit()
+
+            for tech in f.assigned_technicians:
                 create_notification(
                     tech.id,
-                    _('New fault report'),
-                    f"{_('Machine')}: {target} - {f.title}",
+                    _('Fault assigned to you'),
+                    f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority})",
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
-
-        log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority})')
-        add_work_report(f'⚠️ Новая поломка: {f.title} — {target} (приоритет: {f.priority})')
-
-        if f.priority == 'critical':
-            from app import send_email
-            admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
-            for admin in admins:
-                if admin.email:
-                    send_email(
-                        admin.email,
-                        f'🔴 КРИТИЧЕСКАЯ ЗАЯВКА: {f.title}',
-                        f'<h2>Критическая заявка #{f.id}</h2>'
-                        f'<p><strong>Станок/Оборудование:</strong> {target}</p>'
-                        f'<p><strong>Описание:</strong> {f.description[:200]}</p>'
-                        f'<p><a href="https://rabasoff.pythonanywhere.com/faults/{f.id}">Открыть заявку</a></p>'
+            if not f.assigned_technicians:
+                for tech in User.query.filter_by(role='technician', is_active_user=True).all():
+                    create_notification(
+                        tech.id,
+                        _('New fault report'),
+                        f"{_('Machine')}: {target} - {f.title}",
+                        'fault',
+                        url_for('faults.fault_detail', fault_id=f.id)
                     )
 
-        flash(_('Fault report created'), 'success')
-        return redirect(url_for('faults.faults_list'))
+            log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority})')
+            add_work_report(f'⚠️ Новая поломка: {f.title} — {target} (приоритет: {f.priority})')
+
+            if f.priority == 'critical':
+                from app import send_email
+                admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
+                for admin in admins:
+                    if admin.email:
+                        send_email(
+                            admin.email,
+                            f'🔴 КРИТИЧЕСКАЯ ЗАЯВКА: {f.title}',
+                            f'<h2>Критическая заявка #{f.id}</h2>'
+                            f'<p><strong>Станок/Оборудование:</strong> {target}</p>'
+                            f'<p><strong>Описание:</strong> {f.description[:200]}</p>'
+                            f'<p><a href="https://rabasoff.pythonanywhere.com/faults/{f.id}">Открыть заявку</a></p>'
+                        )
+
+            flash(_('Fault report created'), 'success')
+            return redirect(url_for('faults.faults_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash(_('Error creating fault report: {}').format(str(e)), 'error')
+            return redirect(url_for('faults.fault_new'))
 
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     machines = Machine.query.order_by(Machine.name).all()
