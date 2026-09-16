@@ -1,9 +1,9 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-16 03:15 UTC
+Время: 2026-09-16 03:38 UTC
 ============================================================
 
-Последний коммит: 5d00ce4 feat: add floor plan PDF for electricity schematic
+Последний коммит: f671ab4 fix: machines export - xlsx works, PDF/HTML forces download + electricity floorplan with draggable cabinets
 Git status: clean
 
 ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
