@@ -540,6 +540,30 @@ def run_migrations():
             last_checked DATETIME,
             notes TEXT
         )"""),
+        ("chat_room", """CREATE TABLE IF NOT EXISTS chat_room (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(200),
+            is_group BOOLEAN DEFAULT 0,
+            created_by INTEGER NOT NULL REFERENCES user(id),
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("chat_participant", """CREATE TABLE IF NOT EXISTS chat_participant (
+            id INTEGER PRIMARY KEY,
+            room_id INTEGER NOT NULL REFERENCES chat_room(id),
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            joined_at DATETIME,
+            last_read_at DATETIME,
+            UNIQUE(room_id, user_id)
+        )"""),
+        ("chat_message", """CREATE TABLE IF NOT EXISTS chat_message (
+            id INTEGER PRIMARY KEY,
+            room_id INTEGER NOT NULL REFERENCES chat_room(id),
+            sender_id INTEGER NOT NULL REFERENCES user(id),
+            body TEXT NOT NULL,
+            created_at DATETIME,
+            status_json TEXT DEFAULT '{}'
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)

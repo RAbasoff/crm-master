@@ -1,24 +1,29 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 17:30 UTC
+Время: 2026-09-17 17:47 UTC
 ============================================================
 
-Последний коммит: 5d286aa fix: add missing DB migrations for machine_part.next_replacement/next_maintenance + warehouse tables
+Последний коммит: f6ac9a8 feat: WhatsApp-style chat — rooms, 1:1 & group, gray/blue checkmarks, unread badge in header
 Git status: clean
 
-ПОСЛЕДНИЕ КОММИТЫ СЕССИИ:
-  5d286aa fix: DB migrations for machine_part
-  e58a943 fix: duplicate route machine_qr → machine_qr_generate
-  48ed530 feat: unified reminders page /reminders
-  1663576 feat: mobile dashboard + QR codes for machines
-  5c4eb3c perf: DB indexes + eager loading
-  4084310 fix: mass crash prevention (safe_int/safe_float/safe_date)
-  2f926c7 feat: gas analytics report + consumption chart
-  17ba5fb feat: gas spare list active cylinders
-  3bb8eaf feat: gas dashboard inline scanner
-  f1a3116 feat: gas dashboard scanner + QR registry
+ИЗМЕНЕНО:
+  - models.py: ChatRoom, ChatParticipant, ChatMessage (delivery/read tracking)
+  - blueprints/chat.py: полный чат-блюпринт
+    - /chat/ — список бесед
+    - /chat/start/<user_id> — начать 1:1 чат
+    - /chat/room/<id> — окно чата
+    - /chat/group/new — создать группу
+    - /chat/api/send — отправка сообщения (AJAX)
+    - /chat/api/messages/<room_id> — polling новых сообщений
+    - /chat/api/unread — количество непрочитанных
+  - templates/chat/list.html: список бесед с бейджами
+  - templates/chat/room.html: окно чата с галочками ✓/✓✓
+  - base.html: ✉️ envelope с бейджем непрочитанных в хедере рядом с колокольчиком
+  - sidebar: Chat в разделе Communication
+  - 307 маршрутов (+8 новых чат-маршрутов)
 
-СТАТУС: PA работает (подтверждено пользователем)
-ОЖИДАНИЕ: пользователь работает над Honeywell сканером на другом компе
+ДЕПЛОЙ:
+  cd ~/crm-master && git pull origin master
+  Web → Reload
 
 ============================================================
