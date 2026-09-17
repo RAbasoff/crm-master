@@ -5505,6 +5505,12 @@ def api_stats():
 def qr_scan():
     return render_template('qr_scan.html')
 
+@app.route('/scanner')
+@login_required
+def universal_scanner():
+    """Universal barcode scanner — supports Honeywell external + camera"""
+    return render_template('universal_scanner.html')
+
 @app.route('/qr/generate/<int:order_id>')
 @login_required
 def qr_generate(order_id):
@@ -5527,6 +5533,28 @@ def qr_generate(order_id):
     img.save(buf, format='PNG')
     buf.seek(0)
     return send_file(buf, mimetype='image/png', download_name=f'QR_{order.nummer}.png')
+
+@app.route('/api/machines/search')
+@login_required
+def api_machines_search():
+    """Search machines by name, serial number, or barcode"""
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify([])
+    machines = Machine.query.filter(
+        db.or_(
+            Machine.name.ilike(f'%{sanitize_like(q)}%'),
+            Machine.serial_number.ilike(f'%{sanitize_like(q)}%'),
+            Machine.machine_type.ilike(f'%{sanitize_like(q)}%')
+        )
+    ).limit(10).all()
+    return jsonify([{
+        'id': m.id,
+        'name': m.name,
+        'type': m.machine_type or '',
+        'serial': m.serial_number or '',
+        'status': m.status
+    } for m in machines])
 
 @app.route('/api/machine/<int:machine_id>/faults')
 @login_required

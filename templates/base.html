@@ -496,6 +496,7 @@
             {% if has_access('users') %}
             <a href="/users" class="sb-item {% if 'user' in (request.endpoint or '') and 'profile' not in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👥</span>{{ _('Users') }}</a>
             {% endif %}
+            <a href="/scanner" class="sb-item {% if request.endpoint == 'universal_scanner' %}active{% endif %}"><span class="sb-icon">📷</span>{{ _('Scanner') }}</a>
             <a href="/qr/scan" class="sb-item {% if 'qr' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📷</span>QR</a>
             </div>
             {% endif %}
