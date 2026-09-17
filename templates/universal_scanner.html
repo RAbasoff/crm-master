@@ -62,6 +62,12 @@ let scanner = null;
 const scannerInput = document.getElementById('scannerInput');
 let inputTimer = null;
 
+// Strip non-printable / control characters (GS1 FNC1, etc.)
+function cleanBarcode(raw) {
+    // Keep only printable ASCII + common accented chars
+    return raw.replace(/[^\x20-\x7E\u00A0-\u024F]/g, '').trim();
+}
+
 scannerInput.addEventListener('input', function() {
     clearTimeout(inputTimer);
     // Fast input = scanner (under 200ms between chars = scanner)
@@ -73,7 +79,7 @@ scannerInput.addEventListener('input', function() {
 scannerInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
-        const code = scannerInput.value.trim();
+        const code = cleanBarcode(scannerInput.value);
         if (code) {
             processScan(code);
             scannerInput.value = '';
