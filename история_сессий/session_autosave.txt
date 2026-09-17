@@ -1,17 +1,18 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 18:49 UTC
+Время: 2026-09-17 19:14 UTC
 ============================================================
 
-Последний коммит: 6dc3bdc chore: remove test file
+Последний коммит: b5e9495 feat: maintenance calendar — show equipment service dates + MRO records with teal color
 Git status: clean
 
 ИЗМЕНЕНО:
-  - blueprints/chat.py: эффективный запрос DM через SQL вместо Python-цикла
-  - templates/chat/list.html: исправлен crash при пустом others
-  - templates/chat/room.html: CSRF в polling fetch, position:relative для popup
-  - utils.py: миграция для создания таблиц chat_room, chat_participant, chat_message
-  - translations/ru: переводы для чата
+  - app.py: maintenance_calendar — добавлены события Equipment (next_service_date) и EquipmentMaintenance (next_date)
+  - templates/maintenance_calendar.html:
+    - Оборудование отображается бирюзовым цветом (#16a085)
+    - Ссылки на /equipment/<id>/edit для оборудования
+    - Легенда обновлена
+  - translations/ru: "Equipment Service", "Equipment"
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

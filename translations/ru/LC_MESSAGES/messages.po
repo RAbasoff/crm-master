@@ -1985,6 +1985,36 @@ msgstr "Обслуживание оборудования"
 msgid "Equipment"
 msgstr "Оборудование"
 
+msgid "Mark as completed?"
+msgstr "Отметить как выполненное?"
+
+msgid "Mark completed"
+msgstr "Отметить выполнено"
+
+msgid "Delete this event?"
+msgstr "Удалить это событие?"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Event removed"
+msgstr "Событие удалено"
+
+msgid "Plan deleted"
+msgstr "План удалён"
+
+msgid "Equipment service date removed"
+msgstr "Дата обслуживания оборудования удалена"
+
+msgid "MRO record deleted"
+msgstr "Запись MRO удалена"
+
+msgid "Equipment service marked as completed"
+msgstr "Обслуживание оборудования отмечено как выполненное"
+
+msgid "MRO marked as completed"
+msgstr "MRO отмечено как выполненное"
+
 msgid "Scan cylinder number..."
 msgstr "Сканируйте номер баллона..."
 

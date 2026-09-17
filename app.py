@@ -2099,11 +2099,80 @@ def maintenance_calendar_complete():
             safe_commit()
             flash(_('Maintenance marked as completed'), 'success')
 
+    elif ev_type == 'equipment':
+        from models import Equipment
+        equip_id = request.form.get('equipment_id')
+        if equip_id:
+            eq = Equipment.query.get(int(equip_id))
+            if eq:
+                eq.last_service_date = datetime.utcnow().date()
+                if eq.service_interval_days:
+                    eq.next_service_date = datetime.utcnow().date() + timedelta(days=eq.service_interval_days)
+                else:
+                    eq.next_service_date = None
+                safe_commit()
+                flash(_('Equipment service marked as completed'), 'success')
+
+    elif ev_type == 'equipment_mro':
+        from models import EquipmentMaintenance
+        mro_id = request.form.get('mro_id')
+        if mro_id:
+            mro = EquipmentMaintenance.query.get(int(mro_id))
+            if mro:
+                mro.status = 'completed'
+                safe_commit()
+                flash(_('MRO marked as completed'), 'success')
+
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
     return redirect(url_for('maintenance_calendar', month=month))
 
 
-@app.route('/maintenance-calendar/export')
+@app.route('/maintenance-calendar/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def maintenance_calendar_delete():
+    """Delete a calendar event (admin only)."""
+    ev_type = request.form.get('type', '')
+    part_id = request.form.get('part_id')
+    plan_id = request.form.get('plan_id')
+    equipment_id = request.form.get('equipment_id')
+    mro_id = request.form.get('mro_id')
+
+    if ev_type in ('replacement', 'maintenance') and part_id:
+        part = MachinePart.query.get(int(part_id))
+        if part:
+            if ev_type == 'replacement':
+                part.next_replacement = None
+            else:
+                part.next_maintenance = None
+            safe_commit()
+            flash(_('Event removed'), 'success')
+
+    elif ev_type == 'plan' and plan_id:
+        p = MaintenancePlan.query.get(int(plan_id))
+        if p:
+            db.session.delete(p)
+            safe_commit()
+            flash(_('Plan deleted'), 'success')
+
+    elif ev_type == 'equipment' and equipment_id:
+        from models import Equipment
+        eq = Equipment.query.get(int(equipment_id))
+        if eq:
+            eq.next_service_date = None
+            safe_commit()
+            flash(_('Equipment service date removed'), 'success')
+
+    elif ev_type == 'equipment_mro' and mro_id:
+        from models import EquipmentMaintenance
+        mro = EquipmentMaintenance.query.get(int(mro_id))
+        if mro:
+            db.session.delete(mro)
+            safe_commit()
+            flash(_('MRO record deleted'), 'success')
+
+    month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
+    return redirect(url_for('maintenance_calendar', month=month))
 @login_required
 def maintenance_calendar_export():
     import csv, io
