@@ -30,6 +30,7 @@
                 <option value="responsible" {% if report_type=='responsible' %}selected{% endif %}>👥 {{ _('Responsible Persons') }}</option>
                 <option value="machines" {% if report_type=='machines' %}selected{% endif %}>⚙️ {{ _('Machines') }}</option>
                 <option value="warehouse" {% if report_type=='warehouse' %}selected{% endif %}>📦 {{ _('Warehouse') }}</option>
+                <option value="gas" {% if report_type=='gas' %}selected{% endif %}>🔴 {{ _('Gas Cylinders') }}</option>
                 <option value="errors" {% if report_type=='errors' %}selected{% endif %}>❌ {{ _('Errors & Warnings') }}</option>
                 <option value="users" {% if report_type=='users' %}selected{% endif %}>📋 {{ _('Audit Log') }}</option>
             </select>
@@ -81,6 +82,14 @@
     <div class="stat-card"><div class="number">{{ stats.total_movements }}</div><div class="label">{{ _('Total') }}</div></div>
     <div class="stat-card ok"><div class="number">{{ stats.incoming }}</div><div class="label">{{ _('Incoming') }}</div></div>
     <div class="stat-card warn"><div class="number">{{ stats.outgoing }}</div><div class="label">{{ _('Outgoing') }}</div></div>
+    {% elif report_type == 'gas' %}
+    <div class="stat-card ok"><div class="number">{{ stats.total_received }}</div><div class="label">{{ _('Received') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #3498db"><div class="number">{{ stats.n2_received }}</div><div class="label">N₂ {{ _('Received') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ stats.co2_received }}</div><div class="label">CO₂ {{ _('Received') }}</div></div>
+    <div class="stat-card warn"><div class="number">{{ stats.total_consumed }}</div><div class="label">{{ _('Consumed') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #3498db"><div class="number">{{ stats.n2_consumed }}</div><div class="label">N₂ {{ _('Consumed') }}</div></div>
+    <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ stats.co2_consumed }}</div><div class="label">CO₂ {{ _('Consumed') }}</div></div>
+    <div class="stat-card"><div class="number">{{ stats.total_orders }}</div><div class="label">{{ _('Orders') }}</div></div>
     {% elif report_type == 'errors' %}
     <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">{{ _('Total') }}</div></div>
     <div class="stat-card" style="border-left:4px solid #e74c3c"><div class="number">{{ stats.errors }}</div><div class="label">{{ _('Errors') }}</div></div>
@@ -99,6 +108,32 @@
 {% endif %}
 
 <!-- DATA TABLE -->
+{% if report_type == 'gas' and stats.chart_data %}
+<div class="card" style="margin-bottom:16px">
+    <h3 style="margin:0 0 12px;font-size:14px">📈 {{ _('Gas Consumption') }} (6 {{ _('months') }})</h3>
+    <canvas id="gasChart" height="200"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+var chartData = {{ stats.chart_data|tojson }};
+new Chart(document.getElementById('gasChart'), {
+    type: 'bar',
+    data: {
+        labels: chartData.map(function(d){ return d.month; }),
+        datasets: [
+            { label: '{{ _("Received") }}', data: chartData.map(function(d){ return d.received; }), backgroundColor: '#27ae60' },
+            { label: '{{ _("Consumed") }}', data: chartData.map(function(d){ return d.consumed; }), backgroundColor: '#e74c3c' }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+</script>
+{% endif %}
+
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
         {% if report_type == 'activity' %}
@@ -139,7 +174,19 @@
             <td>{{ m.opmerking or '—' }}</td>
         </tr>
         {% endfor %}
-        
+
+        {% elif report_type == 'gas' %}
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Action') }}</th><th>{{ _('Cylinder') }}</th><th>{{ _('User') }}</th><th>{{ _('Notes') }}</th></tr>
+        {% for r in data %}
+        <tr>
+            <td>{{ r.date.strftime('%d-%m %H:%M') }}</td>
+            <td><span class="badge badge-{% if 'created' in r.action %}active{% elif 'in_use' in r.action %}high{% elif 'empty' in r.action %}broken{% else %}open{% endif %}">{{ r.action }}</span></td>
+            <td><strong>{{ r.new_cylinder_number or r.old_cylinder_number or '—' }}</strong></td>
+            <td>{{ r.performer.display_name if r.performer else '—' }}</td>
+            <td style="font-size:12px">{{ r.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+
         {% elif report_type == 'errors' %}
         <tr><th>{{ _('Date') }}</th><th>{{ _('Level') }}</th><th>{{ _('Category') }}</th><th>{{ _('Message') }}</th><th>{{ _('Source') }}</th><th>{{ _('User') }}</th></tr>
         {% for r in data %}

@@ -28,6 +28,40 @@ def check_gas_access():
         return redirect(url_for('index'))
 
 
+def _auto_archive(now):
+    """Archive empty cylinders at end of month. Runs once per month."""
+    month_key = now.strftime('%Y-%m')
+    existing = MonthlyArchive.query.filter_by(archive_month=month_key, section='gas_cylinders').first()
+    if existing:
+        return  # already archived this month
+
+    empty = GasCylinder.query.filter_by(status='empty').all()
+    if not empty:
+        return
+
+    snapshot = []
+    for c in empty:
+        snapshot.append({
+            'id': c.id, 'gas_type': c.gas_type,
+            'cylinder_number': c.cylinder_number, 'barcode': c.barcode,
+            'status': c.status,
+            'received_at': c.received_at.strftime('%Y-%m-%d') if c.received_at else None,
+            'installed_at': c.installed_at.strftime('%Y-%m-%d') if c.installed_at else None,
+            'notes': c.notes or ''
+        })
+
+    archive = MonthlyArchive(
+        archive_month=month_key,
+        section='gas_cylinders',
+        data_json=json.dumps(snapshot, ensure_ascii=False)
+    )
+    db.session.add(archive)
+    for c in empty:
+        db.session.delete(c)
+    safe_commit()
+    log_audit('auto_archive', 'gas_cylinders', 0, f'{len(empty)} empty cylinders auto-archived for {month_key}')
+
+
 # ============================================================
 # MAIN VIEW — Interactive Cylinder Dashboard
 # ============================================================
@@ -36,6 +70,12 @@ def check_gas_access():
 @login_required
 def gas_dashboard():
     """Main gas module view with interactive cylinder visualization"""
+    # Auto-archive empty cylinders on last day of month
+    now = datetime.utcnow()
+    tomorrow = now + timedelta(days=1)
+    if tomorrow.month != now.month:
+        _auto_archive(now)
+
     cylinders = GasCylinder.query.order_by(GasCylinder.gas_type, GasCylinder.cylinder_number).all()
     components = GasSystemComponent.query.order_by(
         GasSystemComponent.gas_type, GasSystemComponent.component_type).all()

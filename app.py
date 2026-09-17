@@ -5183,7 +5183,63 @@ def reports_advanced():
         stats['total_machines'] = len(machine_data)
         stats['total_faults'] = sum(r['period_count'] for r in machine_data)
         stats['machines_with_faults'] = len([r for r in machine_data if r['period_count'] > 0])
-        
+
+    elif report_type == 'gas':
+        from models import GasCylinder, CylinderLog, CylinderOrder
+        # Received: cylinders created in period
+        received_logs = CylinderLog.query.filter(
+            CylinderLog.action == 'created',
+            CylinderLog.date >= d_from, CylinderLog.date < d_to
+        ).all()
+        received_ids = list(set(l.cylinder_id for l in received_logs if l.cylinder_id))
+        n2_received = sum(1 for cid in received_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'nitrogen')
+        co2_received = sum(1 for cid in received_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'co2')
+
+        # Consumed: cylinders that became empty in period
+        consumed_logs = CylinderLog.query.filter(
+            CylinderLog.action.like('%_to_empty%'),
+            CylinderLog.date >= d_from, CylinderLog.date < d_to
+        ).all()
+        consumed_ids = list(set(l.cylinder_id for l in consumed_logs if l.cylinder_id))
+        n2_consumed = sum(1 for cid in consumed_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'nitrogen')
+        co2_consumed = sum(1 for cid in consumed_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'co2')
+
+        # Monthly breakdown (last 6 months)
+        chart_data = []
+        for i in range(5, -1, -1):
+            m_start = (datetime.utcnow().replace(day=1) - timedelta(days=i*30)).replace(day=1)
+            m_end = (m_start + timedelta(days=32)).replace(day=1)
+            m_key = m_start.strftime('%Y-%m')
+            r_logs = CylinderLog.query.filter(CylinderLog.action == 'created', CylinderLog.date >= m_start, CylinderLog.date < m_end).all()
+            c_logs = CylinderLog.query.filter(CylinderLog.action.like('%_to_empty%'), CylinderLog.date >= m_start, CylinderLog.date < m_end).all()
+            r_ids = set(l.cylinder_id for l in r_logs if l.cylinder_id)
+            c_ids = set(l.cylinder_id for l in c_logs if l.cylinder_id)
+            chart_data.append({
+                'month': m_key,
+                'received': len(r_ids),
+                'consumed': len(c_ids)
+            })
+
+        # Orders in period
+        orders = CylinderOrder.query.filter(
+            CylinderOrder.ordered_at >= d_from, CylinderOrder.ordered_at < d_to
+        ).order_by(CylinderOrder.ordered_at.desc()).all()
+
+        # All logs in period
+        all_logs = CylinderLog.query.filter(
+            CylinderLog.date >= d_from, CylinderLog.date < d_to
+        ).order_by(CylinderLog.date.desc()).limit(200).all()
+
+        stats['n2_received'] = n2_received
+        stats['co2_received'] = co2_received
+        stats['n2_consumed'] = n2_consumed
+        stats['co2_consumed'] = co2_consumed
+        stats['total_received'] = n2_received + co2_received
+        stats['total_consumed'] = n2_consumed + co2_consumed
+        stats['total_orders'] = len(orders)
+        stats['chart_data'] = chart_data
+        data = all_logs
+
     return render_template('reports_advanced.html',
         report_type=report_type, data=data, stats=stats,
         users=users, sections=sections,
