@@ -8,7 +8,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
 from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument
-from utils import role_required, safe_commit
+from utils import role_required, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
 
@@ -67,10 +67,10 @@ def cabinet_new():
             description=request.form.get('description', ''),
             manufacturer=request.form.get('manufacturer', ''),
             serial_number=request.form.get('serial_number', ''),
-            main_fuse_amps=int(request.form['main_fuse_amps']) if request.form.get('main_fuse_amps') else None,
+            main_fuse_amps=safe_int(request.form.get('main_fuse_amps')) or None,
             voltage=request.form.get('voltage', '400V/230V'),
-            schematic_x=int(request.form.get('schematic_x', 0)),
-            schematic_y=int(request.form.get('schematic_y', 0))
+            schematic_x=safe_int(request.form.get('schematic_x'), 0),
+            schematic_y=safe_int(request.form.get('schematic_y'), 0)
         )
         if 'photo' in request.files and request.files['photo'].filename:
             filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
@@ -102,10 +102,10 @@ def cabinet_edit(cabinet_id):
         c.description = request.form.get('description', '')
         c.manufacturer = request.form.get('manufacturer', '')
         c.serial_number = request.form.get('serial_number', '')
-        c.main_fuse_amps = int(request.form['main_fuse_amps']) if request.form.get('main_fuse_amps') else None
+        c.main_fuse_amps = safe_int(request.form.get('main_fuse_amps')) or None
         c.voltage = request.form.get('voltage', '400V/230V')
-        c.schematic_x = int(request.form.get('schematic_x', 0))
-        c.schematic_y = int(request.form.get('schematic_y', 0))
+        c.schematic_x = safe_int(request.form.get('schematic_x'), 0)
+        c.schematic_y = safe_int(request.form.get('schematic_y'), 0)
         if 'photo' in request.files and request.files['photo'].filename:
             filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
             request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
@@ -138,15 +138,15 @@ def breaker_new(cabinet_id):
             label=request.form['label'],
             description=request.form.get('description', ''),
             breaker_type=request.form.get('breaker_type', 'MCB'),
-            amperage=int(request.form['amperage']) if request.form.get('amperage') else None,
-            poles=int(request.form.get('poles', 1)),
+            amperage=safe_int(request.form.get('amperage')) or None,
+            poles=safe_int(request.form.get('poles'), 1),
             curve_type=request.form.get('curve_type', 'C'),
             phase=request.form.get('phase', ''),
             status=request.form.get('status', 'on'),
             connected_to=request.form.get('connected_to', ''),
             notes=request.form.get('notes', ''),
-            row=int(request.form.get('row', 1)),
-            position=int(request.form.get('position', 1))
+            row=safe_int(request.form.get('row'), 1),
+            position=safe_int(request.form.get('position'), 1)
         )
         db.session.add(b)
         safe_commit()
@@ -164,15 +164,15 @@ def breaker_edit(breaker_id):
         b.label = request.form['label']
         b.description = request.form.get('description', '')
         b.breaker_type = request.form.get('breaker_type', 'MCB')
-        b.amperage = int(request.form['amperage']) if request.form.get('amperage') else None
-        b.poles = int(request.form.get('poles', 1))
+        b.amperage = safe_int(request.form.get('amperage')) or None
+        b.poles = safe_int(request.form.get('poles'), 1)
         b.curve_type = request.form.get('curve_type', 'C')
         b.phase = request.form.get('phase', '')
         b.status = request.form.get('status', 'on')
         b.connected_to = request.form.get('connected_to', '')
         b.notes = request.form.get('notes', '')
-        b.row = int(request.form.get('row', 1))
-        b.position = int(request.form.get('position', 1))
+        b.row = safe_int(request.form.get('row'), 1)
+        b.position = safe_int(request.form.get('position'), 1)
         safe_commit()
         flash(_('Breaker updated'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=b.cabinet_id))
@@ -245,8 +245,8 @@ def switch_log(cabinet_id):
 @role_required('admin', 'director', 'technician')
 def switch_log_add(cabinet_id):
     c = ElectricalCabinet.query.get_or_404(cabinet_id)
-    from_id = int(request.form['from_breaker_id']) if request.form.get('from_breaker_id') else None
-    to_id = int(request.form['to_breaker_id']) if request.form.get('to_breaker_id') else None
+    from_id = safe_int(request.form.get('from_breaker_id')) or None
+    to_id = safe_int(request.form.get('to_breaker_id')) or None
     reason = request.form.get('reason', '').strip()
     if not reason:
         flash(_('Reason is required'), 'error')
@@ -322,7 +322,7 @@ def document_delete(doc_id):
 @login_required
 @role_required('admin', 'director', 'technician')
 def document_upload_global():
-    cabinet_id = int(request.form.get('cabinet_id', 0))
+    cabinet_id = safe_int(request.form.get('cabinet_id'), 0)
     if not cabinet_id:
         flash(_('Select a cabinet'), 'error')
         return redirect(url_for('electricity.electricity_list'))
@@ -359,12 +359,12 @@ def switch_log_global():
 @login_required
 @role_required('admin', 'director', 'technician')
 def switch_log_add_global():
-    cabinet_id = int(request.form.get('cabinet_id', 0))
+    cabinet_id = safe_int(request.form.get('cabinet_id'), 0)
     if not cabinet_id:
         flash(_('Select a cabinet'), 'error')
         return redirect(url_for('electricity.switch_log_global'))
-    from_id = int(request.form['from_breaker_id']) if request.form.get('from_breaker_id') else None
-    to_id = int(request.form['to_breaker_id']) if request.form.get('to_breaker_id') else None
+    from_id = safe_int(request.form.get('from_breaker_id')) or None
+    to_id = safe_int(request.form.get('to_breaker_id')) or None
     reason = request.form.get('reason', '').strip()
     if not reason:
         flash(_('Reason is required'), 'error')

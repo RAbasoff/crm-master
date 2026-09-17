@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 
 from models import (db, VoorraadItem, VoorraadMutatie, WarehouseGroup, WarehouseReservation,
                     SupplierPrice, Machine, Contractor)
-from utils import role_required, log_audit, sanitize_like, safe_commit
+from utils import role_required, log_audit, sanitize_like, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('warehouse', __name__, url_prefix='/warehouse')
 
@@ -165,6 +165,8 @@ def warehouse_new():
         if logistiek_wh_id and not current_user.has_role('admin', 'director'):
             group_id = logistiek_wh_id
             contractor_id = None
+        d_last = safe_date(request.form.get('last_replacement'))
+        d_next = safe_date(request.form.get('next_replacement'))
         i = VoorraadItem(
             naam=request.form['naam'],
             description=request.form.get('description', ''),
@@ -173,17 +175,17 @@ def warehouse_new():
             contractor_id=contractor_id,
             supplier_part_number=request.form.get('supplier_part_number','').strip() or None,
             eenheid=request.form.get('eenheid','st'),
-            hoeveelheid=float(request.form.get('hoeveelheid',0)),
-            minimum=float(request.form.get('minimum',0)),
-            prijs=float(request.form.get('prijs',0)),
+            hoeveelheid=safe_float(request.form.get('hoeveelheid'), 0),
+            minimum=safe_float(request.form.get('minimum'), 0),
+            prijs=safe_float(request.form.get('prijs'), 0),
             locatie=request.form.get('locatie',''),
             consumable_type=request.form.get('consumable_type',''),
             consumable_subtype=request.form.get('consumable_subtype',''),
             volume=request.form.get('volume',''),
             compatible_machines=request.form.get('compatible_machines',''),
             replacement_interval=request.form.get('replacement_interval',''),
-            last_replacement=datetime.strptime(request.form['last_replacement'], '%Y-%m-%d').date() if request.form.get('last_replacement') else None,
-            next_replacement=datetime.strptime(request.form['next_replacement'], '%Y-%m-%d').date() if request.form.get('next_replacement') else None,
+            last_replacement=d_last.date() if d_last else None,
+            next_replacement=d_next.date() if d_next else None,
         )
         db.session.add(i); safe_commit()
         flash(_('Item added') + f': {i.naam}', 'success')
@@ -215,17 +217,19 @@ def warehouse_edit(item_id):
             item.contractor_id = None
         item.supplier_part_number = request.form.get('supplier_part_number','').strip() or None
         item.eenheid = request.form.get('eenheid','st')
-        item.hoeveelheid = float(request.form.get('hoeveelheid',0))
-        item.minimum = float(request.form.get('minimum',0))
-        item.prijs = float(request.form.get('prijs',0))
+        item.hoeveelheid = safe_float(request.form.get('hoeveelheid'), 0)
+        item.minimum = safe_float(request.form.get('minimum'), 0)
+        item.prijs = safe_float(request.form.get('prijs'), 0)
         item.locatie = request.form.get('locatie','')
         item.consumable_type = request.form.get('consumable_type','')
         item.consumable_subtype = request.form.get('consumable_subtype','')
         item.volume = request.form.get('volume','')
         item.compatible_machines = request.form.get('compatible_machines','')
         item.replacement_interval = request.form.get('replacement_interval','')
-        item.last_replacement = datetime.strptime(request.form['last_replacement'], '%Y-%m-%d').date() if request.form.get('last_replacement') else None
-        item.next_replacement = datetime.strptime(request.form['next_replacement'], '%Y-%m-%d').date() if request.form.get('next_replacement') else None
+        d = safe_date(request.form.get('last_replacement'))
+        item.last_replacement = d.date() if d else None
+        d = safe_date(request.form.get('next_replacement'))
+        item.next_replacement = d.date() if d else None
         safe_commit()
         flash(_('Item updated'), 'success')
         return redirect(url_for('warehouse.warehouse_list'))
@@ -345,7 +349,7 @@ def warehouse_movements():
 @role_required('admin', 'technician')
 def warehouse_reserve(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
-    qty = float(request.form.get('quantity', 1))
+    qty = safe_float(request.form.get('quantity'), 1)
     if qty > item.hoeveelheid:
         flash(_('Insufficient stock for reservation!'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
@@ -428,8 +432,8 @@ def warehouse_price_add(item_id):
         item_id=item_id,
         supplier_name=request.form.get('supplier_name', ''),
         price=price,
-        delivery_days=int(request.form['delivery_days']) if request.form.get('delivery_days') else None,
-        min_order=float(request.form['min_order']) if request.form.get('min_order') else None,
+        delivery_days=safe_int(request.form.get('delivery_days')) or None,
+        min_order=safe_float(request.form.get('min_order')) or None,
         notes=request.form.get('notes', '')
     )
     db.session.add(p); safe_commit()
@@ -606,7 +610,7 @@ def warehouse_qty_update():
 def warehouse_labels():
     ids = request.args.get('ids', '')
     if ids:
-        item_ids = [int(x) for x in ids.split(',') if x.strip()]
+        item_ids = [safe_int(x) for x in ids.split(',') if x.strip()]
         items = VoorraadItem.query.filter(VoorraadItem.id.in_(item_ids)).all()
     else:
         items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
@@ -621,7 +625,7 @@ def warehouse_transfer_print():
     if not ids:
         flash(_('Select items first'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
-    item_ids = [int(x) for x in ids.split(',') if x.strip()]
+    item_ids = [safe_int(x) for x in ids.split(',') if x.strip()]
     items = VoorraadItem.query.filter(VoorraadItem.id.in_(item_ids)).all()
     return render_template('warehouse_transfer.html', items=items, now=datetime.utcnow())
 
@@ -668,7 +672,7 @@ def warehouse_transfer_to_oktopus():
     if not logistiek_id:
         flash(_('Logistiek-Oktopus group not found'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
-    item_ids = [int(x) for x in ids.split(',') if x.strip()]
+    item_ids = [safe_int(x) for x in ids.split(',') if x.strip()]
     count = 0
     for item_id in item_ids:
         item = VoorraadItem.query.get(item_id)
@@ -690,7 +694,7 @@ def warehouse_transfer_from_oktopus():
         flash(_('Select items first'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
     logistiek_id = _get_logistiek_group_id()
-    item_ids = [int(x) for x in ids.split(',') if x.strip()]
+    item_ids = [safe_int(x) for x in ids.split(',') if x.strip()]
     count = 0
     for item_id in item_ids:
         item = VoorraadItem.query.get(item_id)

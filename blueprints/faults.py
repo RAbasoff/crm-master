@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie)
-from utils import role_required, log_audit, create_notification, add_work_report, safe_commit
+from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
 
@@ -328,7 +328,7 @@ def work_report_new(fault_id):
             technician_id=current_user.id,
             work_description=request.form['work_description'],
             parts_used=request.form.get('parts_used', '[]'),
-            time_spent_hours=float(request.form.get('time_spent_hours', 0))
+            time_spent_hours=safe_float(request.form.get('time_spent_hours'), 0)
         )
         db.session.add(wr)
         safe_commit()
@@ -396,7 +396,7 @@ def work_report_edit(fault_id, report_id):
 
         wr.work_description = request.form['work_description']
         wr.parts_used = request.form.get('parts_used', '[]')
-        wr.time_spent_hours = float(request.form.get('time_spent_hours', 0))
+        wr.time_spent_hours = safe_float(request.form.get('time_spent_hours'), 0)
 
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):

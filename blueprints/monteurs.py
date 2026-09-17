@@ -7,7 +7,7 @@ from flask_babel import gettext as _
 
 from models import db, User, Machine, UserSectionAccess
 from config import SECTION_KEYS
-from utils import role_required, safe_commit
+from utils import role_required, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('monteurs', __name__)
 

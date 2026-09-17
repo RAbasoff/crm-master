@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
                     CylinderOrder, EquipmentRepair, User, MonthlyArchive)
-from utils import role_required, log_audit, create_notification, safe_commit
+from utils import role_required, log_audit, create_notification, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
 
@@ -177,7 +177,7 @@ def cylinder_new():
             notes=request.form.get('notes', '')
         )
         if request.form.get('received_at'):
-            c.received_at = datetime.strptime(request.form['received_at'], '%Y-%m-%d')
+            c.received_at = safe_date(request.form.get('received_at'))
         db.session.add(c)
         safe_commit()
 
@@ -210,9 +210,9 @@ def cylinder_edit(cyl_id):
         c.status = request.form.get('status', c.status)
         c.notes = request.form.get('notes', '')
         if request.form.get('received_at'):
-            c.received_at = datetime.strptime(request.form['received_at'], '%Y-%m-%d')
+            c.received_at = safe_date(request.form.get('received_at'))
         if request.form.get('installed_at'):
-            c.installed_at = datetime.strptime(request.form['installed_at'], '%Y-%m-%d')
+            c.installed_at = safe_date(request.form.get('installed_at'))
         safe_commit()
 
         if old_status != c.status:
@@ -399,9 +399,11 @@ def component_new():
             notes=request.form.get('notes', '')
         )
         if request.form.get('last_check'):
-            c.last_check = datetime.strptime(request.form['last_check'], '%Y-%m-%d').date()
+            d = safe_date(request.form.get('last_check'))
+            c.last_check = d.date() if d else None
         if request.form.get('next_check'):
-            c.next_check = datetime.strptime(request.form['next_check'], '%Y-%m-%d').date()
+            d = safe_date(request.form.get('next_check'))
+            c.next_check = d.date() if d else None
         db.session.add(c)
         safe_commit()
         log_audit('create', 'gas_component', c.id, f'{c.component_type}: {c.name}')
@@ -423,9 +425,11 @@ def component_edit(comp_id):
         c.status = request.form.get('status', c.status)
         c.notes = request.form.get('notes', '')
         if request.form.get('last_check'):
-            c.last_check = datetime.strptime(request.form['last_check'], '%Y-%m-%d').date()
+            d = safe_date(request.form.get('last_check'))
+            c.last_check = d.date() if d else None
         if request.form.get('next_check'):
-            c.next_check = datetime.strptime(request.form['next_check'], '%Y-%m-%d').date()
+            d = safe_date(request.form.get('next_check'))
+            c.next_check = d.date() if d else None
         safe_commit()
         log_audit('update', 'gas_component', c.id, f'{c.component_type}: {c.name}')
         flash(_('Component updated'), 'success')
@@ -466,7 +470,7 @@ def order_new():
     if request.method == 'POST':
         o = CylinderOrder(
             gas_type=request.form['gas_type'],
-            quantity=int(request.form.get('quantity', 1)),
+            quantity=safe_int(request.form.get('quantity'), 1),
             status='pending',
             supplier=request.form.get('supplier', ''),
             reason=request.form.get('reason', ''),

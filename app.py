@@ -34,7 +34,8 @@ from utils import (role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
                    log_user_activity, log_system, run_data_migrations, sanitize_like,
-                   check_tool_wear_notifications, safe_commit)
+                   check_tool_wear_notifications, safe_commit,
+                   safe_int, safe_float, safe_date)
 
 # ============================================================
 # APP CONFIG
@@ -591,8 +592,8 @@ def user_cabinet_update(user_id):
     u.role = request.form.get('role', u.role)
     u.access_level = request.form.get('access_level', u.access_level)
     u.is_active_user = 'is_active' in request.form
-    u.hire_date = datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else u.hire_date
-    u.fire_date = datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None
+    u.hire_date = (d := safe_date(request.form.get('hire_date'))) and d.date() or u.hire_date
+    u.fire_date = (d := safe_date(request.form.get('fire_date'))) and d.date() or None
     # Password change (optional)
     new_pass = request.form.get('new_password')
     if new_pass:
@@ -681,8 +682,8 @@ def user_new():
             phone=request.form.get('phone', ''),
             role=request.form.get('role', 'user'),
             access_level=request.form.get('access_level', 'full'),
-            person_id=int(request.form['person_id']) if request.form.get('person_id') else None,
-            hire_date=datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else None
+            person_id=safe_int(request.form.get('person_id')) or None,
+            hire_date=(d := safe_date(request.form.get('hire_date'))) and d.date() or None
         )
         u.set_password(request.form['password'])
         db.session.add(u)
@@ -721,10 +722,10 @@ def user_edit(user_id):
         u.phone = request.form.get('phone', u.phone or '')
         u.role = request.form.get('role', u.role)
         u.access_level = request.form.get('access_level', u.access_level)
-        u.person_id = int(request.form['person_id']) if request.form.get('person_id') else None
+        u.person_id = safe_int(request.form.get('person_id')) or None
         u.is_active_user = 'is_active' in request.form
-        u.hire_date = datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else u.hire_date
-        u.fire_date = datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None
+        u.hire_date = (d := safe_date(request.form.get('hire_date'))) and d.date() or u.hire_date
+        u.fire_date = (d := safe_date(request.form.get('fire_date'))) and d.date() or None
         new_pass = request.form.get('password')
         if new_pass:
             u.set_password(new_pass)
@@ -773,16 +774,16 @@ def machine_new():
             serial_number=request.form.get('serial_number', ''),
             machine_type=request.form.get('machine_type', ''),
             manufacturer=request.form.get('manufacturer', ''),
-            year_of_manufacture=int(request.form['year_of_manufacture']) if request.form.get('year_of_manufacture') else None,
+            year_of_manufacture=safe_int(request.form.get('year_of_manufacture')) or None,
             installation_location=request.form.get('installation_location', ''),
-            contractor_id=int(request.form['contractor_id']) if request.form.get('contractor_id') else None,
-            responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
-            responsible_person_id=int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None,
-            section_id=int(request.form['section_id']) if request.form.get('section_id') else None,
-            marker_size=int(request.form.get('marker_size', 45)),
+            contractor_id=safe_int(request.form.get('contractor_id')) or None,
+            responsible_user_id=safe_int(request.form.get('responsible_user_id')) or None,
+            responsible_person_id=safe_int(request.form.get('responsible_person_id')) or None,
+            section_id=safe_int(request.form.get('section_id')) or None,
+            marker_size=safe_int(request.form.get('marker_size'), 45),
             marker_shape=request.form.get('marker_shape', 'circle'),
-            floor_x=float(request.form.get('floor_x', 50)),
-            floor_y=float(request.form.get('floor_y', 50))
+            floor_x=safe_float(request.form.get('floor_x'), 50),
+            floor_y=safe_float(request.form.get('floor_y'), 50)
         )
         if 'photo' in request.files and request.files['photo'].filename:
             filename = secure_filename(f"machine_{request.files['photo'].filename}")
@@ -832,7 +833,7 @@ def machine_link_consumable(machine_id):
     mc = MachineConsumable(
         machine_id=m.id,
         warehouse_item_id=item_id,
-        quantity_per_use=float(request.form.get('quantity_per_use', 1)),
+        quantity_per_use=safe_float(request.form.get('quantity_per_use'), 1),
         notes=request.form.get('notes', '')
     )
     db.session.add(mc)
@@ -847,7 +848,7 @@ def machine_link_consumable(machine_id):
 @role_required('admin', 'technician')
 def machine_consume_consumable(machine_id, cons_id):
     mc = MachineConsumable.query.get_or_404(cons_id)
-    qty = float(request.form.get('quantity', mc.quantity_per_use or 1))
+    qty = safe_float(request.form.get('quantity'), mc.quantity_per_use or 1)
     item = mc.warehouse_item
     if qty > item.hoeveelheid:
         flash(_('Insufficient stock! Available: {} {}').format(item.hoeveelheid, item.eenheid), 'error')
@@ -916,17 +917,17 @@ def machine_edit(machine_id):
         m.serial_number = request.form.get('serial_number', '')
         m.machine_type = request.form.get('machine_type', '')
         m.manufacturer = request.form.get('manufacturer', '')
-        m.year_of_manufacture = int(request.form['year_of_manufacture']) if request.form.get('year_of_manufacture') else None
+        m.year_of_manufacture = safe_int(request.form.get('year_of_manufacture')) or None
         m.installation_location = request.form.get('installation_location', '')
-        m.contractor_id = int(request.form['contractor_id']) if request.form.get('contractor_id') else None
-        m.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
-        m.responsible_person_id = int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None
-        m.section_id = int(request.form['section_id']) if request.form.get('section_id') else None
-        m.marker_size = int(request.form.get('marker_size', m.marker_size or 45))
+        m.contractor_id = safe_int(request.form.get('contractor_id')) or None
+        m.responsible_user_id = safe_int(request.form.get('responsible_user_id')) or None
+        m.responsible_person_id = safe_int(request.form.get('responsible_person_id')) or None
+        m.section_id = safe_int(request.form.get('section_id')) or None
+        m.marker_size = safe_int(request.form.get('marker_size'), m.marker_size or 45)
         m.marker_shape = request.form.get('marker_shape', m.marker_shape or 'circle')
         m.status = request.form.get('status', m.status)
-        m.floor_x = float(request.form.get('floor_x', m.floor_x))
-        m.floor_y = float(request.form.get('floor_y', m.floor_y))
+        m.floor_x = safe_float(request.form.get('floor_x'), m.floor_x)
+        m.floor_y = safe_float(request.form.get('floor_y'), m.floor_y)
         if 'photo' in request.files and request.files['photo'].filename:
             filename = secure_filename(f"machine_{m.id}_{request.files['photo'].filename}")
             request.files['photo'].save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -1014,8 +1015,8 @@ def machine_add_maintenance(machine_id):
             description=request.form['description'],
             performed_by=current_user.id,
             date_performed=date_performed,
-            next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d') if request.form.get('next_maintenance') else None,
-            cost=float(request.form.get('cost', 0)),
+            next_maintenance=safe_date(request.form.get('next_maintenance')),
+            cost=safe_float(request.form.get('cost'), 0),
             parts_used=request.form.get('parts_used', '[]'),
             notes=request.form.get('notes', '')
         )
@@ -1250,12 +1251,12 @@ def section_new():
             description=request.form.get('description', ''),
             section_type=request.form.get('section_type', 'workshop'),
             color=request.form.get('color', '#3498db'),
-            floor_x=float(request.form.get('floor_x', 10)),
-            floor_y=float(request.form.get('floor_y', 10)),
-            width=float(request.form.get('width', 25)),
-            height=float(request.form.get('height', 25)),
+            floor_x=safe_float(request.form.get('floor_x'), 10),
+            floor_y=safe_float(request.form.get('floor_y'), 10),
+            width=safe_float(request.form.get('width'), 25),
+            height=safe_float(request.form.get('height'), 25),
         )
-        s.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
+        s.responsible_user_id = safe_int(request.form.get('responsible_user_id')) or None
         person_ids = request.form.getlist('responsible_person_ids')
         s.responsible_persons = [Verantwoordelijke.query.get(int(pid)) for pid in person_ids if pid]
         db.session.add(s)
@@ -1276,11 +1277,11 @@ def section_edit(section_id):
         s.description = request.form.get('description', '')
         s.section_type = request.form.get('section_type', s.section_type)
         s.color = request.form.get('color', s.color)
-        s.floor_x = float(request.form.get('floor_x', s.floor_x))
-        s.floor_y = float(request.form.get('floor_y', s.floor_y))
-        s.width = float(request.form.get('width', s.width))
-        s.height = float(request.form.get('height', s.height))
-        s.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
+        s.floor_x = safe_float(request.form.get('floor_x'), s.floor_x)
+        s.floor_y = safe_float(request.form.get('floor_y'), s.floor_y)
+        s.width = safe_float(request.form.get('width'), s.width)
+        s.height = safe_float(request.form.get('height'), s.height)
+        s.responsible_user_id = safe_int(request.form.get('responsible_user_id')) or None
         person_ids = request.form.getlist('responsible_person_ids')
         s.responsible_persons = [Verantwoordelijke.query.get(int(pid)) for pid in person_ids if pid]
         safe_commit()
@@ -1635,9 +1636,9 @@ def machine_parts(machine_id):
 def machine_part_new(machine_id):
     m = Machine.query.get_or_404(machine_id)
     if request.method == 'POST':
-        installed = datetime.strptime(request.form['installed_date'], '%Y-%m-%d').date() if request.form.get('installed_date') else None
-        interval = int(request.form['replacement_interval_days']) if request.form.get('replacement_interval_days') else None
-        maint_interval = int(request.form['maintenance_interval_days']) if request.form.get('maintenance_interval_days') else None
+        installed = (d := safe_date(request.form.get('installed_date'))) and d.date() or None
+        interval = safe_int(request.form.get('replacement_interval_days')) or None
+        maint_interval = safe_int(request.form.get('maintenance_interval_days')) or None
         
         p = MachinePart(
             machine_id=m.id,
@@ -1651,7 +1652,7 @@ def machine_part_new(machine_id):
             next_replacement=date_plus_days(installed, interval) if installed and interval else None,
             maintenance_interval_days=maint_interval,
             next_maintenance=date_plus_days(installed, maint_interval) if installed and maint_interval else None,
-            responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
+            responsible_user_id=safe_int(request.form.get('responsible_user_id')) or None,
         )
         db.session.add(p)
         safe_commit()
@@ -1674,11 +1675,11 @@ def machine_part_edit(machine_id, part_id):
         p.status = request.form.get('status', p.status)
         p.notes = request.form.get('notes', '')
         
-        installed = datetime.strptime(request.form['installed_date'], '%Y-%m-%d').date() if request.form.get('installed_date') else p.installed_date
+        installed = (d := safe_date(request.form.get('installed_date'))) and d.date() or p.installed_date
         p.installed_date = installed
-        p.replacement_interval_days = int(request.form['replacement_interval_days']) if request.form.get('replacement_interval_days') else p.replacement_interval_days
-        p.maintenance_interval_days = int(request.form['maintenance_interval_days']) if request.form.get('maintenance_interval_days') else p.maintenance_interval_days
-        p.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
+        p.replacement_interval_days = safe_int(request.form.get('replacement_interval_days'), p.replacement_interval_days)
+        p.maintenance_interval_days = safe_int(request.form.get('maintenance_interval_days'), p.maintenance_interval_days)
+        p.responsible_user_id = safe_int(request.form.get('responsible_user_id')) or None
 
         if installed and p.replacement_interval_days:
             p.next_replacement = date_plus_days(installed, p.replacement_interval_days)
@@ -1704,9 +1705,9 @@ def machine_part_log(machine_id, part_id):
         part_id=p.id,
         action=action,
         description=request.form.get('description', ''),
-        performed_by=int(request.form['performed_by']) if request.form.get('performed_by') else current_user.id,
+        performed_by=safe_int(request.form.get('performed_by'), current_user.id),
         date=today,
-        cost=float(request.form.get('cost', 0)),
+        cost=safe_float(request.form.get('cost'), 0),
         notes=request.form.get('notes', '')
     )
     db.session.add(log)
@@ -2156,16 +2157,16 @@ def maintenance_plan_new():
             maintenance_type=request.form.get('maintenance_type', 'preventive'),
             status=request.form.get('status', 'planned'),
             planned_start=planned_start,
-            planned_end=datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None,
+            planned_end=(d := safe_date(request.form.get('planned_end'))) and d.date() or None,
             is_external='is_external' in request.form,
             company_name=request.form.get('company_name', ''),
             company_contact=request.form.get('company_contact', ''),
             company_person=request.form.get('company_person', ''),
-            worker_id=int(request.form['worker_id']) if request.form.get('worker_id') else None,
+            worker_id=safe_int(request.form.get('worker_id')) or None,
             parts_used=request.form.get('parts_used', '[]'),
-            cost=float(request.form.get('cost', 0)),
+            cost=safe_float(request.form.get('cost'), 0),
             report=request.form.get('report', ''),
-            next_maintenance=datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None,
+            next_maintenance=(d := safe_date(request.form.get('next_maintenance'))) and d.date() or None,
             recurrence=request.form.get('recurrence', '') or None,
             notes=request.form.get('notes', ''),
             created_by=current_user.id
@@ -2183,7 +2184,7 @@ def maintenance_plan_new():
         
         # Check if TWO should be created
         create_two = request.form.get('create_two') == 'yes'
-        worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
+        worker_id = safe_int(request.form.get('worker_id')) or None
         
         if create_two and worker_id:
             # Create TWO from maintenance plan
@@ -2234,18 +2235,18 @@ def maintenance_plan_edit(plan_id):
         p.description = request.form.get('description', '')
         p.maintenance_type = request.form.get('maintenance_type', p.maintenance_type)
         p.status = request.form.get('status', p.status)
-        p.planned_end = datetime.strptime(request.form['planned_end'], '%Y-%m-%d').date() if request.form.get('planned_end') else None
-        p.actual_start = datetime.strptime(request.form['actual_start'], '%Y-%m-%d').date() if request.form.get('actual_start') else None
-        p.actual_end = datetime.strptime(request.form['actual_end'], '%Y-%m-%d').date() if request.form.get('actual_end') else None
+        p.planned_end = (d := safe_date(request.form.get('planned_end'))) and d.date() or None
+        p.actual_start = (d := safe_date(request.form.get('actual_start'))) and d.date() or None
+        p.actual_end = (d := safe_date(request.form.get('actual_end'))) and d.date() or None
         p.is_external = 'is_external' in request.form
         p.company_name = request.form.get('company_name', '')
         p.company_contact = request.form.get('company_contact', '')
         p.company_person = request.form.get('company_person', '')
-        p.worker_id = int(request.form['worker_id']) if request.form.get('worker_id') else None
+        p.worker_id = safe_int(request.form.get('worker_id')) or None
         p.parts_used = request.form.get('parts_used', '[]')
-        p.cost = float(request.form.get('cost', 0))
+        p.cost = safe_float(request.form.get('cost'), 0)
         p.report = request.form.get('report', '')
-        p.next_maintenance = datetime.strptime(request.form['next_maintenance'], '%Y-%m-%d').date() if request.form.get('next_maintenance') else None
+        p.next_maintenance = (d := safe_date(request.form.get('next_maintenance'))) and d.date() or None
         old_status = p.status
         p.recurrence = request.form.get('recurrence', '') or None
         p.notes = request.form.get('notes', '')
@@ -2464,10 +2465,10 @@ def equipment_new():
             number=gen_eq_number(),
             name=request.form['name'],
             serial=request.form.get('serial', ''),
-            machine_id=int(request.form['machine_id']) if request.form.get('machine_id') else None,
+            machine_id=safe_int(request.form.get('machine_id')) or None,
             date=date,
             reason=request.form['reason'],
-            next_date=datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None,
+            next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,
             periodicity=request.form.get('periodicity', ''),
             notes=request.form.get('notes', ''),
             created_by=current_user.id
@@ -2478,8 +2479,8 @@ def equipment_new():
         wh_ids = request.form.getlist('part_warehouse_id')
         for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
-                wh_id = int(wh_ids[i]) if i < len(wh_ids) and wh_ids[i] else None
-                qty = float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
+                wh_id = safe_int(wh_ids[i]) if i < len(wh_ids) and wh_ids[i] else None
+                qty = safe_float(request.form.getlist('part_qty')[i], 1) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
                 db.session.add(EquipmentPart(
                     equipment_id=eq.id,
                     warehouse_item_id=wh_id,
@@ -2534,17 +2535,17 @@ def equipment_edit(eq_id):
             return redirect(url_for('equipment_edit', eq_id=eq.id))
         eq.name = request.form['name']
         eq.serial = request.form.get('serial', '')
-        eq.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
+        eq.machine_id = safe_int(request.form.get('machine_id')) or None
         eq.reason = request.form['reason']
-        eq.next_date = datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None
+        eq.next_date = (d := safe_date(request.form.get('next_date'))) and d.date() or None
         eq.periodicity = request.form.get('periodicity', '')
         eq.notes = request.form.get('notes', '')
         EquipmentPart.query.filter_by(equipment_id=eq.id).delete()
         wh_ids = request.form.getlist('part_warehouse_id')
         for i, pname in enumerate(request.form.getlist('part_name')):
             if pname.strip():
-                wh_id = int(wh_ids[i]) if i < len(wh_ids) and wh_ids[i] else None
-                qty = float(request.form.getlist('part_qty')[i]) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
+                wh_id = safe_int(wh_ids[i]) if i < len(wh_ids) and wh_ids[i] else None
+                qty = safe_float(request.form.getlist('part_qty')[i], 1) if i < len(request.form.getlist('part_qty')) and request.form.getlist('part_qty')[i] else 1
                 db.session.add(EquipmentPart(
                     equipment_id=eq.id,
                     warehouse_item_id=wh_id,
@@ -2604,7 +2605,7 @@ def equipment_order():
         equipment_name=request.form.get('equipment_name', ''),
         part_name=request.form['part_name'],
         part_number=request.form.get('part_number', ''),
-        quantity=float(request.form.get('quantity', 1)),
+        quantity=safe_float(request.form.get('quantity'), 1),
         supplier=request.form.get('supplier', ''),
         urgency=request.form.get('urgency', 'normal'),
         notes=request.form.get('notes', ''),
@@ -2660,7 +2661,7 @@ def assets_new():
             model_name=request.form.get('model_name', ''),
             serial_number=request.form.get('serial_number', ''),
             inventory_number=request.form.get('inventory_number', ''),
-            year_of_manufacture=int(request.form['year_of_manufacture']) if request.form.get('year_of_manufacture') else None,
+            year_of_manufacture=safe_int(request.form.get('year_of_manufacture')) or None,
             country_of_origin=request.form.get('country_of_origin', ''),
             voltage=request.form.get('voltage', ''),
             power=request.form.get('power', ''),
@@ -2674,27 +2675,27 @@ def assets_new():
             ip_rating=request.form.get('ip_rating', ''),
             material=request.form.get('material', ''),
             color=request.form.get('color', ''),
-            purchase_date=datetime.strptime(request.form['purchase_date'], '%Y-%m-%d').date() if request.form.get('purchase_date') else None,
-            purchase_price=float(request.form['purchase_price']) if request.form.get('purchase_price') else None,
+            purchase_date=(d := safe_date(request.form.get('purchase_date'))) and d.date() or None,
+            purchase_price=safe_float(request.form.get('purchase_price')) or None,
             currency=request.form.get('currency', 'EUR'),
             supplier=request.form.get('supplier', ''),
             invoice_number=request.form.get('invoice_number', ''),
-            warranty_start=datetime.strptime(request.form['warranty_start'], '%Y-%m-%d').date() if request.form.get('warranty_start') else None,
-            warranty_end=datetime.strptime(request.form['warranty_end'], '%Y-%m-%d').date() if request.form.get('warranty_end') else None,
+            warranty_start=(d := safe_date(request.form.get('warranty_start'))) and d.date() or None,
+            warranty_end=(d := safe_date(request.form.get('warranty_end'))) and d.date() or None,
             warranty_notes=request.form.get('warranty_notes', ''),
-            section_id=int(request.form['section_id']) if request.form.get('section_id') else None,
+            section_id=safe_int(request.form.get('section_id')) or None,
             installation_location=request.form.get('installation_location', ''),
             building=request.form.get('building', ''),
             floor_level=request.form.get('floor_level', ''),
             room=request.form.get('room', ''),
             status=request.form.get('status', 'active'),
             condition=request.form.get('condition', 'good'),
-            responsible_person_id=int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None,
-            responsible_user_id=int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None,
-            contractor_id=int(request.form['contractor_id']) if request.form.get('contractor_id') else None,
-            last_service_date=datetime.strptime(request.form['last_service_date'], '%Y-%m-%d').date() if request.form.get('last_service_date') else None,
-            next_service_date=datetime.strptime(request.form['next_service_date'], '%Y-%m-%d').date() if request.form.get('next_service_date') else None,
-            service_interval_days=int(request.form['service_interval_days']) if request.form.get('service_interval_days') else None,
+            responsible_person_id=safe_int(request.form.get('responsible_person_id')) or None,
+            responsible_user_id=safe_int(request.form.get('responsible_user_id')) or None,
+            contractor_id=safe_int(request.form.get('contractor_id')) or None,
+            last_service_date=(d := safe_date(request.form.get('last_service_date'))) and d.date() or None,
+            next_service_date=(d := safe_date(request.form.get('next_service_date'))) and d.date() or None,
+            service_interval_days=safe_int(request.form.get('service_interval_days')) or None,
             maintenance_notes=request.form.get('maintenance_notes', ''),
             description=request.form.get('description', ''),
             notes=request.form.get('notes', ''),
@@ -2742,7 +2743,7 @@ def assets_edit(eq_id):
         eq.model_name = request.form.get('model_name', '')
         eq.serial_number = request.form.get('serial_number', '')
         eq.inventory_number = request.form.get('inventory_number', '')
-        eq.year_of_manufacture = int(request.form['year_of_manufacture']) if request.form.get('year_of_manufacture') else None
+        eq.year_of_manufacture = safe_int(request.form.get('year_of_manufacture')) or None
         eq.country_of_origin = request.form.get('country_of_origin', '')
         eq.voltage = request.form.get('voltage', '')
         eq.power = request.form.get('power', '')
@@ -2756,27 +2757,27 @@ def assets_edit(eq_id):
         eq.ip_rating = request.form.get('ip_rating', '')
         eq.material = request.form.get('material', '')
         eq.color = request.form.get('color', '')
-        eq.purchase_date = datetime.strptime(request.form['purchase_date'], '%Y-%m-%d').date() if request.form.get('purchase_date') else None
-        eq.purchase_price = float(request.form['purchase_price']) if request.form.get('purchase_price') else None
+        eq.purchase_date = (d := safe_date(request.form.get('purchase_date'))) and d.date() or None
+        eq.purchase_price = safe_float(request.form.get('purchase_price')) or None
         eq.currency = request.form.get('currency', 'EUR')
         eq.supplier = request.form.get('supplier', '')
         eq.invoice_number = request.form.get('invoice_number', '')
-        eq.warranty_start = datetime.strptime(request.form['warranty_start'], '%Y-%m-%d').date() if request.form.get('warranty_start') else None
-        eq.warranty_end = datetime.strptime(request.form['warranty_end'], '%Y-%m-%d').date() if request.form.get('warranty_end') else None
+        eq.warranty_start = (d := safe_date(request.form.get('warranty_start'))) and d.date() or None
+        eq.warranty_end = (d := safe_date(request.form.get('warranty_end'))) and d.date() or None
         eq.warranty_notes = request.form.get('warranty_notes', '')
-        eq.section_id = int(request.form['section_id']) if request.form.get('section_id') else None
+        eq.section_id = safe_int(request.form.get('section_id')) or None
         eq.installation_location = request.form.get('installation_location', '')
         eq.building = request.form.get('building', '')
         eq.floor_level = request.form.get('floor_level', '')
         eq.room = request.form.get('room', '')
         eq.status = request.form.get('status', 'active')
         eq.condition = request.form.get('condition', 'good')
-        eq.responsible_person_id = int(request.form['responsible_person_id']) if request.form.get('responsible_person_id') else None
-        eq.responsible_user_id = int(request.form['responsible_user_id']) if request.form.get('responsible_user_id') else None
-        eq.contractor_id = int(request.form['contractor_id']) if request.form.get('contractor_id') else None
-        eq.last_service_date = datetime.strptime(request.form['last_service_date'], '%Y-%m-%d').date() if request.form.get('last_service_date') else None
-        eq.next_service_date = datetime.strptime(request.form['next_service_date'], '%Y-%m-%d').date() if request.form.get('next_service_date') else None
-        eq.service_interval_days = int(request.form['service_interval_days']) if request.form.get('service_interval_days') else None
+        eq.responsible_person_id = safe_int(request.form.get('responsible_person_id')) or None
+        eq.responsible_user_id = safe_int(request.form.get('responsible_user_id')) or None
+        eq.contractor_id = safe_int(request.form.get('contractor_id')) or None
+        eq.last_service_date = (d := safe_date(request.form.get('last_service_date'))) and d.date() or None
+        eq.next_service_date = (d := safe_date(request.form.get('next_service_date'))) and d.date() or None
+        eq.service_interval_days = safe_int(request.form.get('service_interval_days')) or None
         eq.maintenance_notes = request.form.get('maintenance_notes', '')
         eq.description = request.form.get('description', '')
         eq.notes = request.form.get('notes', '')
@@ -2819,9 +2820,9 @@ def assets_add_service(eq_id):
         service_type=request.form.get('service_type', 'maintenance'),
         description=request.form.get('description', ''),
         performed_by=current_user.id,
-        cost=float(request.form['cost']) if request.form.get('cost') else 0,
-        date=datetime.strptime(request.form['date'], '%Y-%m-%d') if request.form.get('date') else datetime.utcnow(),
-        next_date=datetime.strptime(request.form['next_date'], '%Y-%m-%d').date() if request.form.get('next_date') else None,
+        cost=safe_float(request.form.get('cost'), 0),
+        date=safe_date(request.form.get('date')) or datetime.utcnow(),
+        next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,
         notes=request.form.get('notes', '')
     )
     if log.next_date:
@@ -2875,9 +2876,9 @@ def repair_new():
             repair_company=request.form.get('repair_company', ''),
             repair_description=request.form.get('repair_description', ''),
             repair_cost=float(cost_str) if cost_str else 0,
-            date_sent=datetime.strptime(request.form['date_sent'], '%Y-%m-%dT%H:%M') if request.form.get('date_sent') else None,
-            date_repaired=datetime.strptime(request.form['date_repaired'], '%Y-%m-%dT%H:%M') if request.form.get('date_repaired') else None,
-            date_installed=datetime.strptime(request.form['date_installed'], '%Y-%m-%dT%H:%M') if request.form.get('date_installed') else None,
+            date_sent=safe_date(request.form.get('date_sent'), '%Y-%m-%dT%H:%M'),
+            date_repaired=safe_date(request.form.get('date_repaired'), '%Y-%m-%dT%H:%M'),
+            date_installed=safe_date(request.form.get('date_installed'), '%Y-%m-%dT%H:%M'),
             status=request.form.get('status', 'broken'),
             notes=request.form.get('notes', ''),
             created_by=current_user.id
@@ -2914,9 +2915,9 @@ def repair_edit(repair_id):
         r.repair_description = request.form.get('repair_description', '')
         cost_str = request.form.get('repair_cost', '').strip()
         r.repair_cost = float(cost_str) if cost_str else 0
-        r.date_sent = datetime.strptime(request.form['date_sent'], '%Y-%m-%dT%H:%M') if request.form.get('date_sent') else None
-        r.date_repaired = datetime.strptime(request.form['date_repaired'], '%Y-%m-%dT%H:%M') if request.form.get('date_repaired') else None
-        r.date_installed = datetime.strptime(request.form['date_installed'], '%Y-%m-%dT%H:%M') if request.form.get('date_installed') else None
+        r.date_sent = safe_date(request.form.get('date_sent'), '%Y-%m-%dT%H:%M')
+        r.date_repaired = safe_date(request.form.get('date_repaired'), '%Y-%m-%dT%H:%M')
+        r.date_installed = safe_date(request.form.get('date_installed'), '%Y-%m-%dT%H:%M')
         r.status = request.form.get('status', r.status)
         r.notes = request.form.get('notes', '')
         # Update component
@@ -3031,15 +3032,15 @@ def two_list():
 @role_required('admin', 'director', 'technician')
 def two_new():
     if request.method == 'POST':
-        fault_id = int(request.form['fault_id']) if request.form.get('fault_id') else None
+        fault_id = safe_int(request.form.get('fault_id')) or None
         two = TechnicalWorkOrder(
             number=gen_two_number(),
             fault_id=fault_id,
-            machine_id=int(request.form['machine_id']) if request.form.get('machine_id') else None,
-            section_id=int(request.form['section_id']) if request.form.get('section_id') else None,
+            machine_id=safe_int(request.form.get('machine_id')) or None,
+            section_id=safe_int(request.form.get('section_id')) or None,
             description=request.form['description'],
             additional_work=request.form.get('additional_work', ''),
-            planned_date=datetime.strptime(request.form['planned_date'], '%Y-%m-%d').date() if request.form.get('planned_date') else None,
+            planned_date=(d := safe_date(request.form.get('planned_date'))) and d.date() or None,
             status=request.form.get('status', 'draft'),
             notes=request.form.get('notes', ''),
             created_by=current_user.id
@@ -3370,16 +3371,16 @@ def two_add_signature(two_id):
 def two_edit(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     if request.method == 'POST':
-        two.fault_id = int(request.form['fault_id']) if request.form.get('fault_id') else None
-        two.machine_id = int(request.form['machine_id']) if request.form.get('machine_id') else None
-        two.section_id = int(request.form['section_id']) if request.form.get('section_id') else None
+        two.fault_id = safe_int(request.form.get('fault_id')) or None
+        two.machine_id = safe_int(request.form.get('machine_id')) or None
+        two.section_id = safe_int(request.form.get('section_id')) or None
         two.description = request.form['description']
         two.additional_work = request.form.get('additional_work', '')
-        two.planned_date = datetime.strptime(request.form['planned_date'], '%Y-%m-%d').date() if request.form.get('planned_date') else None
+        two.planned_date = (d := safe_date(request.form.get('planned_date'))) and d.date() or None
         two.status = request.form.get('status', two.status)
         two.result = request.form.get('result', '')
         two.parts_used = request.form.get('parts_used', '')
-        two.time_spent_hours = float(request.form.get('time_spent_hours', 0))
+        two.time_spent_hours = safe_float(request.form.get('time_spent_hours'), 0)
         two.notes = request.form.get('notes', '')
         if request.form.get('started_at'):
             try:
@@ -3699,7 +3700,7 @@ def stats_full():
         d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
         period = (d_to - d_from).days
     else:
-        period = int(request.args.get('period', '30'))
+        period = safe_int(request.args.get('period'), 30)
         d_from = datetime.utcnow() - timedelta(days=period)
         d_to = datetime.utcnow() + timedelta(days=1)
         date_from = d_from.strftime('%Y-%m-%d')
@@ -3828,7 +3829,7 @@ def stats_export():
         d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
         period = (d_to - d_from).days
     else:
-        period = int(request.args.get('period', '30'))
+        period = safe_int(request.args.get('period'), 30)
         d_from = datetime.utcnow() - timedelta(days=period)
         d_to = datetime.utcnow() + timedelta(days=1)
         date_from = d_from.strftime('%Y-%m-%d')
@@ -4312,7 +4313,7 @@ def order_new():
             model=request.form.get('model', ''),
             serienummer=request.form.get('serienummer', ''),
             probleem=request.form['probleem'],
-            arbeidskosten=float(request.form.get('arbeidskosten', 0)),
+            arbeidskosten=safe_float(request.form.get('arbeidskosten'), 0),
             status='aangenomen'
         )
         db.session.add(o)
@@ -4343,8 +4344,8 @@ def order_edit(order_id):
         order.probleem = request.form['probleem']
         order.diagnose = request.form.get('diagnose', '')
         order.uitgevoerd = request.form.get('uitgevoerd', '')
-        order.arbeidskosten = float(request.form.get('arbeidskosten', 0))
-        order.onderdelenkosten = float(request.form.get('onderdelenkosten', 0))
+        order.arbeidskosten = safe_float(request.form.get('arbeidskosten'), 0)
+        order.onderdelenkosten = safe_float(request.form.get('onderdelenkosten'), 0)
         order.totaal = order.arbeidskosten + order.onderdelenkosten
         ns = request.form.get('status', order.status)
         if ns != order.status:
@@ -4561,7 +4562,7 @@ def responsible_new():
             work_phone=request.form.get('work_phone', ''),
             email=request.form.get('email', ''),
             username=request.form.get('username', '').strip() or None,
-            group_id=int(request.form['group_id']) if request.form.get('group_id') else None,
+            group_id=safe_int(request.form.get('group_id')) or None,
             access_level=request.form.get('access_level', 'floor'),
             notities=request.form.get('notities', '')
         )
@@ -4723,7 +4724,7 @@ def responsible_quick_add():
             telefoon=request.form.get('telefoon', '').strip(),
             email=request.form.get('email', '').strip(),
             username=request.form.get('username', '').strip() or None,
-            group_id=int(request.form['group_id']) if request.form.get('group_id') else None
+            group_id=safe_int(request.form.get('group_id')) or None
         )
         password = request.form.get('password', '').strip()
         if password:
@@ -4792,7 +4793,7 @@ def responsible_edit(resp_id):
                     flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
                     return redirect(url_for('responsible_edit', resp_id=c.id))
             c.username = new_username
-        c.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
+        c.group_id = safe_int(request.form.get('group_id')) or None
         c.access_level = request.form.get('access_level', c.access_level or 'floor')
         c.is_active = 'is_active' in request.form
         c.notities = request.form.get('notities', '')
@@ -4835,11 +4836,11 @@ def worker_new():
     if request.method == 'POST':
         w = Monteur(naam=request.form['naam'], telefoon=request.form.get('telefoon',''),
                     specialisatie=request.form.get('specialisatie',''),
-                    tarief_per_uur=float(request.form.get('tarief_per_uur',0)),
-                    hire_date=datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else None,
-                    fire_date=datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None,
-                    user_id=int(request.form['user_id']) if request.form.get('user_id') else None,
-                    group_id=int(request.form['group_id']) if request.form.get('group_id') else None)
+                    tarief_per_uur=safe_float(request.form.get('tarief_per_uur'), 0),
+                    hire_date=(d := safe_date(request.form.get('hire_date'))) and d.date() or None,
+                    fire_date=(d := safe_date(request.form.get('fire_date'))) and d.date() or None,
+                    user_id=safe_int(request.form.get('user_id')) or None,
+                    group_id=safe_int(request.form.get('group_id')) or None)
         db.session.add(w); safe_commit()
         flash(_('Worker added') + f': {w.naam}', 'success')
         return redirect(url_for('workers_list'))
@@ -4855,12 +4856,12 @@ def worker_edit(worker_id):
     if request.method == 'POST':
         w.naam = request.form['naam']; w.telefoon = request.form.get('telefoon','')
         w.specialisatie = request.form.get('specialisatie','')
-        w.tarief_per_uur = float(request.form.get('tarief_per_uur',0))
-        w.hire_date = datetime.strptime(request.form['hire_date'], '%Y-%m-%d').date() if request.form.get('hire_date') else w.hire_date
-        w.fire_date = datetime.strptime(request.form['fire_date'], '%Y-%m-%d').date() if request.form.get('fire_date') else None
+        w.tarief_per_uur = safe_float(request.form.get('tarief_per_uur'), 0)
+        w.hire_date = (d := safe_date(request.form.get('hire_date'))) and d.date() or w.hire_date
+        w.fire_date = (d := safe_date(request.form.get('fire_date'))) and d.date() or None
         w.actief = 'actief' in request.form
-        w.user_id = int(request.form['user_id']) if request.form.get('user_id') else None
-        w.group_id = int(request.form['group_id']) if request.form.get('group_id') else None
+        w.user_id = safe_int(request.form.get('user_id')) or None
+        w.group_id = safe_int(request.form.get('group_id')) or None
         safe_commit()
         flash(_('Worker updated'), 'success')
         return redirect(url_for('workers_list'))
@@ -4946,8 +4947,8 @@ def invoice_new():
             invoice_number=request.form['invoice_number'],
             supplier=request.form['supplier'],
             invoice_date=invoice_date,
-            due_date=datetime.strptime(request.form['due_date'], '%Y-%m-%d').date() if request.form.get('due_date') else None,
-            total=float(request.form.get('total', 0)),
+            due_date=(d := safe_date(request.form.get('due_date'))) and d.date() or None,
+            total=safe_float(request.form.get('total'), 0),
             status='pending',
             notes=request.form.get('notes', ''),
             created_by=current_user.id
@@ -4993,8 +4994,8 @@ def invoice_edit(invoice_id):
             return redirect(url_for('invoice_edit', invoice_id=inv.id))
         inv.invoice_number = request.form['invoice_number']
         inv.supplier = request.form['supplier']
-        inv.due_date = datetime.strptime(request.form['due_date'], '%Y-%m-%d').date() if request.form.get('due_date') else None
-        inv.total = float(request.form.get('total', 0))
+        inv.due_date = (d := safe_date(request.form.get('due_date'))) and d.date() or None
+        inv.total = safe_float(request.form.get('total'), 0)
         inv.notes = request.form.get('notes', '')
         # Update items
         inv.items = []
@@ -5081,8 +5082,8 @@ def reports_advanced():
     user_id = request.args.get('user_id', '')
     section_id = request.args.get('section_id', '')
     
-    d_from = datetime.strptime(date_from, '%Y-%m-%d')
-    d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+    d_from = safe_date(date_from) or (datetime.utcnow() - timedelta(days=30))
+    d_to = (safe_date(date_to) or datetime.utcnow()) + timedelta(days=1)
     
     users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
@@ -5093,7 +5094,7 @@ def reports_advanced():
     if report_type == 'activity':
         q = UserActivityLog.query.filter(UserActivityLog.created_at >= d_from, UserActivityLog.created_at < d_to)
         if user_id:
-            q = q.filter_by(user_id=int(user_id))
+            q = q.filter_by(user_id=safe_int(user_id))
         data = q.order_by(UserActivityLog.created_at.desc()).limit(500).all()
         stats['total_actions'] = q.count()
         stats['unique_users'] = db.session.query(db.func.count(db.distinct(UserActivityLog.user_id))).filter(UserActivityLog.created_at >= d_from, UserActivityLog.created_at < d_to).scalar()
@@ -5101,9 +5102,9 @@ def reports_advanced():
     elif report_type == 'faults':
         q = FaultReport.query.filter(FaultReport.created_at >= d_from, FaultReport.created_at < d_to)
         if user_id:
-            q = q.filter_by(reporter_id=int(user_id))
+            q = q.filter_by(reporter_id=safe_int(user_id))
         if section_id:
-            q = q.filter(FaultReport.machine.has(Machine.section_id == int(section_id)))
+            q = q.filter(FaultReport.machine.has(Machine.section_id == safe_int(section_id)))
         data = q.order_by(FaultReport.created_at.desc()).all()
         stats['total'] = q.count()
         stats['open'] = q.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count()
@@ -5120,7 +5121,7 @@ def reports_advanced():
     elif report_type == 'errors':
         q = SystemLog.query.filter(SystemLog.created_at >= d_from, SystemLog.created_at < d_to)
         if user_id:
-            q = q.filter_by(user_id=int(user_id))
+            q = q.filter_by(user_id=safe_int(user_id))
         data = q.order_by(SystemLog.created_at.desc()).limit(500).all()
         stats['total'] = q.count()
         stats['errors'] = q.filter_by(level='ERROR').count()
@@ -5129,7 +5130,7 @@ def reports_advanced():
     elif report_type == 'users':
         q = AuditLog.query.filter(AuditLog.created_at >= d_from, AuditLog.created_at < d_to)
         if user_id:
-            q = q.filter_by(user_id=int(user_id))
+            q = q.filter_by(user_id=safe_int(user_id))
         data = q.order_by(AuditLog.created_at.desc()).limit(500).all()
         stats['total'] = q.count()
         
@@ -5161,7 +5162,7 @@ def reports_advanced():
         # Report by machines - faults, maintenance, status
         machines_q = Machine.query.order_by(Machine.name)
         if section_id:
-            machines_q = machines_q.filter_by(section_id=int(section_id))
+            machines_q = machines_q.filter_by(section_id=safe_int(section_id))
         machines_list = machines_q.all()
         machine_data = []
         for m in machines_list:
@@ -5256,8 +5257,8 @@ def reports_export():
     date_to = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
     user_id = request.args.get('user_id', '')
     
-    d_from = datetime.strptime(date_from, '%Y-%m-%d')
-    d_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+    d_from = safe_date(date_from) or (datetime.utcnow() - timedelta(days=30))
+    d_to = (safe_date(date_to) or datetime.utcnow()) + timedelta(days=1)
     
     # Collect data
     headers = []
@@ -5268,14 +5269,14 @@ def reports_export():
         title = 'Активность пользователей'
         headers = ['Дата', 'Пользователь', 'Действие', 'Страница', 'Детали', 'IP']
         q = UserActivityLog.query.filter(UserActivityLog.created_at >= d_from, UserActivityLog.created_at < d_to)
-        if user_id: q = q.filter_by(user_id=int(user_id))
+        if user_id: q = q.filter_by(user_id=safe_int(user_id))
         for r in q.order_by(UserActivityLog.created_at.desc()).limit(1000).all():
             rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.username or '', r.action or '', r.page or '', r.details or '', r.ip_address or ''])
     elif report_type == 'faults':
         title = 'Заявки о неисправности'
         headers = ['ID', 'Дата', 'Заголовок', 'Станок', 'Приоритет', 'Статус', 'Репортер']
         q = FaultReport.query.filter(FaultReport.created_at >= d_from, FaultReport.created_at < d_to)
-        if user_id: q = q.filter_by(reporter_id=int(user_id))
+        if user_id: q = q.filter_by(reporter_id=safe_int(user_id))
         for f in q.order_by(FaultReport.created_at.desc()).all():
             rows.append([str(f.id), f.created_at.strftime('%Y-%m-%d %H:%M'), f.title or '', f.machine.name if f.machine else '', f.priority or '', f.status or '', f.reporter.display_name if f.reporter else ''])
     elif report_type == 'warehouse':
@@ -5288,14 +5289,14 @@ def reports_export():
         title = 'Ошибки и предупреждения'
         headers = ['Дата', 'Уровень', 'Категория', 'Сообщение', 'Источник', 'Пользователь']
         q = SystemLog.query.filter(SystemLog.created_at >= d_from, SystemLog.created_at < d_to)
-        if user_id: q = q.filter_by(user_id=int(user_id))
+        if user_id: q = q.filter_by(user_id=safe_int(user_id))
         for r in q.order_by(SystemLog.created_at.desc()).limit(1000).all():
             rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.level or '', r.category or '', r.message or '', r.source or '', r.user.display_name if r.user else ''])
     elif report_type == 'users':
         title = 'Журнал аудита'
         headers = ['Дата', 'Пользователь', 'Действие', 'Тип', 'Детали', 'IP']
         q = AuditLog.query.filter(AuditLog.created_at >= d_from, AuditLog.created_at < d_to)
-        if user_id: q = q.filter_by(user_id=int(user_id))
+        if user_id: q = q.filter_by(user_id=safe_int(user_id))
         for r in q.order_by(AuditLog.created_at.desc()).limit(1000).all():
             rows.append([r.created_at.strftime('%Y-%m-%d %H:%M'), r.user.display_name if r.user else '', r.action or '', r.entity_type or '', r.details or '', r.ip_address or ''])
     elif report_type == 'responsible':
@@ -5322,7 +5323,7 @@ def reports_export():
         title = 'Отчёт по станкам'
         headers = ['Станок', 'Тип', 'Серийный номер', 'Отдел', 'Заявок за период', 'Всего заявок', 'Открытых', 'Критичных']
         machines_q = Machine.query.order_by(Machine.name)
-        if section_id: machines_q = machines_q.filter_by(section_id=int(section_id))
+        if section_id: machines_q = machines_q.filter_by(section_id=safe_int(section_id))
         for m in machines_q.all():
             period_count = FaultReport.query.filter(FaultReport.machine_id == m.id, FaultReport.created_at >= d_from, FaultReport.created_at < d_to).count()
             total_count = FaultReport.query.filter(FaultReport.machine_id == m.id).count()
@@ -6057,7 +6058,7 @@ def purchase_request_new():
             fault_description=request.form.get('fault_description', ''),
             part_name=request.form['part_name'],
             part_catalog=request.form.get('part_catalog', ''),
-            quantity=float(request.form.get('quantity', 1)),
+            quantity=safe_float(request.form.get('quantity'), 1),
             unit=request.form.get('unit', 'st'),
             urgency=request.form.get('urgency', 'normal'),
             reason=request.form.get('reason', '')
@@ -6173,7 +6174,7 @@ def schedule_user(user_id):
             name=request.form['name'],
             shift_start=request.form['shift_start'],
             shift_end=request.form['shift_end'],
-            break_minutes=int(request.form.get('break_minutes', 60)),
+            break_minutes=safe_int(request.form.get('break_minutes'), 60),
             work_days=work_days or '1,2,3,4,5'
         )
         db.session.add(s)
@@ -6238,8 +6239,8 @@ def get_belgian_holidays(year):
 @login_required
 @role_required('admin', 'director')
 def schedule_monthly():
-    year = int(request.args.get('year', datetime.utcnow().year))
-    month = int(request.args.get('month', datetime.utcnow().month))
+    year = safe_int(request.args.get('year'), datetime.utcnow().year)
+    month = safe_int(request.args.get('month'), datetime.utcnow().month)
     filter_user = request.args.get('user', '')
     if month < 1: month = 12; year -= 1
     if month > 12: month = 1; year += 1
@@ -6442,7 +6443,7 @@ def time_tracking_manual():
             return redirect(url_for('time_tracking'))
         delta = entry.clock_out - entry.clock_in
         hours = delta.total_seconds() / 3600
-        entry.break_minutes = int(request.form.get('break_minutes', 60))
+        entry.break_minutes = safe_int(request.form.get('break_minutes'), 60)
         entry.hours_worked = round(hours - (entry.break_minutes / 60), 2)
         if entry.hours_worked > 8:
             entry.overtime_hours = round(entry.hours_worked - 8, 2)
@@ -6825,7 +6826,7 @@ def tool_wear_page():
 def tool_wear_add():
     machine_name = request.form.get('machine_name', '').strip()
     tool_name = request.form.get('tool_name', '').strip() or 'Ножи / Фреза'
-    cycle_days = int(request.form.get('cycle_days', 14))
+    cycle_days = safe_int(request.form.get('cycle_days'), 14)
     if machine_name:
         t = ToolWear(machine_name=machine_name, tool_name=tool_name, cycle_days=cycle_days, last_replaced=datetime.utcnow().date())
         db.session.add(t)
@@ -6840,7 +6841,7 @@ def tool_wear_update(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.machine_name = request.form.get('machine_name', tool.machine_name).strip()
     tool.tool_name = request.form.get('tool_name', tool.tool_name).strip()
-    tool.cycle_days = int(request.form.get('cycle_days', tool.cycle_days or 14))
+    tool.cycle_days = safe_int(request.form.get('cycle_days'), tool.cycle_days or 14)
     date_str = request.form.get('last_replaced')
     if date_str:
         tool.last_replaced = datetime.strptime(date_str, '%Y-%m-%d').date()

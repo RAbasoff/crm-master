@@ -7,7 +7,7 @@ from flask_login import login_required
 from flask_babel import gettext as _
 
 from models import db, Contractor, ContractorEmployee
-from utils import role_required, log_audit, safe_commit
+from utils import role_required, log_audit, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('contractors', __name__, url_prefix='/contractors')
 
@@ -25,6 +25,8 @@ def contractors_list():
 @role_required('admin')
 def contractor_new():
     if request.method == 'POST':
+        d_start = safe_date(request.form.get('contract_start'))
+        d_end = safe_date(request.form.get('contract_end'))
         c = Contractor(
             company_name=request.form['company_name'],
             contact_person=request.form.get('contact_person', ''),
@@ -42,8 +44,8 @@ def contractor_new():
             iban=request.form.get('iban', ''),
             service_type=request.form.get('service_type', ''),
             contract_number=request.form.get('contract_number', ''),
-            contract_start=datetime.strptime(request.form['contract_start'], '%Y-%m-%d').date() if request.form.get('contract_start') else None,
-            contract_end=datetime.strptime(request.form['contract_end'], '%Y-%m-%d').date() if request.form.get('contract_end') else None,
+            contract_start=d_start.date() if d_start else None,
+            contract_end=d_end.date() if d_end else None,
             notes=request.form.get('notes', '')
         )
         db.session.add(c)
@@ -85,8 +87,10 @@ def contractor_edit(contractor_id):
         c.iban = request.form.get('iban', '')
         c.service_type = request.form.get('service_type', '')
         c.contract_number = request.form.get('contract_number', '')
-        c.contract_start = datetime.strptime(request.form['contract_start'], '%Y-%m-%d').date() if request.form.get('contract_start') else None
-        c.contract_end = datetime.strptime(request.form['contract_end'], '%Y-%m-%d').date() if request.form.get('contract_end') else None
+        d = safe_date(request.form.get('contract_start'))
+        c.contract_start = d.date() if d else None
+        d = safe_date(request.form.get('contract_end'))
+        c.contract_end = d.date() if d else None
         c.notes = request.form.get('notes', '')
         safe_commit()
         log_audit('update', 'contractor', c.id, c.company_name)

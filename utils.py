@@ -1100,6 +1100,36 @@ def sanitize_like(query_str):
         return ''
     return query_str.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
+
+def safe_int(value, default=0):
+    """Parse int from user input without crashing. Returns default on failure."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def safe_float(value, default=0.0):
+    """Parse float from user input without crashing. Returns default on failure."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def safe_date(value, fmt='%Y-%m-%d'):
+    """Parse datetime from user input without crashing. Returns None on failure."""
+    if not value or not str(value).strip():
+        return None
+    try:
+        return datetime.strptime(str(value).strip(), fmt)
+    except (ValueError, TypeError):
+        return None
+
 def add_work_report(entry_text):
     """Add entry to Work Report log from anywhere in the app"""
     from flask_login import current_user

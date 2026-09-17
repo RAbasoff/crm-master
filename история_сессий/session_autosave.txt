@@ -1,22 +1,29 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 06:05 UTC
+Время: 2026-09-17 09:14 UTC
 ============================================================
 
-Последний коммит: 17ba5fb feat: gas spare list shows active cylinders (in_use+full) with count + translations
+Последний коммит: 2f926c7 feat: gas analytics report + consumption chart + auto-archive on last day of month
 Git status: clean
 
 ИЗМЕНЕНО:
-  - templates/gas/dashboard.html:
-    - Левый список: только баллоны в работе (in_use + full) с цветовой кодировкой
-    - Счётчик "В работе: N" над списком
-    - Кнопка "📦 N получено" если есть полученные за месяц
-    - Удалён "All Cylinders" реестр
-  - translations/ru/nl/pl: Новые строки
+  - app.py: reports_advanced — новый тип отчёта "gas" (Газовые баллоны)
+    - Статистика: получено/израсходовано (N₂ + CO₂)
+    - График потребления за 6 месяцев (Chart.js bar chart)
+    - Лог действий с баллонами за период
+    - Заказы за период
+  - blueprints/gas.py:
+    - _auto_archive() — автоматическая архивация в последний день месяца
+    - Запускается при открытии dashboard если завтра — новый месяц
+  - templates/reports_advanced.html:
+    - Опция "Газовые баллоны" в dropdown
+    - Блок статистики + canvas для графика
+    - Таблица логов
+  - translations/ru: Новые строки
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master
   Web → Reload
 
 ============================================================
-(Updated at 2026-09-17 06:05 UTC)
+
