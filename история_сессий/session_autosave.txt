@@ -1,29 +1,25 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 09:14 UTC
+Время: 2026-09-17 10:29 UTC
 ============================================================
 
-Последний коммит: 2f926c7 feat: gas analytics report + consumption chart + auto-archive on last day of month
+Последний коммит: 4084310 fix: mass crash prevention - safe_int/safe_float/safe_date across app.py + all blueprints (~130 fixes)
 Git status: clean
 
 ИЗМЕНЕНО:
-  - app.py: reports_advanced — новый тип отчёта "gas" (Газовые баллоны)
-    - Статистика: получено/израсходовано (N₂ + CO₂)
-    - График потребления за 6 месяцев (Chart.js bar chart)
-    - Лог действий с баллонами за период
-    - Заказы за период
-  - blueprints/gas.py:
-    - _auto_archive() — автоматическая архивация в последний день месяца
-    - Запускается при открытии dashboard если завтра — новый месяц
-  - templates/reports_advanced.html:
-    - Опция "Газовые баллоны" в dropdown
-    - Блок статистики + canvas для графика
-    - Таблица логов
-  - translations/ru: Новые строки
+  - utils.py: Добавлены safe_int(), safe_float(), safe_date() — безопасные парсеры
+  - app.py: ~130 замен int()/float()/datetime.strptime() → safe_int/safe_float/safe_date
+  - blueprints/ (6 файлов): ~30+ замен аналогично
+  - Все unprotected парсинги вне try/except исправлены
+  - Оставшиеся bare int/datetime — только внутри try/except (защищены)
+
+АУДИТ:
+  - Найдено 109 точек отказа (32 app.py + 77 blueprints)
+  - Исправлено ~130+ замен
+  - 0 unprotected int(request) и datetime.strptime(request) осталось
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master
   Web → Reload
 
 ============================================================
-

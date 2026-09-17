@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 
 from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument
 from utils import role_required, safe_commit, safe_int, safe_float, safe_date
+from sqlalchemy.orm import subqueryload
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
 
@@ -27,7 +28,9 @@ def check_electricity_access():
 @bp.route('/')
 @login_required
 def electricity_list():
-    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    cabinets = ElectricalCabinet.query.options(
+        subqueryload(ElectricalCabinet.breakers)
+    ).filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
     cab_map = {c.id: c for c in cabinets}
     all_breakers = [b for cab in cabinets for b in cab.breakers]
     stats = {
@@ -204,14 +207,18 @@ def breaker_delete(breaker_id):
 @bp.route('/schematic')
 @login_required
 def electricity_schematic():
-    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    cabinets = ElectricalCabinet.query.options(
+        subqueryload(ElectricalCabinet.breakers)
+    ).filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
     return render_template('electricity_schematic.html', cabinets=cabinets)
 
 
 @bp.route('/floorplan')
 @login_required
 def electricity_floorplan():
-    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    cabinets = ElectricalCabinet.query.options(
+        subqueryload(ElectricalCabinet.breakers)
+    ).filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
     return render_template('electricity_floorplan.html', cabinets=cabinets)
 
 
@@ -351,7 +358,9 @@ def document_upload_global():
 def switch_log_global():
     logs = ElectricalSwitchLog.query.order_by(ElectricalSwitchLog.created_at.desc()).limit(100).all()
     all_breakers = CircuitBreaker.query.join(ElectricalCabinet).filter(ElectricalCabinet.is_active == True).order_by(ElectricalCabinet.name, CircuitBreaker.label).all()
-    cabinets = ElectricalCabinet.query.filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    cabinets = ElectricalCabinet.query.options(
+        subqueryload(ElectricalCabinet.breakers)
+    ).filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
     return render_template('switch_log.html', cabinet=None, logs=logs, all_breakers=all_breakers, cabinets=cabinets)
 
 

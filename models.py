@@ -158,7 +158,7 @@ class Machine(db.Model):
     responsible_user = db.relationship('User', foreign_keys=[responsible_user_id], backref='responsible_machines')
     responsible_person = db.relationship('Verantwoordelijke', foreign_keys=[responsible_person_id])
     contractor_rel = db.relationship('Contractor', foreign_keys=[contractor_id], back_populates='machines')
-    fault_reports = db.relationship('FaultReport', backref='machine', lazy=True)
+    fault_reports = db.relationship('FaultReport', back_populates='machine', lazy=True)
     spare_parts = db.relationship('MachineSparePart', backref='machine', lazy=True, cascade='all, delete-orphan')
     documents = db.relationship('MachineDocument', backref='machine', lazy=True, cascade='all, delete-orphan')
     maintenance_records = db.relationship('MaintenanceRecord', backref='machine', lazy=True, cascade='all, delete-orphan')
@@ -191,7 +191,7 @@ class MachinePart(db.Model):
 class PartMaintenanceLog(db.Model):
     __tablename__ = 'part_maintenance_log'
     id = db.Column(db.Integer, primary_key=True)
-    part_id = db.Column(db.Integer, db.ForeignKey('machine_part.id'), nullable=False)
+    part_id = db.Column(db.Integer, db.ForeignKey('machine_part.id'), nullable=False, index=True)
     action = db.Column(db.String(30), nullable=False)
     description = db.Column(db.Text)
     performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -541,7 +541,7 @@ class VoorraadItem(db.Model):
 class VoorraadMutatie(db.Model):
     __tablename__ = 'warehouse_movement'
     id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False, index=True)
     type = db.Column(db.String(10), nullable=False)
     hoeveelheid = db.Column(db.Float, nullable=False)
     opdracht_id = db.Column(db.Integer, db.ForeignKey('opdracht.id'))
@@ -702,13 +702,14 @@ class FaultReport(db.Model):
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=True, index=True)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=True, index=True)
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    technician_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # primary technician (legacy)
-    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))
+    technician_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # primary technician (legacy)
+    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'), index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     accepted_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
     reporter = db.relationship('User', foreign_keys=[reporter_id], back_populates='fault_reports')
     technician = db.relationship('User', foreign_keys=[technician_id])
+    machine = db.relationship('Machine', foreign_keys=[machine_id], back_populates='fault_reports')
     photos = db.relationship('FaultPhoto', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     videos = db.relationship('FaultVideo', backref='fault_report', lazy=True, cascade='all, delete-orphan')
     work_report = db.relationship('WorkReport', backref='fault_report', lazy=True, cascade='all, delete-orphan')

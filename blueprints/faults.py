@@ -7,6 +7,7 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
+from sqlalchemy.orm import joinedload, subqueryload
 
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
@@ -15,20 +16,27 @@ from utils import role_required, log_audit, create_notification, add_work_report
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
 
+_FAULTS_EAGER = (
+    joinedload(FaultReport.machine),
+    joinedload(FaultReport.reporter),
+    joinedload(FaultReport.technician),
+    subqueryload(FaultReport.assigned_technicians),
+)
 
 @bp.route('/')
 @login_required
 def faults_list():
     page = request.args.get('page', 1, type=int)
+    base = FaultReport.query.options(*_FAULTS_EAGER)
     if current_user.has_role('admin', 'director'):
-        pagination = FaultReport.query.order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+        pagination = base.order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     elif current_user.has_role('technician'):
-        pagination = FaultReport.query.filter(
+        pagination = base.filter(
             (FaultReport.technician_id == current_user.id) |
             (FaultReport.status == 'open')
         ).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     else:
-        pagination = FaultReport.query.filter_by(reporter_id=current_user.id).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+        pagination = base.filter_by(reporter_id=current_user.id).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     faults = pagination.items
     return render_template('faults.html', faults=faults, pagination=pagination)
 
