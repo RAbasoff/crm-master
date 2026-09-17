@@ -3,13 +3,15 @@
 Время: 2026-09-17 05:14 UTC
 ============================================================
 
-Последний коммит: 41c87ec fix: scanner input - strip non-printable chars (GS1 FNC1) that show as hieroglyphs
+Последний коммит: ef37571 fix: scanner uses physical key codes (e.code) to bypass keyboard layout - hieroglyphs gone
 Git status: clean
 
-ИЗМЕНЕНО В ЭТОЙ СЕССИИ:
-  - templates/universal_scanner.html: cleanBarcode() фильтрует нечитаемые символы от Honeywell
-  - templates/base.html: Scanner перенесён из System в Warehouse (подменю)
-  - translations/ru/nl/pl: Переводы для сканера
+ИЗМЕНЕНО:
+  - templates/universal_scanner.html: полная переработка ввода сканера
+    - Используется e.code (физическая клавиша) вместо e.key (layout)
+    - Буфер scanBuffer + маппинг US layout → ASCII
+    - Блокировка paste/drop
+    - Таймаут очистки буфера 500мс
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master
