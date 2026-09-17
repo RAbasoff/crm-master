@@ -220,14 +220,14 @@ function tryCylinder(code) {
 
 function showNotFound(code) {
     const card = document.getElementById('resultCard');
-    card.style.borderLeftColor = '#f39c12';
+    card.style.borderLeftColor = '#e74c3c';
     let html = '<div style="display:flex;align-items:center;gap:12px">';
     html += '<span style="font-size:24px">❓</span>';
     html += '<div><div style="font-size:14px;font-weight:600">' + code + '</div>';
-    html += '<div style="font-size:12px;color:#888">{{ _("Not found in system") }}</div></div></div>';
+    html += '<div style="font-size:12px;color:#888">{{ _("Unknown barcode") }}</div></div></div>';
     html += '<div style="display:flex;gap:8px;margin-top:12px">';
-    html += '<a href="/warehouse/new?barcode=' + encodeURIComponent(code) + '" class="btn btn-sm" style="background:#27ae60;color:white;text-decoration:none">+ {{ _("Add to Warehouse") }}</a>';
-    html += '<a href="/machines?search=' + encodeURIComponent(code) + '" class="btn btn-sm" style="background:#eee;text-decoration:none">⚙️ {{ _("Search Machines") }}</a>';
+    html += '<button onclick="window.location.href=\'/warehouse/new?barcode=' + encodeURIComponent(code) + '\'" class="btn btn-sm" style="background:#27ae60;color:white;cursor:pointer">+ {{ _("Add to Warehouse") }}</button>';
+    html += '<button onclick="document.getElementById(\'resultArea\').style.display=\'none\';document.getElementById(\'scannerInput\').focus()" class="btn btn-sm" style="background:#eee;cursor:pointer">{{ _("Ignore") }}</button>';
     html += '</div>';
     document.getElementById('resultContent').innerHTML = html;
 }

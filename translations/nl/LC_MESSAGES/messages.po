@@ -932,3 +932,51 @@ msgid "Attach videos of the fault (mp4, mov, avi, webm)"
 msgstr "Voeg video's van de storing toe (mp4, mov, avi, webm)"
 msgid "Your browser does not support video playback"
 msgstr "Uw browser ondersteunt geen videoafspelen"
+
+msgid "Barcode Scanner"
+msgstr "Barcodescanner"
+
+msgid "Scan barcode or type code..."
+msgstr "Scan barcode of voer code in..."
+
+msgid "External scanner ready — scan to auto-submit"
+msgstr "Externe scanner klaar — scan om automatisch te verzenden"
+
+msgid "Auto-detect"
+msgstr "Auto-detect"
+
+msgid "Gas Cylinder"
+msgstr "Gascilinder"
+
+msgid "Camera"
+msgstr "Camera"
+
+msgid "Stop Camera"
+msgstr "Camera stoppen"
+
+msgid "Scan History"
+msgstr "Scanhistorie"
+
+msgid "Unknown barcode"
+msgstr "Onbekende barcode"
+
+msgid "Ignore"
+msgstr "Negeren"
+
+msgid "Edit"
+msgstr "Bewerken"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "View"
+msgstr "Bekijken"
+
+msgid "New Fault"
+msgstr "Nieuwe storing"
+
+msgid "Not found in system"
+msgstr "Niet gevonden in systeem"
+
+msgid "Search Machines"
+msgstr "Machines zoeken"

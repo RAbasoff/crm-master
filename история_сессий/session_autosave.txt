@@ -1,11 +1,18 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 02:44 UTC
+Время: 2026-09-17 04:16 UTC
 ============================================================
 
-Последний коммит: c71c87e chore: session autosave
-Git status: clean
+Последний коммит: c0acfe8 feat: universal barcode scanner - Honeywell external + camera, auto-detect warehouse/machine/cylinder
+Git status: Есть изменения (не закоммичены)
 
-ВСЁ ЗАКОММИЧЕНО И ЗАПУШЕНО.
+ИЗМЕНЕНО В ЭТОЙ СЕССИИ:
+  - templates/base.html: Scanner перенесён из System в раздел Warehouse (подменю)
+  - templates/universal_scanner.html: При неизвестном коде — кнопки "Добавить на склад" / "Игнорировать"
+  - translations/ru/nl/pl: Добавлены переводы для новых строк сканера
+
+ДЕЙСТВИЯ:
+  - Закоммитить изменения
+  - Задеплоить на PA: cd ~/crm-master && git pull origin master → Web → Reload
 
 ============================================================

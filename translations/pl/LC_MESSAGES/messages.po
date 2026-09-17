@@ -926,3 +926,51 @@ msgid "Attach videos of the fault (mp4, mov, avi, webm)"
 msgstr "Załącz filmy usterki (mp4, mov, avi, webm)"
 msgid "Your browser does not support video playback"
 msgstr "Twoja przeglądarka nie obsługuje odtwarzania wideo"
+
+msgid "Barcode Scanner"
+msgstr "Skaner kodów kreskowych"
+
+msgid "Scan barcode or type code..."
+msgstr "Zeskanuj kod kreskowy lub wpisz kod..."
+
+msgid "External scanner ready — scan to auto-submit"
+msgstr "Skaner zewnętrzny gotowy — zeskanuj, aby automatycznie wysłać"
+
+msgid "Auto-detect"
+msgstr "Automatycznie"
+
+msgid "Gas Cylinder"
+msgstr "Butla gazowa"
+
+msgid "Camera"
+msgstr "Kamera"
+
+msgid "Stop Camera"
+msgstr "Zatrzymaj kamerę"
+
+msgid "Scan History"
+msgstr "Historia skanowania"
+
+msgid "Unknown barcode"
+msgstr "Nieznany kod kreskowy"
+
+msgid "Ignore"
+msgstr "Ignoruj"
+
+msgid "Edit"
+msgstr "Edytuj"
+
+msgid "Details"
+msgstr "Szczegóły"
+
+msgid "View"
+msgstr "Podgląd"
+
+msgid "New Fault"
+msgstr "Nowa usterka"
+
+msgid "Not found in system"
+msgstr "Nie znaleziono w systemie"
+
+msgid "Search Machines"
+msgstr "Szukaj maszyn"

@@ -1876,3 +1876,51 @@ msgstr "Отделы"
 
 msgid "sections"
 msgstr "отделы"
+
+msgid "Barcode Scanner"
+msgstr "Сканер штрих-кодов"
+
+msgid "Scan barcode or type code..."
+msgstr "Сканируйте штрих-код или введите код..."
+
+msgid "External scanner ready — scan to auto-submit"
+msgstr "Внешний сканер готов — сканируйте для автоматической отправки"
+
+msgid "Auto-detect"
+msgstr "Автоопределение"
+
+msgid "Gas Cylinder"
+msgstr "Газовый баллон"
+
+msgid "Camera"
+msgstr "Камера"
+
+msgid "Stop Camera"
+msgstr "Остановить камеру"
+
+msgid "Scan History"
+msgstr "История сканирования"
+
+msgid "Unknown barcode"
+msgstr "Неизвестный штрих-код"
+
+msgid "Ignore"
+msgstr "Игнорировать"
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Details"
+msgstr "Детали"
+
+msgid "View"
+msgstr "Просмотр"
+
+msgid "New Fault"
+msgstr "Новая заявка"
+
+msgid "Not found in system"
+msgstr "Не найдено в системе"
+
+msgid "Search Machines"
+msgstr "Поиск станков"
