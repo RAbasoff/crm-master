@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="manifest" href="/static/manifest.json">
+    <title>ProMaster</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;padding-bottom:80px;-webkit-tap-highlight-color:transparent}
+        .header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;padding:16px 20px;position:sticky;top:0;z-index:100}
+        .header h1{font-size:18px;font-weight:700}
+        .header .sub{font-size:11px;opacity:.7;margin-top:2px}
+        .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px}
+        .kpi{background:white;border-radius:12px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+        .kpi .num{font-size:24px;font-weight:800;line-height:1}
+        .kpi .lbl{font-size:10px;color:#666;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+        .kpi.red .num{color:#e74c3c}
+        .kpi.green .num{color:#27ae60}
+        .kpi.blue .num{color:#3498db}
+        .section{padding:0 16px;margin-top:12px}
+        .section-title{font-size:13px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+        .card{background:white;border-radius:12px;padding:12px 16px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;-webkit-user-select:none;user-select:none;transition:transform .1s}
+        .card:active{transform:scale(.98)}
+        .card .icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+        .card .info{flex:1;min-width:0}
+        .card .info .title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .card .info .desc{font-size:11px;color:#888;margin-top:2px}
+        .card .badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap}
+        .badge-open{background:#ffeaa7;color:#d68910}
+        .badge-in_progress{background:#d4efdf;color:#27ae60}
+        .badge-critical{background:#fadbd8;color:#c0392b}
+        .badge-normal{background:#d6eaf8;color:#2980b9}
+        .machine-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+        .machine-card{background:white;border-radius:10px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);text-decoration:none;color:inherit}
+        .machine-card .m-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .machine-card .m-status{font-size:9px;margin-top:4px;padding:2px 6px;border-radius:6px;display:inline-block}
+        .s-active{background:#d4efdf;color:#27ae60}
+        .s-broken{background:#fadbd8;color:#c0392b}
+        .s-maintenance{background:#fef9e7;color:#f39c12}
+        .s-idle{background:#eaecee;color:#7f8c8d}
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;border-top:1px solid #e0e0e0;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+        .bottom-nav a{flex:1;padding:8px 4px;text-align:center;text-decoration:none;color:#666;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+        .bottom-nav a.active{color:#3498db}
+        .bottom-nav a span{font-size:20px}
+        .fab{position:fixed;bottom:76px;right:20px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;border:none;font-size:28px;box-shadow:0 4px 15px rgba(231,76,60,.4);z-index:99;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-user-select:none;user-select:none}
+        .fab:active{transform:scale(.9)}
+        .empty{text-align:center;padding:32px 16px;color:#999}
+        .empty span{font-size:48px;display:block;margin-bottom:8px}
+        @media(min-width:768px){body{max-width:480px;margin:0 auto}}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ProMaster CRM</h1>
+        <div class="sub">{{ current_user.display_name or current_user.username }} · {{ current_user.role }}</div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+        <a href="/faults?status=open" class="kpi blue">
+            <div class="num">{{ active_faults }}</div>
+            <div class="lbl">{{ _('Active') }}</div>
+        </a>
+        <a href="/faults?priority=critical" class="kpi red">
+            <div class="num">{{ critical_faults }}</div>
+            <div class="lbl">{{ _('Critical') }}</div>
+        </a>
+        <a href="/warehouse" class="kpi green">
+            <div class="num">{{ low_stock }}</div>
+            <div class="lbl">{{ _('Low Stock') }}</div>
+        </a>
+    </div>
+
+    <!-- My tasks -->
+    <div class="section">
+        <div class="section-title">
+            <span>{{ _('My Tasks') }}</span>
+            <span style="font-size:11px;color:#3498db">{{ my_faults|length }}</span>
+        </div>
+        {% if my_faults %}
+        {% for f in my_faults[:5] %}
+        <a href="/faults/{{ f.id }}" class="card">
+            <div class="icon" style="background:{% if f.priority=='critical' %}#fadbd8{% elif f.priority=='high' %}#fef9e7{% else %}#eaf2f8{% endif %}">
+                {% if f.priority=='critical' %}🔴{% elif f.priority=='high' %}🟠{% else %}🔵{% endif %}
+            </div>
+            <div class="info">
+                <div class="title">{{ f.title }}</div>
+                <div class="desc">{{ f.machine.name if f.machine else '—' }} · {{ f.created_at.strftime('%d-%m %H:%M') }}</div>
+            </div>
+            <span class="badge badge-{{ f.status }}">{{ f.status|replace('_',' ')|upper }}</span>
+        </a>
+        {% endfor %}
+        {% if my_faults|length > 5 %}
+        <a href="/faults" style="display:block;text-align:center;padding:10px;color:#3498db;font-size:13px;text-decoration:none">{{ _('All tasks') }} →</a>
+        {% endif %}
+        {% else %}
+        <div class="empty"><span>✅</span>{{ _('No active tasks') }}</div>
+        {% endif %}
+    </div>
+
+    <!-- My machines -->
+    <div class="section">
+        <div class="section-title">
+            <span>{{ _('My Machines') }}</span>
+            <a href="/machines" style="font-size:11px;color:#3498db;text-decoration:none">{{ _('All') }} →</a>
+        </div>
+        {% if my_machines %}
+        <div class="machine-grid">
+            {% for m in my_machines %}
+            <a href="/machines/{{ m.id }}" class="machine-card">
+                <div class="m-name">{{ m.name }}</div>
+                <div class="m-status s-{{ 'active' if m.status=='active' else 'broken' if m.status=='broken' else 'maintenance' if m.status=='maintenance' else 'idle' }}">{{ m.status }}</div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><span>⚙️</span>{{ _('No machines assigned') }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Quick links -->
+    <div class="section" style="margin-bottom:20px">
+        <div class="section-title"><span>{{ _('Quick Actions') }}</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <a href="/scanner" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
+                <span style="font-size:24px">📷</span>
+                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Scanner') }}</span>
+            </a>
+            <a href="/gas" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
+                <span style="font-size:24px">🔴</span>
+                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Gas') }}</span>
+            </a>
+            <a href="/floor" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
+                <span style="font-size:24px">🏭</span>
+                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Floor Plan') }}</span>
+            </a>
+            <a href="/warehouse" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
+                <span style="font-size:24px">📦</span>
+                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Warehouse') }}</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- FAB: Quick fault report -->
+    <a href="/mobile/fault" class="fab" title="{{ _('Report Fault') }}">+</a>
+
+    <!-- Bottom nav -->
+    <div class="bottom-nav">
+        <a href="/mobile" class="active"><span>🏠</span>{{ _('Home') }}</a>
+        <a href="/faults"><span>⚠️</span>{{ _('Faults') }}</a>
+        <a href="/machines"><span>⚙️</span>{{ _('Machines') }}</a>
+        <a href="/messages"><span>💬</span>{{ _('Chat') }}</a>
+        <a href="/profile"><span>👤</span>{{ _('Profile') }}</a>
+    </div>
+</body>
+</html>

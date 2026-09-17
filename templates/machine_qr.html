@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>{{ machine.name }} — ProMaster</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;-webkit-tap-highlight-color:transparent}
+        .header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;padding:16px 20px}
+        .header h1{font-size:18px;font-weight:700}
+        .header .sub{font-size:11px;opacity:.7;margin-top:2px}
+        .status-bar{padding:12px 20px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px}
+        .status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+        .dot-active{background:#27ae60;box-shadow:0 0 8px rgba(39,174,96,.4)}
+        .dot-broken{background:#e74c3c;box-shadow:0 0 8px rgba(231,76,60,.4)}
+        .dot-maintenance{background:#f39c12;box-shadow:0 0 8px rgba(243,156,18,.4)}
+        .dot-idle{background:#95a5a6}
+        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px}
+        .info-card{background:white;border-radius:10px;padding:12px}
+        .info-card .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px}
+        .info-card .val{font-size:14px;font-weight:600;margin-top:2px}
+        .section{padding:0 16px;margin-top:16px}
+        .section-title{font-size:13px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+        .fault-card{background:white;border-radius:10px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+        .fault-card .f-title{font-size:14px;font-weight:600}
+        .fault-card .f-meta{font-size:11px;color:#888;margin-top:4px}
+        .fault-card .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:8px;font-weight:700;margin-top:6px}
+        .badge-open{background:#ffeaa7;color:#d68910}
+        .badge-critical{background:#fadbd8;color:#c0392b}
+        .actions{display:flex;gap:8px;padding:16px}
+        .actions a{flex:1;padding:12px;text-align:center;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px}
+        .btn-primary{background:#3498db;color:white}
+        .btn-danger{background:#e74c3c;color:white}
+        .btn-ghost{background:white;color:#3498db;border:1.5px solid #3498db}
+        .empty{text-align:center;padding:24px;color:#999}
+        @media(min-width:768px){body{max-width:480px;margin:0 auto}}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ machine.name }}</h1>
+        <div class="sub">{{ machine.machine_type or '—' }} · SN: {{ machine.serial_number or '—' }}</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-dot dot-{{ machine.status if machine.status in ('active','broken','maintenance','idle') else 'idle' }}"></div>
+        <span style="color:{% if machine.status=='active' %}#27ae60{% elif machine.status=='broken' %}#e74c3c{% elif machine.status=='maintenance' %}#f39c12{% else %}#95a5a6{% endif %}">{{ machine.status|upper if machine.status else 'UNKNOWN' }}</span>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="lbl">{{ _('Manufacturer') }}</div>
+            <div class="val">{{ machine.manufacturer or '—' }}</div>
+        </div>
+        <div class="info-card">
+            <div class="lbl">{{ _('Year') }}</div>
+            <div class="val">{{ machine.year_of_manufacture or '—' }}</div>
+        </div>
+        <div class="info-card">
+            <div class="lbl">{{ _('Location') }}</div>
+            <div class="val">{{ machine.location or '—' }}</div>
+        </div>
+        <div class="info-card">
+            <div class="lbl">{{ _('Section') }}</div>
+            <div class="val">{{ machine.section.name if machine.section else '—' }}</div>
+        </div>
+    </div>
+
+    <!-- Open faults -->
+    <div class="section">
+        <div class="section-title">{{ _('Open Faults') }} ({{ faults|length }})</div>
+        {% if faults %}
+        {% for f in faults %}
+        <div class="fault-card">
+            <div class="f-title">{{ f.title }}</div>
+            <div class="f-meta">{{ f.created_at.strftime('%d-%m-%Y %H:%M') }} · {{ f.reporter.display_name if f.reporter else '—' }}</div>
+            <span class="badge badge-{{ 'critical' if f.priority=='critical' else 'open' }}">{{ f.priority|upper }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty">{{ _('No open faults') }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <a href="/faults/new?machine={{ machine.id }}" class="btn-danger">⚠️ {{ _('Report Fault') }}</a>
+        <a href="/machines/{{ machine.id }}" class="btn-ghost">📋 {{ _('Details') }}</a>
+    </div>
+</body>
+</html>

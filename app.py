@@ -4215,6 +4215,83 @@ def stats_parts():
 # ROUTES — DASHBOARD
 # ============================================================
 
+@app.route('/mobile')
+@login_required
+def mobile_dashboard():
+    """Lightweight mobile dashboard for workers."""
+    # My assigned faults
+    my_faults = FaultReport.query.filter(
+        (FaultReport.technician_id == current_user.id) |
+        (FaultReport.reporter_id == current_user.id)
+    ).filter(
+        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+    ).order_by(FaultReport.created_at.desc()).limit(10).all()
+
+    # My assigned machines
+    my_machines = current_user.assigned_machines[:12] if current_user.assigned_machines else []
+
+    # Quick stats
+    active_faults = FaultReport.query.filter(
+        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+    ).count()
+    critical_faults = FaultReport.query.filter(
+        FaultReport.status.in_(['open', 'accepted', 'in_progress']),
+        FaultReport.priority == 'critical'
+    ).count()
+    low_stock = VoorraadItem.query.filter(VoorraadItem.hoeveelheid <= VoorraadItem.minimum).count()
+
+    return render_template('mobile_dashboard.html',
+        my_faults=my_faults,
+        my_machines=my_machines,
+        active_faults=active_faults,
+        critical_faults=critical_faults,
+        low_stock=low_stock)
+
+
+@app.route('/mobile/fault', methods=['GET', 'POST'])
+@login_required
+def mobile_fault_new():
+    """Quick fault report from mobile — minimal form."""
+    if request.method == 'POST':
+        title = (request.form.get('title') or '').strip()
+        description = (request.form.get('description') or '').strip()
+        machine_id = safe_int(request.form.get('machine_id'))
+        priority = request.form.get('priority', 'normal')
+
+        if not title or not description:
+            flash(_('Title and description required'), 'error')
+            return redirect(url_for('mobile_fault_new'))
+
+        fault = FaultReport(
+            title=title, description=description,
+            machine_id=machine_id or None,
+            priority=priority,
+            status='open',
+            reporter_id=current_user.id
+        )
+        db.session.add(fault)
+        safe_commit()
+        log_audit('create', 'fault_report', fault.id, f'Mobile: {title}')
+        flash(_('Fault reported'), 'success')
+        return redirect(url_for('mobile_dashboard'))
+
+    machines = Machine.query.order_by(Machine.name).all()
+    return render_template('mobile_fault_form.html', machines=machines)
+
+
+@app.route('/mobile/qr/<int:machine_id>')
+@login_required
+def machine_qr_page(machine_id):
+    """Machine info page via QR code scan."""
+    m = Machine.query.get_or_404(machine_id)
+    faults = FaultReport.query.filter(
+        FaultReport.machine_id == m.id,
+        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+    ).order_by(FaultReport.created_at.desc()).limit(5).all()
+
+    return render_template('machine_qr.html', machine=m, faults=faults)
+
+
 @app.route('/')
 @login_required
 def index():
@@ -5590,6 +5667,32 @@ def qr_generate(order_id):
     img.save(buf, format='PNG')
     buf.seek(0)
     return send_file(buf, mimetype='image/png', download_name=f'QR_{order.nummer}.png')
+
+
+@app.route('/machines/<int:machine_id>/qr')
+@login_required
+def machine_qr(machine_id):
+    """Generate QR code for a machine — links to /mobile/qr/<id>."""
+    m = Machine.query.get_or_404(machine_id)
+    url = request.host_url.rstrip('/') + url_for('machine_qr_page', machine_id=m.id)
+    qr = qrcode.QRCode(version=None, box_size=8, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png', download_name=f'QR_{m.name.replace(" ", "_")}.png')
+
+
+@app.route('/machines/qr/batch')
+@login_required
+@role_required('admin', 'director')
+def machines_qr_batch():
+    """Generate printable page with QR codes for all active machines."""
+    machines = Machine.query.filter_by(status='active').order_by(Machine.name).all()
+    return render_template('machines_qr_batch.html', machines=machines)
+
 
 @app.route('/api/machines/search')
 @login_required

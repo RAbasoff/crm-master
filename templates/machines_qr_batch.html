@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Codes — Machines</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;padding:20px}
+        h1{text-align:center;font-size:18px;margin-bottom:20px}
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+        .qr-card{border:1.5px solid #333;border-radius:8px;padding:12px;text-align:center;page-break-inside:avoid}
+        .qr-card img{width:120px;height:120px;display:block;margin:0 auto 8px}
+        .qr-card .name{font-size:12px;font-weight:700;word-break:break-word}
+        .qr-card .sub{font-size:9px;color:#666;margin-top:2px}
+        .qr-card .url{font-size:7px;color:#aaa;margin-top:4px;word-break:break-all}
+        @media print{
+            .no-print{display:none!important}
+            body{padding:10px}
+            .grid{gap:10px}
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align:center;margin-bottom:16px">
+        <button onclick="window.print()" style="padding:8px 24px;font-size:14px;cursor:pointer">🖨️ Print</button>
+        <a href="/machines" style="margin-left:12px;font-size:14px">← Back</a>
+    </div>
+    <h1>Machine QR Codes ({{ machines|length }})</h1>
+    <div class="grid">
+        {% for m in machines %}
+        <div class="qr-card">
+            <img src="/machines/{{ m.id }}/qr" alt="QR {{ m.name }}" loading="lazy">
+            <div class="name">{{ m.name }}</div>
+            <div class="sub">{{ m.serial_number or '—' }} · {{ m.section.name if m.section else '—' }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

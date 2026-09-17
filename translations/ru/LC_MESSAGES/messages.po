@@ -1972,3 +1972,39 @@ msgstr "Заказы"
 
 msgid "Gas Cylinders"
 msgstr "Газовые баллоны"
+
+msgid "Mobile"
+msgstr "Мобильный"
+
+msgid "My Tasks"
+msgstr "Мои задачи"
+
+msgid "My Machines"
+msgstr "Мои станки"
+
+msgid "Quick Actions"
+msgstr "Быстрые действия"
+
+msgid "Report Fault"
+msgstr "Сообщить о поломке"
+
+msgid "No active tasks"
+msgstr "Нет активных задач"
+
+msgid "No machines assigned"
+msgstr "Нет закреплённых станков"
+
+msgid "Send Report"
+msgstr "Отправить"
+
+msgid "What happened?"
+msgstr "Что случилось?"
+
+msgid "Describe the problem in detail..."
+msgstr "Опишите проблему подробно..."
+
+msgid "Report"
+msgstr "Отчёт"
+
+msgid "No open faults"
+msgstr "Нет открытых заявок"

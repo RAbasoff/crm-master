@@ -1,22 +1,25 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 10:29 UTC
+Время: 2026-09-17 11:59 UTC
 ============================================================
 
-Последний коммит: 4084310 fix: mass crash prevention - safe_int/safe_float/safe_date across app.py + all blueprints (~130 fixes)
+Последний коммит: 5c4eb3c perf: add DB indexes + eager loading for faults list and electricity module
 Git status: clean
 
 ИЗМЕНЕНО:
-  - utils.py: Добавлены safe_int(), safe_float(), safe_date() — безопасные парсеры
-  - app.py: ~130 замен int()/float()/datetime.strptime() → safe_int/safe_float/safe_date
-  - blueprints/ (6 файлов): ~30+ замен аналогично
-  - Все unprotected парсинги вне try/except исправлены
-  - Оставшиеся bare int/datetime — только внутри try/except (защищены)
+  - models.py:
+    - Добавлены индексы: FaultReport.technician_id, contractor_id, PartMaintenanceLog.part_id, VoorraadMutatie.item_id
+    - FaultReport.machine — явная relationship с back_populates (вместо backref)
+  - blueprints/faults.py:
+    - Eager loading: joinedload(machine, reporter, technician) + subqueryload(assigned_technicians)
+    - Устраняет N+1: было 100-125 лишних запросов на страницу, стало ~5
+  - blueprints/electricity.py:
+    - subqueryload(ElectricalCabinet.breakers) — устраняет N+1 (18 лишних запросов)
 
-АУДИТ:
-  - Найдено 109 точек отказа (32 app.py + 77 blueprints)
-  - Исправлено ~130+ замен
-  - 0 unprotected int(request) и datetime.strptime(request) осталось
+АУДИТ ПРОИЗВОДИТЕЛЬНОСТИ:
+  - Найдено 15 узких мест (6 HIGH, 4 MEDIUM-HIGH, 5 MEDIUM)
+  - Исправлено: индексы + eager loading (3 из 6 HIGH)
+  - Осталось: queries-in-loops (stats export, maintenance calendar)
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

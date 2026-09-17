@@ -386,6 +386,7 @@
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Production') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             <a href="/" class="sb-item {% if request.endpoint == 'index' %}active{% endif %}"><span class="sb-icon">🏠</span>{{ _('Dashboard') }}</a>
+            <a href="/mobile" class="sb-item {% if request.endpoint == 'mobile_dashboard' %}active{% endif %}"><span class="sb-icon">📱</span>{{ _('Mobile') }}</a>
             {% if has_access('floor') %}
             <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
             {% endif %}

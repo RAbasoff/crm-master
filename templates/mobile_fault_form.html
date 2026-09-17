@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>{{ _('Report Fault') }} — ProMaster</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;-webkit-tap-highlight-color:transparent}
+        .header{background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;padding:16px 20px;display:flex;align-items:center;gap:12px}
+        .header a{color:white;text-decoration:none;font-size:24px;line-height:1}
+        .header h1{font-size:18px;font-weight:700}
+        .form{padding:16px}
+        .field{margin-bottom:16px}
+        .field label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+        .field input,.field select,.field textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;outline:none;transition:border-color .2s;background:white;-webkit-appearance:none}
+        .field input:focus,.field select:focus,.field textarea:focus{border-color:#3498db}
+        .field textarea{resize:vertical;min-height:120px;font-family:inherit}
+        .priority-row{display:flex;gap:8px}
+        .priority-btn{flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:10px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;background:white;transition:all .2s}
+        .priority-btn.sel{border-color:currentColor;transform:scale(1.02)}
+        .priority-btn.p-normal{color:#3498db}
+        .priority-btn.p-high{color:#e67e22}
+        .priority-btn.p-critical{color:#e74c3c}
+        .submit{width:100%;padding:14px;background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px}
+        .submit:active{transform:scale(.98)}
+        @media(min-width:768px){body{max-width:480px;margin:0 auto}}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/mobile">←</a>
+        <h1>{{ _('Report Fault') }}</h1>
+    </div>
+    <form method="POST" class="form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+            <label>{{ _('Title') }}</label>
+            <input type="text" name="title" placeholder="{{ _('What happened?') }}" required autofocus>
+        </div>
+        <div class="field">
+            <label>{{ _('Description') }}</label>
+            <textarea name="description" placeholder="{{ _('Describe the problem in detail...') }}" required></textarea>
+        </div>
+        <div class="field">
+            <label>{{ _('Machine') }}</label>
+            <select name="machine_id">
+                <option value="">{{ _('— Select —') }}</option>
+                {% for m in machines %}
+                <option value="{{ m.id }}">{{ m.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label>{{ _('Priority') }}</label>
+            <div class="priority-row">
+                <div class="priority-btn p-normal sel" data-val="normal" onclick="selPriority(this)">🟢 {{ _('Normal') }}</div>
+                <div class="priority-btn p-high" data-val="high" onclick="selPriority(this)">🟠 {{ _('High') }}</div>
+                <div class="priority-btn p-critical" data-val="critical" onclick="selPriority(this)">🔴 {{ _('Critical') }}</div>
+            </div>
+            <input type="hidden" name="priority" id="priorityInput" value="normal">
+        </div>
+        <button type="submit" class="submit">{{ _('Send Report') }}</button>
+    </form>
+    <script>
+    function selPriority(el){
+        document.querySelectorAll('.priority-btn').forEach(function(b){b.classList.remove('sel')});
+        el.classList.add('sel');
+        document.getElementById('priorityInput').value = el.dataset.val;
+    }
+    </script>
+</body>
+</html>

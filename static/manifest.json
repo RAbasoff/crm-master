@@ -27,21 +27,21 @@
     "prefer_related_applications": false,
     "shortcuts": [
         {
+            "name": "Мобильный дашборд",
+            "short_name": "Мобильный",
+            "url": "/mobile",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+        },
+        {
             "name": "Новая заявка",
             "short_name": "Заявка",
-            "url": "/faults/new",
+            "url": "/mobile/fault",
             "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
         },
         {
             "name": "Склад",
             "short_name": "Склад",
             "url": "/warehouse",
-            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
-        },
-        {
-            "name": "Карта цеха",
-            "short_name": "Карта",
-            "url": "/floor",
             "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
         }
     ]
