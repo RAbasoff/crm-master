@@ -1,27 +1,22 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 12:24 UTC
+Время: 2026-09-17 12:35 UTC
 ============================================================
 
-Последний коммит: 1663576 feat: mobile dashboard for workers + QR codes for machines
+Последний коммит: 48ed530 feat: unified reminders page /reminders — maintenance, consumables, low stock with sidebar badge
 Git status: clean
 
 ИЗМЕНЕНО:
-  - /mobile — лёгкий мобильный дашборд для рабочих
-    - KPI: активные заявки, критические, низкий запас
-    - Мои задачи (мои заявки)
-    - Мои станки (закреплённые)
-    - Быстрые действия: сканер, газ, карта, склад
-    - FAB-кнопка "Сообщить о поломке"
-    - Bottom nav: Home, Faults, Machines, Chat, Profile
-    - PWA-ready (manifest, viewport, standalone)
-  - /mobile/fault — быстрая форма заявки с телефона
-  - /machines/<id>/qr — QR-код станка (PNG)
-  - /machines/qr/batch — печать QR-кодов всех станков
-  - /mobile/qr/<id> — страница станка по QR (мобильная)
-  - sidebar: кнопка "Mobile" (📱)
-  - machines.html: кнопка "📱 QR"
-  - manifest.json: shortcut "Мобильный дашборд"
+  - /reminders — единая страница напоминаний:
+    - Просроченные ТО запчастей (overdue_parts)
+    - Просроченные замены расходников (overdue_consumables)
+    - Скоро ТО запчастей (upcoming_parts) — 30 дней
+    - Скоро замены расходников (upcoming_consumables)
+    - Низкий запас на складе (low_stock)
+    - Кнопки перехода к станку/товару
+  - Sidebar: 🔔 Reminders с красным бейджем (количество)
+  - context_processor: reminder_count — считается на каждый запрос (7 дней)
+  - translations/ru: Новые строки
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

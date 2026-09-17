@@ -5750,7 +5750,7 @@ def qr_generate(order_id):
 
 @app.route('/machines/<int:machine_id>/qr')
 @login_required
-def machine_qr(machine_id):
+def machine_qr_generate(machine_id):
     """Generate QR code for a machine — links to /mobile/qr/<id>."""
     m = Machine.query.get_or_404(machine_id)
     url = request.host_url.rstrip('/') + url_for('machine_qr_page', machine_id=m.id)
