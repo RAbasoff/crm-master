@@ -1955,5 +1955,5 @@ msgstr "Нет пустых баллонов для архивации"
 msgid "%(count)d cylinders archived"
 msgstr "%(count)d баллонов архивировано"
 
-msgid "received"
-msgstr "получено"
+msgid "In Work"
+msgstr "В работе"

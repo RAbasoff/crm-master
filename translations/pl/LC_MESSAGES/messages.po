@@ -974,3 +974,39 @@ msgstr "Nie znaleziono w systemie"
 
 msgid "Search Machines"
 msgstr "Szukaj maszyn"
+
+msgid "Scan cylinder number..."
+msgstr "Zeskanuj numer butli..."
+
+msgid "Find / Add"
+msgstr "Znajdź / Dodaj"
+
+msgid "new cylinder created"
+msgstr "nowa butla utworzona"
+
+msgid "Connection error"
+msgstr "Błąd połączenia"
+
+msgid "All Cylinders"
+msgstr "Wszystkie butle"
+
+msgid "total"
+msgstr "łącznie"
+
+msgid "Archive"
+msgstr "Archiwum"
+
+msgid "Archive all empty cylinders?"
+msgstr "Zarchiwizować wszystkie puste butle?"
+
+msgid "No empty cylinders to archive"
+msgstr "Brak pustych butli do archiwizacji"
+
+msgid "%(count)d cylinders archived"
+msgstr "Zarchiwizowano %(count)d butli"
+
+msgid "received"
+msgstr "odebrane"
+
+msgid "In Work"
+msgstr "W użyciu"

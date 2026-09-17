@@ -1,21 +1,20 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 05:45 UTC
+Время: 2026-09-17 05:55 UTC
 ============================================================
 
-Последний коммит: f1a3116 feat: gas dashboard - inline barcode scanner + full cylinder registry with quick status change
+Последний коммит: 3bb8eaf feat: gas dashboard - received count + archive empty cylinders monthly
 Git status: clean
 
 ИЗМЕНЕНО:
   - templates/gas/dashboard.html:
-    - Inline сканер штрих-кодов (поле ввода + Enter)
-    - Выбор газа (N₂ / CO₂)
-    - Результат: статус баллона + кнопки Full / In Use / Empty
-    - Полный реестр всех баллонов (N₂ + CO₂) внизу страницы
-    - Клик по баллону → popup со сменой статуса
+    - Удалён "All Cylinders" реестр (все цилиндры)
+    - Над списком Spare: счётчик "📦 N получено" за текущий месяц
+    - Кнопка "🗄️ Archive" для архивации пустых баллонов (admin)
   - blueprints/gas.py:
-    - POST /gas/api/cylinders/quick-add — найти или создать баллон по номеру
-  - translations/ru: Новые строки перевода
+    - GET /gas/archive — архивирует пустые баллоны в MonthlyArchive, удаляет из активных
+    - Подсчёт полученных за месяц баллонов
+  - translations/ru: Новые строки
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

@@ -980,3 +980,39 @@ msgstr "Niet gevonden in systeem"
 
 msgid "Search Machines"
 msgstr "Machines zoeken"
+
+msgid "Scan cylinder number..."
+msgstr "Scan cilindernummer..."
+
+msgid "Find / Add"
+msgstr "Zoek / Voeg toe"
+
+msgid "new cylinder created"
+msgstr "nieuwe cilinder aangemaakt"
+
+msgid "Connection error"
+msgstr "Verbindingsfout"
+
+msgid "All Cylinders"
+msgstr "Alle cilinders"
+
+msgid "total"
+msgstr "totaal"
+
+msgid "Archive"
+msgstr "Archief"
+
+msgid "Archive all empty cylinders?"
+msgstr "Alle lege cilinders archiveren?"
+
+msgid "No empty cylinders to archive"
+msgstr "Geen lege cilinders om te archiveren"
+
+msgid "%(count)d cylinders archived"
+msgstr "%(count)d cilinders gearchiveerd"
+
+msgid "received"
+msgstr "ontvangen"
+
+msgid "In Work"
+msgstr "In gebruik"
