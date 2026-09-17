@@ -1,25 +1,27 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 11:59 UTC
+Время: 2026-09-17 12:24 UTC
 ============================================================
 
-Последний коммит: 5c4eb3c perf: add DB indexes + eager loading for faults list and electricity module
+Последний коммит: 1663576 feat: mobile dashboard for workers + QR codes for machines
 Git status: clean
 
 ИЗМЕНЕНО:
-  - models.py:
-    - Добавлены индексы: FaultReport.technician_id, contractor_id, PartMaintenanceLog.part_id, VoorraadMutatie.item_id
-    - FaultReport.machine — явная relationship с back_populates (вместо backref)
-  - blueprints/faults.py:
-    - Eager loading: joinedload(machine, reporter, technician) + subqueryload(assigned_technicians)
-    - Устраняет N+1: было 100-125 лишних запросов на страницу, стало ~5
-  - blueprints/electricity.py:
-    - subqueryload(ElectricalCabinet.breakers) — устраняет N+1 (18 лишних запросов)
-
-АУДИТ ПРОИЗВОДИТЕЛЬНОСТИ:
-  - Найдено 15 узких мест (6 HIGH, 4 MEDIUM-HIGH, 5 MEDIUM)
-  - Исправлено: индексы + eager loading (3 из 6 HIGH)
-  - Осталось: queries-in-loops (stats export, maintenance calendar)
+  - /mobile — лёгкий мобильный дашборд для рабочих
+    - KPI: активные заявки, критические, низкий запас
+    - Мои задачи (мои заявки)
+    - Мои станки (закреплённые)
+    - Быстрые действия: сканер, газ, карта, склад
+    - FAB-кнопка "Сообщить о поломке"
+    - Bottom nav: Home, Faults, Machines, Chat, Profile
+    - PWA-ready (manifest, viewport, standalone)
+  - /mobile/fault — быстрая форма заявки с телефона
+  - /machines/<id>/qr — QR-код станка (PNG)
+  - /machines/qr/batch — печать QR-кодов всех станков
+  - /mobile/qr/<id> — страница станка по QR (мобильная)
+  - sidebar: кнопка "Mobile" (📱)
+  - machines.html: кнопка "📱 QR"
+  - manifest.json: shortcut "Мобильный дашборд"
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

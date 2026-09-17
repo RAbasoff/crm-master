@@ -2008,3 +2008,24 @@ msgstr "Отчёт"
 
 msgid "No open faults"
 msgstr "Нет открытых заявок"
+
+msgid "Reminders"
+msgstr "Напоминания"
+
+msgid "Overdue"
+msgstr "Просрочено"
+
+msgid "Upcoming"
+msgstr "Скоро"
+
+msgid "days"
+msgstr "дн."
+
+msgid "All clear!"
+msgstr "Всё в порядке!"
+
+msgid "No pending reminders"
+msgstr "Нет активных напоминаний"
+
+msgid "replacement"
+msgstr "замена"

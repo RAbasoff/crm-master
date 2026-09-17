@@ -314,7 +314,29 @@ def inject_section_access():
         if not current_user.is_authenticated:
             return False
         return user_has_section_access(section_key, action)
-    return dict(has_access=has_access)
+
+    # Reminder count for sidebar badge
+    reminder_count = 0
+    if current_user.is_authenticated and request.endpoint not in ('static',):
+        try:
+            today = datetime.utcnow().date()
+            soon = today + timedelta(days=7)
+            reminder_count = MachinePart.query.filter(
+                db.or_(
+                    MachinePart.next_replacement <= soon,
+                    MachinePart.next_maintenance <= soon
+                )
+            ).count()
+            # Add overdue consumables
+            reminder_count += VoorraadItem.query.filter(
+                VoorraadItem.consumable_type.isnot(None),
+                VoorraadItem.next_replacement.isnot(None),
+                VoorraadItem.next_replacement <= soon
+            ).count()
+        except Exception:
+            pass
+
+    return dict(has_access=has_access, reminder_count=reminder_count)
 
 @app.route('/set_language/<lang>')
 def set_language(lang):
@@ -3639,6 +3661,63 @@ def notifications_read_all():
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     safe_commit()
     return jsonify({'success': True})
+
+@app.route('/reminders')
+@login_required
+def reminders():
+    """Unified reminders page — maintenance + consumables + overdue."""
+    from sqlalchemy.orm import joinedload
+    today = datetime.utcnow().date()
+    soon_7 = today + timedelta(days=7)
+    soon_30 = today + timedelta(days=30)
+
+    # Machine parts with upcoming maintenance
+    part_q = MachinePart.query.options(joinedload(MachinePart.machine))
+    if not current_user.has_role('admin', 'director', 'technician'):
+        machine_ids = [m.id for m in current_user.assigned_machines]
+        part_q = part_q.filter(MachinePart.machine_id.in_(machine_ids))
+
+    overdue_parts = []
+    upcoming_parts = []
+    for p in part_q.all():
+        if p.next_replacement and p.next_replacement <= soon_30:
+            entry = {'type': 'replacement', 'part': p, 'machine': p.machine,
+                     'date': p.next_replacement, 'days': (p.next_replacement - today).days}
+            if p.next_replacement < today:
+                overdue_parts.append(entry)
+            else:
+                upcoming_parts.append(entry)
+        if p.next_maintenance and p.next_maintenance <= soon_30:
+            entry = {'type': 'maintenance', 'part': p, 'machine': p.machine,
+                     'date': p.next_maintenance, 'days': (p.next_maintenance - today).days}
+            if p.next_maintenance < today:
+                overdue_parts.append(entry)
+            else:
+                upcoming_parts.append(entry)
+
+    # Consumables
+    consumables = VoorraadItem.query.filter(
+        VoorraadItem.consumable_type.isnot(None),
+        VoorraadItem.next_replacement.isnot(None),
+        VoorraadItem.next_replacement <= soon_30
+    ).order_by(VoorraadItem.next_replacement).all()
+
+    overdue_consumables = [c for c in consumables if c.next_replacement < today]
+    upcoming_consumables = [c for c in consumables if today <= c.next_replacement <= soon_30]
+
+    # Low stock
+    low_stock = VoorraadItem.query.filter(
+        VoorraadItem.hoeveelheid <= VoorraadItem.minimum
+    ).all()
+
+    overdue_parts.sort(key=lambda x: x['date'])
+    upcoming_parts.sort(key=lambda x: x['date'])
+
+    return render_template('reminders.html',
+        overdue_parts=overdue_parts, upcoming_parts=upcoming_parts,
+        overdue_consumables=overdue_consumables, upcoming_consumables=upcoming_consumables,
+        low_stock=low_stock, today=today)
+
 
 @app.route('/consumable-reminders')
 @login_required

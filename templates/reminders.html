@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Reminders') }} — CRM{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h1 style="margin:0;font-size:18px">🔔 {{ _('Reminders') }}</h1>
+    <span style="font-size:12px;color:#888">{{ today.strftime('%d-%m-%Y') }}</span>
+</div>
+
+{% set total_overdue = overdue_parts|length + overdue_consumables|length %}
+{% set total_upcoming = upcoming_parts|length + upcoming_consumables|length %}
+{% set total_low = low_stock|length %}
+
+<!-- Summary cards -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+    <div style="background:{% if total_overdue > 0 %}#fadbd8{% else %}#d5f5e3{% endif %};border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:800;color:{% if total_overdue > 0 %}#c0392b{% else %}#27ae60{% endif %}">{{ total_overdue }}</div>
+        <div style="font-size:10px;color:#666;text-transform:uppercase">{{ _('Overdue') }}</div>
+    </div>
+    <div style="background:#fef9e7;border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:800;color:#f39c12">{{ total_upcoming }}</div>
+        <div style="font-size:10px;color:#666;text-transform:uppercase">{{ _('Upcoming') }}</div>
+    </div>
+    <div style="background:{% if total_low > 0 %}#fef9e7{% else %}#d5f5e3{% endif %};border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:800;color:{% if total_low > 0 %}#e67e22{% else %}#27ae60{% endif %}">{{ total_low }}</div>
+        <div style="font-size:10px;color:#666;text-transform:uppercase">{{ _('Low Stock') }}</div>
+    </div>
+</div>
+
+<!-- OVERDUE -->
+{% if overdue_parts or overdue_consumables %}
+<div class="card" style="border-left:4px solid #e74c3c;margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:14px;color:#e74c3c">🚨 {{ _('Overdue') }} ({{ total_overdue }})</h2>
+    {% for e in overdue_parts %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:18px">{% if e.type=='replacement' %}🔧{% else %}⚙️{% endif %}</span>
+        <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">{{ e.part.name }}</div>
+            <div style="font-size:11px;color:#888">{{ e.machine.name if e.machine else '—' }} · {{ e.type|capitalize }}</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:12px;font-weight:700;color:#e74c3c">{{ e.days }} {{ _('days') }}</div>
+            <div style="font-size:10px;color:#888">{{ e.date.strftime('%d-%m-%Y') }}</div>
+        </div>
+        <a href="/machines/{{ e.machine.id }}" style="font-size:16px;text-decoration:none">📋</a>
+    </div>
+    {% endfor %}
+    {% for c in overdue_consumables %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:18px">📦</span>
+        <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">{{ c.naam }}</div>
+            <div style="font-size:11px;color:#888">{{ c.consumable_type or '—' }} · {{ _('replacement') }}</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:12px;font-weight:700;color:#e74c3c">{{ (c.next_replacement - today).days }} {{ _('days') }}</div>
+            <div style="font-size:10px;color:#888">{{ c.next_replacement.strftime('%d-%m-%Y') }}</div>
+        </div>
+        <a href="/warehouse/{{ c.id }}" style="font-size:16px;text-decoration:none">📋</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- UPCOMING -->
+{% if upcoming_parts or upcoming_consumables %}
+<div class="card" style="border-left:4px solid #f39c12;margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:14px;color:#f39c12">⏰ {{ _('Upcoming') }} ({{ total_upcoming }})</h2>
+    {% for e in upcoming_parts %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:18px">{% if e.type=='replacement' %}🔧{% else %}⚙️{% endif %}</span>
+        <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">{{ e.part.name }}</div>
+            <div style="font-size:11px;color:#888">{{ e.machine.name if e.machine else '—' }} · {{ e.type|capitalize }}</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:12px;font-weight:700;color:{% if e.days <= 3 %}#e74c3c{% elif e.days <= 7 %}#f39c12{% else %}#27ae60{% endif %}">{{ e.days }} {{ _('days') }}</div>
+            <div style="font-size:10px;color:#888">{{ e.date.strftime('%d-%m-%Y') }}</div>
+        </div>
+        <a href="/machines/{{ e.machine.id }}" style="font-size:16px;text-decoration:none">📋</a>
+    </div>
+    {% endfor %}
+    {% for c in upcoming_consumables %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:18px">📦</span>
+        <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">{{ c.naam }}</div>
+            <div style="font-size:11px;color:#888">{{ c.consumable_type or '—' }}</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:12px;font-weight:700;color:{% if (c.next_replacement - today).days <= 3 %}#e74c3c{% elif (c.next_replacement - today).days <= 7 %}#f39c12{% else %}#27ae60{% endif %}">{{ (c.next_replacement - today).days }} {{ _('days') }}</div>
+            <div style="font-size:10px;color:#888">{{ c.next_replacement.strftime('%d-%m-%Y') }}</div>
+        </div>
+        <a href="/warehouse/{{ c.id }}" style="font-size:16px;text-decoration:none">📋</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- LOW STOCK -->
+{% if low_stock %}
+<div class="card" style="border-left:4px solid #e67e22;margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:14px;color:#e67e22">📦 {{ _('Low Stock') }} ({{ low_stock|length }})</h2>
+    {% for item in low_stock %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:18px">⚠️</span>
+        <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">{{ item.naam }}</div>
+            <div style="font-size:11px;color:#888">{{ item.categorie or '—' }}</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:12px;font-weight:700;color:#e74c3c">{{ item.hoeveelheid }} {{ item.eenheid or '' }}</div>
+            <div style="font-size:10px;color:#888">min: {{ item.minimum }}</div>
+        </div>
+        <a href="/warehouse/{{ item.id }}" style="font-size:16px;text-decoration:none">📋</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if not total_overdue and not total_upcoming and not total_low %}
+<div class="card" style="text-align:center;padding:40px">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <div style="font-size:16px;font-weight:600;color:#27ae60">{{ _('All clear!') }}</div>
+    <div style="font-size:12px;color:#888;margin-top:4px">{{ _('No pending reminders') }}</div>
+</div>
+{% endif %}
+{% endblock %}

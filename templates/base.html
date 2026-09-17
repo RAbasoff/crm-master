@@ -387,6 +387,9 @@
             <div class="sb-group-items">
             <a href="/" class="sb-item {% if request.endpoint == 'index' %}active{% endif %}"><span class="sb-icon">🏠</span>{{ _('Dashboard') }}</a>
             <a href="/mobile" class="sb-item {% if request.endpoint == 'mobile_dashboard' %}active{% endif %}"><span class="sb-icon">📱</span>{{ _('Mobile') }}</a>
+            {% if has_access('maintenance') %}
+            <a href="/reminders" class="sb-item {% if request.endpoint == 'reminders' %}active{% endif %}" style="position:relative"><span class="sb-icon">🔔</span>{{ _('Reminders') }}{% if reminder_count > 0 %}<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#e74c3c;color:white;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center">{{ reminder_count }}</span>{% endif %}</a>
+            {% endif %}
             {% if has_access('floor') %}
             <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
             {% endif %}
