@@ -108,7 +108,7 @@
                             {% set is_done = ev.done if ev.done is defined else False %}
                             {% set ev_status = ev.status if ev.status is defined else '' %}
                             <div style="display:flex;align-items:center;gap:2px;margin-bottom:2px">
-                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
+                            <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% elif ev.type == 'equipment' %}/equipment/{{ ev.equipment_id }}/edit{% elif ev.type == 'equipment_mro' and ev.machine_id %}/machines/{{ ev.machine_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}
                             </a>
                             {% if not is_done and current_user.has_role('admin', 'director', 'technician') %}
@@ -142,6 +142,7 @@
         <div class="legend-item"><div class="legend-dot" style="background:#f39c12"></div> {{ _('In Progress') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div> {{ _('Overdue') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div> {{ _('Replacement') }}</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#16a085"></div> {{ _('Equipment') }}</div>
         <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div> {{ _('Other') }}</div>
     </div>
 </div>
@@ -160,7 +161,9 @@
             <td>{{ ev.part }}{% if is_done %} ✅{% endif %}</td>
             <td>
                 {% if ev.type == 'replacement' %}🔄 {{ _('Replacement') }}
-                {% elif ev.type == 'maintenance' %}🔧 {{ _('Maintenance') }}
+                {% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}🔧 {{ _('Maintenance') }}
+                {% elif ev.type == 'equipment' %}🔌 {{ _('Equipment Service') }}
+                {% elif ev.type == 'equipment_mro' %}🔧 MRO
                 {% else %}⚙️ {{ ev.category }}{% endif %}
             </td>
             <td>

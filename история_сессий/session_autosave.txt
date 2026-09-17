@@ -1,26 +1,17 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 17:47 UTC
+Время: 2026-09-17 18:49 UTC
 ============================================================
 
-Последний коммит: f6ac9a8 feat: WhatsApp-style chat — rooms, 1:1 & group, gray/blue checkmarks, unread badge in header
+Последний коммит: 6dc3bdc chore: remove test file
 Git status: clean
 
 ИЗМЕНЕНО:
-  - models.py: ChatRoom, ChatParticipant, ChatMessage (delivery/read tracking)
-  - blueprints/chat.py: полный чат-блюпринт
-    - /chat/ — список бесед
-    - /chat/start/<user_id> — начать 1:1 чат
-    - /chat/room/<id> — окно чата
-    - /chat/group/new — создать группу
-    - /chat/api/send — отправка сообщения (AJAX)
-    - /chat/api/messages/<room_id> — polling новых сообщений
-    - /chat/api/unread — количество непрочитанных
-  - templates/chat/list.html: список бесед с бейджами
-  - templates/chat/room.html: окно чата с галочками ✓/✓✓
-  - base.html: ✉️ envelope с бейджем непрочитанных в хедере рядом с колокольчиком
-  - sidebar: Chat в разделе Communication
-  - 307 маршрутов (+8 новых чат-маршрутов)
+  - blueprints/chat.py: эффективный запрос DM через SQL вместо Python-цикла
+  - templates/chat/list.html: исправлен crash при пустом others
+  - templates/chat/room.html: CSRF в polling fetch, position:relative для popup
+  - utils.py: миграция для создания таблиц chat_room, chat_participant, chat_message
+  - translations/ru: переводы для чата
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

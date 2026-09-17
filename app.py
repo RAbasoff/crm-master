@@ -1955,6 +1955,50 @@ def maintenance_calendar():
                 else:
                     break
 
+    # Add Equipment maintenance events
+    from models import Equipment, EquipmentMaintenance
+    equip_q = Equipment.query.filter(Equipment.next_service_date.isnot(None))
+    if not current_user.has_role('admin', 'director', 'technician'):
+        equip_q = equip_q.filter(Equipment.responsible_user_id == current_user.id)
+    for eq in equip_q.all():
+        if eq.next_service_date and month_start <= eq.next_service_date < month_end:
+            # Check if maintenance was done after the due date
+            done = False
+            if eq.last_service_date and eq.last_service_date >= eq.next_service_date:
+                done = True
+            events.append({
+                'date': eq.next_service_date,
+                'type': 'equipment',
+                'part': eq.name[:40],
+                'machine': eq.equipment_type or eq.name[:20],
+                'machine_id': None,
+                'equipment_id': eq.id,
+                'part_id': None,
+                'category': eq.category or 'service',
+                'overdue': eq.next_service_date < today and not done,
+                'done': done
+            })
+
+    # Add EquipmentMaintenance (MRO) records with next_date
+    mro_q = EquipmentMaintenance.query.filter(EquipmentMaintenance.next_date.isnot(None))
+    for mro in mro_q.all():
+        if mro.next_date and month_start <= mro.next_date < month_end:
+            done = mro.status == 'completed'
+            events.append({
+                'date': mro.next_date,
+                'type': 'equipment_mro',
+                'part': mro.name[:40],
+                'machine': mro.number,
+                'machine_id': mro.machine_id,
+                'equipment_id': None,
+                'part_id': None,
+                'category': mro.periodicity or 'MRO',
+                'overdue': mro.next_date < today and not done,
+                'done': done,
+                'plan_id': None,
+                'mro_id': mro.id
+            })
+
     # Get overdue items (before today) — skip if there's a maintenance record after the due date
     overdue = []
     for p in parts:
