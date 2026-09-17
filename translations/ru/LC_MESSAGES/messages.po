@@ -1925,6 +1925,60 @@ msgstr "Не найдено в системе"
 msgid "Search Machines"
 msgstr "Поиск станков"
 
+msgid "Chat"
+msgstr "Чат"
+
+msgid "Group"
+msgstr "Группа"
+
+msgid "Group name"
+msgstr "Название группы"
+
+msgid "Create"
+msgstr "Создать"
+
+msgid "Start chat"
+msgstr "Начать чат"
+
+msgid "No messages"
+msgstr "Нет сообщений"
+
+msgid "No conversations yet"
+msgstr "Пока нет бесед"
+
+msgid "Start a chat with someone above"
+msgstr "Начните чат с кем-нибудь выше"
+
+msgid "members"
+msgstr "участников"
+
+msgid "Members"
+msgstr "Участники"
+
+msgid "you"
+msgstr "вы"
+
+msgid "Type a message..."
+msgstr "Введите сообщение..."
+
+msgid "New message"
+msgstr "Новое сообщение"
+
+msgid "Group created"
+msgstr "Группа создана"
+
+msgid "Group name required"
+msgstr "Требуется название группы"
+
+msgid "Select at least one member"
+msgstr "Выберите хотя бы одного участника"
+
+msgid "Not a member of this chat"
+msgstr "Вы не участник этого чата"
+
+msgid "Cannot chat with yourself"
+msgstr "Нельзя писать самому себе"
+
 msgid "Scan cylinder number..."
 msgstr "Сканируйте номер баллона..."
 

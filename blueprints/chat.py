@@ -22,12 +22,18 @@ def check_auth():
 
 def get_or_create_dm(user1_id, user2_id):
     """Get or create a 1:1 chat room between two users."""
-    # Check if DM already exists
-    rooms = ChatRoom.query.filter_by(is_group=False).all()
-    for room in rooms:
-        pids = [p.user_id for p in room.participants]
-        if user1_id in pids and user2_id in pids and len(pids) == 2:
-            return room
+    # Find existing DM via participant subquery
+    from sqlalchemy import and_
+    existing = db.session.query(ChatRoom).join(ChatParticipant).filter(
+        ChatRoom.is_group == False,
+        ChatParticipant.user_id.in_([user1_id, user2_id])
+    ).group_by(ChatRoom.id).having(
+        db.func.count(ChatParticipant.id) == 2
+    ).first()
+
+    if existing:
+        return existing
+
     # Create new DM
     room = ChatRoom(is_group=False, created_by=user1_id)
     db.session.add(room)

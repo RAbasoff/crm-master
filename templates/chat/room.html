@@ -15,9 +15,10 @@
             </div>
         </div>
         {% if room.is_group %}
+        <div style="position:relative">
         <details>
             <summary style="cursor:pointer;font-size:16px">👥</summary>
-            <div style="position:absolute;right:10px;top:50px;background:white;border:1px solid #ddd;border-radius:8px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:200px">
+            <div style="position:absolute;right:0;top:100%;background:white;border:1px solid #ddd;border-radius:8px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:200px">
                 <div style="font-weight:700;font-size:12px;margin-bottom:8px">{{ _('Members') }}</div>
                 {% for p in all_participants %}
                 <div style="font-size:12px;padding:4px 0">{{ p.display_name or p.username }}{% if p.id == current_user.id %} <span style="color:#888">({{ _('you') }})</span>{% endif %}</div>
@@ -33,6 +34,7 @@
                 </form>
             </div>
         </details>
+        </div>
         {% endif %}
     </div>
 
@@ -123,7 +125,7 @@ function appendMessage(id, body, time, status, isMine) {
 
 // Poll for new messages
 setInterval(function() {
-    fetch('/chat/api/messages/' + roomId + '?after=' + lastMsgId)
+    csrfFetch('/chat/api/messages/' + roomId + '?after=' + lastMsgId)
     .then(function(r) { return r.json(); })
     .then(function(d) {
         if (d.messages) {
@@ -135,26 +137,20 @@ setInterval(function() {
                 }
             });
         }
-    });
+    }).catch(function(){});
 }, 3000);
 
 // Poll for delivery/read status updates
 setInterval(function() {
-    fetch('/chat/api/messages/' + roomId + '?after=0')
+    csrfFetch('/chat/api/messages/' + roomId + '?after=0')
     .then(function(r) { return r.json(); })
     .then(function(d) {
         if (d.messages) {
             d.messages.forEach(function(m) {
-                // Update checkmarks for messages we sent
-                if (m.sender_id == {{ current_user.id }}) {
-                    var statusStr = JSON.stringify(m.status);
-                    var msgDivs = chatMessages.querySelectorAll('[data-mid="' + m.id + '"]');
-                    // Could update checkmarks here if needed
-                }
                 if (m.id > lastMsgId) lastMsgId = m.id;
             });
         }
-    });
+    }).catch(function(){});
 }, 5000);
 
 function addMember(e) {
