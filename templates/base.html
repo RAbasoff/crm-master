@@ -430,8 +430,9 @@
             
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Communication') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
+            <a href="/chat/" class="sb-item {% if 'chat' in (request.endpoint or '') %}active{% endif %}" style="position:relative"><span class="sb-icon">💬</span>{{ _('Chat') }}{% if chat_unread > 0 %}<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#25d366;color:white;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center">{{ chat_unread }}</span>{% endif %}</a>
             {% if has_access('messages') %}
-            <a href="/messages" class="sb-item {% if 'message' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">💬</span>{{ _('Messages') }}</a>
+            <a href="/messages" class="sb-item {% if 'message' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">✉️</span>{{ _('Messages') }}</a>
             {% endif %}
             <a href="/notifications" class="sb-item {% if request.endpoint == 'notifications_list' %}active{% endif %}"><span class="sb-icon">🔔</span>{{ _('Notifications') }}</a>
             </div>
@@ -537,6 +538,9 @@
             <div class="tb-sep"></div>
             <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="{{ _('Install App') }}">📲</button>
             <button class="dark-toggle" onclick="toggleDarkMode()" title="{{ _('Toggle dark mode') }}">🌙</button>
+            <a href="/chat/" class="tb-btn" style="position:relative;text-decoration:none" title="{{ _('Chat') }}">
+                ✉️{% if chat_unread > 0 %}<span style="position:absolute;top:2px;right:2px;background:#25d366;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;padding:0 4px;border:2px solid white">{{ chat_unread }}</span>{% endif %}
+            </a>
             <button class="tb-btn" id="notifBtn" onclick="toggleNotifications()" style="position:relative">
                 🔔<span id="notifCount" style="display:none;position:absolute;top:2px;right:2px;background:#e74c3c;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;padding:0 4px;border:2px solid white"></span>
             </button>

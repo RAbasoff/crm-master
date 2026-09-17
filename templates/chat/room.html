@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{% if room.is_group %}{{ room.name }}{% else %}{{ others[0].display_name if others else 'Chat' }}{% endif %} — CRM{% endblock %}
+{% block content %}
+<div style="display:flex;flex-direction:column;height:calc(100vh - 120px);max-width:800px;margin:0 auto">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;margin-bottom:8px">
+        <a href="/chat/" style="font-size:20px;text-decoration:none;color:#333">←</a>
+        <div style="flex:1">
+            <div style="font-weight:700;font-size:14px">
+                {% if room.is_group %}{{ room.name }}{% else %}{{ others[0].display_name if others else '—' }}{% endif %}
+            </div>
+            <div style="font-size:11px;color:#888">
+                {% if room.is_group %}{{ all_participants|length }} {{ _('members') }}{% else %}{{ others[0].role if others else '' }}{% endif %}
+            </div>
+        </div>
+        {% if room.is_group %}
+        <details>
+            <summary style="cursor:pointer;font-size:16px">👥</summary>
+            <div style="position:absolute;right:10px;top:50px;background:white;border:1px solid #ddd;border-radius:8px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:200px">
+                <div style="font-weight:700;font-size:12px;margin-bottom:8px">{{ _('Members') }}</div>
+                {% for p in all_participants %}
+                <div style="font-size:12px;padding:4px 0">{{ p.display_name or p.username }}{% if p.id == current_user.id %} <span style="color:#888">({{ _('you') }})</span>{% endif %}</div>
+                {% endfor %}
+                <hr style="margin:8px 0">
+                <form onsubmit="addMember(event)" style="display:flex;gap:4px">
+                    <select id="addMemberSelect" style="flex:1;padding:4px;font-size:12px;border:1px solid #ddd;border-radius:4px">
+                        {% for u in users %}{% if u.id not in all_participants|map(attribute='id')|list %}
+                        <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
+                        {% endif %}{% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;font-size:11px">+</button>
+                </form>
+            </div>
+        </details>
+        {% endif %}
+    </div>
+
+    <!-- Messages -->
+    <div id="chatMessages" style="flex:1;overflow-y:auto;padding:8px 0">
+        {% for m in messages %}
+        {% set is_mine = m.sender_id == current_user.id %}
+        <div style="display:flex;justify-content:{% if is_mine %}flex-end{% else %}flex-start{% endif %};margin-bottom:6px">
+            <div style="max-width:75%;padding:8px 12px;border-radius:16px;font-size:13px;line-height:1.4;position:relative;{% if is_mine %}background:#dcf8c6;border-bottom-right-radius:4px{% else %}background:white;border:1px solid #eee;border-bottom-left-radius:4px{% endif %}">
+                {% if not is_mine and room.is_group %}
+                <div style="font-size:10px;font-weight:700;color:#25d366;margin-bottom:2px">{{ m.sender.display_name if m.sender else '?' }}</div>
+                {% endif %}
+                <div style="white-space:pre-wrap;word-break:break-word">{{ m.body }}</div>
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:2px">
+                    <span style="font-size:9px;color:#999">{{ m.created_at.strftime('%H:%M') }}</span>
+                    {% if is_mine %}
+                    {% set status = m.status_json|tojson if m.status_json else '{}' %}
+                    {% if '"read"' in m.status_json %}
+                        <span style="color:#53bdeb;font-size:12px">✓✓</span>
+                    {% elif '"delivered"' in m.status_json %}
+                        <span style="color:#999;font-size:12px">✓✓</span>
+                    {% else %}
+                        <span style="color:#999;font-size:12px">✓</span>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Input -->
+    <div style="display:flex;gap:8px;padding:8px 0;border-top:1px solid #eee">
+        <input type="text" id="chatInput" placeholder="{{ _('Type a message...') }}" style="flex:1;padding:10px 16px;border:2px solid #eee;border-radius:24px;font-size:14px;outline:none" onfocus="this.style.borderColor='#25d366'" onblur="this.style.borderColor='#eee'">
+        <button onclick="sendMessage()" style="width:44px;height:44px;border-radius:50%;background:#25d366;color:white;border:none;font-size:18px;cursor:pointer;flex-shrink:0">➤</button>
+    </div>
+</div>
+
+<script>
+var roomId = {{ room.id }};
+var lastMsgId = {{ messages[-1].id if messages else 0 }};
+var chatInput = document.getElementById('chatInput');
+var chatMessages = document.getElementById('chatMessages');
+
+// Scroll to bottom
+chatMessages.scrollTop = chatMessages.scrollHeight;
+chatInput.focus();
+
+// Send on Enter
+chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+function sendMessage() {
+    var body = chatInput.value.trim();
+    if (!body) return;
+    chatInput.value = '';
+
+    csrfFetch('/chat/api/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({room_id: roomId, body: body})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.ok) {
+            appendMessage(d.msg_id, body, d.created_at, d.status, true);
+            lastMsgId = d.msg_id;
+        }
+    });
+}
+
+function appendMessage(id, body, time, status, isMine) {
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:' + (isMine ? 'flex-end' : 'flex-start') + ';margin-bottom:6px';
+    var checks = '';
+    if (isMine) {
+        if (status && JSON.stringify(status).indexOf('read') >= 0) checks = '<span style="color:#53bdeb;font-size:12px">✓✓</span>';
+        else if (status && JSON.stringify(status).indexOf('delivered') >= 0) checks = '<span style="color:#999;font-size:12px">✓✓</span>';
+        else checks = '<span style="color:#999;font-size:12px">✓</span>';
+    }
+    div.innerHTML = '<div style="max-width:75%;padding:8px 12px;border-radius:16px;font-size:13px;line-height:1.4;' + (isMine ? 'background:#dcf8c6;border-bottom-right-radius:4px' : 'background:white;border:1px solid #eee;border-bottom-left-radius:4px') + '">' +
+        '<div style="white-space:pre-wrap;word-break:break-word">' + body.replace(/</g, '&lt;') + '</div>' +
+        '<div style="display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:2px"><span style="font-size:9px;color:#999">' + time + '</span> ' + checks + '</div></div>';
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Poll for new messages
+setInterval(function() {
+    fetch('/chat/api/messages/' + roomId + '?after=' + lastMsgId)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.messages) {
+            d.messages.forEach(function(m) {
+                if (m.id > lastMsgId) {
+                    var isMine = m.sender_id == {{ current_user.id }};
+                    appendMessage(m.id, m.body, m.created_at, m.status, isMine);
+                    lastMsgId = m.id;
+                }
+            });
+        }
+    });
+}, 3000);
+
+// Poll for delivery/read status updates
+setInterval(function() {
+    fetch('/chat/api/messages/' + roomId + '?after=0')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.messages) {
+            d.messages.forEach(function(m) {
+                // Update checkmarks for messages we sent
+                if (m.sender_id == {{ current_user.id }}) {
+                    var statusStr = JSON.stringify(m.status);
+                    var msgDivs = chatMessages.querySelectorAll('[data-mid="' + m.id + '"]');
+                    // Could update checkmarks here if needed
+                }
+                if (m.id > lastMsgId) lastMsgId = m.id;
+            });
+        }
+    });
+}, 5000);
+
+function addMember(e) {
+    e.preventDefault();
+    var select = document.getElementById('addMemberSelect');
+    if (!select.value) return;
+    csrfFetch('/chat/api/rooms/' + roomId + '/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: parseInt(select.value)})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) location.reload();
+    });
+}
+</script>
+{% endblock %}

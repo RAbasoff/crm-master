@@ -29,7 +29,8 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     EquipmentMaintenance, EquipmentPart, EquipmentComponent, EquipmentPartOrder,
                     Equipment, EquipmentDocument, EquipmentServiceLog,
                     WarehouseReservation, SupplierPrice,
-                    GasCylinder, CylinderLog, CylinderOrder)
+                    GasCylinder, CylinderLog, CylinderOrder,
+                    ChatRoom, ChatParticipant, ChatMessage)
 from utils import (role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -61,6 +62,8 @@ from blueprints.faults import bp as faults_bp
 app.register_blueprint(faults_bp)
 from blueprints.gas import bp as gas_bp
 app.register_blueprint(gas_bp)
+from blueprints.chat import bp as chat_bp
+app.register_blueprint(chat_bp)
 
 csrf = CSRFProtect(app)
 db.init_app(app)
@@ -317,6 +320,7 @@ def inject_section_access():
 
     # Reminder count for sidebar badge
     reminder_count = 0
+    chat_unread = 0
     if current_user.is_authenticated and request.endpoint not in ('static',):
         try:
             today = datetime.utcnow().date()
@@ -335,8 +339,13 @@ def inject_section_access():
             ).count()
         except Exception:
             pass
+        try:
+            from blueprints.chat import get_unread_count
+            chat_unread = get_unread_count(current_user.id)
+        except Exception:
+            pass
 
-    return dict(has_access=has_access, reminder_count=reminder_count)
+    return dict(has_access=has_access, reminder_count=reminder_count, chat_unread=chat_unread)
 
 @app.route('/set_language/<lang>')
 def set_language(lang):

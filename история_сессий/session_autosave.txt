@@ -1,18 +1,24 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 12:45 UTC
+Время: 2026-09-17 17:30 UTC
 ============================================================
 
-Последний коммит: e58a943 fix: duplicate route name machine_qr → machine_qr_generate + fix machine.location → installation_location
+Последний коммит: 5d286aa fix: add missing DB migrations for machine_part.next_replacement/next_maintenance + warehouse tables
 Git status: clean
 
-ИСПРАВЛЕНО:
-  - Дублирование имени маршрута machine_qr (было 2 функции) → переименована в machine_qr_generate
-  - machine.location → machine.installation_location в machine_qr.html
-  - Это вызывало AssertionError на PA → "Something went wrong"
+ПОСЛЕДНИЕ КОММИТЫ СЕССИИ:
+  5d286aa fix: DB migrations for machine_part
+  e58a943 fix: duplicate route machine_qr → machine_qr_generate
+  48ed530 feat: unified reminders page /reminders
+  1663576 feat: mobile dashboard + QR codes for machines
+  5c4eb3c perf: DB indexes + eager loading
+  4084310 fix: mass crash prevention (safe_int/safe_float/safe_date)
+  2f926c7 feat: gas analytics report + consumption chart
+  17ba5fb feat: gas spare list active cylinders
+  3bb8eaf feat: gas dashboard inline scanner
+  f1a3116 feat: gas dashboard scanner + QR registry
 
-ДЕПЛОЙ:
-  cd ~/crm-master && git pull origin master
-  Web → Reload
+СТАТУС: PA работает (подтверждено пользователем)
+ОЖИДАНИЕ: пользователь работает над Honeywell сканером на другом компе
 
 ============================================================

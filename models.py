@@ -965,6 +965,47 @@ class Notification(db.Model):
     link = db.Column(db.String(300))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
+# ============================================================
+# CHAT MODELS
+# ============================================================
+
+class ChatRoom(db.Model):
+    __tablename__ = 'chat_room'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200))
+    is_group = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    creator = db.relationship('User', foreign_keys=[created_by])
+    participants = db.relationship('ChatParticipant', backref='room', lazy=True, cascade='all, delete-orphan')
+    messages = db.relationship('ChatMessage', backref='room', lazy=True, cascade='all, delete-orphan')
+
+
+class ChatParticipant(db.Model):
+    __tablename__ = 'chat_participant'
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_read_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', foreign_keys=[user_id])
+    __table_args__ = (db.UniqueConstraint('room_id', 'user_id'),)
+
+
+class ChatMessage(db.Model):
+    __tablename__ = 'chat_message'
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    # delivery/read tracking per recipient (JSON: {"user_id": "delivered"|"read"})
+    status_json = db.Column(db.Text, default='{}')
+    sender = db.relationship('User', foreign_keys=[sender_id])
+
+
 class Opdracht(db.Model):
     __tablename__ = 'opdracht'
     id = db.Column(db.Integer, primary_key=True)
