@@ -2139,37 +2139,49 @@ def maintenance_calendar_delete():
     mro_id = request.form.get('mro_id')
 
     if ev_type in ('replacement', 'maintenance') and part_id:
-        part = MachinePart.query.get(int(part_id))
-        if part:
-            if ev_type == 'replacement':
-                part.next_replacement = None
-            else:
-                part.next_maintenance = None
-            safe_commit()
-            flash(_('Event removed'), 'success')
+        try:
+            part = MachinePart.query.get(int(part_id))
+            if part:
+                if ev_type == 'replacement':
+                    part.next_replacement = None
+                else:
+                    part.next_maintenance = None
+                safe_commit()
+                flash(_('Event removed'), 'success')
+        except (ValueError, TypeError):
+            pass
 
-    elif ev_type == 'plan' and plan_id:
-        p = MaintenancePlan.query.get(int(plan_id))
-        if p:
-            db.session.delete(p)
-            safe_commit()
-            flash(_('Plan deleted'), 'success')
+    elif ev_type in ('plan', 'machine_maintenance') and plan_id:
+        try:
+            p = MaintenancePlan.query.get(int(plan_id))
+            if p:
+                db.session.delete(p)
+                safe_commit()
+                flash(_('Plan deleted'), 'success')
+        except (ValueError, TypeError):
+            pass
 
     elif ev_type == 'equipment' and equipment_id:
-        from models import Equipment
-        eq = Equipment.query.get(int(equipment_id))
-        if eq:
-            eq.next_service_date = None
-            safe_commit()
-            flash(_('Equipment service date removed'), 'success')
+        try:
+            from models import Equipment
+            eq = Equipment.query.get(int(equipment_id))
+            if eq:
+                eq.next_service_date = None
+                safe_commit()
+                flash(_('Equipment service date removed'), 'success')
+        except (ValueError, TypeError):
+            pass
 
     elif ev_type == 'equipment_mro' and mro_id:
-        from models import EquipmentMaintenance
-        mro = EquipmentMaintenance.query.get(int(mro_id))
-        if mro:
-            db.session.delete(mro)
-            safe_commit()
-            flash(_('MRO record deleted'), 'success')
+        try:
+            from models import EquipmentMaintenance
+            mro = EquipmentMaintenance.query.get(int(mro_id))
+            if mro:
+                db.session.delete(mro)
+                safe_commit()
+                flash(_('MRO record deleted'), 'success')
+        except (ValueError, TypeError):
+            pass
 
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
     return redirect(url_for('maintenance_calendar', month=month))

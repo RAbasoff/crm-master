@@ -1,18 +1,20 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 19:14 UTC
+Время: 2026-09-17 19:34 UTC
 ============================================================
 
-Последний коммит: b5e9495 feat: maintenance calendar — show equipment service dates + MRO records with teal color
+Последний коммит: fd2acc5 fix: calendar TO — mark equipment complete works + delete button for admin
 Git status: clean
 
 ИЗМЕНЕНО:
-  - app.py: maintenance_calendar — добавлены события Equipment (next_service_date) и EquipmentMaintenance (next_date)
+  - app.py:
+    - maintenance_calendar_complete: добавлены типы equipment и equipment_mro
+    - Новый маршрут /maintenance-calendar/delete (admin)
   - templates/maintenance_calendar.html:
-    - Оборудование отображается бирюзовым цветом (#16a085)
-    - Ссылки на /equipment/<id>/edit для оборудования
-    - Легенда обновлена
-  - translations/ru: "Equipment Service", "Equipment"
+    - Формы в календаре: добавлены equipment_id и mro_id поля
+    - Кнопка 🗑 удаления для admin (в календаре и в списке)
+    - Кнопка ✅ выполнения работает для оборудования и MRO
+  - translations/ru: Новые строки
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master
