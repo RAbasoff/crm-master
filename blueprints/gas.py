@@ -3,6 +3,7 @@ Gas & Gas Equipment module — interactive cylinder management
 Nitrogen (N₂) and Carbon Dioxide (CO₂) cylinders with visual status
 """
 import os
+import json
 from datetime import datetime, timedelta
 from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, current_app
 from flask_login import login_required, current_user
@@ -10,7 +11,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
 from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
-                    CylinderOrder, EquipmentRepair, User)
+                    CylinderOrder, EquipmentRepair, User, MonthlyArchive)
 from utils import role_required, log_audit, create_notification, safe_commit
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
@@ -73,6 +74,18 @@ def gas_dashboard():
     stats['n2_consumed_month'] = n2_consumed
     stats['co2_consumed_month'] = co2_consumed
     stats['total_consumed_month'] = n2_consumed + co2_consumed
+
+    # Received this month: cylinders created this month
+    received_logs = CylinderLog.query.filter(
+        CylinderLog.action == 'created',
+        CylinderLog.date >= month_start
+    ).all()
+    received_ids = set(l.cylinder_id for l in received_logs)
+    n2_received = len([cid for cid in received_ids if any(c.id == cid and c.gas_type == 'nitrogen' for c in cylinders)])
+    co2_received = len([cid for cid in received_ids if any(c.id == cid and c.gas_type == 'co2' for c in cylinders)])
+    stats['n2_received_month'] = n2_received
+    stats['co2_received_month'] = co2_received
+    stats['total_received_month'] = n2_received + co2_received
 
     # Spare cylinders (empty, available for replacement)
     n2_spare = [c for c in n2_cylinders if c.status == 'empty']
@@ -274,6 +287,48 @@ def cylinder_swap(cyl_id):
     log_audit('swap', 'gas_cylinder', c.id, f'{c.gas_type} #{old_number} swapped')
     flash(_('Cylinder marked as empty. Add a new cylinder to replace it.'), 'info')
     return redirect(url_for('gas.cylinder_new'))
+
+
+@bp.route('/archive')
+@login_required
+@role_required('admin')
+def gas_archive():
+    """Archive all empty cylinders to MonthlyArchive, then delete them."""
+    now = datetime.utcnow()
+    month_key = now.strftime('%Y-%m')
+
+    empty = GasCylinder.query.filter_by(status='empty').all()
+    if not empty:
+        flash(_('No empty cylinders to archive'), 'info')
+        return redirect(url_for('gas.gas_dashboard'))
+
+    # Save snapshot
+    snapshot = []
+    for c in empty:
+        snapshot.append({
+            'id': c.id, 'gas_type': c.gas_type,
+            'cylinder_number': c.cylinder_number, 'barcode': c.barcode,
+            'status': c.status,
+            'received_at': c.received_at.strftime('%Y-%m-%d') if c.received_at else None,
+            'installed_at': c.installed_at.strftime('%Y-%m-%d') if c.installed_at else None,
+            'notes': c.notes or ''
+        })
+
+    archive = MonthlyArchive(
+        archive_month=month_key,
+        section='gas_cylinders',
+        data_json=json.dumps(snapshot, ensure_ascii=False)
+    )
+    db.session.add(archive)
+
+    count = len(empty)
+    for c in empty:
+        db.session.delete(c)
+
+    safe_commit()
+    log_audit('archive', 'gas_cylinders', 0, f'{count} empty cylinders archived for {month_key}')
+    flash(_('%(count)d cylinders archived', count=count), 'success')
+    return redirect(url_for('gas.gas_dashboard'))
 
 
 # ============================================================

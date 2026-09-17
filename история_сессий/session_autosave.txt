@@ -1,15 +1,21 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 05:29 UTC
+Время: 2026-09-17 05:45 UTC
 ============================================================
 
-Последний коммит: 64d1cc2 revert: scanner back to simple input+Enter — e.code overkill, hieroglyphs are hardware issue
+Последний коммит: f1a3116 feat: gas dashboard - inline barcode scanner + full cylinder registry with quick status change
 Git status: clean
 
-СТАТУС:
-  - Иероглифы сканера — проблема аппаратная (другой комп, раскладка Honeywell)
-  - На текущем компе сканер работает корректно
-  - revert к простому input+Enter
+ИЗМЕНЕНО:
+  - templates/gas/dashboard.html:
+    - Inline сканер штрих-кодов (поле ввода + Enter)
+    - Выбор газа (N₂ / CO₂)
+    - Результат: статус баллона + кнопки Full / In Use / Empty
+    - Полный реестр всех баллонов (N₂ + CO₂) внизу страницы
+    - Клик по баллону → popup со сменой статуса
+  - blueprints/gas.py:
+    - POST /gas/api/cylinders/quick-add — найти или создать баллон по номеру
+  - translations/ru: Новые строки перевода
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

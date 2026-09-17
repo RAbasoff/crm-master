@@ -1942,3 +1942,18 @@ msgstr "Все баллоны"
 
 msgid "total"
 msgstr "всего"
+
+msgid "Archive"
+msgstr "Архив"
+
+msgid "Archive all empty cylinders?"
+msgstr "Архивировать все пустые баллоны?"
+
+msgid "No empty cylinders to archive"
+msgstr "Нет пустых баллонов для архивации"
+
+msgid "%(count)d cylinders archived"
+msgstr "%(count)d баллонов архивировано"
+
+msgid "received"
+msgstr "получено"
