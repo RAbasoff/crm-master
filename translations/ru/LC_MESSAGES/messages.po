@@ -1924,3 +1924,21 @@ msgstr "Не найдено в системе"
 
 msgid "Search Machines"
 msgstr "Поиск станков"
+
+msgid "Scan cylinder number..."
+msgstr "Сканируйте номер баллона..."
+
+msgid "Find / Add"
+msgstr "Найти / Добавить"
+
+msgid "new cylinder created"
+msgstr "создан новый баллон"
+
+msgid "Connection error"
+msgstr "Ошибка соединения"
+
+msgid "All Cylinders"
+msgstr "Все баллоны"
+
+msgid "total"
+msgstr "всего"

@@ -455,6 +455,68 @@ def api_cylinder_update(cyl_id):
     return jsonify({'ok': True, 'status': c.status})
 
 
+@bp.route('/api/cylinders/quick-add', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def cylinder_quick_add():
+    """Find or create cylinder by scanned number, return it for status selection."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+
+    number = (data.get('number') or '').strip()
+    gas_type = data.get('gas_type', 'nitrogen')
+
+    if not number:
+        return jsonify({'error': 'No number'}), 400
+    if gas_type not in ('nitrogen', 'co2'):
+        return jsonify({'error': 'Invalid gas type'}), 400
+
+    # Find by barcode or cylinder_number
+    cylinder = GasCylinder.query.filter(
+        (GasCylinder.barcode == number) | (GasCylinder.cylinder_number == number)
+    ).first()
+
+    if cylinder:
+        return jsonify({
+            'found': True,
+            'id': cylinder.id,
+            'number': cylinder.cylinder_number,
+            'gas_type': cylinder.gas_type,
+            'status': cylinder.status
+        })
+
+    # Create new
+    cylinder = GasCylinder(
+        gas_type=gas_type,
+        cylinder_number=number,
+        barcode=number,
+        status='full',
+        received_at=datetime.utcnow()
+    )
+    db.session.add(cylinder)
+    safe_commit()
+
+    db.session.add(CylinderLog(
+        cylinder_id=cylinder.id,
+        action='created',
+        new_cylinder_number=number,
+        performed_by=current_user.id,
+        notes='Added via dashboard scan'
+    ))
+    safe_commit()
+
+    log_audit('create', 'gas_cylinder', cylinder.id, f'{gas_type} #{number}')
+
+    return jsonify({
+        'found': False,
+        'id': cylinder.id,
+        'number': cylinder.cylinder_number,
+        'gas_type': cylinder.gas_type,
+        'status': cylinder.status
+    })
+
+
 # ============================================================
 # BARCODE SCANNING — cylinder install/replace
 # ============================================================

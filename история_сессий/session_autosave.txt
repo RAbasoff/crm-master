@@ -1,17 +1,15 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 05:14 UTC
+Время: 2026-09-17 05:29 UTC
 ============================================================
 
-Последний коммит: ef37571 fix: scanner uses physical key codes (e.code) to bypass keyboard layout - hieroglyphs gone
+Последний коммит: 64d1cc2 revert: scanner back to simple input+Enter — e.code overkill, hieroglyphs are hardware issue
 Git status: clean
 
-ИЗМЕНЕНО:
-  - templates/universal_scanner.html: полная переработка ввода сканера
-    - Используется e.code (физическая клавиша) вместо e.key (layout)
-    - Буфер scanBuffer + маппинг US layout → ASCII
-    - Блокировка paste/drop
-    - Таймаут очистки буфера 500мс
+СТАТУС:
+  - Иероглифы сканера — проблема аппаратная (другой комп, раскладка Honeywell)
+  - На текущем компе сканер работает корректно
+  - revert к простому input+Enter
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

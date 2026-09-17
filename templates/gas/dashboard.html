@@ -22,11 +22,27 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
     <h1 style="margin:0;font-size:18px">{{ _('Gas Cylinders') }}</h1>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <a href="/gas/scan" class="btn btn-primary btn-sm">📷 {{ _('Scan') }}</a>
         <a href="/gas/cylinders/new" class="btn btn-sm" style="background:#eee">+ {{ _('Add') }}</a>
         <a href="/gas/orders/new" class="btn btn-sm" style="background:#eee">📦 {{ _('Order') }}</a>
         <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">{{ _('All') }}</a>
     </div>
+</div>
+
+<!-- Inline barcode scanner -->
+<div class="card" style="margin-bottom:10px;padding:10px;border:2px solid #27ae60">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:20px">📷</span>
+        <input type="text" id="cylScanInput" placeholder="{{ _('Scan cylinder number...') }}"
+            style="flex:1;min-width:150px;padding:8px;border:2px solid #3498db;border-radius:6px;font-size:14px;font-family:monospace;outline:none"
+            onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#3498db'"
+            autocomplete="off" autofocus>
+        <select id="cylScanGas" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+            <option value="nitrogen">N₂</option>
+            <option value="co2">CO₂</option>
+        </select>
+        <button onclick="scanCylinder()" class="btn btn-sm" style="background:#27ae60;color:white;padding:8px 16px">{{ _('Find / Add') }}</button>
+    </div>
+    <div id="cylScanResult" style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px"></div>
 </div>
 
 {% set n2a = [] %}
@@ -219,6 +235,40 @@
 
 </div>
 
+<!-- All cylinders registry -->
+<div class="card" style="margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h2 style="font-size:13px;margin:0">📋 {{ _('All Cylinders') }}</h2>
+        <span style="font-size:10px;color:#888">{{ cylinders|length }} {{ _('total') }}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <!-- N₂ column -->
+        <div>
+            <div style="font-weight:700;color:#3498db;font-size:11px;margin-bottom:4px">N₂ Nitrogen ({{ n2_cylinders|length }})</div>
+            {% for cyl in n2_cylinders %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                 style="cursor:pointer;padding:3px 6px;border-radius:4px;border:1px solid {% if cyl.status=='in_use' %}#f39c12{% elif cyl.status=='full' %}#27ae60{% elif cyl.status=='empty' %}#c0392b{% else %}#95a5a6{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% elif cyl.status=='full' %}#f0fff0{% elif cyl.status=='empty' %}#fff0f0{% else %}#f8f8f8{% endif %};font-size:10px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center"
+                 onmouseover="this.style.borderColor='#3498db'" onmouseout="this.style.borderColor='{% if cyl.status=='in_use' %}#f39c12{% elif cyl.status=='full' %}#27ae60{% elif cyl.status=='empty' %}#c0392b{% else %}#95a5a6{% endif %}'">
+                <span><b>{{ cyl.cylinder_number }}</b></span>
+                <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:{% if cyl.status=='in_use' %}#f39c12{% elif cyl.status=='full' %}#27ae60{% elif cyl.status=='empty' %}#c0392b{% else %}#95a5a6{% endif %};color:white">{{ cyl.status|upper }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <!-- CO₂ column -->
+        <div>
+            <div style="font-weight:700;color:#e74c3c;font-size:11px;margin-bottom:4px">CO₂ Carbon Dioxide ({{ co2_cylinders|length }})</div>
+            {% for cyl in co2_cylinders %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
+                 style="cursor:pointer;padding:3px 6px;border-radius:4px;border:1px solid {% if cyl.status=='in_use' %}#f39c12{% elif cyl.status=='full' %}#27ae60{% elif cyl.status=='empty' %}#c0392b{% else %}#95a5a6{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% elif cyl.status=='full' %}#f0fff0{% elif cyl.status=='empty' %}#fff0f0{% else %}#f8f8f8{% endif %};font-size:10px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center"
+                 onmouseover="this.style.borderColor='#e74c3c'" onmouseout="this.style.borderColor='{% if cyl.status=='in_use' %}#f39c12{% elif cyl.status=='full' %}#27ae60{% elif cyl.status=='empty' %}#c0392b{% else %}#95a5a6{% endif %}'">
+                <span><b>{{ cyl.cylinder_number }}</b></span>
+                <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:{% if cyl.status=='in_use' %}#f39c12{% elif cyl.status=='full' %}#27ae60{% elif cyl.status=='empty' %}#c0392b{% else %}#95a5a6{% endif %};color:white">{{ cyl.status|upper }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 <!-- Popup -->
 <div id="cylinderMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:20px;min-width:260px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
@@ -258,6 +308,84 @@ function setCylinderStatus(status) {
     .catch(function(e) { alert('Error'); });
 }
 document.getElementById('cylinderMenu').addEventListener('click', function(e) { if (e.target === this) closeCylMenu(); });
+
+// === INLINE SCANNER ===
+var scanInput = document.getElementById('cylScanInput');
+var lastScannedCyl = '';
+
+scanInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        scanCylinder();
+    }
+});
+
+function scanCylinder() {
+    var number = scanInput.value.trim();
+    if (!number) return;
+    if (number === lastScannedCyl) { scanInput.value = ''; return; }
+    lastScannedCyl = number;
+
+    var gasType = document.getElementById('cylScanGas').value;
+    var resultDiv = document.getElementById('cylScanResult');
+    resultDiv.style.display = '';
+    resultDiv.style.background = '#e8f4fd';
+    resultDiv.innerHTML = '<b>' + number + '</b> — searching...';
+
+    csrfFetch('/gas/api/cylinders/quick-add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({number: number, gas_type: gasType})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.error) {
+            resultDiv.style.background = '#fde8e8';
+            resultDiv.innerHTML = '❌ ' + d.error;
+            return;
+        }
+        var isNew = !d.found;
+        var statusColors = {full:'#27ae60', in_use:'#f39c12', empty:'#c0392b', maintenance:'#95a5a6'};
+        var sc = statusColors[d.status] || '#888';
+        var html = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+        html += '<span style="font-size:16px">' + (isNew ? '🆕' : '✅') + '</span>';
+        html += '<b>' + d.number + '</b>';
+        html += '<span style="color:' + sc + ';font-weight:700">' + d.status.toUpperCase().replace('_',' ') + '</span>';
+        if (d.gas_type === 'nitrogen') html += '<span class="badge badge-active" style="font-size:10px">N₂</span>';
+        else html += '<span class="badge badge-maintenance" style="font-size:10px">CO₂</span>';
+        if (isNew) html += '<span style="color:#27ae60;font-size:11px">({{ _("new cylinder created") }})</span>';
+        html += '</div>';
+        html += '<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">';
+        html += '<button onclick="quickStatus(' + d.id + ',\'full\',this)" style="padding:4px 10px;border:1.5px solid #27ae60;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;color:#27ae60">🟢 {{ _("Full") }}</button>';
+        html += '<button onclick="quickStatus(' + d.id + ',\'in_use\',this)" style="padding:4px 10px;border:1.5px solid #f39c12;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;color:#f39c12">🟠 {{ _("In Use") }}</button>';
+        html += '<button onclick="quickStatus(' + d.id + ',\'empty\',this)" style="padding:4px 10px;border:1.5px solid #c0392b;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;color:#c0392b">🔴 {{ _("Empty") }}</button>';
+        html += '<a href="/gas/cylinders/' + d.id + '/edit" style="padding:4px 10px;border:1.5px solid #3498db;background:white;border-radius:4px;font-size:11px;color:#3498db;text-decoration:none">✏️</a>';
+        html += '</div>';
+        resultDiv.style.background = isNew ? '#f0fff0' : '#e8f4fd';
+        resultDiv.innerHTML = html;
+        scanInput.value = '';
+        scanInput.focus();
+    })
+    .catch(function() {
+        resultDiv.style.background = '#fde8e8';
+        resultDiv.innerHTML = '❌ {{ _("Connection error") }}';
+    });
+}
+
+function quickStatus(cylId, status, btn) {
+    btn.style.opacity = '0.5';
+    csrfFetch('/gas/cylinders/' + cylId + '/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: status})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.ok) { location.reload(); }
+        else { btn.style.opacity = '1'; alert('Error: ' + (d.error || 'unknown')); }
+    })
+    .catch(function() { btn.style.opacity = '1'; alert('Error'); });
+}
 </script>
 
 {% if components %}
