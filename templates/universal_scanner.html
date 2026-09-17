@@ -57,35 +57,74 @@ let lastScanTime = 0;
 let cameraActive = false;
 let scanner = null;
 
-// === HONEYWELL SCANNER DETECTION ===
-// Scanner sends fast keystrokes + Enter. Detect by input speed.
+// === HONEYWELL SCANNER ===
+// Works as USB keyboard. Use e.code (physical key) to avoid layout issues.
 const scannerInput = document.getElementById('scannerInput');
-let inputTimer = null;
+let scanBuffer = '';
+let scanTimer = null;
 
-// Strip non-printable / control characters (GS1 FNC1, etc.)
-function cleanBarcode(raw) {
-    // Keep only printable ASCII + common accented chars
-    return raw.replace(/[^\x20-\x7E\u00A0-\u024F]/g, '').trim();
+// Map physical key codes to ASCII characters (US layout)
+function codeToChar(e) {
+    if (e.code.startsWith('Key') && e.code.length === 4) return e.code[3]; // KeyA → A
+    if (e.code.startsWith('Digit') && e.code.length === 6) return e.code[5]; // Digit1 → 1
+    if (e.code.startsWith('Numpad') && e.code.length === 7 && /\d/.test(e.code[6])) return e.code[6];
+    if (e.code === 'Minus') return '-';
+    if (e.code === 'Equal') return '=';
+    if (e.code === 'BracketLeft') return '[';
+    if (e.code === 'BracketRight') return ']';
+    if (e.code === 'Backslash') return '\\';
+    if (e.code === 'Semicolon') return ';';
+    if (e.code === 'Quote') return "'";
+    if (e.code === 'Backquote') return '`';
+    if (e.code === 'Comma') return ',';
+    if (e.code === 'Period') return '.';
+    if (e.code === 'Slash') return '/';
+    if (e.code === 'Space') return ' ';
+    if (e.code === 'NumpadAdd') return '+';
+    if (e.code === 'NumpadSubtract') return '-';
+    if (e.code === 'NumpadMultiply') return '*';
+    if (e.code === 'NumpadDivide') return '/';
+    if (e.code === 'NumpadDecimal') return '.';
+    return null;
 }
-
-scannerInput.addEventListener('input', function() {
-    clearTimeout(inputTimer);
-    // Fast input = scanner (under 200ms between chars = scanner)
-    inputTimer = setTimeout(function() {
-        // Human typing - do nothing until Enter
-    }, 300);
-});
 
 scannerInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
-        const code = cleanBarcode(scannerInput.value);
+        // Process buffer directly (already clean ASCII)
+        const code = scanBuffer.trim();
         if (code) {
             processScan(code);
-            scannerInput.value = '';
         }
+        scanBuffer = '';
+        scannerInput.value = '';
+        return;
+    }
+    // Intercept all printable keys and use physical mapping
+    const ch = codeToChar(e);
+    if (ch) {
+        e.preventDefault();
+        if (e.shiftKey && /[a-z]/.test(ch)) {
+            scanBuffer += ch.toUpperCase();
+        } else if (!e.shiftKey && /[A-Z]/.test(ch)) {
+            scanBuffer += ch.toLowerCase();
+        } else {
+            scanBuffer += ch;
+        }
+        scannerInput.value = scanBuffer;
+        clearTimeout(scanTimer);
+        scanTimer = setTimeout(function() { scanBuffer = ''; scannerInput.value = ''; }, 500);
+    }
+    // Block non-printable keys except Backspace
+    if (e.key === 'Backspace') {
+        scanBuffer = scanBuffer.slice(0, -1);
+        // Don't preventDefault — let it update the input
     }
 });
+
+// Prevent copy/paste and drag-drop garbage
+scannerInput.addEventListener('paste', function(e) { e.preventDefault(); });
+scannerInput.addEventListener('drop', function(e) { e.preventDefault(); });
 
 // Auto-refocus on click anywhere (except buttons/links)
 document.addEventListener('click', function(e) {
