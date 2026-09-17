@@ -1,22 +1,15 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 12:35 UTC
+Время: 2026-09-17 12:45 UTC
 ============================================================
 
-Последний коммит: 48ed530 feat: unified reminders page /reminders — maintenance, consumables, low stock with sidebar badge
+Последний коммит: e58a943 fix: duplicate route name machine_qr → machine_qr_generate + fix machine.location → installation_location
 Git status: clean
 
-ИЗМЕНЕНО:
-  - /reminders — единая страница напоминаний:
-    - Просроченные ТО запчастей (overdue_parts)
-    - Просроченные замены расходников (overdue_consumables)
-    - Скоро ТО запчастей (upcoming_parts) — 30 дней
-    - Скоро замены расходников (upcoming_consumables)
-    - Низкий запас на складе (low_stock)
-    - Кнопки перехода к станку/товару
-  - Sidebar: 🔔 Reminders с красным бейджем (количество)
-  - context_processor: reminder_count — считается на каждый запрос (7 дней)
-  - translations/ru: Новые строки
+ИСПРАВЛЕНО:
+  - Дублирование имени маршрута machine_qr (было 2 функции) → переименована в machine_qr_generate
+  - machine.location → machine.installation_location в machine_qr.html
+  - Это вызывало AssertionError на PA → "Something went wrong"
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master

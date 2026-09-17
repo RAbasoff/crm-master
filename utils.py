@@ -513,6 +513,33 @@ def run_migrations():
         ("worker.hire_date", "ALTER TABLE worker ADD COLUMN hire_date DATE"),
         ("worker.fire_date", "ALTER TABLE worker ADD COLUMN fire_date DATE"),
         ("gas_cylinder.barcode", "ALTER TABLE gas_cylinder ADD COLUMN barcode VARCHAR(100)"),
+        ("machine_part.next_replacement", "ALTER TABLE machine_part ADD COLUMN next_replacement DATE"),
+        ("machine_part.next_maintenance", "ALTER TABLE machine_part ADD COLUMN next_maintenance DATE"),
+        ("machine_part.last_replaced", "ALTER TABLE machine_part ADD COLUMN last_replaced DATE"),
+        ("machine_part.replacement_interval_days", "ALTER TABLE machine_part ADD COLUMN replacement_interval_days INTEGER"),
+        ("machine_part.maintenance_interval_days", "ALTER TABLE machine_part ADD COLUMN maintenance_interval_days INTEGER"),
+        ("warehouse_item.expiry_date", "ALTER TABLE warehouse_item ADD COLUMN expiry_date DATE"),
+        ("warehouse_item.barcode", "ALTER TABLE warehouse_item ADD COLUMN barcode VARCHAR(100)"),
+        ("warehouse_item.serial_number", "ALTER TABLE warehouse_item ADD COLUMN serial_number VARCHAR(100)"),
+        ("warehouse_reservation", """CREATE TABLE IF NOT EXISTS warehouse_reservation (
+            id INTEGER PRIMARY KEY,
+            item_id INTEGER NOT NULL REFERENCES warehouse_item(id),
+            quantity FLOAT NOT NULL,
+            reserved_by INTEGER REFERENCES user(id),
+            reason TEXT,
+            created_at DATETIME,
+            expires_at DATETIME
+        )"""),
+        ("supplier_price", """CREATE TABLE IF NOT EXISTS supplier_price (
+            id INTEGER PRIMARY KEY,
+            item_id INTEGER NOT NULL REFERENCES warehouse_item(id),
+            contractor_id INTEGER REFERENCES contractor(id),
+            price NUMERIC(10,2),
+            delivery_days INTEGER,
+            min_order FLOAT,
+            last_checked DATETIME,
+            notes TEXT
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
