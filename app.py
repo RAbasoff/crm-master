@@ -2050,13 +2050,22 @@ def maintenance_calendar_complete():
             if plan:
                 event_date = request.form.get('date')
                 if plan.recurrence and plan.recurrence != 'none' and event_date:
+                    event_dt = datetime.strptime(event_date, '%Y-%m-%d')
+                    # Clean up old records with next_maintenance on this date (from old buggy code)
+                    old_records = MaintenanceRecord.query.filter(
+                        MaintenanceRecord.machine_id == plan.machine_id,
+                        db.func.date(MaintenanceRecord.next_maintenance) == event_date
+                    ).all()
+                    for old in old_records:
+                        old.next_maintenance = None
+                    # Create completion record
                     mr = MaintenanceRecord(
                         machine_id=plan.machine_id,
                         maintenance_type=plan.maintenance_type,
                         description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
                         performed_by=current_user.id,
-                        date_performed=datetime.strptime(event_date, '%Y-%m-%d'),
-                        next_maintenance=None,
+                        date_performed=event_dt,
+                        next_maintenance=event_dt,
                         cost=0
                     )
                     db.session.add(mr)
