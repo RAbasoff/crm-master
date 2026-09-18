@@ -2090,14 +2090,36 @@ def maintenance_calendar_complete():
             safe_commit()
             flash(_('Maintenance marked as completed'), 'success')
 
-    elif ev_type == 'machine_maintenance' and plan_id:
-        # Machine maintenance from MaintenanceRecord — mark via plan if linked
-        plan = MaintenancePlan.query.get(int(plan_id))
-        if plan:
-            plan.status = 'completed'
-            plan.actual_end = datetime.utcnow().date()
-            safe_commit()
-            flash(_('Maintenance marked as completed'), 'success')
+    elif ev_type == 'machine_maintenance':
+        machine_id = request.form.get('machine_id')
+        event_date = request.form.get('date')
+        if plan_id:
+            plan = MaintenancePlan.query.get(int(plan_id))
+            if plan:
+                plan.status = 'completed'
+                plan.actual_end = datetime.utcnow().date()
+                safe_commit()
+                flash(_('Maintenance marked as completed'), 'success')
+        elif machine_id and event_date:
+            # Find MaintenanceRecord by machine + date
+            mr = MaintenanceRecord.query.filter(
+                MaintenanceRecord.machine_id == int(machine_id),
+                db.func.date(MaintenanceRecord.next_maintenance) == event_date
+            ).first()
+            if mr:
+                mr_record = MaintenanceRecord(
+                    machine_id=mr.machine_id,
+                    maintenance_type=mr.maintenance_type,
+                    description=mr.description + ' — completed',
+                    performed_by=current_user.id,
+                    date_performed=datetime.utcnow(),
+                    cost=0
+                )
+                db.session.add(mr_record)
+                safe_commit()
+                flash(_('Maintenance marked as completed'), 'success')
+            else:
+                flash(_('Event not found'), 'error')
 
     elif ev_type == 'equipment':
         from models import Equipment
@@ -2161,6 +2183,24 @@ def maintenance_calendar_delete():
         except (ValueError, TypeError):
             pass
 
+    elif ev_type == 'machine_maintenance':
+        machine_id = request.form.get('machine_id')
+        event_date = request.form.get('date')
+        if machine_id and event_date:
+            try:
+                mr = MaintenanceRecord.query.filter(
+                    MaintenanceRecord.machine_id == int(machine_id),
+                    db.func.date(MaintenanceRecord.next_maintenance) == event_date
+                ).first()
+                if mr:
+                    mr.next_maintenance = None
+                    safe_commit()
+                    flash(_('Event removed'), 'success')
+                else:
+                    flash(_('Event not found'), 'error')
+            except (ValueError, TypeError):
+                pass
+
     elif ev_type == 'equipment' and equipment_id:
         try:
             from models import Equipment
@@ -2185,6 +2225,8 @@ def maintenance_calendar_delete():
 
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
     return redirect(url_for('maintenance_calendar', month=month))
+
+@app.route('/maintenance-calendar/export')
 @login_required
 def maintenance_calendar_export():
     import csv, io

@@ -263,9 +263,31 @@ def cylinder_status(cyl_id):
     if new_status == 'empty':
         c.installed_at = None
 
-    # Auto-switch: when setting to "full", the other cylinder of same gas type
-    # that is currently "in_use" stays in_use. This cylinder becomes backup.
-    # When setting to "empty", the "full" backup automatically becomes "in_use".
+    # Limit: max 2 cylinders "in_use" per gas type
+    if new_status == 'in_use':
+        active_count = GasCylinder.query.filter(
+            GasCylinder.gas_type == c.gas_type,
+            GasCylinder.status == 'in_use',
+            GasCylinder.id != c.id
+        ).count()
+        if active_count >= 2:
+            # Auto-empties the oldest in_use cylinder
+            oldest = GasCylinder.query.filter(
+                GasCylinder.gas_type == c.gas_type,
+                GasCylinder.status == 'in_use',
+                GasCylinder.id != c.id
+            ).order_by(GasCylinder.installed_at.asc().nullslast()).first()
+            if oldest:
+                oldest.status = 'empty'
+                oldest.installed_at = None
+                db.session.add(CylinderLog(
+                    cylinder_id=oldest.id,
+                    action='status_in_use_to_empty',
+                    performed_by=current_user.id,
+                    notes='Auto-emptied: replaced by %s (limit 2)' % c.cylinder_number
+                ))
+
+    # Auto-switch: when setting to "empty", the "full" backup automatically becomes "in_use".
     if new_status == 'empty' and old_status == 'in_use':
         # Find the backup (full) cylinder of same gas type
         backup = GasCylinder.query.filter(
@@ -274,14 +296,21 @@ def cylinder_status(cyl_id):
             GasCylinder.id != c.id
         ).first()
         if backup:
-            backup.status = 'in_use'
-            backup.installed_at = datetime.utcnow()
-            db.session.add(CylinderLog(
-                cylinder_id=backup.id,
-                action='status_full_to_in_use',
-                performed_by=current_user.id,
-                notes='Auto-switch: backup activated after %s emptied' % c.cylinder_number
-            ))
+            # Check limit before activating backup
+            active_count = GasCylinder.query.filter(
+                GasCylinder.gas_type == c.gas_type,
+                GasCylinder.status == 'in_use',
+                GasCylinder.id != c.id
+            ).count()
+            if active_count < 2:
+                backup.status = 'in_use'
+                backup.installed_at = datetime.utcnow()
+                db.session.add(CylinderLog(
+                    cylinder_id=backup.id,
+                    action='status_full_to_in_use',
+                    performed_by=current_user.id,
+                    notes='Auto-switch: backup activated after %s emptied' % c.cylinder_number
+                ))
 
     safe_commit()
 
@@ -677,21 +706,32 @@ def cylinder_scan_install():
         ))
         safe_commit()
 
-    # Set current in_use cylinder of same gas type to empty
-    active = GasCylinder.query.filter(
+    # Install scanned cylinder — replace oldest in_use on same gas type if at limit
+    active_count = GasCylinder.query.filter(
         GasCylinder.gas_type == gas_type,
         GasCylinder.status == 'in_use',
         GasCylinder.id != cylinder.id
-    ).first()
-    if active:
-        active.status = 'empty'
-        active.installed_at = None
-        db.session.add(CylinderLog(
-            cylinder_id=active.id,
-            action='status_in_use_to_empty',
-            performed_by=current_user.id,
-            notes='Auto-emptied: replaced by %s (scanned)' % code
-        ))
+    ).count()
+
+    if active_count >= 2:
+        # At limit — replace the oldest in_use cylinder
+        oldest = GasCylinder.query.filter(
+            GasCylinder.gas_type == gas_type,
+            GasCylinder.status == 'in_use',
+            GasCylinder.id != cylinder.id
+        ).order_by(GasCylinder.installed_at.asc().nullslast()).first()
+        if oldest:
+            oldest.status = 'empty'
+            oldest.installed_at = None
+            db.session.add(CylinderLog(
+                cylinder_id=oldest.id,
+                action='status_in_use_to_empty',
+                performed_by=current_user.id,
+                notes='Auto-emptied: replaced by %s (scanned, limit 2)' % code
+            ))
+    elif active_count == 0:
+        pass  # No active cylinders, just install
+    # If active_count == 1, just install alongside
 
     # Install scanned cylinder
     old_status = cylinder.status
