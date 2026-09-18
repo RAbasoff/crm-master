@@ -2058,14 +2058,14 @@ def maintenance_calendar_complete():
                     ).all()
                     for old in old_records:
                         old.next_maintenance = None
-                    # Create completion record
+                    # Create completion record — do NOT set next_maintenance (causes duplicate)
                     mr = MaintenanceRecord(
                         machine_id=plan.machine_id,
                         maintenance_type=plan.maintenance_type,
                         description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
                         performed_by=current_user.id,
                         date_performed=event_dt,
-                        next_maintenance=event_dt,
+                        next_maintenance=None,
                         cost=0
                     )
                     db.session.add(mr)
