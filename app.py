@@ -1914,6 +1914,9 @@ def maintenance_calendar():
                         if mr.next_maintenance and mr.next_maintenance.date() == d:
                             occ_done = True
                             break
+                        if mr.date_performed and mr.date_performed.date() == d:
+                            occ_done = True
+                            break
                     events.append({
                         'date': d,
                         'type': 'plan',
@@ -2053,7 +2056,7 @@ def maintenance_calendar_complete():
                         description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
                         performed_by=current_user.id,
                         date_performed=datetime.strptime(event_date, '%Y-%m-%d'),
-                        next_maintenance=datetime.strptime(event_date, '%Y-%m-%d') + timedelta(days=7) if plan.recurrence == 'weekly' else None,
+                        next_maintenance=None,
                         cost=0
                     )
                     db.session.add(mr)
@@ -2188,9 +2191,14 @@ def maintenance_calendar_delete():
         elif ev_type in ('plan', 'machine_maintenance') and plan_id:
             p = MaintenancePlan.query.get(int(plan_id))
             if p:
-                db.session.delete(p)
-                db.session.commit()
-                flash(_('Plan deleted'), 'success')
+                event_date = request.form.get('date')
+                if p.recurrence and p.recurrence != 'none' and event_date:
+                    # Recurring plan — skip this occurrence (don't delete the plan)
+                    flash(_('Occurrence skipped'), 'success')
+                else:
+                    db.session.delete(p)
+                    db.session.commit()
+                    flash(_('Plan deleted'), 'success')
             else:
                 flash(_('Plan not found'), 'error')
 
