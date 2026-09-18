@@ -5873,8 +5873,20 @@ def qr_scan():
 @app.route('/scanner')
 @login_required
 def universal_scanner():
-    """Universal barcode scanner — supports Honeywell external + camera"""
+    """Scanner hub — links to warehouse, machine, and cylinder scanners"""
     return render_template('universal_scanner.html')
+
+@app.route('/warehouse/scan')
+@login_required
+def warehouse_scan_page():
+    """Dedicated warehouse barcode scanner"""
+    return render_template('warehouse_scan.html')
+
+@app.route('/machines/scan')
+@login_required
+def machine_scan_page():
+    """Dedicated machine QR/barcode scanner"""
+    return render_template('machine_scan.html')
 
 @app.route('/qr/generate/<int:order_id>')
 @login_required

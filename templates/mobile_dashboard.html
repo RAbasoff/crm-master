@@ -125,22 +125,28 @@
     <!-- Quick links -->
     <div class="section" style="margin-bottom:20px">
         <div class="section-title"><span>{{ _('Quick Actions') }}</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <a href="/scanner" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
-                <span style="font-size:24px">📷</span>
-                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Scanner') }}</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <a href="/warehouse/scan" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:12px">
+                <span style="font-size:20px">📦</span>
+                <span style="font-size:10px;font-weight:600;margin-top:4px">{{ _('Warehouse') }}</span>
             </a>
+            <a href="/machines/scan" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:12px">
+                <span style="font-size:20px">⚙️</span>
+                <span style="font-size:10px;font-weight:600;margin-top:4px">{{ _('Machines') }}</span>
+            </a>
+            <a href="/gas/scan" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:12px">
+                <span style="font-size:20px">🔴</span>
+                <span style="font-size:10px;font-weight:600;margin-top:4px">{{ _('Cylinders') }}</span>
+            </a>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
             <a href="/gas" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
                 <span style="font-size:24px">🔴</span>
-                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Gas') }}</span>
+                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Gas Dashboard') }}</span>
             </a>
             <a href="/floor" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
                 <span style="font-size:24px">🏭</span>
                 <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Floor Plan') }}</span>
-            </a>
-            <a href="/warehouse" class="card" style="justify-content:center;flex-direction:column;text-align:center;padding:16px">
-                <span style="font-size:24px">📦</span>
-                <span style="font-size:12px;font-weight:600;margin-top:4px">{{ _('Warehouse') }}</span>
             </a>
         </div>
     </div>

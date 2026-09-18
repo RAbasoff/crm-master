@@ -395,6 +395,7 @@
             {% endif %}
             {% if has_access('machines') %}
             <a href="/machines" class="sb-item {% if request.endpoint == 'machines_list' %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Machines') }}</a>
+            <a href="/machines/scan" class="sb-item {% if request.endpoint == 'machine_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Machines') }}</a>
             {% endif %}
             {% if has_access('equipment') %}
             <a href="/equipment" class="sb-item {% if request.endpoint == 'equipment_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Mule Maintenance') }}</a>
@@ -410,6 +411,7 @@
             {% endif %}
             {% if has_access('gas') or has_access('machines') %}
             <a href="/gas" class="sb-item {% if 'gas' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas System') }}</a>
+            <a href="/gas/scan" class="sb-item {% if request.endpoint == 'cylinder_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Cylinders') }}</a>
             {% endif %}
             {% if has_access('maintenance') %}
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
@@ -470,7 +472,7 @@
             {% endif %}
             {% if has_access('warehouse') %}
             <a href="/warehouse" class="sb-item {% if 'warehouse' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Warehouse') }}</a>
-            <a href="/scanner" class="sb-item {% if request.endpoint == 'universal_scanner' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Barcode Scanner') }}</a>
+            <a href="/warehouse/scan" class="sb-item {% if request.endpoint == 'warehouse_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Warehouse') }}</a>
             <a href="/consumable-reminders" class="sb-item {% if 'consumable_reminders' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔔</span>{{ _('Replacement Reminders') }}</a>
             {% endif %}
             {% if has_access('purchase_requests') %}

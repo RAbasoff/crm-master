@@ -1,23 +1,35 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-17 19:34 UTC
+Время: 2026-09-18 10:14 UTC
 ============================================================
 
-Последний коммит: fd2acc5 fix: calendar TO — mark equipment complete works + delete button for admin
-Git status: clean
+Последний коммит: 56bc16b fix: mobile fault form — AJAX-first submission with error feedback
+Git status: 6 modified + 2 new files (uncommitted)
 
-ИЗМЕНЕНО:
-  - app.py:
-    - maintenance_calendar_complete: добавлены типы equipment и equipment_mro
-    - Новый маршрут /maintenance-calendar/delete (admin)
-  - templates/maintenance_calendar.html:
-    - Формы в календаре: добавлены equipment_id и mro_id поля
-    - Кнопка 🗑 удаления для admin (в календаре и в списке)
-    - Кнопка ✅ выполнения работает для оборудования и MRO
-  - translations/ru: Новые строки
+ИЗМЕНЕНО (в этой сессии):
+  - app.py: добавлены роуты /warehouse/scan и /machines/scan (warehouse_scan_page, machine_scan_page)
+  - templates/base.html: sidebar — отдельные ссылки на3 сканера (Scan Warehouse, Scan Machines, Scan Cylinders)
+  - templates/gas/cylinder_scan.html: улучшен — Honeywell-поддержка, автофокус, csrfFetch, ссылка на хаб
+  - templates/universal_scanner.html: переделан в хаб с тремя карточками выбора типа сканирования
+  - templates/mobile_dashboard.html: обновлены быстрые действия — 3 отдельных сканера
 
-ДЕПЛОЙ:
-  cd ~/crm-master && git pull origin master
-  Web → Reload
+НОВЫЕ ФАЙЛЫ:
+  - templates/warehouse_scan.html: dedicated сканер склада (barcode/name search, Honeywell, camera)
+  - templates/machine_scan.html: dedicated сканер станков (QR, name/serial search, camera)
+
+ИСПРАВЛЕННЫЕ БАГИ:
+  - tryCylinder() в универсальном сканере хардкодил gas_type='nitrogen', side='left' — невозможно выбрать тип газа/сторону
+  - Навигация вела на один общий /scanner вместо разделённых страниц
+  - loadCurrent() в cylinder_scan.html использовал fetch вместо csrfFetch
+
+ОЖИДАЕТ ДЕЙСТВИЙ:
+  1. Запустить сервер (python app.py) и проверить:
+     - /warehouse/scan — сканер склада
+     - /machines/scan — сканер станков
+     - /gas/scan — сканер баллонов (выбор газа + сторона)
+     - /scanner — хаб с тремя карточками
+  2. Проверить мобильную версию (/mobile)
+  3. git add + git commit изменений
+  4. Деплой на PA (git push + Web Reload)
 
 ============================================================

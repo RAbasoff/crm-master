@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Scan Machine') }} — CRM{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h1 style="margin:0;font-size:20px">⚙️ {{ _('Machine Scanner') }}</h1>
+    <a href="/scanner" class="btn btn-sm" style="background:#eee">← {{ _('All Scanners') }}</a>
+</div>
+
+<!-- Scanner input -->
+<div class="card" style="margin-bottom:16px;border:2px solid #f39c12;padding:16px">
+    <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:28px">⚙️</span>
+        <div style="flex:1">
+            <input type="text" id="scannerInput" placeholder="{{ _('Scan machine QR / barcode or type name/serial...') }}"
+                style="width:100%;padding:12px;border:2px solid #f39c12;border-radius:8px;font-size:16px;font-family:monospace;outline:none"
+                onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#f39c12'"
+                autocomplete="off" autofocus>
+            <div style="font-size:11px;color:#888;margin-top:4px">{{ _('Searches by name, serial number, or type') }}</div>
+        </div>
+        <button id="btnCamera" class="btn btn-sm" style="background:#27ae60;color:white" onclick="toggleCamera()">📷 {{ _('Camera') }}</button>
+    </div>
+</div>
+
+<!-- Camera -->
+<div id="cameraBlock" style="display:none;margin-bottom:16px">
+    <div class="card" style="padding:16px">
+        <div id="reader" style="max-width:400px;margin:0 auto;border-radius:12px;overflow:hidden"></div>
+    </div>
+</div>
+
+<!-- Result -->
+<div id="resultArea" style="display:none;margin-bottom:16px">
+    <div class="card" id="resultCard" style="border-left:4px solid #f39c12">
+        <div id="resultContent"></div>
+    </div>
+</div>
+
+<!-- Scan history -->
+<div id="historyArea" style="display:none">
+    <div class="card">
+        <h3 style="margin:0 0 12px;font-size:14px">{{ _('Scan History') }}</h3>
+        <div id="historyList"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const history = [];
+let lastScan = '';
+let lastScanTime = 0;
+let cameraActive = false;
+let scanner = null;
+
+const scannerInput = document.getElementById('scannerInput');
+
+scannerInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const code = scannerInput.value.trim();
+        if (code) {
+            processScan(code);
+            scannerInput.value = '';
+        }
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('a') && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('#reader')) {
+        scannerInput.focus();
+    }
+});
+
+function toggleCamera() {
+    cameraActive = !cameraActive;
+    document.getElementById('cameraBlock').style.display = cameraActive ? '' : 'none';
+    document.getElementById('btnCamera').textContent = cameraActive ? '⏹ Stop' : '📷 Camera';
+    document.getElementById('btnCamera').style.background = cameraActive ? '#e74c3c' : '#27ae60';
+    if (cameraActive && !scanner) startCamera();
+    else if (!cameraActive && scanner) stopCamera();
+}
+
+function startCamera() {
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        function(text) { processScan(text); },
+        function() {}
+    ).catch(function() {
+        document.getElementById('cameraBlock').innerHTML = '<div style="padding:20px;text-align:center;color:#e74c3c">Camera not available. Use external scanner.</div>';
+        scanner = null;
+    });
+}
+
+function stopCamera() {
+    if (scanner) {
+        scanner.stop().then(function() { scanner.clear(); scanner = null; });
+    }
+}
+
+function processScan(code) {
+    if (code === lastScan && (Date.now() - lastScanTime) < 2000) return;
+    lastScan = code;
+    lastScanTime = Date.now();
+
+    document.getElementById('resultArea').style.display = '';
+    document.getElementById('resultContent').innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">⏳</span> <b>' + code + '</b> — searching...</div>';
+    document.getElementById('resultCard').style.borderLeftColor = '#f39c12';
+
+    // Try QR code JSON parse first (machine QR codes)
+    try {
+        const parsed = JSON.parse(code);
+        if (parsed.type === 'opdracht' || parsed.id) {
+            window.location.href = '/mobile/qr/' + (parsed.id || '');
+            return;
+        }
+    } catch(e) {}
+
+    // Search machines by name/serial/type
+    csrfFetch('/api/machines/search?q=' + encodeURIComponent(code), {method: 'GET'})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d && d.length > 0) {
+            showMachineResult(d, code);
+        } else {
+            showNotFound(code);
+        }
+    })
+    .catch(function() { showError(code); });
+
+    history.unshift({ code: code, time: new Date().toLocaleTimeString() });
+    updateHistory();
+}
+
+function showMachineResult(machines, code) {
+    const card = document.getElementById('resultCard');
+    card.style.borderLeftColor = '#27ae60';
+    let html = '';
+
+    if (machines.length === 1) {
+        const m = machines[0];
+        html += '<div style="display:flex;align-items:center;gap:12px">';
+        html += '<span style="font-size:28px">⚙️</span>';
+        html += '<div>';
+        html += '<div style="font-size:16px;font-weight:700">' + m.name + '</div>';
+        html += '<div style="font-size:12px;color:#888">';
+        if (m.type) html += m.type + ' · ';
+        html += 'SN: ' + (m.serial || '-') + ' · ';
+        html += '<span style="color:' + (m.status === 'active' ? '#27ae60' : '#e74c3c') + '">' + m.status + '</span>';
+        html += '</div></div></div>';
+        html += '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">';
+        html += '<a href="/machines/' + m.id + '" class="btn btn-sm" style="background:#3498db;color:white;text-decoration:none">📋 {{ _("View") }}</a>';
+        html += '<a href="/faults/new?machine=' + m.id + '" class="btn btn-sm" style="background:#e74c3c;color:white;text-decoration:none">⚠️ {{ _("New Fault") }}</a>';
+        html += '<a href="/machines/' + m.id + '/qr" class="btn btn-sm" style="background:#eee;text-decoration:none"> QR</a>';
+        html += '</div>';
+    } else {
+        html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">';
+        html += '<span style="font-size:28px">⚙️</span>';
+        html += '<div style="font-size:14px;font-weight:600">' + machines.length + ' {{ _("machines found") }}</div></div>';
+        html += '<div style="display:flex;flex-direction:column;gap:6px">';
+        machines.forEach(function(m) {
+            html += '<a href="/machines/' + m.id + '" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid #eee;border-radius:6px;text-decoration:none;color:#333">';
+            html += '<div><b>' + m.name + '</b> <span style="color:#888;font-size:12px">' + (m.type || '') + '</span></div>';
+            html += '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:' + (m.status === 'active' ? '#e8f8e8' : '#fde8e8') + ';color:' + (m.status === 'active' ? '#27ae60' : '#e74c3c') + '">' + m.status + '</span>';
+            html += '</a>';
+        });
+        html += '</div>';
+    }
+
+    document.getElementById('resultContent').innerHTML = html;
+}
+
+function showNotFound(code) {
+    const card = document.getElementById('resultCard');
+    card.style.borderLeftColor = '#e74c3c';
+    let html = '<div style="display:flex;align-items:center;gap:12px">';
+    html += '<span style="font-size:28px">❓</span>';
+    html += '<div><div style="font-size:14px;font-weight:600">' + code + '</div>';
+    html += '<div style="font-size:12px;color:#888">{{ _("Machine not found") }}</div></div></div>';
+    html += '<div style="display:flex;gap:8px;margin-top:12px">';
+    html += '<button onclick="document.getElementById(\'resultArea\').style.display=\'none\';document.getElementById(\'scannerInput\').focus()" class="btn btn-sm" style="background:#eee;cursor:pointer">{{ _("Try again") }}</button>';
+    html += '</div>';
+    document.getElementById('resultContent').innerHTML = html;
+}
+
+function showError(code) {
+    const card = document.getElementById('resultCard');
+    card.style.borderLeftColor = '#e74c3c';
+    document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">❌ {{ _("Connection error") }}: ' + code + '</div>';
+}
+
+function updateHistory() {
+    if (!history.length) return;
+    document.getElementById('historyArea').style.display = '';
+    document.getElementById('historyList').innerHTML = history.slice(0, 10).map(function(h) {
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0"><span><code>' + h.code + '</code></span><span style="color:#888">' + h.time + '</span></div>';
+    }).join('');
+}
+
+scannerInput.focus();
+</script>
+{% endblock %}

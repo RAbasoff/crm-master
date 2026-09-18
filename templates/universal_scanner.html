@@ -1,247 +1,91 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Scanner') }} — CRM{% endblock %}
+{% block title %}{{ _('Scanners') }} — CRM{% endblock %}
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <h1 style="margin:0;font-size:20px">{{ _('Barcode Scanner') }}</h1>
-    <div style="display:flex;gap:6px">
-        <button id="btnMode" class="btn btn-sm" style="background:#27ae60;color:white" onclick="toggleMode()">📷 {{ _('Camera') }}</button>
-    </div>
+<div style="margin-bottom:20px">
+    <h1 style="margin:0;font-size:22px">📷 {{ _('Barcode Scanners') }}</h1>
+    <p style="margin:6px 0 0;font-size:13px;color:#888">{{ _('Choose what you want to scan') }}</p>
 </div>
 
-<!-- Scanner input (auto-focused for Honeywell) -->
-<div class="card" style="margin-bottom:16px;border:2px solid #27ae60;padding:16px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
+
+<!-- Warehouse Scanner -->
+<a href="/warehouse/scan" class="card" style="text-decoration:none;color:inherit;border:2px solid #3498db;padding:24px;text-align:center;transition:transform 0.15s"
+   onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
+    <div style="font-size:48px;margin-bottom:12px">📦</div>
+    <h2 style="margin:0 0 8px;font-size:18px;color:#3498db">{{ _('Warehouse') }}</h2>
+    <p style="margin:0;font-size:12px;color:#888">{{ _('Scan warehouse items, parts, materials') }}</p>
+    <div style="margin-top:12px;font-size:11px;color:#3498db">{{ _('Search by barcode or name') }}</div>
+</a>
+
+<!-- Machine Scanner -->
+<a href="/machines/scan" class="card" style="text-decoration:none;color:inherit;border:2px solid #f39c12;padding:24px;text-align:center;transition:transform 0.15s"
+   onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
+    <div style="font-size:48px;margin-bottom:12px">⚙️</div>
+    <h2 style="margin:0 0 8px;font-size:18px;color:#f39c12">{{ _('Machines') }}</h2>
+    <p style="margin:0;font-size:12px;color:#888">{{ _('Scan machine QR codes, search by name/serial') }}</p>
+    <div style="margin-top:12px;font-size:11px;color:#f39c12">{{ _('View machine, create fault report') }}</div>
+</a>
+
+<!-- Cylinder Scanner -->
+<a href="/gas/scan" class="card" style="text-decoration:none;color:inherit;border:2px solid #e74c3c;padding:24px;text-align:center;transition:transform 0.15s"
+   onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
+    <div style="font-size:48px;margin-bottom:12px">🔴</div>
+    <h2 style="margin:0 0 8px;font-size:18px;color:#e74c3c">{{ _('Gas Cylinders') }}</h2>
+    <p style="margin:0;font-size:12px;color:#888">{{ _('Scan cylinder barcodes, install/replace') }}</p>
+    <div style="margin-top:12px;font-size:11px;color:#e74c3c">{{ _('Choose gas type and side') }}</div>
+</a>
+
+</div>
+
+<!-- Quick universal scan (kept for backwards compatibility) -->
+<div class="card" style="margin-top:24px;padding:16px;border:1px dashed #ddd">
+    <h3 style="margin:0 0 8px;font-size:14px;color:#888">⚡ {{ _('Quick Scan (Auto-detect)') }}</h3>
     <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:28px">📷</span>
-        <div style="flex:1">
-            <input type="text" id="scannerInput" placeholder="{{ _('Scan barcode or type code...') }}"
-                style="width:100%;padding:12px;border:2px solid #3498db;border-radius:8px;font-size:16px;font-family:monospace;outline:none"
-                onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#3498db'"
-                autocomplete="off" autofocus>
-            <div style="font-size:11px;color:#888;margin-top:4px">{{ _('External scanner ready — scan to auto-submit') }}</div>
-        </div>
-        <select id="scanTarget" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:13px">
-            <option value="auto">{{ _('Auto-detect') }}</option>
-            <option value="warehouse">{{ _('Warehouse') }}</option>
-            <option value="machine">{{ _('Machine') }}</option>
-            <option value="cylinder">{{ _('Gas Cylinder') }}</option>
-        </select>
+        <input type="text" id="quickScan" placeholder="{{ _('Scan any barcode...') }}"
+            style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px;font-family:monospace;outline:none"
+            onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#ddd'"
+            autocomplete="off">
+        <button onclick="quickScanGo()" class="btn btn-sm" style="background:#27ae60;color:white;padding:8px 16px">{{ _('Go') }}</button>
     </div>
-</div>
-
-<!-- Camera scanner (hidden by default) -->
-<div id="cameraBlock" style="display:none;margin-bottom:16px">
-    <div class="card" style="padding:16px">
-        <div id="reader" style="max-width:400px;margin:0 auto;border-radius:12px;overflow:hidden"></div>
-    </div>
-</div>
-
-<!-- Result area -->
-<div id="resultArea" style="display:none;margin-bottom:16px">
-    <div class="card" id="resultCard" style="border-left:4px solid #3498db">
-        <div id="resultContent"></div>
-    </div>
-</div>
-
-<!-- Scan history -->
-<div id="historyArea" style="display:none">
-    <div class="card">
-        <h3 style="margin:0 0 12px;font-size:14px">{{ _('Scan History') }}</h3>
-        <div id="historyList"></div>
-    </div>
+    <div id="quickResult" style="display:none;margin-top:10px;font-size:12px"></div>
 </div>
 
 <script>
-const history = [];
-let lastScan = '';
-let lastScanTime = 0;
-let cameraActive = false;
-let scanner = null;
-
-// === HONEYWELL SCANNER DETECTION ===
-// Scanner sends fast keystrokes + Enter. Detect by input speed.
-const scannerInput = document.getElementById('scannerInput');
-let inputTimer = null;
-
-scannerInput.addEventListener('input', function() {
-    clearTimeout(inputTimer);
-    inputTimer = setTimeout(function() {
-        // Human typing - do nothing until Enter
-    }, 300);
+var quickInput = document.getElementById('quickScan');
+quickInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); quickScanGo(); }
 });
 
-scannerInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const code = scannerInput.value.trim();
-        if (code) {
-            processScan(code);
-            scannerInput.value = '';
+function quickScanGo() {
+    var code = quickInput.value.trim();
+    if (!code) return;
+    var result = document.getElementById('quickResult');
+    result.style.display = '';
+    result.innerHTML = '<span style="color:#888">Searching...</span>';
+
+    // Try warehouse first
+    csrfFetch('/api/warehouse/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code: code})})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.found) {
+            result.innerHTML = '<span style="color:#27ae60">📦 {{ _("Warehouse") }}:</span> <a href="/warehouse/' + d.id + '">' + d.name + '</a> (Qty: ' + d.quantity + ')';
+        } else {
+            // Try machine
+            return csrfFetch('/api/machines/search?q=' + encodeURIComponent(code), {method:'GET'})
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d && d.length > 0) {
+                    result.innerHTML = '<span style="color:#f39c12">⚙️ {{ _("Machine") }}:</span> <a href="/machines/' + d[0].id + '">' + d[0].name + '</a> (' + (d[0].type || '') + ')';
+                } else {
+                    result.innerHTML = '<span style="color:#888">{{ _("Not found") }}:</span> ' + code +
+                        ' — <a href="/warehouse/new?barcode=' + encodeURIComponent(code) + '" style="color:#27ae60">+ {{ _("Add to warehouse") }}</a>';
+                }
+            });
         }
-    }
-});
-
-// Auto-refocus on click anywhere (except buttons/links)
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('a') && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('#reader')) {
-        scannerInput.focus();
-    }
-});
-
-// === CAMERA TOGGLE ===
-function toggleMode() {
-    cameraActive = !cameraActive;
-    document.getElementById('cameraBlock').style.display = cameraActive ? '' : 'none';
-    document.getElementById('btnMode').textContent = cameraActive ? '⏹ {{ _("Stop Camera") }}' : '📷 {{ _("Camera") }}';
-    document.getElementById('btnMode').style.background = cameraActive ? '#e74c3c' : '#27ae60';
-    if (cameraActive && !scanner) {
-        startCamera();
-    } else if (!cameraActive && scanner) {
-        stopCamera();
-    }
-}
-
-function startCamera() {
-    scanner = new Html5Qrcode('reader');
-    scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 150 } },
-        function(text) { processScan(text); },
-        function() {}
-    ).catch(function() {
-        document.getElementById('cameraBlock').innerHTML = '<div style="padding:20px;text-align:center;color:#e74c3c">Camera not available. Use external scanner.</div>';
-        scanner = null;
+    })
+    .catch(function() {
+        result.innerHTML = '<span style="color:#e74c3c">{{ _("Connection error") }}</span>';
     });
 }
-
-function stopCamera() {
-    if (scanner) {
-        scanner.stop().then(function() { scanner.clear(); scanner = null; });
-    }
-}
-
-// === SCAN PROCESSING ===
-function processScan(code) {
-    // Debounce - same code within 2 seconds
-    if (code === lastScan && (Date.now() - lastScanTime) < 2000) return;
-    lastScan = code;
-    lastScanTime = Date.now();
-
-    const target = document.getElementById('scanTarget').value;
-    
-    // Show result
-    document.getElementById('resultArea').style.display = '';
-    document.getElementById('resultContent').innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">⏳</span> <b>' + code + '</b> — searching...</div>';
-    document.getElementById('resultCard').style.borderLeftColor = '#3498db';
-
-    // Route based on target or auto-detect
-    if (target === 'warehouse' || target === 'auto') {
-        // Try warehouse first
-        csrfFetch('/api/warehouse/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code: code})})
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (d.found && target !== 'machine') {
-                showWarehouseResult(d, code);
-            } else if (target === 'auto') {
-                // Try machine
-                tryMachine(code);
-            } else {
-                showNotFound(code);
-            }
-        })
-        .catch(function() { tryMachine(code); });
-    } else if (target === 'cylinder') {
-        tryCylinder(code);
-    } else {
-        tryMachine(code);
-    }
-
-    // Add to history
-    history.unshift({ code: code, time: new Date().toLocaleTimeString() });
-    updateHistory();
-}
-
-function showWarehouseResult(d, code) {
-    const card = document.getElementById('resultCard');
-    card.style.borderLeftColor = '#27ae60';
-    let html = '<div style="display:flex;align-items:center;gap:12px">';
-    html += '<span style="font-size:24px">📦</span>';
-    html += '<div>';
-    html += '<div style="font-size:16px;font-weight:700">' + d.name + '</div>';
-    html += '<div style="font-size:12px;color:#888">';
-    if (d.category) html += d.category + ' · ';
-    html += 'Qty: ' + d.quantity + ' ' + (d.unit || '') + '</div>';
-    html += '</div></div>';
-    html += '<div style="display:flex;gap:8px;margin-top:12px">';
-    html += '<a href="/warehouse/' + d.id + '/edit" class="btn btn-sm" style="background:#3498db;color:white;text-decoration:none">✏️ {{ _("Edit") }}</a>';
-    html += '<a href="/warehouse/' + d.id + '" class="btn btn-sm" style="background:#eee;text-decoration:none">📋 {{ _("Details") }}</a>';
-    html += '</div>';
-    document.getElementById('resultContent').innerHTML = html;
-}
-
-function tryMachine(code) {
-    csrfFetch('/api/machines/search?q=' + encodeURIComponent(code), {method:'GET'})
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        if (d && d.length > 0) {
-            const card = document.getElementById('resultCard');
-            card.style.borderLeftColor = '#f39c12';
-            let html = '<div style="display:flex;align-items:center;gap:12px">';
-            html += '<span style="font-size:24px">⚙️</span>';
-            html += '<div><div style="font-size:16px;font-weight:700">' + d[0].name + '</div>';
-            html += '<div style="font-size:12px;color:#888">' + (d[0].type || '') + ' · SN: ' + (d[0].serial || '-') + '</div></div></div>';
-            html += '<div style="display:flex;gap:8px;margin-top:12px">';
-            html += '<a href="/machines/' + d[0].id + '" class="btn btn-sm" style="background:#3498db;color:white;text-decoration:none">📋 {{ _("View") }}</a>';
-            html += '<a href="/faults/new?machine=' + d[0].id + '" class="btn btn-sm" style="background:#e74c3c;color:white;text-decoration:none">⚠️ {{ _("New Fault") }}</a>';
-            html += '</div>';
-            document.getElementById('resultContent').innerHTML = html;
-        } else {
-            showNotFound(code);
-        }
-    })
-    .catch(function() { showNotFound(code); });
-}
-
-function tryCylinder(code) {
-    csrfFetch('/gas/api/cylinders/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code: code, gas_type: 'nitrogen', side: 'left'})})
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        const card = document.getElementById('resultCard');
-        if (d.ok) {
-            card.style.borderLeftColor = '#27ae60';
-            document.getElementById('resultContent').innerHTML = '<div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🔴</span><div><div style="font-size:16px;font-weight:700">' + (d.cylinder_number || code) + '</div><div style="font-size:12px;color:#27ae60">Installed on ' + (d.side || 'left') + ' ' + (d.gas_type || '') + '</div></div></div>';
-        } else {
-            card.style.borderLeftColor = '#f39c12';
-            document.getElementById('resultContent').innerHTML = '<div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">❓</span><div><div style="font-size:14px">' + code + '</div><div style="font-size:12px;color:#888">Unknown cylinder</div></div></div>';
-        }
-    })
-    .catch(function() { showNotFound(code); });
-}
-
-function showNotFound(code) {
-    const card = document.getElementById('resultCard');
-    card.style.borderLeftColor = '#e74c3c';
-    let html = '<div style="display:flex;align-items:center;gap:12px">';
-    html += '<span style="font-size:24px">❓</span>';
-    html += '<div><div style="font-size:14px;font-weight:600">' + code + '</div>';
-    html += '<div style="font-size:12px;color:#888">{{ _("Unknown barcode") }}</div></div></div>';
-    html += '<div style="display:flex;gap:8px;margin-top:12px">';
-    html += '<button onclick="window.location.href=\'/warehouse/new?barcode=' + encodeURIComponent(code) + '\'" class="btn btn-sm" style="background:#27ae60;color:white;cursor:pointer">+ {{ _("Add to Warehouse") }}</button>';
-    html += '<button onclick="document.getElementById(\'resultArea\').style.display=\'none\';document.getElementById(\'scannerInput\').focus()" class="btn btn-sm" style="background:#eee;cursor:pointer">{{ _("Ignore") }}</button>';
-    html += '</div>';
-    document.getElementById('resultContent').innerHTML = html;
-}
-
-function updateHistory() {
-    if (!history.length) return;
-    document.getElementById('historyArea').style.display = '';
-    document.getElementById('historyList').innerHTML = history.slice(0, 10).map(function(h) {
-        return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0"><span><code>' + h.code + '</code></span><span style="color:#888">' + h.time + '</span></div>';
-    }).join('');
-}
-
-// Focus on load
-scannerInput.focus();
 </script>
-
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 {% endblock %}
