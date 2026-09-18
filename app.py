@@ -2046,7 +2046,6 @@ def maintenance_calendar_complete():
         if plan:
             event_date = request.form.get('date')
             if plan.recurrence and plan.recurrence != 'none' and event_date:
-                # Recurring plan — create MaintenanceRecord for this specific date
                 mr = MaintenanceRecord(
                     machine_id=plan.machine_id,
                     maintenance_type=plan.maintenance_type,
@@ -2057,13 +2056,17 @@ def maintenance_calendar_complete():
                     cost=0
                 )
                 db.session.add(mr)
-                safe_commit()
-                flash(_('Recurring event marked as completed'), 'success')
+                if safe_commit():
+                    flash(_('Recurring event marked as completed'), 'success')
+                else:
+                    flash(_('Database error'), 'error')
             else:
                 plan.status = 'completed'
                 plan.actual_end = datetime.utcnow().date()
-                safe_commit()
-                flash(_('Plan marked as completed'), 'success')
+                if safe_commit():
+                    flash(_('Plan marked as completed'), 'success')
+                else:
+                    flash(_('Database error'), 'error')
 
     elif ev_type in ('replacement', 'maintenance') and part_id:
         part = MachinePart.query.get(int(part_id))
@@ -2077,18 +2080,19 @@ def maintenance_calendar_complete():
                 date=datetime.utcnow()
             )
             db.session.add(log)
-            # Update part status
             if action == 'replacement':
                 part.last_replacement = datetime.utcnow().date()
-                if part.replacement_interval_days:
-                    part.next_replacement = date_plus_days(datetime.utcnow().date(), part.replacement_interval_days)
+                part.next_replacement = None
             else:
                 part.last_maintenance = datetime.utcnow().date()
-                if part.maintenance_interval_days:
-                    part.next_maintenance = date_plus_days(datetime.utcnow().date(), part.maintenance_interval_days)
+                part.next_maintenance = None
             part.status = 'ok'
-            safe_commit()
-            flash(_('Maintenance marked as completed'), 'success')
+            if safe_commit():
+                flash(_('%(type)s marked as completed', type=action), 'success')
+            else:
+                flash(_('Database error'), 'error')
+        else:
+            flash(_('Part not found'), 'error')
 
     elif ev_type == 'machine_maintenance':
         machine_id = request.form.get('machine_id')
@@ -2098,26 +2102,21 @@ def maintenance_calendar_complete():
             if plan:
                 plan.status = 'completed'
                 plan.actual_end = datetime.utcnow().date()
-                safe_commit()
-                flash(_('Maintenance marked as completed'), 'success')
+                if safe_commit():
+                    flash(_('Maintenance marked as completed'), 'success')
+                else:
+                    flash(_('Database error'), 'error')
         elif machine_id and event_date:
-            # Find MaintenanceRecord by machine + date
             mr = MaintenanceRecord.query.filter(
                 MaintenanceRecord.machine_id == int(machine_id),
                 db.func.date(MaintenanceRecord.next_maintenance) == event_date
             ).first()
             if mr:
-                mr_record = MaintenanceRecord(
-                    machine_id=mr.machine_id,
-                    maintenance_type=mr.maintenance_type,
-                    description=mr.description + ' — completed',
-                    performed_by=current_user.id,
-                    date_performed=datetime.utcnow(),
-                    cost=0
-                )
-                db.session.add(mr_record)
-                safe_commit()
-                flash(_('Maintenance marked as completed'), 'success')
+                mr.next_maintenance = None
+                if safe_commit():
+                    flash(_('Maintenance marked as completed'), 'success')
+                else:
+                    flash(_('Database error'), 'error')
             else:
                 flash(_('Event not found'), 'error')
 
@@ -2132,8 +2131,10 @@ def maintenance_calendar_complete():
                     eq.next_service_date = datetime.utcnow().date() + timedelta(days=eq.service_interval_days)
                 else:
                     eq.next_service_date = None
-                safe_commit()
-                flash(_('Equipment service marked as completed'), 'success')
+                if safe_commit():
+                    flash(_('Equipment service marked as completed'), 'success')
+                else:
+                    flash(_('Database error'), 'error')
 
     elif ev_type == 'equipment_mro':
         from models import EquipmentMaintenance
@@ -2142,10 +2143,13 @@ def maintenance_calendar_complete():
             mro = EquipmentMaintenance.query.get(int(mro_id))
             if mro:
                 mro.status = 'completed'
-                safe_commit()
-                flash(_('MRO marked as completed'), 'success')
+                if safe_commit():
+                    flash(_('MRO marked as completed'), 'success')
+                else:
+                    flash(_('Database error'), 'error')
 
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
+    db.session.expire_all()
     return redirect(url_for('maintenance_calendar', month=month))
 
 
@@ -2159,6 +2163,7 @@ def maintenance_calendar_delete():
     plan_id = request.form.get('plan_id')
     equipment_id = request.form.get('equipment_id')
     mro_id = request.form.get('mro_id')
+    deleted = False
 
     if ev_type in ('replacement', 'maintenance') and part_id:
         try:
@@ -2168,8 +2173,7 @@ def maintenance_calendar_delete():
                     part.next_replacement = None
                 else:
                     part.next_maintenance = None
-                safe_commit()
-                flash(_('Event removed'), 'success')
+                deleted = safe_commit()
         except (ValueError, TypeError):
             pass
 
@@ -2178,8 +2182,7 @@ def maintenance_calendar_delete():
             p = MaintenancePlan.query.get(int(plan_id))
             if p:
                 db.session.delete(p)
-                safe_commit()
-                flash(_('Plan deleted'), 'success')
+                deleted = safe_commit()
         except (ValueError, TypeError):
             pass
 
@@ -2194,10 +2197,7 @@ def maintenance_calendar_delete():
                 ).first()
                 if mr:
                     mr.next_maintenance = None
-                    safe_commit()
-                    flash(_('Event removed'), 'success')
-                else:
-                    flash(_('Event not found'), 'error')
+                    deleted = safe_commit()
             except (ValueError, TypeError):
                 pass
 
@@ -2207,8 +2207,7 @@ def maintenance_calendar_delete():
             eq = Equipment.query.get(int(equipment_id))
             if eq:
                 eq.next_service_date = None
-                safe_commit()
-                flash(_('Equipment service date removed'), 'success')
+                deleted = safe_commit()
         except (ValueError, TypeError):
             pass
 
@@ -2218,12 +2217,17 @@ def maintenance_calendar_delete():
             mro = EquipmentMaintenance.query.get(int(mro_id))
             if mro:
                 db.session.delete(mro)
-                safe_commit()
-                flash(_('MRO record deleted'), 'success')
+                deleted = safe_commit()
         except (ValueError, TypeError):
             pass
 
+    if deleted:
+        flash(_('Event removed'), 'success')
+    else:
+        flash(_('Error removing event'), 'error')
+
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
+    db.session.expire_all()
     return redirect(url_for('maintenance_calendar', month=month))
 
 @app.route('/maintenance-calendar/export')
