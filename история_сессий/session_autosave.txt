@@ -1,21 +1,25 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-18 12:30 UTC
+Время: 2026-09-18 17:15 UTC
 ============================================================
 
-Последний коммит: 6fd8de7 fix: maintenance calendar complete/delete for machine_maintenance + cylinder in_use limit of 2
-Git status: clean (autosave только, всё запушено на origin/master)
+Последний коммит: e32d9f5 fix: calendar complete/delete — clear dates on complete, verify commit, expire session
+Git status: clean (pushed to origin)
 
-ДЕПЛОЙ: запрошен, ожидает Web Reload на PA
+ПРОДАКШЕН: rabasoff.pythonanywhere.com
+  - Путь проекта: ~/crm-master
+  - Логин: admin/Aba103sov
+  - Старый код на проде: AJAX кнопки НЕ задеплоины
 
-ТЕСТИРОВАНИЕ ЗАВЕРШЕНО:
-  - Календарь ТО: ✅ complete работает (plan event → marked completed)
-  - Календарь ТО: ✅ delete работает (plan event → удалён)
-  - Баллоны: лимит 2 in_use на тип газа работает
-  - Сканеры: 3 отдельных страницы + хаб
+ЗАПУШЕННЫЕ КОММИТЫ (ждут деплоя):
+  1. 6fd8de7 — maintenance calendar complete/delete + cylinder limit
+  2. 4d39387 — overdue section: ✅ и 🗑 кнопки добавлены
+  3. b4083a6 — AJAX-отправка кнопок, убран confirm-блок
+  4. e32d9f5 — clear dates on complete, verify commit, expire session
 
 ОЖИДАЕТ ДЕЙСТВИЙ:
-  1. Web Reload на PA (все изменения запушены на origin/master)
-  2. Проверить на проде: календарь ТО, баллоны, сканеры
+  1. cd ~/crm-master && git pull origin master (на PA)
+  2. Web → Reload
+  3. Проверить /maintenance-calendar — ✅ и 🗑 должны работать (даты очищаются, записи пропадают)
 
 ============================================================
