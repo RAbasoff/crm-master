@@ -35,7 +35,7 @@ from utils import (role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
                    log_user_activity, log_system, run_data_migrations, sanitize_like,
-                   check_tool_wear_notifications, safe_commit,
+                   check_tool_wear_notifications, safe_commit, add_work_report,
                    safe_int, safe_float, safe_date)
 
 # ============================================================
@@ -4470,6 +4470,8 @@ def mobile_fault_new():
         description = (request.form.get('description') or '').strip()
         machine_id = safe_int(request.form.get('machine_id'))
         priority = request.form.get('priority', 'normal')
+        if priority not in ('normal', 'high', 'critical'):
+            priority = 'normal'
 
         if not title or not description:
             flash(_('Title and description required'), 'error')
@@ -4483,8 +4485,24 @@ def mobile_fault_new():
             reporter_id=current_user.id
         )
         db.session.add(fault)
-        safe_commit()
-        log_audit('create', 'fault_report', fault.id, f'Mobile: {title}')
+        if not safe_commit():
+            flash(_('Error saving fault report. Please try again.'), 'error')
+            return redirect(url_for('mobile_fault_new'))
+
+        target = fault.target_name
+        log_audit('create', 'fault_report', fault.id, f'Mobile: {title} — {target}')
+        add_work_report(f'⚠️ Новая поломка (моб.): {title} — {target} (приоритет: {priority})')
+
+        # Notify all technicians
+        for tech in User.query.filter_by(role='technician', is_active_user=True).all():
+            create_notification(
+                tech.id,
+                _('New fault report'),
+                f"{_('Machine')}: {target} - {title}",
+                'fault',
+                url_for('faults.fault_detail', fault_id=fault.id)
+            )
+
         flash(_('Fault reported'), 'success')
         return redirect(url_for('mobile_dashboard'))
 

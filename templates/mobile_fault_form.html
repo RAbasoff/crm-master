@@ -33,14 +33,14 @@
         <a href="/mobile">←</a>
         <h1>{{ _('Report Fault') }}</h1>
     </div>
-    <form method="POST" class="form">
+    <form method="POST" action="{{ url_for('mobile_fault_new') }}" class="form" id="faultForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
-            <label>{{ _('Title') }}</label>
-            <input type="text" name="title" placeholder="{{ _('What happened?') }}" required autofocus>
+            <label>{{ _('Title') }} *</label>
+            <input type="text" name="title" placeholder="{{ _('What happened?') }}" required maxlength="200">
         </div>
         <div class="field">
-            <label>{{ _('Description') }}</label>
+            <label>{{ _('Description') }} *</label>
             <textarea name="description" placeholder="{{ _('Describe the problem in detail...') }}" required></textarea>
         </div>
         <div class="field">
@@ -61,7 +61,7 @@
             </div>
             <input type="hidden" name="priority" id="priorityInput" value="normal">
         </div>
-        <button type="submit" class="submit">{{ _('Send Report') }}</button>
+        <button type="submit" class="submit" id="submitBtn">{{ _('Send Report') }}</button>
     </form>
     <script>
     function selPriority(el){
@@ -69,6 +69,11 @@
         el.classList.add('sel');
         document.getElementById('priorityInput').value = el.dataset.val;
     }
+    document.getElementById('faultForm').addEventListener('submit', function(){
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = '{{ _("Sending...") }}';
+    });
     </script>
 </body>
 </html>
