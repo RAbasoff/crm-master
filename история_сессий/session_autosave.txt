@@ -1,29 +1,21 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-18 10:44 UTC
+Время: 2026-09-18 12:30 UTC
 ============================================================
 
-Последний коммит: ac2bc1e feat: split scanners into 3 dedicated pages (warehouse, machines, cylinders)
-Git status: 2 файла изменены (не закоммичены)
+Последний коммит: 6fd8de7 fix: maintenance calendar complete/delete for machine_maintenance + cylinder in_use limit of 2
+Git status: clean (autosave только, всё запушено на origin/master)
 
-ИЗМЕНЕНО (в этой сессии, не закоммичено):
-  - app.py:
-    * maintenance_calendar_complete() — добавлена обработка machine_maintenance без plan_id (ищет MaintenanceRecord по machine_id + date)
-    * maintenance_calendar_delete() — добавлена обработка machine_maintenance без plan_id (очищает next_maintenance)
-    * Исправлен пропущенный @app.route('/maintenance-calendar/export')
-  - templates/maintenance_calendar.html:
-    * Добавлен hidden field machine_id в формы complete/delete (обе секции — календарь + upcoming events)
+ДЕПЛОЙ: запрошен, ожидает Web Reload на PA
 
-ИСПРАВЛЕННЫЕ БАГИ (в процессе):
-  1. Календарь ТО: machine_maintenance события не имели plan_id/part_id → delete и complete не работали
-  2. Календарь ТО: @app.route для export был пропущен
-
-РАБОТА В ПРОЦЕССЕ:
-  - Баллоны: логика установки (только 2 N₂ + 2 CO₂ должны быть "in_use", остальные — full или empty)
+ТЕСТИРОВАНИЕ ЗАВЕРШЕНО:
+  - Календарь ТО: ✅ complete работает (plan event → marked completed)
+  - Календарь ТО: ✅ delete работает (plan event → удалён)
+  - Баллоны: лимит 2 in_use на тип газа работает
+  - Сканеры: 3 отдельных страницы + хаб
 
 ОЖИДАЕТ ДЕЙСТВИЙ:
-  1. Закончить исправление баллонов (in_use лимит)
-  2. git commit + push
-  3. Web Reload на PA
+  1. Web Reload на PA (все изменения запушены на origin/master)
+  2. Проверить на проде: календарь ТО, баллоны, сканеры
 
 ============================================================

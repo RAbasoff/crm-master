@@ -53,9 +53,32 @@
             <td><span class="badge badge-{{ item.type }}">{{ item.type }}</span></td>
             <td style="color:#e74c3c;font-weight:bold">{{ item.date.strftime('%d-%m-%Y') }}</td>
             <td style="color:#e74c3c;font-weight:bold">+{{ (today - item.date).days }}</td>
-            <td>
+            <td style="white-space:nowrap">
+                {% if current_user.has_role('admin', 'director', 'technician') %}
+                <form method="POST" action="/maintenance-calendar/complete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Mark as completed?') }}')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="type" value="{{ item.type }}">
+                    <input type="hidden" name="part_id" value="{{ item.part_id or '' }}">
+                    <input type="hidden" name="plan_id" value="{{ item.plan_id or '' }}">
+                    <input type="hidden" name="machine_id" value="{{ item.machine_id or '' }}">
+                    <input type="hidden" name="date" value="{{ item.date.strftime('%Y-%m-%d') }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <button type="submit" style="background:#27ae60;color:white;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Mark completed') }}">✅</button>
+                </form>
+                {% endif %}
+                {% if current_user.has_role('admin') %}
+                <form method="POST" action="/maintenance-calendar/delete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Delete this event?') }}')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="type" value="{{ item.type }}">
+                    <input type="hidden" name="part_id" value="{{ item.part_id or '' }}">
+                    <input type="hidden" name="plan_id" value="{{ item.plan_id or '' }}">
+                    <input type="hidden" name="machine_id" value="{{ item.machine_id or '' }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <button type="submit" style="background:#e74c3c;color:white;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Delete') }}">🗑</button>
+                </form>
+                {% endif %}
                 {% if item.part_id %}
-                <a href="/machines/{{ item.machine_id }}/parts" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px">{{ _('Fix') }}</a>
+                <a href="/machines/{{ item.machine_id }}/parts" class="btn btn-sm" style="background:#e74c3c;color:white;padding:2px 6px;font-size:10px">{{ _('Fix') }}</a>
                 {% endif %}
             </td>
         </tr>
