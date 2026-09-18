@@ -55,7 +55,7 @@
             <td style="color:#e74c3c;font-weight:bold">+{{ (today - item.date).days }}</td>
             <td style="white-space:nowrap">
                 {% if current_user.has_role('admin', 'director', 'technician') %}
-                <form method="POST" action="/maintenance-calendar/complete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Mark as completed?') }}')">
+                <form method="POST" action="/maintenance-calendar/complete" style="display:inline;margin:0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="type" value="{{ item.type }}">
                     <input type="hidden" name="part_id" value="{{ item.part_id or '' }}">
@@ -63,18 +63,18 @@
                     <input type="hidden" name="machine_id" value="{{ item.machine_id or '' }}">
                     <input type="hidden" name="date" value="{{ item.date.strftime('%Y-%m-%d') }}">
                     <input type="hidden" name="month" value="{{ month }}">
-                    <button type="submit" style="background:#27ae60;color:white;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Mark completed') }}">✅</button>
+                    <button type="submit" class="btn-done" style="background:#27ae60;color:white;border:none;border-radius:3px;font-size:10px;padding:4px 8px;cursor:pointer" title="{{ _('Mark completed') }}">✅</button>
                 </form>
                 {% endif %}
                 {% if current_user.has_role('admin') %}
-                <form method="POST" action="/maintenance-calendar/delete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Delete this event?') }}')">
+                <form method="POST" action="/maintenance-calendar/delete" style="display:inline;margin:0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="type" value="{{ item.type }}">
                     <input type="hidden" name="part_id" value="{{ item.part_id or '' }}">
                     <input type="hidden" name="plan_id" value="{{ item.plan_id or '' }}">
                     <input type="hidden" name="machine_id" value="{{ item.machine_id or '' }}">
                     <input type="hidden" name="month" value="{{ month }}">
-                    <button type="submit" style="background:#e74c3c;color:white;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Delete') }}">🗑</button>
+                    <button type="submit" class="btn-del" style="background:#e74c3c;color:white;border:none;border-radius:3px;font-size:10px;padding:4px 8px;cursor:pointer" title="{{ _('Delete') }}">🗑</button>
                 </form>
                 {% endif %}
                 {% if item.part_id %}
@@ -265,5 +265,70 @@ function doCalPrint() {
     document.head.appendChild(_printStyle);
     window.print();
 }
+
+// AJAX handlers for complete/delete buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-done').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var form = btn.closest('form');
+            var fd = new FormData(form);
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            fetch(form.action, {
+                method: 'POST',
+                body: fd,
+                redirect: 'follow'
+            }).then(function(r) {
+                if (r.ok || r.redirected) {
+                    btn.style.background = '#95a5a6';
+                    btn.textContent = '✓';
+                    btn.disabled = true;
+                    var row = btn.closest('tr');
+                    if (row) row.style.opacity = '0.4';
+                    setTimeout(function() { location.reload(); }, 800);
+                } else {
+                    alert('Error: ' + r.status);
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            }).catch(function(err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+        });
+    });
+
+    document.querySelectorAll('.btn-del').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!confirm('Delete?')) return;
+            var form = btn.closest('form');
+            var fd = new FormData(form);
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            fetch(form.action, {
+                method: 'POST',
+                body: fd,
+                redirect: 'follow'
+            }).then(function(r) {
+                if (r.ok || r.redirected) {
+                    var row = btn.closest('tr');
+                    if (row) row.style.display = 'none';
+                    setTimeout(function() { location.reload(); }, 500);
+                } else {
+                    alert('Error: ' + r.status);
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            }).catch(function(err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+        });
+    });
+});
 </script>
 {% endblock %}
