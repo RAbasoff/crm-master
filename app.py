@@ -2103,11 +2103,16 @@ def maintenance_calendar_complete():
                     flash(_('Maintenance marked as completed'), 'success')
                 else:
                     flash(_('Plan not found'), 'error')
-            elif machine_id and event_date:
-                mr = MaintenanceRecord.query.filter(
+            elif machine_id:
+                query = MaintenanceRecord.query.filter(
                     MaintenanceRecord.machine_id == int(machine_id),
-                    db.func.date(MaintenanceRecord.next_maintenance) == event_date
-                ).first()
+                    MaintenanceRecord.next_maintenance.isnot(None)
+                )
+                if event_date:
+                    query = query.filter(
+                        db.func.date(MaintenanceRecord.next_maintenance) == event_date
+                    )
+                mr = query.first()
                 if mr:
                     mr.next_maintenance = None
                     db.session.commit()
@@ -2192,17 +2197,24 @@ def maintenance_calendar_delete():
         elif ev_type == 'machine_maintenance':
             machine_id = request.form.get('machine_id')
             event_date = request.form.get('date')
-            if machine_id and event_date:
-                mr = MaintenanceRecord.query.filter(
+            if machine_id:
+                query = MaintenanceRecord.query.filter(
                     MaintenanceRecord.machine_id == int(machine_id),
-                    db.func.date(MaintenanceRecord.next_maintenance) == event_date
-                ).first()
+                    MaintenanceRecord.next_maintenance.isnot(None)
+                )
+                if event_date:
+                    query = query.filter(
+                        db.func.date(MaintenanceRecord.next_maintenance) == event_date
+                    )
+                mr = query.first()
                 if mr:
                     mr.next_maintenance = None
                     db.session.commit()
                     flash(_('Event removed'), 'success')
                 else:
                     flash(_('Event not found'), 'error')
+            else:
+                flash(_('Machine ID required'), 'error')
 
         elif ev_type == 'equipment' and equipment_id:
             from models import Equipment
