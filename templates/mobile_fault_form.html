@@ -34,18 +34,18 @@
         <h1>{{ _('Report Fault') }}</h1>
     </div>
     <form method="POST" action="{{ url_for('mobile_fault_new') }}" class="form" id="faultForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrfToken">
         <div class="field">
             <label>{{ _('Title') }} *</label>
-            <input type="text" name="title" placeholder="{{ _('What happened?') }}" required maxlength="200">
+            <input type="text" name="title" id="faultTitle" placeholder="{{ _('What happened?') }}" required maxlength="200">
         </div>
         <div class="field">
             <label>{{ _('Description') }} *</label>
-            <textarea name="description" placeholder="{{ _('Describe the problem in detail...') }}" required></textarea>
+            <textarea name="description" id="faultDesc" placeholder="{{ _('Describe the problem in detail...') }}" required></textarea>
         </div>
         <div class="field">
             <label>{{ _('Machine') }}</label>
-            <select name="machine_id">
+            <select name="machine_id" id="faultMachine">
                 <option value="">{{ _('— Select —') }}</option>
                 {% for m in machines %}
                 <option value="{{ m.id }}">{{ m.name }}</option>
@@ -62,6 +62,7 @@
             <input type="hidden" name="priority" id="priorityInput" value="normal">
         </div>
         <button type="submit" class="submit" id="submitBtn">{{ _('Send Report') }}</button>
+        <div id="formMsg" style="display:none;padding:12px;margin-top:12px;border-radius:10px;font-size:14px"></div>
     </form>
     <script>
     function selPriority(el){
@@ -69,10 +70,42 @@
         el.classList.add('sel');
         document.getElementById('priorityInput').value = el.dataset.val;
     }
-    document.getElementById('faultForm').addEventListener('submit', function(){
+    function showMsg(text, isError){
+        var el = document.getElementById('formMsg');
+        el.textContent = text;
+        el.style.display = 'block';
+        el.style.background = isError ? '#fdf0f0' : '#f0fdf4';
+        el.style.border = '1px solid ' + (isError ? '#e74c3c' : '#27ae60');
+        el.style.color = isError ? '#c0392b' : '#27ae60';
+    }
+    document.getElementById('faultForm').addEventListener('submit', function(e){
+        e.preventDefault();
         var btn = document.getElementById('submitBtn');
+        var title = document.getElementById('faultTitle').value.trim();
+        var desc = document.getElementById('faultDesc').value.trim();
+        if(!title || !desc){
+            showMsg('{{ _("Please fill in title and description") }}', true);
+            return;
+        }
         btn.disabled = true;
         btn.textContent = '{{ _("Sending...") }}';
+        var fd = new FormData(this);
+        fetch(this.action, {
+            method: 'POST',
+            body: fd,
+            redirect: 'follow',
+            credentials: 'same-origin'
+        }).then(function(r){
+            if(r.ok || r.redirected){
+                window.location.href = '/mobile';
+            } else {
+                return r.text().then(function(t){ throw new Error(r.status + ' ' + r.statusText); });
+            }
+        }).catch(function(err){
+            showMsg('{{ _("Error") }}: ' + err.message, true);
+            btn.disabled = false;
+            btn.textContent = '{{ _("Send Report") }}';
+        });
     });
     </script>
 </body>
