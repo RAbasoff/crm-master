@@ -72,7 +72,10 @@ def fault_new():
                 f.status = 'accepted'
                 f.accepted_at = datetime.utcnow()
 
-            safe_commit()
+            if not safe_commit():
+                db.session.rollback()
+                flash(_('Save failed. Please try again.'), 'error')
+                return redirect(url_for('faults.fault_new'))
 
             target = f.target_name
 
@@ -91,7 +94,8 @@ def fault_new():
                         video.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
                         fv = FaultVideo(fault_id=f.id, filename=filename)
                         db.session.add(fv)
-                safe_commit()
+                if not safe_commit():
+                    flash(_('Fault created but video upload failed'), 'warning')
 
             for tech in f.assigned_technicians:
                 create_notification(
@@ -158,7 +162,9 @@ def fault_accept(fault_id):
     f.status = 'accepted'
     f.technician_id = current_user.id
     f.accepted_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('accept', 'fault', f.id, f'{f.title} — {f.target_name}')
     create_notification(
         f.reporter_id,
@@ -197,7 +203,9 @@ def fault_assign(fault_id):
             names.append(f"🏢 {c.company_name}")
     f.status = 'accepted'
     f.accepted_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
     for tech in f.assigned_technicians:
         create_notification(
@@ -226,7 +234,9 @@ def fault_resolve(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     f.status = 'resolved'
     f.resolved_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('resolve', 'fault', f.id, f'{f.title} — {f.target_name}')
     create_notification(
         f.reporter_id,
@@ -259,7 +269,8 @@ def fault_status_change(fault_id):
         reason=reason, changed_by=current_user.id
     )
     db.session.add(history)
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
     log_audit('status_change', 'fault', f.id, f'{old_status} → {new_status}')
     add_work_report(f'🔄 Поломка #{f.id} "{f.title}": статус {old_status} → {new_status}')
     return jsonify({'ok': True, 'old': old_status, 'new': new_status})
@@ -278,7 +289,11 @@ def fault_close(fault_id):
         return jsonify({'error': _('Work report is required to close this fault')}), 400
     f.status = 'closed'
     f.resolved_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     create_notification(
         f.reporter_id,
         _('Fault closed'),
@@ -310,7 +325,11 @@ def fault_reopen(fault_id):
         reason=f'{reopen_date}: {reason}', changed_by=current_user.id
     )
     db.session.add(history)
-    safe_commit()
+    if not safe_commit():
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     create_notification(
         f.reporter_id,
         _('Fault reopened'),
@@ -339,7 +358,9 @@ def work_report_new(fault_id):
             time_spent_hours=safe_float(request.form.get('time_spent_hours'), 0)
         )
         db.session.add(wr)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
@@ -348,7 +369,8 @@ def work_report_new(fault_id):
                     photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
                     wp = WorkReportPhoto(report_id=wr.id, filename=filename, description=request.form.get('photo_desc', ''))
                     db.session.add(wp)
-            safe_commit()
+            if not safe_commit():
+                flash(_('Work report saved but photo upload failed'), 'warning')
 
         # Deduct parts from warehouse (non-fatal — work report already saved)
         try:
@@ -363,13 +385,16 @@ def work_report_new(fault_id):
                         opmerking=f"Work report #{wr.id} for fault #{f.id}"
                     )
                     db.session.add(mutatie)
-            safe_commit()
+            if not safe_commit():
+                db.session.rollback()
         except (ValueError, KeyError, TypeError):
             db.session.rollback()
 
         f.status = 'resolved'
         f.resolved_at = datetime.utcnow()
-        safe_commit()
+        if not safe_commit():
+            flash(_('Work report saved but status update failed'), 'warning')
+            return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
         log_audit('create', 'work_report', wr.id, f'Отчёт по поломке #{f.id}: {f.title} ({wr.time_spent_hours}ч)')
         add_work_report(f'📝 Отчёт о работе по поломке #{f.id}: {f.title} ({wr.time_spent_hours}ч)')
@@ -398,7 +423,8 @@ def work_report_edit(fault_id, report_id):
                         opmerking=f"Reversed: work report #{wr.id} edit"
                     )
                     db.session.add(mutatie)
-            safe_commit()
+            if not safe_commit():
+                db.session.rollback()
         except (ValueError, KeyError, TypeError):
             db.session.rollback()
 
@@ -426,7 +452,8 @@ def work_report_edit(fault_id, report_id):
                         opmerking=f"Work report #{wr.id} (edited) for fault #{f.id}"
                     )
                     db.session.add(mutatie)
-            safe_commit()
+            if not safe_commit():
+                db.session.rollback()
         except (ValueError, KeyError, TypeError):
             db.session.rollback()
 
@@ -444,7 +471,11 @@ def fault_delete(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     title = f.title
     db.session.delete(f)
-    safe_commit()
+    if not safe_commit():
+        if request.is_json:
+            return jsonify({'error': 'Delete failed'}), 500
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('faults.faults_list'))
     log_audit('delete', 'fault', fault_id, title)
     if request.is_json:
         return jsonify({'ok': True})

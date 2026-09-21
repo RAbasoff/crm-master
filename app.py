@@ -2131,19 +2131,37 @@ def maintenance_calendar_complete():
             event_date = request.form.get('date')
             mr = None
             if record_id:
-                mr = MaintenanceRecord.query.get(int(record_id))
-            elif machine_id:
-                query = MaintenanceRecord.query.filter(
-                    MaintenanceRecord.machine_id == int(machine_id),
-                    MaintenanceRecord.next_maintenance.isnot(None)
-                )
-                if event_date:
-                    query = query.filter(
-                        db.func.date(MaintenanceRecord.next_maintenance) == event_date
+                try:
+                    mr = MaintenanceRecord.query.get(int(record_id))
+                except (ValueError, TypeError):
+                    mr = None
+            if not mr and machine_id:
+                try:
+                    query = MaintenanceRecord.query.filter(
+                        MaintenanceRecord.machine_id == int(machine_id),
+                        MaintenanceRecord.next_maintenance.isnot(None)
                     )
-                mr = query.first()
+                    if event_date:
+                        query = query.filter(
+                            db.func.date(MaintenanceRecord.next_maintenance) == event_date
+                        )
+                    mr = query.first()
+                except (ValueError, TypeError):
+                    mr = None
             if mr:
                 mr.next_maintenance = None
+                db.session.flush()
+                # Create PartMaintenanceLog so calendar shows green (done=True)
+                first_part = MachinePart.query.filter_by(machine_id=mr.machine_id).first()
+                if first_part:
+                    log = PartMaintenanceLog(
+                        part_id=first_part.id,
+                        action='maintenance',
+                        description=f'{mr.description[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                        performed_by=current_user.id,
+                        date=datetime.utcnow()
+                    )
+                    db.session.add(log)
                 db.session.commit()
                 flash(_('Maintenance marked as completed'), 'success')
             else:

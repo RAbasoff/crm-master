@@ -52,6 +52,8 @@ def monteur_permissions(user_id):
     new_pass = request.form.get('password')
     if new_pass:
         u.set_password(new_pass)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('monteurs.monteurs_list'))
     flash(_('Permissions updated for') + ' ' + (u.display_name or u.username), 'success')
     return redirect(url_for('monteurs.monteurs_list'))

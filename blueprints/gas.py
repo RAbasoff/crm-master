@@ -58,7 +58,8 @@ def _auto_archive(now):
     db.session.add(archive)
     for c in empty:
         db.session.delete(c)
-    safe_commit()
+    if not safe_commit():
+        return
     log_audit('auto_archive', 'gas_cylinders', 0, f'{len(empty)} empty cylinders auto-archived for {month_key}')
 
 
@@ -179,7 +180,9 @@ def cylinder_new():
         if request.form.get('received_at'):
             c.received_at = safe_date(request.form.get('received_at'))
         db.session.add(c)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.cylinder_new'))
 
         log = CylinderLog(
             cylinder_id=c.id,
@@ -189,7 +192,8 @@ def cylinder_new():
             notes=f'New {c.gas_type} cylinder added'
         )
         db.session.add(log)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Cylinder added but log entry failed'), 'warning')
 
         log_audit('create', 'gas_cylinder', c.id, f'{c.gas_type} #{c.cylinder_number}')
         flash(_('Cylinder added'), 'success')
@@ -213,7 +217,9 @@ def cylinder_edit(cyl_id):
             c.received_at = safe_date(request.form.get('received_at'))
         if request.form.get('installed_at'):
             c.installed_at = safe_date(request.form.get('installed_at'))
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.cylinder_edit', cyl_id=cyl_id))
 
         if old_status != c.status:
             log = CylinderLog(
@@ -223,7 +229,8 @@ def cylinder_edit(cyl_id):
                 notes=f'Status: {old_status} → {c.status}'
             )
             db.session.add(log)
-            safe_commit()
+            if not safe_commit():
+                flash(_('Cylinder updated but status log failed'), 'warning')
 
         log_audit('update', 'gas_cylinder', c.id, f'{c.gas_type} #{c.cylinder_number}')
         flash(_('Cylinder updated'), 'success')
@@ -239,7 +246,9 @@ def cylinder_delete(cyl_id):
     c = GasCylinder.query.get_or_404(cyl_id)
     name = f'{c.gas_type} #{c.cylinder_number}'
     db.session.delete(c)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('gas.gas_dashboard'))
     log_audit('delete', 'gas_cylinder', cyl_id, name)
     flash(_('Cylinder deleted'), 'success')
     return redirect(url_for('gas.gas_dashboard'))
@@ -312,7 +321,11 @@ def cylinder_status(cyl_id):
                     notes='Auto-switch: backup activated after %s emptied' % c.cylinder_number
                 ))
 
-    safe_commit()
+    if not safe_commit():
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('gas.gas_dashboard'))
 
     log = CylinderLog(
         cylinder_id=c.id,
@@ -321,7 +334,10 @@ def cylinder_status(cyl_id):
         notes='Status: %s -> %s' % (old_status, new_status)
     )
     db.session.add(log)
-    safe_commit()
+    if not safe_commit():
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        flash(_('Status updated but log entry failed'), 'warning')
 
     log_audit('status_change', 'gas_cylinder', c.id,
               '%s #%s: %s -> %s' % (c.gas_type, c.cylinder_number, old_status, new_status))
@@ -341,7 +357,9 @@ def cylinder_swap(cyl_id):
     old_number = c.cylinder_number
     c.status = 'empty'
     c.installed_at = None
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('gas.gas_dashboard'))
 
     log = CylinderLog(
         cylinder_id=c.id,
@@ -351,7 +369,8 @@ def cylinder_swap(cyl_id):
         notes=f'Cylinder removed from service'
     )
     db.session.add(log)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Cylinder marked as empty but log entry failed'), 'warning')
 
     log_audit('swap', 'gas_cylinder', c.id, f'{c.gas_type} #{old_number} swapped')
     flash(_('Cylinder marked as empty. Add a new cylinder to replace it.'), 'info')
@@ -394,7 +413,9 @@ def gas_archive():
     for c in empty:
         db.session.delete(c)
 
-    safe_commit()
+    if not safe_commit():
+        flash(_('Archive failed. Please try again.'), 'error')
+        return redirect(url_for('gas.gas_dashboard'))
     log_audit('archive', 'gas_cylinders', 0, f'{count} empty cylinders archived for {month_key}')
     flash(_('%(count)d cylinders archived', count=count), 'success')
     return redirect(url_for('gas.gas_dashboard'))
@@ -434,7 +455,9 @@ def component_new():
             d = safe_date(request.form.get('next_check'))
             c.next_check = d.date() if d else None
         db.session.add(c)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.component_new'))
         log_audit('create', 'gas_component', c.id, f'{c.component_type}: {c.name}')
         flash(_('Component added'), 'success')
         return redirect(url_for('gas.components_list'))
@@ -459,7 +482,9 @@ def component_edit(comp_id):
         if request.form.get('next_check'):
             d = safe_date(request.form.get('next_check'))
             c.next_check = d.date() if d else None
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.component_edit', comp_id=comp_id))
         log_audit('update', 'gas_component', c.id, f'{c.component_type}: {c.name}')
         flash(_('Component updated'), 'success')
         return redirect(url_for('gas.components_list'))
@@ -474,7 +499,9 @@ def component_delete(comp_id):
     c = GasSystemComponent.query.get_or_404(comp_id)
     name = f'{c.component_type}: {c.name}'
     db.session.delete(c)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('gas.components_list'))
     log_audit('delete', 'gas_component', comp_id, name)
     flash(_('Component deleted'), 'success')
     return redirect(url_for('gas.components_list'))
@@ -506,7 +533,9 @@ def order_new():
             ordered_by=current_user.id
         )
         db.session.add(o)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.order_new'))
         log_audit('create', 'cylinder_order', o.id, f'{o.gas_type} x{o.quantity}')
         flash(_('Order created'), 'success')
         return redirect(url_for('gas.orders_list'))
@@ -523,7 +552,9 @@ def order_status(order_id):
     o.status = new_status
     if new_status == 'delivered':
         o.delivered_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('gas.orders_list'))
     flash(_('Order status updated'), 'success')
     return redirect(url_for('gas.orders_list'))
 
@@ -568,7 +599,8 @@ def api_cylinder_update(cyl_id):
         c.status = data['status']
     if 'notes' in data:
         c.notes = data['notes']
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
 
     if old_status != c.status:
         log = CylinderLog(
@@ -578,7 +610,8 @@ def api_cylinder_update(cyl_id):
             notes=data.get('reason', f'Status: {old_status} → {c.status}')
         )
         db.session.add(log)
-        safe_commit()
+        if not safe_commit():
+            return jsonify({'error': 'Save failed'}), 500
 
     return jsonify({'ok': True, 'status': c.status})
 
@@ -623,7 +656,8 @@ def cylinder_quick_add():
         received_at=datetime.utcnow()
     )
     db.session.add(cylinder)
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
 
     db.session.add(CylinderLog(
         cylinder_id=cylinder.id,
@@ -632,7 +666,8 @@ def cylinder_quick_add():
         performed_by=current_user.id,
         notes='Added via dashboard scan'
     ))
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
 
     log_audit('create', 'gas_cylinder', cylinder.id, f'{gas_type} #{number}')
 
@@ -696,7 +731,8 @@ def cylinder_scan_install():
             received_at=datetime.utcnow()
         )
         db.session.add(cylinder)
-        safe_commit()
+        if not safe_commit():
+            return jsonify({'error': 'Save failed'}), 500
         db.session.add(CylinderLog(
             cylinder_id=cylinder.id,
             action='created',
@@ -704,7 +740,8 @@ def cylinder_scan_install():
             performed_by=current_user.id,
             notes='Created via barcode scan'
         ))
-        safe_commit()
+        if not safe_commit():
+            return jsonify({'error': 'Save failed'}), 500
 
     # Install scanned cylinder — replace oldest in_use on same gas type if at limit
     active_count = GasCylinder.query.filter(
@@ -738,7 +775,8 @@ def cylinder_scan_install():
     cylinder.status = 'in_use'
     cylinder.gas_type = gas_type
     cylinder.installed_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
 
     db.session.add(CylinderLog(
         cylinder_id=cylinder.id,
@@ -746,7 +784,8 @@ def cylinder_scan_install():
         performed_by=current_user.id,
         notes='Installed via scan on %s side (%s)' % (side, gas_type)
     ))
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
 
     return jsonify({
         'ok': True,

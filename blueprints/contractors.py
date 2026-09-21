@@ -49,7 +49,9 @@ def contractor_new():
             notes=request.form.get('notes', '')
         )
         db.session.add(c)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('contractors.contractor_new'))
         log_audit('create', 'contractor', c.id, c.company_name)
         flash(_('Contractor added'), 'success')
         return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
@@ -92,7 +94,9 @@ def contractor_edit(contractor_id):
         d = safe_date(request.form.get('contract_end'))
         c.contract_end = d.date() if d else None
         c.notes = request.form.get('notes', '')
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('contractors.contractor_edit', contractor_id=contractor_id))
         log_audit('update', 'contractor', c.id, c.company_name)
         flash(_('Contractor updated'), 'success')
         return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
@@ -105,7 +109,9 @@ def contractor_edit(contractor_id):
 def contractor_delete(contractor_id):
     c = Contractor.query.get_or_404(contractor_id)
     c.is_active = False
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('contractors.contractor_detail', contractor_id=contractor_id))
     log_audit('delete', 'contractor', c.id, c.company_name)
     flash(_('Contractor deactivated'), 'success')
     return redirect(url_for('contractors.contractors_list'))
@@ -125,7 +131,9 @@ def contractor_add_employee(contractor_id):
         notes=request.form.get('notes', '')
     )
     db.session.add(emp)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
     flash(_('Employee added'), 'success')
     return redirect(url_for('contractors.contractor_detail', contractor_id=c.id))
 
@@ -137,6 +145,8 @@ def contractor_delete_employee(emp_id):
     emp = ContractorEmployee.query.get_or_404(emp_id)
     cid = emp.contractor_id
     db.session.delete(emp)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('contractors.contractor_detail', contractor_id=cid))
     flash(_('Employee removed'), 'success')
     return redirect(url_for('contractors.contractor_detail', contractor_id=cid))

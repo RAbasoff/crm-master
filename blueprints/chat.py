@@ -40,7 +40,8 @@ def get_or_create_dm(user1_id, user2_id):
     db.session.flush()
     db.session.add(ChatParticipant(room_id=room.id, user_id=user1_id))
     db.session.add(ChatParticipant(room_id=room.id, user_id=user2_id))
-    safe_commit()
+    if not safe_commit():
+        return None
     return room
 
 
@@ -99,7 +100,8 @@ def chat_room(room_id):
 
     # Mark as read
     participant.last_read_at = datetime.utcnow()
-    safe_commit()
+    if not safe_commit():
+        pass  # Non-critical: read status update failed, continue showing room
 
     messages = ChatMessage.query.filter_by(room_id=room_id).order_by(ChatMessage.created_at.asc()).limit(200).all()
     others = [p.user for p in room.participants if p.user_id != current_user.id]
@@ -119,6 +121,9 @@ def chat_start(user_id):
         return redirect(url_for('chat.chat_list'))
     other = User.query.get_or_404(user_id)
     room = get_or_create_dm(current_user.id, user_id)
+    if not room:
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('chat.chat_list'))
     return redirect(url_for('chat.chat_room', room_id=room.id))
 
 
@@ -146,7 +151,9 @@ def chat_group_new():
         mid = safe_int(mid)
         if mid and mid != current_user.id:
             db.session.add(ChatParticipant(room_id=room.id, user_id=mid))
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('chat.chat_list'))
 
     flash(_('Group created'), 'success')
     return redirect(url_for('chat.chat_room', room_id=room.id))
@@ -193,7 +200,8 @@ def api_send():
                 url_for('chat.chat_room', room_id=room_id)
             )
     msg.status_json = json.dumps(status)
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
 
     return jsonify({
         'ok': True,
@@ -229,7 +237,8 @@ def api_messages(room_id):
                     m.status_json = json.dumps(status)
             except (json.JSONDecodeError, ValueError):
                 pass
-    safe_commit()
+    if not safe_commit():
+        pass  # Non-critical: read status update failed, still return messages
 
     result = []
     for m in messages:
@@ -272,5 +281,6 @@ def api_add_member(room_id):
     if existing:
         return jsonify({'ok': True, 'msg': 'Already a member'})
     db.session.add(ChatParticipant(room_id=room_id, user_id=user_id))
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True})

@@ -80,7 +80,9 @@ def cabinet_new():
             request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             c.photo = filename
         db.session.add(c)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('electricity.cabinet_new'))
         flash(_('Cabinet created'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     return render_template('cabinet_form.html', cabinet=None)
@@ -113,7 +115,9 @@ def cabinet_edit(cabinet_id):
             filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
             request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             c.photo = filename
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('electricity.cabinet_edit', cabinet_id=c.id))
         flash(_('Cabinet updated'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     return render_template('cabinet_form.html', cabinet=c)
@@ -125,7 +129,9 @@ def cabinet_edit(cabinet_id):
 def cabinet_delete(cabinet_id):
     c = ElectricalCabinet.query.get_or_404(cabinet_id)
     c.is_active = False
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.electricity_list'))
     flash(_('Cabinet deleted'), 'success')
     return redirect(url_for('electricity.electricity_list'))
 
@@ -152,7 +158,9 @@ def breaker_new(cabinet_id):
             position=safe_int(request.form.get('position'), 1)
         )
         db.session.add(b)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
         flash(_('Breaker added'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     return render_template('breaker_form.html', cabinet=c, breaker=None)
@@ -176,7 +184,9 @@ def breaker_edit(breaker_id):
         b.notes = request.form.get('notes', '')
         b.row = safe_int(request.form.get('row'), 1)
         b.position = safe_int(request.form.get('position'), 1)
-        safe_commit()
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('electricity.breaker_edit', breaker_id=breaker_id))
         flash(_('Breaker updated'), 'success')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=b.cabinet_id))
     return render_template('breaker_form.html', cabinet=b.cabinet, breaker=b)
@@ -188,7 +198,8 @@ def breaker_edit(breaker_id):
 def breaker_toggle(breaker_id):
     b = CircuitBreaker.query.get_or_404(breaker_id)
     b.status = 'off' if b.status == 'on' else 'on'
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
     return jsonify({'status': b.status})
 
 
@@ -199,7 +210,9 @@ def breaker_delete(breaker_id):
     b = CircuitBreaker.query.get_or_404(breaker_id)
     cabinet_id = b.cabinet_id
     db.session.delete(b)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.cabinet_detail', cabinet_id=cabinet_id))
     flash(_('Breaker deleted'), 'success')
     return redirect(url_for('electricity.cabinet_detail', cabinet_id=cabinet_id))
 
@@ -232,7 +245,8 @@ def cabinet_position(cabinet_id):
     c = ElectricalCabinet.query.get_or_404(cabinet_id)
     c.schematic_x = int(data.get('x', 0))
     c.schematic_y = int(data.get('y', 0))
-    safe_commit()
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True})
 
 
@@ -267,7 +281,9 @@ def switch_log_add(cabinet_id):
         performed_by=current_user.id
     )
     db.session.add(log)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.switch_log', cabinet_id=c.id))
     flash(_('Switch logged'), 'success')
     return redirect(url_for('electricity.switch_log', cabinet_id=c.id))
 
@@ -278,7 +294,9 @@ def switch_log_add(cabinet_id):
 def switch_log_delete(log_id):
     log = ElectricalSwitchLog.query.get_or_404(log_id)
     db.session.delete(log)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.switch_log_global'))
     flash(_('Log entry deleted'), 'success')
     return redirect(url_for('electricity.switch_log_global'))
 
@@ -304,7 +322,9 @@ def document_upload(cabinet_id):
         uploaded_by=current_user.id
     )
     db.session.add(doc)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     flash(_('Document uploaded'), 'success')
     return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
 
@@ -318,7 +338,9 @@ def document_delete(doc_id):
     if os.path.exists(filepath):
         os.remove(filepath)
     db.session.delete(doc)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.electricity_list'))
     flash(_('Document deleted'), 'success')
     return redirect(url_for('electricity.electricity_list'))
 
@@ -348,7 +370,9 @@ def document_upload_global():
         uploaded_by=current_user.id
     )
     db.session.add(doc)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.electricity_list'))
     flash(_('Document uploaded for {}').format(c.name), 'success')
     return redirect(url_for('electricity.electricity_list'))
 
@@ -387,6 +411,8 @@ def switch_log_add_global():
         performed_by=current_user.id
     )
     db.session.add(log)
-    safe_commit()
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.switch_log_global'))
     flash(_('Switch logged'), 'success')
     return redirect(url_for('electricity.switch_log_global'))
