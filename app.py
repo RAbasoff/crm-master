@@ -1974,6 +1974,12 @@ def maintenance_calendar():
         # Основное событие
         if month_start <= pl.planned_start < month_end:
             done = pl.status in ('completed',)
+            # Also check MaintenanceRecord for recurring plans
+            if not done:
+                for mr in maint_by_machine.get(pl.machine_id, []):
+                    if mr.date_performed and mr.date_performed.date() == pl.planned_start:
+                        done = True
+                        break
             events.append({
                 'date': pl.planned_start,
                 'type': 'plan',
@@ -1982,9 +1988,9 @@ def maintenance_calendar():
                 'machine_id': pl.machine_id,
                 'part_id': None,
                 'category': pl.maintenance_type,
-                'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'),
+                'overdue': pl.planned_start < today and not done,
                 'plan_id': pl.id,
-                'status': pl.status,
+                'status': 'completed' if done else pl.status,
                 'done': done,
                 'equipment_id': None,
                 'mro_id': None,
