@@ -1834,7 +1834,11 @@ def maintenance_calendar():
                 'part_id': p.id,
                 'category': p.category,
                 'overdue': p.next_replacement < today and not done,
-                'done': done
+                'done': done,
+                'plan_id': None,
+                'equipment_id': None,
+                'mro_id': None,
+                'record_id': None
             })
         if p.next_maintenance and month_start <= p.next_maintenance < month_end:
             # Check if maintenance was done
@@ -1852,7 +1856,11 @@ def maintenance_calendar():
                 'part_id': p.id,
                 'category': p.category,
                 'overdue': p.next_maintenance < today and not done,
-                'done': done
+                'done': done,
+                'plan_id': None,
+                'equipment_id': None,
+                'mro_id': None,
+                'record_id': None
             })
         # Check maintenance records (from batch-fetched data)
         for mr in maint_by_machine.get(p.machine_id, []):
@@ -1872,7 +1880,11 @@ def maintenance_calendar():
                     'part_id': None,
                     'category': mr.maintenance_type,
                     'overdue': mr.next_maintenance.date() < today and not done,
-                    'done': done
+                    'done': done,
+                    'plan_id': None,
+                    'equipment_id': None,
+                    'mro_id': None,
+                    'record_id': mr.id
                 })
     
     # Add maintenance plans
@@ -1898,7 +1910,10 @@ def maintenance_calendar():
                 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'),
                 'plan_id': pl.id,
                 'status': pl.status,
-                'done': done
+                'done': done,
+                'equipment_id': None,
+                'mro_id': None,
+                'record_id': None
             })
         # Периодические повторения (виртуальные события)
         if pl.recurrence and pl.recurrence != 'none':
@@ -1928,7 +1943,10 @@ def maintenance_calendar():
                         'overdue': d < today and not occ_done,
                         'plan_id': pl.id,
                         'status': 'completed' if occ_done else pl.status,
-                        'done': occ_done
+                        'done': occ_done,
+                        'equipment_id': None,
+                        'mro_id': None,
+                        'record_id': None
                     })
                 # Следующая дата
                 if pl.recurrence == 'daily':
@@ -1979,7 +1997,10 @@ def maintenance_calendar():
                 'part_id': None,
                 'category': eq.category or 'service',
                 'overdue': eq.next_service_date < today and not done,
-                'done': done
+                'done': done,
+                'plan_id': None,
+                'mro_id': None,
+                'record_id': None
             })
 
     # Add EquipmentMaintenance (MRO) records with next_date
@@ -1999,7 +2020,8 @@ def maintenance_calendar():
                 'overdue': mro.next_date < today and not done,
                 'done': done,
                 'plan_id': None,
-                'mro_id': mro.id
+                'mro_id': mro.id,
+                'record_id': None
             })
 
     # Get overdue items (before today) — skip if there's a maintenance record after the due date
@@ -2013,7 +2035,7 @@ def maintenance_calendar():
                 PartMaintenanceLog.date >= datetime.combine(p.next_replacement, datetime.min.time())
             ).first()
             if not done_after:
-                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
+                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category, 'plan_id': None, 'equipment_id': None, 'mro_id': None, 'record_id': None})
         if p.next_maintenance and p.next_maintenance < today:
             done_after = PartMaintenanceLog.query.filter(
                 PartMaintenanceLog.part_id == p.id,
@@ -2021,7 +2043,7 @@ def maintenance_calendar():
                 PartMaintenanceLog.date >= datetime.combine(p.next_maintenance, datetime.min.time())
             ).first()
             if not done_after:
-                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category})
+                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category, 'plan_id': None, 'equipment_id': None, 'mro_id': None, 'record_id': None})
     
     # Navigation
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
@@ -2104,17 +2126,12 @@ def maintenance_calendar_complete():
                 flash(_('Part not found'), 'error')
 
         elif ev_type == 'machine_maintenance':
+            record_id = request.form.get('record_id')
             machine_id = request.form.get('machine_id')
             event_date = request.form.get('date')
-            if plan_id:
-                plan = MaintenancePlan.query.get(int(plan_id))
-                if plan:
-                    plan.status = 'completed'
-                    plan.actual_end = datetime.utcnow().date()
-                    db.session.commit()
-                    flash(_('Maintenance marked as completed'), 'success')
-                else:
-                    flash(_('Plan not found'), 'error')
+            mr = None
+            if record_id:
+                mr = MaintenanceRecord.query.get(int(record_id))
             elif machine_id:
                 query = MaintenanceRecord.query.filter(
                     MaintenanceRecord.machine_id == int(machine_id),
@@ -2125,12 +2142,12 @@ def maintenance_calendar_complete():
                         db.func.date(MaintenanceRecord.next_maintenance) == event_date
                     )
                 mr = query.first()
-                if mr:
-                    mr.next_maintenance = None
-                    db.session.commit()
-                    flash(_('Maintenance marked as completed'), 'success')
-                else:
-                    flash(_('Event not found'), 'error')
+            if mr:
+                mr.next_maintenance = None
+                db.session.commit()
+                flash(_('Maintenance marked as completed'), 'success')
+            else:
+                flash(_('Event not found'), 'error')
 
         elif ev_type == 'equipment':
             from models import Equipment
@@ -2183,6 +2200,7 @@ def maintenance_calendar_delete():
     plan_id = request.form.get('plan_id')
     equipment_id = request.form.get('equipment_id')
     mro_id = request.form.get('mro_id')
+    record_id = request.form.get('record_id')
 
     try:
         if ev_type in ('replacement', 'maintenance') and part_id:
@@ -2197,26 +2215,24 @@ def maintenance_calendar_delete():
             else:
                 flash(_('Part not found'), 'error')
 
-        elif ev_type in ('plan', 'machine_maintenance') and plan_id:
+        elif ev_type == 'plan' and plan_id:
             p = MaintenancePlan.query.get(int(plan_id))
             if p:
-                event_date = request.form.get('date')
-                if p.recurrence and p.recurrence != 'none' and event_date:
-                    # Recurring plan — skip this occurrence (don't delete the plan)
-                    flash(_('Occurrence skipped'), 'success')
-                else:
-                    db.session.delete(p)
-                    db.session.commit()
-                    flash(_('Plan deleted'), 'success')
+                db.session.delete(p)
+                db.session.commit()
+                flash(_('Plan deleted'), 'success')
             else:
                 flash(_('Plan not found'), 'error')
 
         elif ev_type == 'machine_maintenance':
-            machine_id = request.form.get('machine_id')
-            event_date = request.form.get('date')
-            if machine_id:
+            mr = None
+            if record_id:
+                mr = MaintenanceRecord.query.get(int(record_id))
+            elif request.form.get('machine_id'):
+                machine_id = int(request.form.get('machine_id'))
+                event_date = request.form.get('date')
                 query = MaintenanceRecord.query.filter(
-                    MaintenanceRecord.machine_id == int(machine_id),
+                    MaintenanceRecord.machine_id == machine_id,
                     MaintenanceRecord.next_maintenance.isnot(None)
                 )
                 if event_date:
@@ -2224,14 +2240,12 @@ def maintenance_calendar_delete():
                         db.func.date(MaintenanceRecord.next_maintenance) == event_date
                     )
                 mr = query.first()
-                if mr:
-                    mr.next_maintenance = None
-                    db.session.commit()
-                    flash(_('Event removed'), 'success')
-                else:
-                    flash(_('Event not found'), 'error')
+            if mr:
+                mr.next_maintenance = None
+                db.session.commit()
+                flash(_('Event removed'), 'success')
             else:
-                flash(_('Machine ID required'), 'error')
+                flash(_('Event not found'), 'error')
 
         elif ev_type == 'equipment' and equipment_id:
             from models import Equipment
