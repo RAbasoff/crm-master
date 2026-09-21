@@ -1873,6 +1873,9 @@ def maintenance_calendar():
     events = []
     # Batch-fetch all maintenance records for relevant machines
     all_machine_ids = list(set(p.machine_id for p in parts))
+    # Also include machines that have plans (not all machines have parts)
+    plan_machine_ids = [pl.machine_id for pl in MaintenancePlan.query.with_entities(MaintenancePlan.machine_id).distinct().all()]
+    all_machine_ids = list(set(all_machine_ids + plan_machine_ids))
     all_maint_records = MaintenanceRecord.query.filter(
         MaintenanceRecord.machine_id.in_(all_machine_ids)
     ).all() if all_machine_ids else []
