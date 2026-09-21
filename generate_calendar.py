@@ -13,6 +13,15 @@ YEAR_START = datetime(2026, 10, 1)
 YEAR_END = datetime(2027, 10, 1)
 TUESDAY = 1
 
+def skip_weekends(d):
+    """If date falls on Sat/Sun, move to next Monday."""
+    wd = d.weekday()
+    if wd == 5:  # Saturday → Monday
+        return d + timedelta(days=2)
+    if wd == 6:  # Sunday → Monday
+        return d + timedelta(days=1)
+    return d
+
 def next_weekday(start, weekday):
     days_ahead = weekday - start.weekday()
     if days_ahead <= 0: days_ahead += 7
@@ -90,7 +99,7 @@ def generate_plans():
                 d += timedelta(weeks=1)
 
         # ── 3. MONTHLY maintenance ──
-        d = YEAR_START.replace(day=day_of_month)
+        d = skip_weekends(YEAR_START.replace(day=day_of_month))
         while d < YEAR_END:
             plans.append({
                 'machine_id': mid,
@@ -103,14 +112,14 @@ def generate_plans():
             })
             month = d.month + 1; year = d.year
             if month > 12: month = 1; year += 1
-            d = d.replace(year=year, month=month, day=day_of_month)
+            d = skip_weekends(d.replace(year=year, month=month, day=day_of_month))
 
         # ── 4. QUARTERLY deep maintenance ──
         # Spread: group A (idx%3==0) → Jan,Apr,Jul,Oct; B→Feb,May,Aug,Nov; C→Mar,Jun,Sep,Dec
         q_start_month = (idx % 3) + 1  # 1, 2, or 3
         for qm in range(q_start_month, 13, 3):
             try:
-                qd = datetime(2026, qm, day_of_month)
+                qd = skip_weekends(datetime(2026, qm, day_of_month))
                 if YEAR_START <= qd < YEAR_END:
                     plans.append({
                         'machine_id': mid,
@@ -126,7 +135,7 @@ def generate_plans():
         # Repeat for 2027
         for qm in range(q_start_month, 13, 3):
             try:
-                qd = datetime(2027, qm, day_of_month)
+                qd = skip_weekends(datetime(2027, qm, day_of_month))
                 if YEAR_START <= qd < YEAR_END:
                     plans.append({
                         'machine_id': mid,
@@ -146,7 +155,7 @@ def generate_plans():
         for sam in sa_months:
             for say in [2026, 2027]:
                 try:
-                    sad = datetime(say, sam, day_of_month)
+                    sad = skip_weekends(datetime(say, sam, day_of_month))
                     if YEAR_START <= sad < YEAR_END:
                         plans.append({
                             'machine_id': mid,
@@ -164,7 +173,7 @@ def generate_plans():
         # Spread across year: group by idx%6 → Jan..Jun
         y_month = (idx % 6) + 1
         try:
-            yd = datetime(2027, y_month, day_of_month)
+            yd = skip_weekends(datetime(2027, y_month, day_of_month))
             if YEAR_START <= yd < YEAR_END:
                 plans.append({
                     'machine_id': mid,
