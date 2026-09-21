@@ -2293,6 +2293,28 @@ def maintenance_calendar_complete():
     return redirect(url_for('maintenance_calendar', month=month))
 
 
+@app.route('/maintenance-calendar/debug')
+@login_required
+@role_required('admin')
+def maintenance_calendar_debug():
+    """Debug endpoint to check calendar state."""
+    plans = MaintenancePlan.query.all()
+    records = MaintenanceRecord.query.all()
+    lines = [f"=== Plans ({len(plans)}) ==="]
+    for p in plans:
+        lines.append(f"  ID={p.id} machine={p.machine_id} title={p.title} status={p.status} recur={p.recurrence} start={p.planned_start}")
+    lines.append(f"\n=== Records ({len(records)}) ===")
+    for r in records:
+        lines.append(f"  ID={r.id} machine={r.machine_id} desc={str(r.description)[:50]} perf={r.date_performed}")
+    lines.append(f"\n=== Done check ===")
+    for p in plans:
+        if p.planned_start:
+            ds = p.status in ('completed',)
+            dr = any(r.machine_id == p.machine_id and r.date_performed and r.date_performed.date() == p.planned_start for r in records)
+            lines.append(f"  Plan {p.id} on {p.planned_start}: status_done={ds}, record_done={dr}")
+    return '<pre>' + '\n'.join(lines) + '</pre>'
+
+
 @app.route('/maintenance-calendar/delete', methods=['POST'])
 @login_required
 @role_required('admin')
