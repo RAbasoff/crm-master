@@ -2143,16 +2143,9 @@ def maintenance_calendar_complete():
             plan = MaintenancePlan.query.get(int(plan_id))
             if plan:
                 event_date = request.form.get('date')
-                if plan.recurrence and plan.recurrence != 'none' and event_date:
-                    event_dt = datetime.strptime(event_date, '%Y-%m-%d')
-                    # Clean up old records with next_maintenance on this date (from old buggy code)
-                    old_records = MaintenanceRecord.query.filter(
-                        MaintenanceRecord.machine_id == plan.machine_id,
-                        db.func.date(MaintenanceRecord.next_maintenance) == event_date
-                    ).all()
-                    for old in old_records:
-                        old.next_maintenance = None
-                    # Create completion record — do NOT set next_maintenance (causes duplicate)
+                event_dt = datetime.strptime(event_date, '%Y-%m-%d') if event_date else datetime.utcnow()
+                if plan.recurrence and plan.recurrence != 'none':
+                    # Recurring plan — mark only THIS occurrence as done
                     mr = MaintenanceRecord(
                         machine_id=plan.machine_id,
                         maintenance_type=plan.maintenance_type,
@@ -2164,10 +2157,21 @@ def maintenance_calendar_complete():
                     )
                     db.session.add(mr)
                     db.session.commit()
-                    flash(_('Recurring event marked as completed'), 'success')
+                    flash(_('Occurrence marked as completed'), 'success')
                 else:
+                    # Non-recurring plan — mark whole plan done
                     plan.status = 'completed'
-                    plan.actual_end = datetime.utcnow().date()
+                    plan.actual_end = event_dt.date()
+                    mr = MaintenanceRecord(
+                        machine_id=plan.machine_id,
+                        maintenance_type=plan.maintenance_type,
+                        description=f'{plan.title} — completed by {current_user.display_name or current_user.username}',
+                        performed_by=current_user.id,
+                        date_performed=event_dt,
+                        next_maintenance=None,
+                        cost=0
+                    )
+                    db.session.add(mr)
                     db.session.commit()
                     flash(_('Plan marked as completed'), 'success')
             else:
