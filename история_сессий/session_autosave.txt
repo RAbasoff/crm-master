@@ -1,25 +1,25 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-18 17:15 UTC
+Время: 2026-09-20 22:30 UTC
 ============================================================
 
-Последний коммит: e32d9f5 fix: calendar complete/delete — clear dates on complete, verify commit, expire session
-Git status: clean (pushed to origin)
+Последний коммит: 95db34c fix: safe_commit return value checked across all blueprints
+Git status: 1 изменённый файл (только этот autosave-файл + session_2026-09-20.txt)
 
-ПРОДАКШЕН: rabasoff.pythonanywhere.com
-  - Путь проекта: ~/crm-master
-  - Логин: admin/Aba103sov
-  - Старый код на проде: AJAX кнопки НЕ задеплоины
+ПРОДАКШЕН: rabasoff.pythonanywhere.com / ~/crm-master
 
-ЗАПУШЕННЫЕ КОММИТЫ (ждут деплоя):
-  1. 6fd8de7 — maintenance calendar complete/delete + cylinder limit
-  2. 4d39387 — overdue section: ✅ и 🗑 кнопки добавлены
-  3. b4083a6 — AJAX-отправка кнопок, убран confirm-блок
-  4. e32d9f5 — clear dates on complete, verify commit, expire session
+СЕССИЯ — ОСНОВНЫЕ ИЗМЕНЕНИЯ:
+  1. Календарь ТО: record_id для complete/delete + PartMaintenanceLog при выполнении
+  2. Склад: 16 safe_commit() проверок + nested form fix + safe_float
+  3. Все блюпринты: ~85 safe_commit() проверок (contractors, chat, electricity, faults, gas, monteurs)
+  4. app.py: календарь ТО complete handler создаёт PartMaintenanceLog
 
-ОЖИДАЕТ ДЕЙСТВИЙ:
-  1. cd ~/crm-master && git pull origin master (на PA)
-  2. Web → Reload
-  3. Проверить /maintenance-calendar — ✅ и 🗑 должны работать (даты очищаются, записи пропадают)
+ДЕПЛОЙ:
+  cd ~/crm-master && git pull origin master
+  Web → Reload
+
+СЛЕДУЮЩАЯ СЕССИЯ:
+  - app.py: ~120 unchecked safe_commit() в основном файле
+  - Проверить подрядчиков, календарь ТО, склад на продакшене
 
 ============================================================

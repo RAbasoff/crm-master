@@ -1,0 +1,75 @@
+============================================================
+СЕССИЯ CRM_Мастерская — 2026-09-20
+============================================================
+
+Проект: D:\ИИ\CRM_Мастерская
+GitHub: https://github.com/RAbasoff/crm-master.git
+Online: https://rabasoff.pythonanywhere.com
+
+============================================================
+КОММИТОВ ЗА СЕССИЮ: 4
+============================================================
+
+1. 1b0fb7c fix: calendar complete/delete — add record_id for precise targeting
+2. fdde185 fix: warehouse safe_commit — check return value in all 16 POST handlers, fix nested form, safe_float
+3. 95db34c fix: safe_commit return value checked across all blueprints + calendar complete creates PartMaintenanceLog
+4. (app.py + 6 blueprints)
+
+============================================================
+ЧТО СДЕЛАНО
+============================================================
+
+--- SAFE_COMMIT — СИСТЕМНОЕ ИСПРАВЛЕНИЕ ---
+  Корневая причина потери данных: safe_commit() возвращает False при ошибке,
+  но вызывающий код игнорирует результат → пользователь видит "Сохранено",
+  хотя транзакция откатилась.
+
+  Исправлено ВСЕГО ~85 обработчиков:
+  - blueprints/warehouse.py: 16 обработчиков
+  - blueprints/contractors.py: 5 обработчиков
+  - blueprints/chat.py: 6 обработчиков
+  - blueprints/electricity.py: 14 обработчиков
+  - blueprints/faults.py: 15 обработчиков
+  - blueprints/gas.py: 24 обработчика
+  - blueprints/monteurs.py: 1 обработчик
+  - app.py: календарь ТО (1 обработчик)
+
+  НЕ ИСПРАВЛЕНО: app.py ещё ~120 unchecked safe_commit() вызовов
+  (большой объём, отложено на следующую сессию)
+
+--- СКЛАД (Warehouse) ---
+  - Все 16 POST-обработчиков проверяют safe_commit()
+  - Вложенный <form> (delete внутри edit) вынесен наружу
+  - float() заменён на safe_float() в inventory_check и qty_update
+  - CSRF токен auto-inject работает корректно (base.html MutationObserver)
+
+--- ПОДРЯДЧИКИ (Contractors) ---
+  - 5 обработчиков: new, edit, delete, add-employee, delete-employee
+  - Все проверяют safe_commit()
+
+--- КАЛЕНДАРЬ ТО ---
+  - calendar complete/delete: добавлен record_id для точного поиска
+  - machine_maintenance complete: создаёт PartMaintenanceLog → запись зелёная
+  - Шаблон: hidden-инпуты record_id, equipment_id, mro_id на все кнопки
+
+============================================================
+СТАТУС
+============================================================
+
+Git status: clean
+Последний коммит: 95db34c safe_commit checked across all blueprints
+
+ДЕПЛОЙ НА PA:
+  cd ~/crm-master && git pull origin master
+  Web → Reload
+
+============================================================
+ЧТО ДЕЛАТЬ ДАЛЬШЕ
+============================================================
+
+  - app.py: ~120 unchecked safe_commit() — нужно исправить
+  - Проверить работу подрядчиков на продакшене
+  - Проверить календарь ТО — выполнение и удаление
+  - Проверить склад — создание/редактирование товаров
+
+============================================================
