@@ -108,13 +108,13 @@
         <div style="display:flex;gap:8px;align-items:center">
             <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
             <a href="/warehouse" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
-            {% if item and current_user.has_role('admin') %}
-            <form method="POST" action="/warehouse/{{ item.id }}/delete" style="margin-left:auto" onsubmit="return confirm('{{ _('Delete this item?') }}')">
-                <button type="submit" class="btn btn-danger">🗑️ {{ _('Delete') }}</button>
-            </form>
-            {% endif %}
         </div>
     </form>
+    {% if item and current_user.has_role('admin') %}
+    <form method="POST" action="/warehouse/{{ item.id }}/delete" style="margin-top:-36px;text-align:right" onsubmit="return confirm('{{ _('Delete this item?') }}')">
+        <button type="submit" class="btn btn-danger">🗑️ {{ _('Delete') }}</button>
+    </form>
+    {% endif %}
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
