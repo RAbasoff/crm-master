@@ -31,7 +31,7 @@
     </div>
 </div>
 
-<!-- Inline barcode scanner -->
+<!-- Inline barcode scanner — auto-install mode -->
 <div class="card" style="margin-bottom:10px;padding:10px;border:2px solid #27ae60">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span style="font-size:20px">📷</span>
@@ -43,7 +43,11 @@
             <option value="nitrogen">N₂</option>
             <option value="co2">CO₂</option>
         </select>
-        <button onclick="scanCylinder()" class="btn btn-sm" style="background:#27ae60;color:white;padding:8px 16px">{{ _('Find / Add') }}</button>
+        <select id="cylScanSide" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+            <option value="left">⬅ {{ _('Left') }}</option>
+            <option value="right">➡ {{ _('Right') }}</option>
+        </select>
+        <button onclick="scanCylinder()" class="btn btn-sm" style="background:#27ae60;color:white;padding:8px 16px">📷 {{ _('Scan & Install') }}</button>
     </div>
     <div id="cylScanResult" style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px"></div>
 </div>
@@ -306,44 +310,41 @@ function scanCylinder() {
     lastScannedCyl = number;
 
     var gasType = document.getElementById('cylScanGas').value;
+    var side = document.getElementById('cylScanSide').value;
     var resultDiv = document.getElementById('cylScanResult');
     resultDiv.style.display = '';
     resultDiv.style.background = '#e8f4fd';
-    resultDiv.innerHTML = '<b>' + number + '</b> — searching...';
+    resultDiv.innerHTML = '<b>' + number + '</b> — installing...';
 
-    csrfFetch('/gas/api/cylinders/quick-add', {
+    csrfFetch('/gas/api/cylinders/scan', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({number: number, gas_type: gasType})
+        body: JSON.stringify({code: number, gas_type: gasType, side: side})
     })
     .then(function(r) { return r.json(); })
     .then(function(d) {
         if (d.error) {
             resultDiv.style.background = '#fde8e8';
             resultDiv.innerHTML = '❌ ' + d.error;
+            scanInput.value = '';
+            scanInput.focus();
             return;
         }
-        var isNew = !d.found;
-        var statusColors = {full:'#27ae60', in_use:'#f39c12', empty:'#c0392b', maintenance:'#95a5a6'};
-        var sc = statusColors[d.status] || '#888';
+        var gasLabel = d.gas_type === 'nitrogen' ? 'N₂' : 'CO₂';
+        var sideLabel = side === 'left' ? '⬅ {{ _("Left") }}' : '➡ {{ _("Right") }}';
         var html = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
-        html += '<span style="font-size:16px">' + (isNew ? '🆕' : '✅') + '</span>';
-        html += '<b>' + d.number + '</b>';
-        html += '<span style="color:' + sc + ';font-weight:700">' + d.status.toUpperCase().replace('_',' ') + '</span>';
-        if (d.gas_type === 'nitrogen') html += '<span class="badge badge-active" style="font-size:10px">N₂</span>';
-        else html += '<span class="badge badge-maintenance" style="font-size:10px">CO₂</span>';
-        if (isNew) html += '<span style="color:#27ae60;font-size:11px">({{ _("new cylinder created") }})</span>';
+        html += '<span style="font-size:16px">✅</span>';
+        html += '<b>' + d.cylinder_number + '</b>';
+        html += '<span style="color:#f39c12;font-weight:700">IN USE</span>';
+        html += '<span class="badge" style="font-size:10px;background:#3498db;color:white">' + gasLabel + '</span>';
+        html += '<span style="font-size:11px;color:#555">' + sideLabel + '</span>';
+        if (d.old_status && d.old_status !== 'in_use') html += '<span style="font-size:10px;color:#888">(' + d.old_status + ' → in_use)</span>';
         html += '</div>';
-        html += '<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">';
-        html += '<button onclick="quickStatus(' + d.id + ',\'full\',this)" style="padding:4px 10px;border:1.5px solid #27ae60;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;color:#27ae60">🟢 {{ _("Full") }}</button>';
-        html += '<button onclick="quickStatus(' + d.id + ',\'in_use\',this)" style="padding:4px 10px;border:1.5px solid #f39c12;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;color:#f39c12">🟠 {{ _("In Use") }}</button>';
-        html += '<button onclick="quickStatus(' + d.id + ',\'empty\',this)" style="padding:4px 10px;border:1.5px solid #c0392b;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;color:#c0392b">🔴 {{ _("Empty") }}</button>';
-        html += '<a href="/gas/cylinders/' + d.id + '/edit" style="padding:4px 10px;border:1.5px solid #3498db;background:white;border-radius:4px;font-size:11px;color:#3498db;text-decoration:none">✏️</a>';
-        html += '</div>';
-        resultDiv.style.background = isNew ? '#f0fff0' : '#e8f4fd';
+        resultDiv.style.background = '#f0fff0';
         resultDiv.innerHTML = html;
         scanInput.value = '';
         scanInput.focus();
+        setTimeout(function() { location.reload(); }, 1200);
     })
     .catch(function() {
         resultDiv.style.background = '#fde8e8';
