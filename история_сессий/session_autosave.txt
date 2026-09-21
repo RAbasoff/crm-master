@@ -1,25 +1,28 @@
 ============================================================
 АВТОСОХРАНЕНИЕ СЕССИИ CRM_Мастерская
-Время: 2026-09-20 22:30 UTC
+Время: 2026-09-21 23:00 UTC
 ============================================================
 
-Последний коммит: 95db34c fix: safe_commit return value checked across all blueprints
-Git status: 1 изменённый файл (только этот autosave-файл + session_2026-09-20.txt)
+Последний коммит: 24fd8a8 debug: show done value in calendar cells + verify skip_weekends
+Git status: чистый (кроме autosave + session files)
 
 ПРОДАКШЕН: rabasoff.pythonanywhere.com / ~/crm-master
 
 СЕССИЯ — ОСНОВНЫЕ ИЗМЕНЕНИЯ:
-  1. Календарь ТО: record_id для complete/delete + PartMaintenanceLog при выполнении
-  2. Склад: 16 safe_commit() проверок + nested form fix + safe_float
-  3. Все блюпринты: ~85 safe_commit() проверок (contractors, chat, electricity, faults, gas, monteurs)
-  4. app.py: календарь ТО complete handler создаёт PartMaintenanceLog
+  1. safe_commit: 128 исправлений в app.py + все blueprints
+  2. Gas dashboard scanner: auto-install (scan → install → reload)
+  3. Calendar generator: ~3400 событий на год для 42 станков
+  4. Calendar green checkbox: ИСПРАВЛЕН в коде, НЕ ПРОТЕСТИРОВАН на PA
+
+НЕЗАВЕРШЁННОЕ:
+  - Green checkbox календаря: debug endpoint page not found на PA
+  - Удалить все ТО на PA + восстановить шаблон пользователя
+  - Образец календаря от пользователя (создаст на сентябрь)
+  - Разбивка app.py на blueprints (не начата)
 
 ДЕПЛОЙ:
   cd ~/crm-master && git pull origin master
+  python clean_calendar.py   # очистить ТО если нужно
   Web → Reload
-
-СЛЕДУЮЩАЯ СЕССИЯ:
-  - app.py: ~120 unchecked safe_commit() в основном файле
-  - Проверить подрядчиков, календарь ТО, склад на продакшене
 
 ============================================================
