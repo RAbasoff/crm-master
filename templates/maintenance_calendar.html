@@ -130,14 +130,14 @@
                                 {% if day_events.append(ev) %}{% endif %}
                             {% endif %}
                         {% endfor %}
-                        <td style="vertical-align:top;height:90px;padding:4px 6px;border:1px solid #eee;{% if cell_date.val == today %}background:#e8f4fd{% elif dow >= 5 %}background:#fff5f5{% endif %}">
+                        <td class="cal-drop{% if dow < 5 %} weekday{% endif %}" data-date="{{ cell_date.val.strftime('%Y-%m-%d') }}" style="vertical-align:top;height:90px;padding:4px 6px;border:1px solid #eee;{% if cell_date.val == today %}background:#e8f4fd{% elif dow >= 5 %}background:#fff5f5{% endif %}">
                             <div style="font-size:12px;font-weight:600;color:{% if cell_date.val == today %}#3498db{% elif dow >= 5 %}#e74c3c{% else %}#333{% endif %};margin-bottom:4px">
                                 {{ ns.day }}
                             </div>
                             {% for ev in day_events %}
                             {% set is_done = ev.done if ev.done is defined else False %}
                             {% set ev_status = ev.status if ev.status is defined else '' %}
-                            <div style="display:flex;align-items:center;gap:2px;margin-bottom:2px">
+                            <div class="cal-event" draggable="{% if not is_done and current_user.has_role('admin','technician') %}true{% else %}false{% endif %}" data-type="{{ ev.type }}" data-plan-id="{{ ev.plan_id or '' }}" data-part-id="{{ ev.part_id or '' }}" data-date="{{ ev.date.strftime('%Y-%m-%d') }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px;{% if not is_done and current_user.has_role('admin','technician') %}cursor:grab{% endif %}">
                             <a href="{% if ev.type == 'plan' %}/maintenance-plans/{{ ev.plan_id }}{% elif ev.type == 'equipment' %}/equipment/{{ ev.equipment_id }}/edit{% elif ev.type == 'equipment_mro' and ev.machine_id %}/machines/{{ ev.machine_id }}{% else %}/machines/{{ ev.machine_id }}{% endif %}" style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}{% if request.args.get('debug') %} [{{ ev.done }}]{% endif %}
                             </a>
@@ -339,6 +339,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Error: ' + err.message);
                 btn.disabled = false;
                 btn.style.opacity = '1';
+            });
+        });
+    });
+
+    // ── DRAG & DROP ──
+    var draggedEvent = null;
+
+    document.querySelectorAll('.cal-event[draggable="true"]').forEach(function(el) {
+        el.addEventListener('dragstart', function(e) {
+            draggedEvent = el;
+            el.style.opacity = '0.4';
+            e.dataTransfer.setData('text/plain', '');
+        });
+        el.addEventListener('dragend', function() {
+            el.style.opacity = '1';
+            draggedEvent = null;
+            document.querySelectorAll('.cal-drop').forEach(function(td) {
+                td.style.outline = '';
+            });
+        });
+    });
+
+    document.querySelectorAll('.cal-drop').forEach(function(cell) {
+        cell.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            cell.style.outline = '2px solid #4a9eff';
+        });
+        cell.addEventListener('dragleave', function() {
+            cell.style.outline = '';
+        });
+        cell.addEventListener('drop', function(e) {
+            e.preventDefault();
+            cell.style.outline = '';
+            if (!draggedEvent) return;
+
+            var newDate = cell.dataset.date;
+            var oldDate = draggedEvent.dataset.date;
+            var evType = draggedEvent.dataset.type;
+            var planId = draggedEvent.dataset.planId;
+            var partId = draggedEvent.dataset.partId;
+
+            if (!newDate || newDate === oldDate) return;
+
+            // Check weekend
+            var d = new Date(newDate + 'T00:00:00');
+            if (d.getDay() === 0 || d.getDay() === 6) {
+                alert('{{ _("Cannot move to weekend") }}');
+                return;
+            }
+
+            var fd = new FormData();
+            fd.append('csrf_token', '{{ csrf_token() }}');
+            fd.append('type', evType);
+            fd.append('plan_id', planId);
+            fd.append('part_id', partId);
+            fd.append('new_date', newDate);
+
+            fetch('/maintenance-calendar/move', {
+                method: 'POST',
+                body: fd
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.ok) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown'));
+                }
+            }).catch(function(err) {
+                alert('Error: ' + err.message);
             });
         });
     });

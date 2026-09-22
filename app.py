@@ -2404,6 +2404,56 @@ def maintenance_calendar_delete():
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
     return redirect(url_for('maintenance_calendar', month=month))
 
+
+@app.route('/maintenance-calendar/move', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def maintenance_calendar_move():
+    """Drag & drop: move a calendar event to a new date."""
+    ev_type = request.form.get('type', '')
+    plan_id = request.form.get('plan_id')
+    new_date_str = request.form.get('new_date')  # YYYY-MM-DD
+
+    if not new_date_str:
+        return jsonify({'error': 'No date'}), 400
+
+    try:
+        new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+
+    # Don't allow moving to weekends
+    if new_date.weekday() >= 5:
+        return jsonify({'error': 'Cannot move to weekend'}), 400
+
+    try:
+        if ev_type == 'plan' and plan_id:
+            p = MaintenancePlan.query.get(int(plan_id))
+            if p:
+                p.planned_start = new_date
+                if not safe_commit():
+                    return jsonify({'error': 'Save failed'}), 500
+                return jsonify({'ok': True, 'new_date': new_date_str})
+
+        elif ev_type in ('replacement', 'maintenance'):
+            part_id = request.form.get('part_id')
+            if part_id:
+                part = MachinePart.query.get(int(part_id))
+                if part:
+                    if ev_type == 'replacement':
+                        part.next_replacement = new_date
+                    else:
+                        part.next_maintenance = new_date
+                    if not safe_commit():
+                        return jsonify({'error': 'Save failed'}), 500
+                    return jsonify({'ok': True, 'new_date': new_date_str})
+
+        return jsonify({'error': 'Event not found'}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)[:100]}), 500
+
+
 @app.route('/maintenance-calendar/export')
 @login_required
 def maintenance_calendar_export():
@@ -2515,6 +2565,15 @@ def maintenance_plans_list():
     machines = Machine.query.order_by(Machine.name).all()
     return render_template('maintenance_plans.html', plans=plans, machines=machines)
 
+def skip_weekend(d):
+    """Move date to next Monday if it falls on Saturday or Sunday."""
+    if d.weekday() == 5:  # Saturday
+        return d + timedelta(days=2)
+    elif d.weekday() == 6:  # Sunday
+        return d + timedelta(days=1)
+    return d
+
+
 @app.route('/maintenance-plans/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
@@ -2526,6 +2585,11 @@ def maintenance_plan_new():
         except (ValueError, KeyError):
             flash(_('Invalid machine or date'), 'error')
             return redirect(url_for('maintenance_plan_new'))
+        # Skip weekends — move to Monday
+        original = planned_start
+        planned_start = skip_weekend(planned_start)
+        if planned_start != original:
+            flash(_('Date moved from weekend to Monday: {}').format(planned_start.strftime('%d-%m-%Y')), 'info')
         p = MaintenancePlan(
             machine_id=machine_id,
             title=request.form['title'],
