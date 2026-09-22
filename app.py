@@ -16,7 +16,7 @@ from sqlalchemy import func, case
 from config import Config, LANGUAGES, SECTION_KEYS
 from models import (db, User, UserSectionAccess, FactorySection, Machine, MachinePart,
                     PartMaintenanceLog, MachineDocument, MaintenanceRecord, MaintenancePhoto,
-                    MaintenancePlan, MachineSparePart, MachineConsumable, ResponsibleGroup, Verantwoordelijke,
+                    MaintenancePlan, MaintenanceSchedule, MachineSparePart, MachineConsumable, ResponsibleGroup, Verantwoordelijke,
                     Monteur, Contractor, ContractorEmployee, WarehouseGroup, VoorraadItem,
                     VoorraadMutatie, Invoice, InvoiceItem, FaultReport, FaultPhoto, FaultVideo, WorkReport, WorkReportPhoto,
                     PurchaseRequest, WorkSchedule, TimeEntry, Vacation, Message, Notification,
@@ -2797,6 +2797,234 @@ def api_maintenance_reminders():
 
     reminders.sort(key=lambda r: r['date'])
     return jsonify(reminders)
+
+# ============================================================
+# ROUTES — MAINTENANCE SCHEDULE CONFIGURATION
+# ============================================================
+
+@app.route('/maintenance-schedule')
+@login_required
+@role_required('admin', 'director', 'technician')
+def maintenance_schedule():
+    machines = Machine.query.order_by(Machine.name).all()
+    schedules = MaintenanceSchedule.query.order_by(MaintenanceSchedule.machine_id).all()
+    sched_by_machine = {}
+    for s in schedules:
+        sched_by_machine.setdefault(s.machine_id, []).append(s)
+    return render_template('maintenance_schedule.html',
+                           machines=machines, sched_by_machine=sched_by_machine)
+
+@app.route('/maintenance-schedule/new', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def maintenance_schedule_new():
+    machine_id = safe_int(request.form.get('machine_id'))
+    title = request.form.get('title', '').strip()
+    recurrence = request.form.get('recurrence', 'monthly')
+    preferred_dow = safe_int(request.form.get('preferred_dow'))
+    preferred_day = safe_int(request.form.get('preferred_day'))
+    mtype = request.form.get('maintenance_type', 'preventive')
+    description = request.form.get('description', '')
+
+    if not machine_id or not title:
+        flash(_('Machine and title are required'), 'error')
+        return redirect(url_for('maintenance_schedule'))
+
+    s = MaintenanceSchedule(
+        machine_id=machine_id, title=title, description=description,
+        maintenance_type=mtype, recurrence=recurrence,
+        preferred_dow=preferred_dow if preferred_dow is not None else None,
+        preferred_day=preferred_day if preferred_day is not None else None,
+        months_ahead=3, is_active=True
+    )
+    db.session.add(s)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        flash(_('Schedule added'), 'success')
+    return redirect(url_for('maintenance_schedule'))
+
+@app.route('/maintenance-schedule/<int:sched_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def maintenance_schedule_delete(sched_id):
+    s = MaintenanceSchedule.query.get_or_404(sched_id)
+    db.session.delete(s)
+    if not safe_commit():
+        flash(_('Delete failed'), 'error')
+    else:
+        flash(_('Schedule deleted'), 'success')
+    return redirect(url_for('maintenance_schedule'))
+
+@app.route('/maintenance-schedule/<int:sched_id>/toggle', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def maintenance_schedule_toggle(sched_id):
+    s = MaintenanceSchedule.query.get_or_404(sched_id)
+    s.is_active = not s.is_active
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    return redirect(url_for('maintenance_schedule'))
+
+@app.route('/maintenance-schedule/generate', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def maintenance_schedule_generate():
+    """Generate MaintenancePlan entries from active schedules."""
+    months = safe_int(request.form.get('months'), 3)
+    schedules = MaintenanceSchedule.query.filter_by(is_active=True).all()
+    if not schedules:
+        flash(_('No active schedules'), 'error')
+        return redirect(url_for('maintenance_schedule'))
+
+    today = datetime.utcnow().date()
+    end_date = today + timedelta(days=months * 31)
+    created = 0
+    skipped = 0
+
+    for sched in schedules:
+        dates = _generate_schedule_dates(sched, today, end_date)
+        for d in dates:
+            exists = MaintenancePlan.query.filter(
+                MaintenancePlan.machine_id == sched.machine_id,
+                MaintenancePlan.title == sched.title,
+                MaintenancePlan.planned_start == d
+            ).first()
+            if exists:
+                skipped += 1
+                continue
+            p = MaintenancePlan(
+                machine_id=sched.machine_id,
+                title=sched.title,
+                description=sched.description or sched.title,
+                maintenance_type=sched.maintenance_type,
+                status='planned',
+                planned_start=d,
+                recurrence=sched.recurrence,
+                created_by=current_user.id
+            )
+            db.session.add(p)
+            created += 1
+
+    if not safe_commit():
+        flash(_('Generation failed'), 'error')
+    else:
+        flash(_('{} events created, {} skipped (already exist)').format(created, skipped), 'success')
+    return redirect(url_for('maintenance_schedule'))
+
+
+def _generate_schedule_dates(sched, start, end):
+    """Generate dates for a schedule entry between start and end."""
+    dates = []
+    dow = sched.preferred_dow  # 0=Mon..6=Sun
+    day = sched.preferred_day  # 1-28
+
+    # Find first occurrence
+    if sched.recurrence == 'weekly':
+        d = start
+        if dow is not None:
+            days_ahead = dow - d.weekday()
+            if days_ahead < 0: days_ahead += 7
+            d = d + timedelta(days=days_ahead)
+        while d < end:
+            if d.weekday() < 5:  # Mon-Fri only
+                dates.append(d)
+            d += timedelta(weeks=1)
+
+    elif sched.recurrence == 'biweekly':
+        d = start
+        if dow is not None:
+            days_ahead = dow - d.weekday()
+            if days_ahead < 0: days_ahead += 7
+            d = d + timedelta(days=days_ahead)
+        while d < end:
+            if d.weekday() < 5:
+                dates.append(d)
+            d += timedelta(weeks=2)
+
+    elif sched.recurrence == 'monthly':
+        target_day = day or 1
+        d = start.replace(day=min(target_day, 28))
+        if d < start:
+            month = d.month + 1
+            year = d.year
+            if month > 12: month = 1; year += 1
+            d = d.replace(year=year, month=month, day=min(target_day, 28))
+        while d < end:
+            if d.weekday() < 5:
+                dates.append(d)
+            else:
+                # Move to next Monday
+                days_ahead = (7 - d.weekday()) % 7
+                if days_ahead == 0: days_ahead = 1
+                alt = d + timedelta(days=days_ahead)
+                if alt < end:
+                    dates.append(alt)
+            month = d.month + 1
+            year = d.year
+            if month > 12: month = 1; year += 1
+            d = d.replace(year=year, month=month, day=min(target_day, 28))
+
+    elif sched.recurrence == 'quarterly':
+        target_day = day or 1
+        d = start.replace(day=min(target_day, 28))
+        while d < end:
+            if d.weekday() < 5:
+                dates.append(d)
+            else:
+                days_ahead = (7 - d.weekday()) % 7
+                if days_ahead == 0: days_ahead = 1
+                alt = d + timedelta(days=days_ahead)
+                if alt < end:
+                    dates.append(alt)
+            month = d.month + 3
+            year = d.year
+            while month > 12:
+                month -= 12
+                year += 1
+            d = d.replace(year=year, month=month, day=min(target_day, 28))
+
+    elif sched.recurrence == 'semiannual':
+        target_day = day or 1
+        d = start.replace(day=min(target_day, 28))
+        while d < end:
+            if d.weekday() < 5:
+                dates.append(d)
+            else:
+                days_ahead = (7 - d.weekday()) % 7
+                if days_ahead == 0: days_ahead = 1
+                alt = d + timedelta(days=days_ahead)
+                if alt < end:
+                    dates.append(alt)
+            month = d.month + 6
+            year = d.year
+            while month > 12:
+                month -= 12
+                year += 1
+            d = d.replace(year=year, month=month, day=min(target_day, 28))
+
+    elif sched.recurrence == 'yearly':
+        target_day = day or 1
+        target_month = (start.month % 12) + 1
+        try:
+            d = start.replace(year=start.year, month=target_month, day=min(target_day, 28))
+        except ValueError:
+            d = start.replace(year=start.year, month=target_month, day=28)
+        if d < start:
+            d = d.replace(year=d.year + 1)
+        while d < end:
+            if d.weekday() < 5:
+                dates.append(d)
+            else:
+                days_ahead = (7 - d.weekday()) % 7
+                if days_ahead == 0: days_ahead = 1
+                alt = d + timedelta(days=days_ahead)
+                if alt < end:
+                    dates.append(alt)
+            d = d.replace(year=d.year + 1)
+
+    return dates
+
 
 # ============================================================
 # ROUTES — EQUIPMENT MAINTENANCE

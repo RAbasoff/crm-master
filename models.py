@@ -266,6 +266,22 @@ class MaintenancePlan(db.Model):
     worker = db.relationship('Monteur', backref='maintenance_plans')
     creator = db.relationship('User', foreign_keys=[created_by])
 
+class MaintenanceSchedule(db.Model):
+    """Per-machine maintenance schedule template. Generator creates MaintenancePlan entries from these."""
+    __tablename__ = 'maintenance_schedule'
+    id = db.Column(db.Integer, primary_key=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    maintenance_type = db.Column(db.String(50), default='preventive')
+    recurrence = db.Column(db.String(20), nullable=False)  # weekly/biweekly/monthly/quarterly/semiannual/yearly
+    preferred_dow = db.Column(db.Integer)  # 0=Mon..6=Sun, NULL=any
+    preferred_day = db.Column(db.Integer)  # 1-28 for monthly, NULL=auto
+    months_ahead = db.Column(db.Integer, default=3)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    machine = db.relationship('Machine', backref='maintenance_schedules')
+
 class MachineSparePart(db.Model):
     __tablename__ = 'machine_spare_part'
     id = db.Column(db.Integer, primary_key=True)

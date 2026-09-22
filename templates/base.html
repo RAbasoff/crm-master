@@ -415,8 +415,7 @@
             {% endif %}
             {% if has_access('maintenance') %}
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
-            {% endif %}
-            {% if has_access('maintenance') %}
+            <a href="/maintenance-schedule" class="sb-item {% if 'maintenance_schedule' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Maint. Schedule') }}</a>
             <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
             {% endif %}
             {% if has_access('equipment') %}
