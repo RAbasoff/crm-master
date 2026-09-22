@@ -664,6 +664,72 @@ def warehouse_transfer_print():
     return render_template('warehouse_transfer.html', items=items, now=datetime.utcnow())
 
 
+@bp.route('/<int:item_id>/transfer', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'technician')
+def warehouse_transfer(item_id):
+    """Transfer item quantity to a responsible person."""
+    from models import Verantwoordelijke
+    item = VoorraadItem.query.get_or_404(item_id)
+    persons = Verantwoordelijke.query.filter_by(actief=True).order_by(Verantwoordelijke.naam).all()
+
+    if request.method == 'POST':
+        person_id = safe_int(request.form.get('person_id'))
+        qty = safe_float(request.form.get('quantity'), 0)
+        notes = request.form.get('notes', '')
+
+        if not person_id:
+            flash(_('Select a responsible person'), 'error')
+            return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
+        if qty <= 0:
+            flash(_('Quantity must be positive'), 'error')
+            return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
+        if qty > item.hoeveelheid:
+            flash(_('Insufficient stock! Available: {} {}').format(item.hoeveelheid, item.eenheid), 'error')
+            return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
+
+        person = Verantwoordelijke.query.get(person_id)
+        if not person:
+            flash(_('Person not found'), 'error')
+            return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
+
+        # Create outgoing movement
+        m = VoorraadMutatie(
+            item_id=item_id, type='uitgaand', hoeveelheid=qty,
+            opmerking=f'Transfer to: {person.naam}' + (f' — {notes}' if notes else ''),
+            user_id=current_user.id
+        )
+        item.hoeveelheid -= qty
+
+        # Create reservation (tracks who has it)
+        r = WarehouseReservation(
+            item_id=item_id, quantity=qty,
+            reserved_for=person.naam,
+            reserved_by=current_user.id,
+            notes=notes or f'Transferred to {person.naam}'
+        )
+        db.session.add(m)
+        db.session.add(r)
+        if not safe_commit():
+            flash(_('Transfer failed. Please try again.'), 'error')
+            return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
+
+        # Low-stock notification
+        if item.minimum and item.hoeveelheid <= item.minimum:
+            from utils import create_notification
+            from models import User
+            admins = User.query.filter_by(role='admin', is_active_user=True).all()
+            level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+            msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
+            for a in admins:
+                create_notification(a.id, msg, link='/warehouse/')
+
+        flash(_('Transferred {} {} {} to {}').format(qty, item.eenheid, item.naam, person.naam), 'success')
+        return redirect(url_for('warehouse.warehouse_list'))
+
+    return render_template('warehouse_transfer_form.html', item=item, persons=persons)
+
+
 def _get_logistiek_group_id():
     """Return the Logistiek - Oktopus WarehouseGroup ID."""
     wg = WarehouseGroup.query.filter_by(name='Logistiek - Oktopus').first()

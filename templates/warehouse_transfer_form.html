@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Transfer Item') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📦 {{ _('Transfer Item') }}</h1>
+    <a href="/warehouse" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>{{ item.naam }}</h3>
+        <span style="font-size:13px;color:var(--text-dim)">{{ _('Available') }}: <strong>{{ item.hoeveelheid }}</strong> {{ item.eenheid }}</span>
+    </div>
+
+    <form method="POST" action="/warehouse/{{ item.id }}/transfer">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label>{{ _('Responsible Person') }} *</label>
+            <select name="person_id" required>
+                <option value="">— {{ _('Select') }} —</option>
+                {% for p in persons %}
+                <option value="{{ p.id }}">{{ p.naam }}{% if p.functie %} ({{ p.functie }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Quantity') }} *</label>
+            <input type="number" name="quantity" value="1" min="0.1" max="{{ item.hoeveelheid }}" step="0.1" required>
+            <small style="color:var(--text-dim)">{{ item.eenheid }} (max: {{ item.hoeveelheid }})</small>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <input type="text" name="notes" placeholder="{{ _('e.g. Machine maintenance, project X...') }}">
+        </div>
+
+        <div class="btn-group">
+            <button type="submit" class="btn btn-primary">📦 {{ _('Transfer') }}</button>
+            <a href="/warehouse" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -85,6 +85,7 @@
             <td>€{{ "%.2f"|format(i.prijs) }}</td>
             <td style="white-space:nowrap">
                 <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                <a href="/warehouse/{{ i.id }}/transfer" class="btn btn-sm" style="background:#8e44ad;color:white;padding:4px 6px" title="{{ _('Transfer to person') }}">📦</a>
                 <button class="btn btn-sm btn-success" onclick="document.getElementById('mv-{{ i.id }}').style.display='table-row'">+</button>
                 <a href="/api/warehouse/qr/{{ i.id }}" class="btn btn-sm" style="background:#2c3e50;color:white;padding:4px 6px" title="QR" target="_blank">QR</a>
                 <button class="btn btn-sm" style="background:#7f8c8d;color:white;padding:4px 6px" title="Barcode" onclick="showBarcode('{{ i.id }}', '{{ i.naam }}', '{{ i.supplier_part_number or '' }}')">|||</button>
