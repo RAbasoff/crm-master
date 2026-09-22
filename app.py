@@ -2881,41 +2881,53 @@ def maintenance_schedule_generate():
     end_date = today + timedelta(days=months * 31)
     created = 0
     skipped = 0
+    debug_info = []
 
-    # Pre-fetch all existing plans in the date range for dedup
-    existing_plans = MaintenancePlan.query.filter(
-        MaintenancePlan.planned_start >= today,
-        MaintenancePlan.planned_start <= end_date
-    ).all()
-    existing_set = set()
-    for p in existing_plans:
-        existing_set.add((p.machine_id, str(p.planned_start)))
+    try:
+        # Pre-fetch all existing plans in the date range for dedup
+        existing_plans = MaintenancePlan.query.filter(
+            MaintenancePlan.planned_start >= today,
+            MaintenancePlan.planned_start <= end_date
+        ).all()
+        existing_set = set()
+        for p in existing_plans:
+            existing_set.add((p.machine_id, str(p.planned_start)))
 
-    for sched in schedules:
-        dates = _generate_schedule_dates(sched, today, end_date)
-        for d in dates:
-            key = (sched.machine_id, str(d))
-            if key in existing_set:
-                skipped += 1
-                continue
-            existing_set.add(key)
-            p = MaintenancePlan(
-                machine_id=sched.machine_id,
-                title=sched.title,
-                description=sched.description or sched.title,
-                maintenance_type=sched.maintenance_type,
-                status='planned',
-                planned_start=d,
-                recurrence=sched.recurrence,
-                created_by=current_user.id
-            )
-            db.session.add(p)
-            created += 1
+        for sched in schedules:
+            dates = _generate_schedule_dates(sched, today, end_date)
+            debug_info.append(f'Sched {sched.id}: machine={sched.machine_id} title={sched.title} dates={len(dates)}')
+            for d in dates:
+                key = (sched.machine_id, str(d))
+                if key in existing_set:
+                    skipped += 1
+                    continue
+                existing_set.add(key)
+                p = MaintenancePlan(
+                    machine_id=sched.machine_id,
+                    title=sched.title,
+                    description=sched.description or sched.title,
+                    maintenance_type=sched.maintenance_type,
+                    status='planned',
+                    planned_start=d,
+                    recurrence=sched.recurrence,
+                    created_by=current_user.id
+                )
+                db.session.add(p)
+                created += 1
 
-    if not safe_commit():
-        flash(_('Generation failed'), 'error')
-    else:
-        flash(_('{} events created, {} skipped (already exist)').format(created, skipped), 'success')
+        db.session.flush()
+        if not safe_commit():
+            flash(_('Generation failed — database error'), 'error')
+            log_system('ERROR', 'maintenance', f'Schedule generation commit failed: created={created}')
+        else:
+            msg = _('{} events created, {} skipped').format(created, skipped)
+            flash(msg, 'success')
+            log_system('INFO', 'maintenance', f'Schedule generation: {created} created, {skipped} skipped. {"; ".join(debug_info[:3])}')
+    except Exception as e:
+        db.session.rollback()
+        flash(_('Generation error: {}').format(str(e)[:100]), 'error')
+        log_system('ERROR', 'maintenance', f'Schedule generation exception: {e}')
+
     return redirect(url_for('maintenance_schedule'))
 
 
