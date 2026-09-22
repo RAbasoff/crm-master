@@ -2932,42 +2932,52 @@ def maintenance_schedule_generate():
 
 
 def _generate_schedule_dates(sched, start, end):
-    """Generate dates for a schedule entry between start and end."""
+    """Generate dates for a schedule entry between start and end.
+    Spreads events across different weekdays to avoid bunching."""
     dates = []
     dow = sched.preferred_dow  # 0=Mon..6=Sun
     day = sched.preferred_day  # 1-28
+    mid = sched.machine_id or 0
 
-    # Find first occurrence
+    # Stagger: different machines get slightly different days
+    # Machine 1→Mon, 2→Tue, 3→Wed, etc. (for weekly)
+    # Machine 1→1st, 2→2nd, 3→3rd, etc. (for monthly)
+    stagger_weekly = mid % 5  # 0=Mon..4=Fri
+    stagger_monthly = (mid % 25) + 1  # 1..25
+
     if sched.recurrence == 'weekly':
+        # Use preferred_dow if set, otherwise stagger by machine_id
+        target_dow = dow if dow is not None else stagger_weekly
         d = start
-        if dow is not None:
-            days_ahead = dow - d.weekday()
-            if days_ahead < 0: days_ahead += 7
-            d = d + timedelta(days=days_ahead)
+        days_ahead = target_dow - d.weekday()
+        if days_ahead < 0: days_ahead += 7
+        d = d + timedelta(days=days_ahead)
         while d < end:
-            if d.weekday() < 5:  # Mon-Fri only
+            if d.weekday() < 5:
                 dates.append(d)
             d += timedelta(weeks=1)
 
     elif sched.recurrence == 'biweekly':
+        target_dow = dow if dow is not None else stagger_weekly
         d = start
-        if dow is not None:
-            days_ahead = dow - d.weekday()
-            if days_ahead < 0: days_ahead += 7
-            d = d + timedelta(days=days_ahead)
+        days_ahead = target_dow - d.weekday()
+        if days_ahead < 0: days_ahead += 7
+        d = d + timedelta(days=days_ahead)
         while d < end:
             if d.weekday() < 5:
                 dates.append(d)
             d += timedelta(weeks=2)
 
     elif sched.recurrence == 'monthly':
-        target_day = day or 1
-        d = start.replace(day=min(target_day, 28))
+        # Use preferred_day if set, otherwise stagger by machine_id
+        target_day = day if day is not None else stagger_monthly
+        target_day = min(target_day, 28)
+        d = start.replace(day=target_day)
         if d < start:
             month = d.month + 1
             year = d.year
             if month > 12: month = 1; year += 1
-            d = d.replace(year=year, month=month, day=min(target_day, 28))
+            d = d.replace(year=year, month=month, day=target_day)
         while d < end:
             if d.weekday() < 5:
                 dates.append(d)
@@ -2984,8 +2994,11 @@ def _generate_schedule_dates(sched, start, end):
             d = d.replace(year=year, month=month, day=min(target_day, 28))
 
     elif sched.recurrence == 'quarterly':
-        target_day = day or 1
-        d = start.replace(day=min(target_day, 28))
+        td = day if day is not None else stagger_monthly
+        td = min(td, 28)
+        d = start.replace(day=td)
+        if d < start:
+            d = d + timedelta(days=1)
         while d < end:
             if d.weekday() < 5:
                 dates.append(d)
@@ -3000,11 +3013,14 @@ def _generate_schedule_dates(sched, start, end):
             while month > 12:
                 month -= 12
                 year += 1
-            d = d.replace(year=year, month=month, day=min(target_day, 28))
+            d = d.replace(year=year, month=month, day=td)
 
     elif sched.recurrence == 'semiannual':
-        target_day = day or 1
-        d = start.replace(day=min(target_day, 28))
+        td = day if day is not None else stagger_monthly
+        td = min(td, 28)
+        d = start.replace(day=td)
+        if d < start:
+            d = d + timedelta(days=1)
         while d < end:
             if d.weekday() < 5:
                 dates.append(d)
@@ -3019,13 +3035,14 @@ def _generate_schedule_dates(sched, start, end):
             while month > 12:
                 month -= 12
                 year += 1
-            d = d.replace(year=year, month=month, day=min(target_day, 28))
+            d = d.replace(year=year, month=month, day=td)
 
     elif sched.recurrence == 'yearly':
-        target_day = day or 1
+        td = day if day is not None else stagger_monthly
+        td = min(td, 28)
         target_month = (start.month % 12) + 1
         try:
-            d = start.replace(year=start.year, month=target_month, day=min(target_day, 28))
+            d = start.replace(year=start.year, month=target_month, day=td)
         except ValueError:
             d = start.replace(year=start.year, month=target_month, day=28)
         if d < start:
