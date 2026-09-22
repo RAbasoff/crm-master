@@ -1,0 +1,50 @@
+============================================================
+СЕССИЯ CRM_Мастерская — 2026-09-22
+============================================================
+
+Проект: D:\ИИ\CRM_Мастерская
+GitHub: https://github.com/RAbasoff/crm-master.git
+Online: https://rabasoff.pythonanywhere.com
+
+============================================================
+СТАТУС НА КОНЕЦ СЕССИИ
+============================================================
+
+Последний коммит: adcec29 fix: schedule generator add error logging + flush before commit
+PA: работает на Python 3.12, virtualenv /home/rabasoff/.virtualenvs/crm
+
+============================================================
+ЧТО СДЕЛАНО ЗА СЕССИЮ
+============================================================
+
+1. РАЗБИВКА APP.PY НА BLUEPRINTS — ЗАПЛАНИРОВАНА, НЕ НАЧАТА
+   - 215 роутов в одном файле (8000+ строк)
+   - План: 18+ blueprint'ов (machines, responsible, two, invoices, users, 
+     settings, equipment, schedule, maintenance, messages, time_tracking, 
+     vacations, orders, reports, workers, purchase, tool_wear, archive)
+
+2. КАЛЕНДАРЬ ТО — НОВАЯ СИСТЕМА РАСПИСАНИЯ
+   - Модель MaintenanceSchedule добавлена в models.py
+   - Страница /maintenance-schedule с UI для настройки ТО
+   - Генератор создаёт MaintenancePlan на 1-3 мес вперёд
+   - Дедупликация по machine_id + дата
+   - Шаблон maintenance_schedule.html создан
+
+3. КАЛЕНДАРЬ ТО — ОЧИСТКА
+   - Удалены все старые генерированные записи (2899 планов)
+   - Скрипты generate_calendar.py, clean_calendar.py удалены
+
+4. PA — ПРОБЛЕМЫ С VIRTUALENV
+   - После git reset --hard virtualenv сломался
+   - Создано новое окружение: /home/rabasoff/.virtualenvs/crm (Python 3.12)
+   - Сайт переключён на Python 3.10 для совместимости
+
+============================================================
+ЧТО ДЕЛАТЬ ДАЛЬШЕ
+============================================================
+
+1. Протестировать Maintenance Schedule на PA
+2. Разбивка app.py на blueprints (большая задача)
+3. Green checkbox календаря — проверить работает ли теперь
+
+============================================================
