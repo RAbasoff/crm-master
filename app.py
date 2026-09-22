@@ -5943,12 +5943,6 @@ def warehouse_scan_page():
     """Dedicated warehouse barcode scanner"""
     return render_template('warehouse_scan.html')
 
-@app.route('/machines/scan')
-@login_required
-def machine_scan_page():
-    """Dedicated machine QR/barcode scanner"""
-    return render_template('machine_scan.html')
-
 @app.route('/qr/generate/<int:order_id>')
 @login_required
 def qr_generate(order_id):
@@ -6184,17 +6178,6 @@ def machine_barcode(machine_id):
 def machine_qr_label(machine_id):
     m = Machine.query.get_or_404(machine_id)
     return render_template('machine_qr_label.html', machine=m)
-
-@app.route('/machines/qr-labels')
-@login_required
-def machines_qr_labels():
-    ids_str = request.args.get('ids', '')
-    if not ids_str:
-        flash(_('Select machines first'), 'error')
-        return redirect(url_for('machines.machines_list'))
-    ids = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
-    machines = Machine.query.filter(Machine.id.in_(ids)).order_by(Machine.name).all()
-    return render_template('machines_qr_labels.html', machines=machines)
 
 @app.route('/qr/product', methods=['POST'])
 @login_required
