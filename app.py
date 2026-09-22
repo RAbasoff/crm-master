@@ -64,6 +64,8 @@ from blueprints.gas import bp as gas_bp
 app.register_blueprint(gas_bp)
 from blueprints.chat import bp as chat_bp
 app.register_blueprint(chat_bp)
+from blueprints.machines import bp as machines_bp
+app.register_blueprint(machines_bp)
 
 csrf = CSRFProtect(app)
 db.init_app(app)
