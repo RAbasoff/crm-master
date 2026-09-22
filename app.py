@@ -2882,17 +2882,23 @@ def maintenance_schedule_generate():
     created = 0
     skipped = 0
 
+    # Pre-fetch all existing plans in the date range for dedup
+    existing_plans = MaintenancePlan.query.filter(
+        MaintenancePlan.planned_start >= today,
+        MaintenancePlan.planned_start <= end_date
+    ).all()
+    existing_set = set()
+    for p in existing_plans:
+        existing_set.add((p.machine_id, str(p.planned_start)))
+
     for sched in schedules:
         dates = _generate_schedule_dates(sched, today, end_date)
         for d in dates:
-            exists = MaintenancePlan.query.filter(
-                MaintenancePlan.machine_id == sched.machine_id,
-                MaintenancePlan.title == sched.title,
-                MaintenancePlan.planned_start == d
-            ).first()
-            if exists:
+            key = (sched.machine_id, str(d))
+            if key in existing_set:
                 skipped += 1
                 continue
+            existing_set.add(key)
             p = MaintenancePlan(
                 machine_id=sched.machine_id,
                 title=sched.title,
