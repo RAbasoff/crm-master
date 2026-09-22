@@ -2939,15 +2939,16 @@ def _generate_schedule_dates(sched, start, end):
     day = sched.preferred_day  # 1-28
     mid = sched.machine_id or 0
 
-    # Stagger: different machines get slightly different days
-    # Machine 1→Mon, 2→Tue, 3→Wed, etc. (for weekly)
-    # Machine 1→1st, 2→2nd, 3→3rd, etc. (for monthly)
-    stagger_weekly = mid % 5  # 0=Mon..4=Fri
+    # Stagger: different machines get different days
+    # Base = preferred_dow (e.g. Tuesday), offset by machine_id
+    # Machine 1→Tue, 2→Wed, 3→Thu, 4→Fri, 5→Mon, 6→Tue...
+    stagger_offset = mid % 5  # 0..4
     stagger_monthly = (mid % 25) + 1  # 1..25
 
     if sched.recurrence == 'weekly':
-        # Use preferred_dow if set, otherwise stagger by machine_id
-        target_dow = dow if dow is not None else stagger_weekly
+        # preferred_dow as base + offset by machine_id
+        base_dow = dow if dow is not None else 0  # default Monday
+        target_dow = (base_dow + stagger_offset) % 5  # stay Mon-Fri
         d = start
         days_ahead = target_dow - d.weekday()
         if days_ahead < 0: days_ahead += 7
@@ -2958,7 +2959,8 @@ def _generate_schedule_dates(sched, start, end):
             d += timedelta(weeks=1)
 
     elif sched.recurrence == 'biweekly':
-        target_dow = dow if dow is not None else stagger_weekly
+        base_dow = dow if dow is not None else 0
+        target_dow = (base_dow + stagger_offset) % 5
         d = start
         days_ahead = target_dow - d.weekday()
         if days_ahead < 0: days_ahead += 7
