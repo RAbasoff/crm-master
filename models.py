@@ -267,10 +267,13 @@ class MaintenancePlan(db.Model):
     creator = db.relationship('User', foreign_keys=[created_by])
 
 class MaintenanceSchedule(db.Model):
-    """Per-machine maintenance schedule template. Generator creates MaintenancePlan entries from these."""
+    """Per-machine/equipment maintenance schedule template. Generator creates MaintenancePlan entries from these."""
     __tablename__ = 'maintenance_schedule'
     id = db.Column(db.Integer, primary_key=True)
-    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=False, index=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=True, index=True)
+    equipment_id = db.Column(db.Integer, nullable=True, index=True)  # Equipment or custom target
+    target_type = db.Column(db.String(20), default='machine')  # machine / equipment / custom
+    target_name = db.Column(db.String(200))  # display name for custom targets
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     maintenance_type = db.Column(db.String(50), default='preventive')

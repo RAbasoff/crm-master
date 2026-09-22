@@ -2806,19 +2806,29 @@ def api_maintenance_reminders():
 @login_required
 @role_required('admin', 'director', 'technician')
 def maintenance_schedule():
+    from models import Equipment
     machines = Machine.query.order_by(Machine.name).all()
-    schedules = MaintenanceSchedule.query.order_by(MaintenanceSchedule.machine_id).all()
-    sched_by_machine = {}
+    equipment_list = Equipment.query.order_by(Equipment.name).all()
+    schedules = MaintenanceSchedule.query.order_by(MaintenanceSchedule.id).all()
+    # Group by target (machine or equipment)
+    sched_by_target = {}
     for s in schedules:
-        sched_by_machine.setdefault(s.machine_id, []).append(s)
+        if s.target_type == 'equipment':
+            key = f'e_{s.equipment_id}'
+        elif s.target_type == 'custom':
+            key = f'c_{s.target_name}'
+        else:
+            key = f'm_{s.machine_id}'
+        sched_by_target.setdefault(key, []).append(s)
     return render_template('maintenance_schedule.html',
-                           machines=machines, sched_by_machine=sched_by_machine)
+                           machines=machines, equipment_list=equipment_list,
+                           schedules=schedules, sched_by_target=sched_by_target)
 
 @app.route('/maintenance-schedule/new', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
 def maintenance_schedule_new():
-    machine_id = safe_int(request.form.get('machine_id'))
+    target = request.form.get('target', '')
     title = request.form.get('title', '').strip()
     recurrence = request.form.get('recurrence', 'monthly')
     preferred_dow = safe_int(request.form.get('preferred_dow'))
@@ -2826,12 +2836,30 @@ def maintenance_schedule_new():
     mtype = request.form.get('maintenance_type', 'preventive')
     description = request.form.get('description', '')
 
-    if not machine_id or not title:
-        flash(_('Machine and title are required'), 'error')
+    if not target or not title:
+        flash(_('Target and title are required'), 'error')
         return redirect(url_for('maintenance_schedule'))
 
+    # Parse target: m_5 = machine 5, e_3 = equipment 3
+    machine_id = None
+    equipment_id = None
+    target_type = 'machine'
+    target_name = ''
+
+    if target.startswith('m_'):
+        machine_id = safe_int(target[2:])
+        target_type = 'machine'
+    elif target.startswith('e_'):
+        equipment_id = safe_int(target[2:])
+        target_type = 'equipment'
+    else:
+        target_type = 'custom'
+        target_name = target
+
     s = MaintenanceSchedule(
-        machine_id=machine_id, title=title, description=description,
+        machine_id=machine_id, equipment_id=equipment_id,
+        target_type=target_type, target_name=target_name,
+        title=title, description=description,
         maintenance_type=mtype, recurrence=recurrence,
         preferred_dow=preferred_dow if preferred_dow is not None else None,
         preferred_day=preferred_day if preferred_day is not None else None,
