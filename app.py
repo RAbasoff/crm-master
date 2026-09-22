@@ -2300,10 +2300,12 @@ def maintenance_schedule_new():
         months_ahead=3, is_active=True
     )
     db.session.add(s)
-    if not safe_commit():
-        flash(_('Save failed'), 'error')
-    else:
+    try:
+        db.session.commit()
         flash(_('Schedule added'), 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(_('Save failed: {}').format(str(e)[:200]), 'error')
     return redirect(url_for('maintenance_schedule'))
 
 @app.route('/maintenance-schedule/<int:sched_id>/delete', methods=['POST'])
