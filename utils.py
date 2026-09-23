@@ -636,6 +636,35 @@ def run_migrations():
     except Exception as e:
         pass
 
+    # Fix maintenance_schedule: make machine_id nullable
+    try:
+        cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='maintenance_schedule'")
+        row = cur.fetchone()
+        if row and 'NOT NULL' in (row[0] or '') and 'machine_id' in (row[0] or ''):
+            cur.execute("ALTER TABLE maintenance_schedule RENAME TO maintenance_schedule_old")
+            cur.execute("""CREATE TABLE maintenance_schedule (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                machine_id INTEGER,
+                equipment_id INTEGER,
+                target_type VARCHAR(20) DEFAULT 'machine',
+                target_name VARCHAR(200),
+                title VARCHAR(200) NOT NULL,
+                description TEXT,
+                maintenance_type VARCHAR(50) DEFAULT 'preventive',
+                recurrence VARCHAR(20) NOT NULL,
+                preferred_dow INTEGER,
+                preferred_day INTEGER,
+                months_ahead INTEGER DEFAULT 3,
+                is_active BOOLEAN DEFAULT 1,
+                created_at DATETIME
+            )""")
+            cur.execute("INSERT INTO maintenance_schedule SELECT * FROM maintenance_schedule_old")
+            cur.execute("DROP TABLE maintenance_schedule_old")
+            conn.commit()
+            print("Migration: fixed maintenance_schedule.machine_id to nullable")
+    except Exception as e:
+        pass
+
     for col_name, sql in migrations:
         try:
             if 'CREATE TABLE' in sql:
