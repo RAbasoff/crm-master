@@ -655,6 +655,27 @@ def run_migrations():
         except Exception as e:
             pass
 
+    # Fix empty datetime strings that cause ValueError on read
+    try:
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [r[0] for r in cur.fetchall()]
+        datetime_fixes = {
+            'maintenance_schedule': ['created_at'],
+            'maintenance_plan': ['created_at'],
+            'maintenance_record': ['created_at', 'date_performed', 'next_maintenance'],
+        }
+        for table, cols in datetime_fixes.items():
+            if table in tables:
+                for col in cols:
+                    try:
+                        cur.execute(f"UPDATE [{table}] SET [{col}] = NULL WHERE [{col}] = '' OR [{col}] = 'None'")
+                        if cur.rowcount > 0:
+                            print(f"Migration: fixed {cur.rowcount} empty {col} in {table}")
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 
