@@ -1,0 +1,31 @@
+============================================================
+СЕССИЯ CRM_Мастерская — 2026-09-22 (вечер)
+============================================================
+
+Последний коммит: 98b74c2 fix: migration to clean empty datetime strings
+
+============================================================
+ПРОВЕРКА ВСЕХ МОДУЛЕЙ
+============================================================
+
+✅ Machines blueprint — 16 маршрутов, все работают
+✅ Maintenance schedule — открывается, datetime фикс применён
+✅ Maintenance calendar — все endpoints OK
+✅ Maintenance plans — OK
+✅ Warehouse — все endpoints OK
+✅ Gas — dashboard, scan OK
+✅ Faults — list, new OK
+✅ Electricity — все 20 endpoints OK (list, cabinets, breakers, schematic, floorplan, switch log)
+✅ Transfer to responsible person — работает
+
+НАЙДЕННЫЕ ПРОБЛЕМЫ И ИСПРАВЛЕНИЯ:
+1. datetime ValueError: Invalid isoformat string — ИСПРАВЛЕНО (миграция чистит пустые строки)
+2. safe_commit молча откатывает — ИСПРАВЛЕНО (показывает конкретную ошибку)
+3. Дубликат routes machines/scan и machines/qr-labels — ИСПРАВЛЕНО (удалены из app.py)
+
+ОТЛОЖЕНО:
+- app.py всё ещё ~7700 строк, blueprint рефакторинг продолжить
+- 3 маршрута машин в app.py (qr, qr-label, qr/batch) — не критично
+- Образец календаря от пользователя — ждём
+
+============================================================
