@@ -44,21 +44,30 @@
         <input type="text" id="quickScan" placeholder="{{ _('Scan any barcode...') }}"
             style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px;font-family:monospace;outline:none"
             onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#ddd'"
-            autocomplete="off">
+            autocomplete="off" autofocus>
         <button onclick="quickScanGo()" class="btn btn-sm" style="background:#27ae60;color:white;padding:8px 16px">{{ _('Go') }}</button>
     </div>
+    <div id="scanStatus" style="margin-top:6px"></div>
     <div id="quickResult" style="display:none;margin-top:10px;font-size:12px"></div>
 </div>
 
+<script src="/static/js/scanner-common.js"></script>
 <script>
-var quickInput = document.getElementById('quickScan');
-quickInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); quickScanGo(); }
+ScannerCommon.init({
+    inputId: 'quickScan',
+    onScan: function(code) {
+        document.getElementById('quickScan').value = code;
+        quickScanGo();
+    },
+    hintSelector: '#scanStatus'
 });
 
 function quickScanGo() {
+    var quickInput = document.getElementById('quickScan');
     var code = quickInput.value.trim();
     if (!code) return;
+    // Russian keyboard layout fix: Я→Z etc.
+    if (typeof ScannerCommon !== 'undefined') code = ScannerCommon.normalizeCode(code);
     var result = document.getElementById('quickResult');
     result.style.display = '';
     result.innerHTML = '<span style="color:#888">Searching...</span>';

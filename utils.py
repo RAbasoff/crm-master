@@ -583,6 +583,15 @@ def run_migrations():
             created_at DATETIME,
             status_json TEXT DEFAULT '{}'
         )"""),
+        ("record_lock", """CREATE TABLE IF NOT EXISTS record_lock (
+            id INTEGER PRIMARY KEY,
+            record_type VARCHAR(50) NOT NULL,
+            record_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            user_name VARCHAR(100),
+            locked_at DATETIME,
+            expires_at DATETIME NOT NULL
+        )"""),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
@@ -1249,6 +1258,102 @@ def safe_date(value, fmt='%Y-%m-%d'):
         return datetime.strptime(str(value).strip(), fmt)
     except (ValueError, TypeError):
         return None
+
+
+# ============================================================
+# RECORD LOCKS — prevent concurrent editing (admin priority)
+# ============================================================
+
+LOCK_TTL_MINUTES = 5  # lock expires after 5 minutes of inactivity
+
+
+def acquire_lock(record_type, record_id, user_id, user_name):
+    """Try to acquire edit lock on a record. Returns (True, None) or (False, lock_info).
+    Admin always wins: breaks any existing lock."""
+    from models import RecordLock
+    from flask_login import current_user
+    now = datetime.utcnow()
+    expires = now + timedelta(minutes=LOCK_TTL_MINUTES)
+
+    # Clean expired locks for this record
+    RecordLock.query.filter(
+        RecordLock.record_type == record_type,
+        RecordLock.record_id == record_id,
+        RecordLock.expires_at < now
+    ).delete()
+
+    existing = RecordLock.query.filter(
+        RecordLock.record_type == record_type,
+        RecordLock.record_id == record_id
+    ).first()
+
+    is_admin = current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+
+    if existing:
+        if existing.user_id == user_id:
+            # Refresh own lock
+            existing.locked_at = now
+            existing.expires_at = expires
+            safe_commit()
+            return True, None
+        if is_admin:
+            # Admin breaks any lock
+            db.session.delete(existing)
+            lock = RecordLock(
+                record_type=record_type,
+                record_id=record_id,
+                user_id=user_id,
+                user_name=user_name,
+                locked_at=now,
+                expires_at=expires
+            )
+            db.session.add(lock)
+            safe_commit()
+            return True, None
+        # Another user has the lock
+        return False, {
+            'user_name': existing.user_name or 'Unknown',
+            'locked_at': existing.locked_at.strftime('%H:%M') if existing.locked_at else '?',
+            'expires_at': existing.expires_at.strftime('%H:%M') if existing.expires_at else '?'
+        }
+
+    # No lock — acquire it
+    lock = RecordLock(
+        record_type=record_type,
+        record_id=record_id,
+        user_id=user_id,
+        user_name=user_name,
+        locked_at=now,
+        expires_at=expires
+    )
+    db.session.add(lock)
+    safe_commit()
+    return True, None
+
+
+def release_lock(record_type, record_id, user_id):
+    """Release a lock held by user_id."""
+    from models import RecordLock
+    RecordLock.query.filter(
+        RecordLock.record_type == record_type,
+        RecordLock.record_id == record_id,
+        RecordLock.user_id == user_id
+    ).delete()
+    safe_commit()
+
+
+def refresh_lock(record_type, record_id, user_id):
+    """Extend lock TTL (called periodically from edit forms)."""
+    from models import RecordLock
+    now = datetime.utcnow()
+    lock = RecordLock.query.filter(
+        RecordLock.record_type == record_type,
+        RecordLock.record_id == record_id,
+        RecordLock.user_id == user_id
+    ).first()
+    if lock:
+        lock.expires_at = now + timedelta(minutes=LOCK_TTL_MINUTES)
+        safe_commit()
 
 def add_work_report(entry_text):
     """Add entry to Work Report log from anywhere in the app"""

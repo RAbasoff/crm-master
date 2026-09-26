@@ -3,7 +3,10 @@
 {% block content %}
 <div class="page-header">
     <h1>🔧 TWO — {{ _('Technical Work Orders') }}</h1>
-    <a href="/two/new" class="btn btn-primary">+ {{ _('New TWO') }}</a>
+    <div style="display:flex;gap:8px">
+        <button type="submit" form="merge-form" id="merge-btn" class="btn" style="background:#e67e22;color:#fff;display:none" onclick="return confirm('{{ _('Merge selected TWOs?') }}')">🔀 {{ _('Merge') }}</button>
+        <a href="/two/new" class="btn btn-primary">+ {{ _('New TWO') }}</a>
+    </div>
 </div>
 
 <div class="stats">
@@ -13,9 +16,11 @@
     <div class="stat-card ok"><div class="number">{{ orders|selectattr('status','equalto','completed')|list|length }}</div><div class="label">{{ _('Completed') }}</div></div>
 </div>
 
+<form id="merge-form" method="POST" action="/two/merge">
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
         <tr>
+            <th style="width:30px"><input type="checkbox" id="check-all" title="{{ _('Select all') }}"></th>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Status') }}</th>
             <th>{{ _('Sections') }} / {{ _('Machines') }}</th>
@@ -26,6 +31,7 @@
         </tr>
         {% for o in orders %}
         <tr>
+            <td><input type="checkbox" name="two_ids" value="{{ o.id }}" class="two-check" onchange="toggleMergeBtn()"></td>
             <td><a href="/two/{{ o.id }}" style="color:#3498db;font-weight:bold">{{ o.number }}</a></td>
             <td><span class="badge badge-{% if o.status == 'completed' %}closed{% elif o.status == 'in_progress' %}in_progress{% elif o.status == 'cancelled' %}geannuleerd{% else %}open{% endif %}">{{ o.status }}</span></td>
             <td style="font-size:12px">
@@ -51,4 +57,16 @@
         {% endfor %}
     </table></div>
 </div>
+</form>
+
+<script>
+function toggleMergeBtn() {
+    const checked = document.querySelectorAll('.two-check:checked').length;
+    document.getElementById('merge-btn').style.display = checked >= 2 ? 'inline-block' : 'none';
+}
+document.getElementById('check-all').addEventListener('change', function() {
+    document.querySelectorAll('.two-check').forEach(cb => cb.checked = this.checked);
+    toggleMergeBtn();
+});
+</script>
 {% endblock %}

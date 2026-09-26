@@ -46,7 +46,7 @@
     </div>
     <div style="font-size:11px;color:#888;margin-top:4px">{{ _('Honeywell scanner ready — scan to auto-submit') }}</div>
     <div style="text-align:center;margin-top:8px">
-        <button id="btnScan" class="btn btn-sm" style="background:#27ae60;color:white" onclick="startScanner()">{{ _('📷 Start Camera') }}</button>
+        <button id="btnScan" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="startScanner()">{{ _('📷 Start Camera') }}</button>
         <button id="btnStop" class="btn btn-sm" style="background:#e74c3c;color:white;display:none" onclick="stopScanner()">{{ _('⏹ Stop Camera') }}</button>
     </div>
 </div>
@@ -64,30 +64,53 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/js/scanner-common.js"></script>
 <script>
 let scanner = null;
 let lastScanned = '';
 let lastScannedTime = 0;
 const manualInput = document.getElementById('manualCode');
 
-// Honeywell auto-submit on Enter
-manualInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        var code = manualInput.value.trim();
-        if (code) {
-            processCode(code);
-            manualInput.value = '';
-        }
-    }
+ScannerCommon.init({
+    inputId: 'manualCode',
+    cameraBtnId: 'btnScan',
+    onScan: processCode,
+    autoStartCamera: true,
+    cameraStartFn: function() { startScanner(); }
 });
 
-// Auto-refocus on click
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('a') && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('#reader')) {
-        manualInput.focus();
+// also show stop button on mobile when camera starts
+function startScanner() {
+    if (scanner) return;
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        function(text) {
+            if (text !== lastScanned || (Date.now() - lastScannedTime) > 2000) {
+                lastScanned = text;
+                lastScannedTime = Date.now();
+                processCode(text);
+            }
+        },
+        function() {}
+    ).then(function() {
+        document.getElementById('btnScan').style.display = 'none';
+        document.getElementById('btnStop').style.display = '';
+    }).catch(function() {
+        document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">{{ _("Camera not available. Use manual entry or USB scanner.") }}</div>';
+        document.getElementById('step3').style.display = '';
+        scanner = null;
+    });
+}
+
+function stopScanner() {
+    if (scanner) {
+        scanner.stop().then(function() { scanner.clear(); scanner = null; });
+        document.getElementById('btnScan').style.display = '';
+        document.getElementById('btnStop').style.display = 'none';
     }
-});
+}
 
 function loadCurrent() {
     csrfFetch('/gas/api/cylinders')
@@ -111,41 +134,11 @@ function loadCurrent() {
     });
 }
 
-function startScanner() {
-    if (scanner) return;
-    scanner = new Html5Qrcode('reader');
-    scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 150 } },
-        function(text) {
-            if (text !== lastScanned || (Date.now() - lastScannedTime) > 2000) {
-                lastScanned = text;
-                lastScannedTime = Date.now();
-                processCode(text);
-            }
-        },
-        function() {}
-    ).then(function() {
-        document.getElementById('btnScan').style.display = 'none';
-        document.getElementById('btnStop').style.display = '';
-    }).catch(function() {
-        document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">{{ _("Camera not available. Use manual entry or Honeywell scanner.") }}</div>';
-        document.getElementById('step3').style.display = '';
-        scanner = null;
-    });
-}
-
-function stopScanner() {
-    if (scanner) {
-        scanner.stop().then(function() { scanner.clear(); scanner = null; });
-        document.getElementById('btnScan').style.display = '';
-        document.getElementById('btnStop').style.display = 'none';
-    }
-}
-
 function processCode(code) {
     if (!code || !code.trim()) return;
     code = code.trim();
+    // Russian keyboard layout fix: Я→Z etc.
+    if (typeof ScannerCommon !== 'undefined') code = ScannerCommon.normalizeCode(code);
     var gasType = document.getElementById('gasType').value;
     var side = document.getElementById('side').value;
     var step3 = document.getElementById('step3');
@@ -163,11 +156,16 @@ function processCode(code) {
         if (d.ok) {
             var gas = gasType === 'nitrogen' ? 'N₂' : 'CO₂';
             document.getElementById('step3Title').innerHTML = '✅ {{ _("Success") }}';
-            document.getElementById('resultContent').innerHTML =
-                '<div style="padding:12px;background:#f0fff0;border-radius:8px;border:1px solid #27ae60">' +
-                '<b>' + gas + ' ' + (d.cylinder_number || code) + '</b> — {{ _("installed on") }} <b>' + side.toUpperCase() + '</b> {{ _("side") }}<br>' +
-                '<span style="font-size:12px;color:#888">{{ _("Status set to IN USE") }}</span>' +
-                '</div>';
+            var html = '<div style="padding:12px;background:#f0fff0;border-radius:8px;border:1px solid #27ae60">';
+            html += '<b>' + gas + ' ' + (d.cylinder_number || code) + '</b> — <b style="color:#27ae60">FULL</b> ({{ _("installed on") }} ' + side.toUpperCase() + ')<br>';
+            if (d.other_activated) {
+                html += '<span style="font-size:12px;color:#27ae60">→ {{ _("Other cylinder") }} <b>' + d.other_activated + '</b> {{ _("is now IN USE") }}</span><br>';
+            }
+            if (d.created) {
+                html += '<span style="font-size:11px;color:#888">{{ _("New cylinder created in DB") }}</span><br>';
+            }
+            html += '</div>';
+            document.getElementById('resultContent').innerHTML = html;
             loadCurrent();
             lastScanned = '';
         } else {
@@ -185,6 +183,5 @@ function processCode(code) {
 }
 
 loadCurrent();
-manualInput.focus();
 </script>
 {% endblock %}

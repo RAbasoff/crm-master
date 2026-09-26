@@ -463,6 +463,11 @@ def login():
                     return redirect(url_for('index'))
                 log_user_activity('login', page='/login', details=f'User {username} logged in')
                 log_system('INFO', 'auth', f'User {username} logged in', source='login')
+                # Auto-backup DB on login — saves all changes from previous session
+                try:
+                    backup_database()
+                except Exception as be:
+                    print(f'LOGIN BACKUP WARNING: {be}')
                 # Force password change after 2 logins
                 if user.force_change_password:
                     flash(_('You must change your password'), 'warning')
@@ -490,6 +495,10 @@ def login():
                 login_user(auth, remember=True)
                 log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
                 log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
+                try:
+                    backup_database()
+                except Exception as be:
+                    print(f'LOGIN BACKUP WARNING: {be}')
                 if auth.force_change_password:
                     flash(_('You must change your password'), 'warning')
                     return redirect(url_for('change_password'))
@@ -829,7 +838,15 @@ def floor_plan():
         section_ids = list(set(m.section_id for m in machines if m.section_id))
         sections = FactorySection.query.filter(FactorySection.id.in_(section_ids)).all() if section_ids else []
     is_filtered = hasattr(current_user, '_person') and current_user.role == 'responsible'
-    return render_template('floor_plan.html', machines=machines, sections=sections, is_filtered=is_filtered)
+    # Also show equipment on floor plan
+    from models import Equipment
+    if current_user.has_role('admin', 'director', 'technician'):
+        equipment = Equipment.query.filter(
+            Equipment.floor_x.isnot(None), Equipment.floor_y.isnot(None)
+        ).all()
+    else:
+        equipment = []
+    return render_template('floor_plan.html', machines=machines, sections=sections, is_filtered=is_filtered, equipment=equipment)
 
 # ============================================================
 # ROUTES — FACTORY SECTIONS
@@ -2286,6 +2303,10 @@ def maintenance_schedule_new():
     elif target.startswith('e_'):
         equipment_id = safe_int(target[2:])
         target_type = 'equipment'
+    elif target == 'custom':
+        # Use free-text input
+        target_type = 'custom'
+        target_name = request.form.get('custom_target', '').strip() or 'Other'
     else:
         target_type = 'custom'
         target_name = target
@@ -3520,7 +3541,12 @@ def two_add_signature(two_id):
 @role_required('admin', 'technician')
 def two_edit(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
+    from utils import acquire_lock, release_lock
     if request.method == 'POST':
+        ok, lock_info = acquire_lock('two', two_id, current_user.id, current_user.username)
+        if not ok:
+            flash(_('Record is being edited by %(user)s. Try again later.', user=lock_info.get('user_name', '?')), 'error')
+            return redirect(url_for('two_detail', two_id=two_id))
         two.fault_id = safe_int(request.form.get('fault_id')) or None
         two.machine_id = safe_int(request.form.get('machine_id')) or None
         two.section_id = safe_int(request.form.get('section_id')) or None
@@ -3604,9 +3630,14 @@ def two_edit(two_id):
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('two_detail', two_id=two.id))
+        release_lock('two', two_id, current_user.id)
         log_audit('update', 'two', two.id, two.number)
         flash(_('TWO updated'), 'success')
         return redirect(url_for('two_detail', two_id=two.id))
+    ok, lock_info = acquire_lock('two', two_id, current_user.id, current_user.username)
+    if not ok:
+        flash(_('⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now.', user=lock_info.get('user_name', '?'), time=lock_info.get('locked_at', '?')), 'error')
+        return redirect(url_for('two_detail', two_id=two_id))
     faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).order_by(FaultReport.created_at.desc()).all()
     # Only workers from technical service (Technician group or linked user with technician role)
     workers = Monteur.query.filter_by(actief=True).filter(
@@ -3647,6 +3678,152 @@ def two_delete(two_id):
         return redirect(url_for('two_list'))
     flash(_('TWO deleted'), 'success')
     return redirect(url_for('two_list'))
+
+@app.route('/two/merge', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def two_merge():
+    """Merge multiple TWOs with the same planned_date into one combined work order."""
+    two_ids = request.form.getlist('two_ids')
+    if not two_ids or len(two_ids) < 2:
+        flash(_('Select at least 2 TWOs to merge'), 'error')
+        return redirect(url_for('two_list'))
+
+    twos = []
+    for tid in two_ids:
+        t = TechnicalWorkOrder.query.get(int(tid))
+        if t:
+            twos.append(t)
+
+    if len(twos) < 2:
+        flash(_('Not enough valid TWOs to merge'), 'error')
+        return redirect(url_for('two_list'))
+
+    # Use the first TWO as the target, merge others into it
+    target = twos[0]
+    merged_descriptions = []
+    merged_workers = set()
+    merged_assignments = []
+    merged_notes = []
+    orphan_checklists = []  # checklist items without assignment_id
+    earliest_date = target.planned_date
+
+    for two in twos:
+        if two.planned_date and (earliest_date is None or two.planned_date < earliest_date):
+            earliest_date = two.planned_date
+        if two.id != target.id:
+            merged_descriptions.append(two.description)
+            if two.additional_work:
+                merged_descriptions.append(two.additional_work)
+            if two.notes:
+                merged_notes.append(f'[{two.number}] {two.notes}')
+            for w in two.workers:
+                merged_workers.add(w.id)
+            # Copy assignments (sections + machines)
+            for a in two.assignments:
+                merged_assignments.append({
+                    'section_id': a.section_id,
+                    'machine_id': a.machine_id,
+                    'description': a.description,
+                    'checklist': [ci.text for ci in a.checklist_items]
+                })
+            # Checklist items without assignment
+            for ci in two.checklist_items:
+                if ci.assignment_id is None:
+                    orphan_checklists.append(ci.text)
+            # Transfer photos and signatures to target (before delete cascades them)
+            for photo in list(two.photos):
+                photo.two_id = target.id
+            for sig in list(two.signatures):
+                sig.two_id = target.id
+
+    # Merge into target
+    if merged_descriptions:
+        target.description = target.description + '\n\n--- Merged from ---\n' + '\n'.join(merged_descriptions)
+    if merged_notes:
+        existing_notes = target.notes or ''
+        target.notes = existing_notes + '\n' + '\n'.join(merged_notes) if existing_notes else '\n'.join(merged_notes)
+    if earliest_date:
+        target.planned_date = earliest_date
+
+    # Merge workers
+    for wid in merged_workers:
+        w = Monteur.query.get(wid)
+        if w and w not in target.workers:
+            target.workers.append(w)
+
+    # Merge assignments - add new ones, combine checklist items for matching sections/machines
+    for ma in merged_assignments:
+        # Check if target already has an assignment for this section/machine
+        existing = None
+        for ta in target.assignments:
+            if ma['section_id'] and ta.section_id == ma['section_id']:
+                existing = ta
+                break
+            if ma['machine_id'] and ta.machine_id == ma['machine_id']:
+                existing = ta
+                break
+
+        if existing:
+            # Merge checklist items into existing assignment
+            existing_texts = {ci.text for ci in existing.checklist_items}
+            next_order = max([ci.sort_order for ci in existing.checklist_items], default=0) + 1
+            for ci_text in ma['checklist']:
+                if ci_text not in existing_texts:
+                    existing_texts.add(ci_text)
+                    db.session.add(TWOChecklistItem(
+                        two_id=target.id,
+                        assignment_id=existing.id,
+                        text=ci_text,
+                        sort_order=next_order
+                    ))
+                    next_order += 1
+        else:
+            # Create new assignment
+            new_assignment = TWOAssignment(
+                two_id=target.id,
+                section_id=ma['section_id'],
+                machine_id=ma['machine_id'],
+                description=ma['description'],
+                sort_order=len(target.assignments)
+            )
+            db.session.add(new_assignment)
+            db.session.flush()
+            for j, ci_text in enumerate(ma['checklist']):
+                db.session.add(TWOChecklistItem(
+                    two_id=target.id,
+                    assignment_id=new_assignment.id,
+                    text=ci_text,
+                    sort_order=j
+                ))
+
+    # Add orphan checklist items (not tied to any assignment)
+    if orphan_checklists:
+        existing_texts = {ci.text for ci in target.checklist_items}
+        next_order = max([ci.sort_order for ci in target.checklist_items], default=0) + 1
+        for ci_text in orphan_checklists:
+            if ci_text not in existing_texts:
+                existing_texts.add(ci_text)
+                db.session.add(TWOChecklistItem(
+                    two_id=target.id,
+                    text=ci_text,
+                    sort_order=next_order
+                ))
+                next_order += 1
+
+    # Delete merged twos (not the target)
+    for two in twos:
+        if two.id != target.id:
+            db.session.delete(two)
+
+    db.session.flush()
+    if not safe_commit():
+        flash(_('Merge failed'), 'error')
+        return redirect(url_for('two_list'))
+
+    log_audit('merge', 'two', target.id, f'Merged {len(twos)} TWOs into {target.number}')
+    flash(_('Merged {} TWOs into {}').format(len(twos), target.number), 'success')
+    return redirect(url_for('two_detail', two_id=target.id))
 
 @app.route('/two/<int:two_id>/print')
 @login_required
@@ -7312,15 +7489,7 @@ def tool_wear_reset(tool_id):
 def api_tool_wear_warnings():
     """Return tools with wear >= 80% for popup warning."""
     today = datetime.utcnow().date()
-    # Pre-filter: only tools that could possibly have wear >= 80%
-    # Max cycle is typically < 365 days, so last_replaced older than 292 days (365*0.8) or missing
-    cutoff = today - timedelta(days=365)
-    all_tools = ToolWear.query.filter(
-        db.or_(
-            ToolWear.last_replaced.is_(None),
-            ToolWear.last_replaced <= cutoff
-        )
-    ).all()
+    all_tools = ToolWear.query.all()
     warnings = []
     for t in all_tools:
         cycle = t.cycle_days or 14

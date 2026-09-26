@@ -691,15 +691,64 @@ def cylinder_scan_page():
     return render_template('gas/cylinder_scan.html')
 
 
+@bp.route('/api/cylinders/add', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def cylinder_add():
+    """Add cylinder to DB only (status=full). No install/activation."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+
+    code = (data.get('code') or '').strip()
+    gas_type = data.get('gas_type', 'nitrogen')
+
+    if not code:
+        return jsonify({'error': 'No code provided'}), 400
+    if gas_type not in ('nitrogen', 'co2'):
+        return jsonify({'error': 'Invalid gas type'}), 400
+
+    existing = GasCylinder.query.filter(
+        (GasCylinder.barcode == code) | (GasCylinder.cylinder_number == code)
+    ).first()
+    if existing:
+        return jsonify({'ok': True, 'cylinder_id': existing.id, 'cylinder_number': existing.cylinder_number,
+                        'already_exists': True, 'status': existing.status})
+
+    cylinder = GasCylinder(
+        gas_type=gas_type,
+        cylinder_number=code,
+        barcode=code,
+        status='full',
+        received_at=datetime.utcnow()
+    )
+    db.session.add(cylinder)
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    db.session.add(CylinderLog(
+        cylinder_id=cylinder.id,
+        action='created',
+        new_cylinder_number=code,
+        performed_by=current_user.id,
+        notes='Added to DB (status=full)'
+    ))
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+
+    return jsonify({'ok': True, 'cylinder_id': cylinder.id, 'cylinder_number': cylinder.cylinder_number,
+                    'already_exists': False, 'status': 'full'})
+
+
 @bp.route('/api/cylinders/scan', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
 def cylinder_scan_install():
     """Scan barcode → install cylinder on selected gas type + side.
-    Logic:
+    OLD FLOW (restored):
     1. Find or create cylinder by barcode
-    2. Set scanned cylinder to 'in_use' on selected side
-    3. Set previous 'in_use' cylinder of same gas type to 'empty'
+    2. Set scanned cylinder to 'full' (newly installed, полный)
+    3. Set the OTHER cylinder of same gas type to 'in_use' (в работе)
+    4. Previous 'in_use' cylinder on same side → 'empty'
     """
     data = request.get_json()
     if not data:
@@ -721,6 +770,7 @@ def cylinder_scan_install():
         (GasCylinder.barcode == code) | (GasCylinder.cylinder_number == code)
     ).first()
 
+    created = False
     if not cylinder:
         # Create new cylinder from scan
         cylinder = GasCylinder(
@@ -742,37 +792,11 @@ def cylinder_scan_install():
         ))
         if not safe_commit():
             return jsonify({'error': 'Save failed'}), 500
+        created = True
 
-    # Install scanned cylinder — replace oldest in_use on same gas type if at limit
-    active_count = GasCylinder.query.filter(
-        GasCylinder.gas_type == gas_type,
-        GasCylinder.status == 'in_use',
-        GasCylinder.id != cylinder.id
-    ).count()
-
-    if active_count >= 2:
-        # At limit — replace the oldest in_use cylinder
-        oldest = GasCylinder.query.filter(
-            GasCylinder.gas_type == gas_type,
-            GasCylinder.status == 'in_use',
-            GasCylinder.id != cylinder.id
-        ).order_by(GasCylinder.installed_at.asc().nullslast()).first()
-        if oldest:
-            oldest.status = 'empty'
-            oldest.installed_at = None
-            db.session.add(CylinderLog(
-                cylinder_id=oldest.id,
-                action='status_in_use_to_empty',
-                performed_by=current_user.id,
-                notes='Auto-emptied: replaced by %s (scanned, limit 2)' % code
-            ))
-    elif active_count == 0:
-        pass  # No active cylinders, just install
-    # If active_count == 1, just install alongside
-
-    # Install scanned cylinder
+    # 1. Set scanned cylinder to 'full' (newly installed, полный)
     old_status = cylinder.status
-    cylinder.status = 'in_use'
+    cylinder.status = 'full'
     cylinder.gas_type = gas_type
     cylinder.installed_at = datetime.utcnow()
     if not safe_commit():
@@ -780,10 +804,50 @@ def cylinder_scan_install():
 
     db.session.add(CylinderLog(
         cylinder_id=cylinder.id,
-        action='status_%s_to_in_use' % old_status,
+        action='status_%s_to_full' % old_status,
         performed_by=current_user.id,
-        notes='Installed via scan on %s side (%s)' % (side, gas_type)
+        notes='Installed via scan on %s side (%s) — set as FULL' % (side, gas_type)
     ))
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+
+    # 2. The OTHER cylinder of same gas type → 'in_use' (в работе)
+    other = GasCylinder.query.filter(
+        GasCylinder.gas_type == gas_type,
+        GasCylinder.status == 'full',
+        GasCylinder.id != cylinder.id
+    ).first()
+    other_activated = None
+    if other:
+        prev = other.status
+        other.status = 'in_use'
+        other.installed_at = datetime.utcnow()
+        db.session.add(CylinderLog(
+            cylinder_id=other.id,
+            action='status_%s_to_in_use' % prev,
+            performed_by=current_user.id,
+            notes='Auto-activated: new cylinder %s installed (full)' % cylinder.cylinder_number
+        ))
+        other_activated = other.cylinder_number
+
+    # 3. Old 'in_use' cylinders that are NOT the activated one → 'empty'
+    # (keep at most 1 in_use per gas type — the freshly activated one)
+    old_in_use = GasCylinder.query.filter(
+        GasCylinder.gas_type == gas_type,
+        GasCylinder.status == 'in_use',
+        GasCylinder.id != cylinder.id,
+        GasCylinder.id != (other.id if other else -1)
+    ).all()
+    for c in old_in_use:
+        c.status = 'empty'
+        c.installed_at = None
+        db.session.add(CylinderLog(
+            cylinder_id=c.id,
+            action='status_in_use_to_empty',
+            performed_by=current_user.id,
+            notes='Auto-emptied: replaced during install of %s' % cylinder.cylinder_number
+        ))
+
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
 
@@ -793,5 +857,7 @@ def cylinder_scan_install():
         'cylinder_number': cylinder.cylinder_number,
         'gas_type': gas_type,
         'side': side,
-        'old_status': old_status
+        'old_status': old_status,
+        'created': created,
+        'other_activated': other_activated
     })

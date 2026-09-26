@@ -25,31 +25,69 @@
         {% if current_user.role == 'admin' %}
         <a href="/gas/archive" class="btn btn-sm" style="background:#95a5a6;color:white" onclick="return confirm('{{ _('Archive all empty cylinders?') }}')">🗄️ {{ _('Archive') }}</a>
         {% endif %}
-        <a href="/gas/cylinders/new" class="btn btn-sm" style="background:#eee">+ {{ _('Add') }}</a>
+        <button onclick="openInstallModal()" class="btn btn-sm" style="background:#27ae60;color:white">＋ {{ _('Install / Add') }}</button>
         <a href="/gas/orders/new" class="btn btn-sm" style="background:#eee">📦 {{ _('Order') }}</a>
         <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">{{ _('All') }}</a>
     </div>
 </div>
 
-<!-- Inline barcode scanner — auto-install mode -->
-<div class="card" style="margin-bottom:10px;padding:10px;border:2px solid #27ae60">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="font-size:20px">📷</span>
-        <input type="text" id="cylScanInput" placeholder="{{ _('Scan cylinder number...') }}"
-            style="flex:1;min-width:150px;padding:8px;border:2px solid #3498db;border-radius:6px;font-size:14px;font-family:monospace;outline:none"
-            onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#3498db'"
-            autocomplete="off" autofocus>
-        <select id="cylScanGas" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
-            <option value="nitrogen">N₂</option>
-            <option value="co2">CO₂</option>
-        </select>
-        <select id="cylScanSide" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
-            <option value="left">⬅ {{ _('Left') }}</option>
-            <option value="right">➡ {{ _('Right') }}</option>
-        </select>
-        <button onclick="scanCylinder()" class="btn btn-sm" style="background:#27ae60;color:white;padding:8px 16px">📷 {{ _('Scan & Install') }}</button>
+<!-- Install / Add modal -->
+<div id="installModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto">
+    <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:12px;padding:20px">
+        <h2 style="margin:0 0 16px;font-size:18px">＋ {{ _('Install / Add Cylinder') }}</h2>
+
+        <!-- Step 1: gas + side -->
+        <div id="imStep1">
+            <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Gas Type') }}</label>
+            <select id="imGas" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:12px">
+                <option value="nitrogen">N₂ Nitrogen</option>
+                <option value="co2">CO₂ Carbon Dioxide</option>
+            </select>
+
+            <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Action') }}</label>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+                <button type="button" onclick="imSetAction('install')" id="imBtnInstall" class="btn" style="flex:1;background:#27ae60;color:white;padding:12px;font-size:14px">🔧 {{ _('Install') }}</button>
+                <button type="button" onclick="imSetAction('stock')" id="imBtnStock" class="btn" style="flex:1;background:#eee;padding:12px;font-size:14px">📦 {{ _('Add to Stock') }}</button>
+            </div>
+
+            <div id="imSideWrap">
+                <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Side') }}</label>
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                    <button type="button" onclick="imSetSide('left')" id="imBtnLeft" class="btn" style="flex:1;background:#3498db;color:white;padding:12px">⬅ {{ _('Left') }}</button>
+                    <button type="button" onclick="imSetSide('right')" id="imBtnRight" class="btn" style="flex:1;background:#eee;padding:12px">➡ {{ _('Right') }}</button>
+                </div>
+                <div style="font-size:11px;color:#888;margin-bottom:12px">
+                    {{ _('Scanned cylinder → FULL. Other cylinder of same gas → IN USE.') }}
+                </div>
+            </div>
+
+            <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Input Method') }}</label>
+            <div style="display:flex;gap:8px">
+                <button type="button" onclick="imSetInput('scan')" id="imBtnScan" class="btn" style="flex:1;background:#eee;padding:12px">📷 {{ _('Scan') }}</button>
+                <button type="button" onclick="imSetInput('manual')" id="imBtnManual" class="btn" style="flex:1;background:#eee;padding:12px">⌨ {{ _('Manual') }}</button>
+            </div>
+        </div>
+
+        <!-- Step 2: code entry -->
+        <div id="imStep2" style="display:none;margin-top:16px">
+            <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px" id="imCodeLabel">{{ _('Scan or enter cylinder number') }}</label>
+            <div style="display:flex;gap:8px">
+                <input type="text" id="imCode" placeholder="{{ _('Cylinder number / barcode...') }}"
+                    style="flex:1;padding:12px;border:2px solid #3498db;border-radius:8px;font-size:16px;font-family:monospace;outline:none" autocomplete="off">
+                <button type="button" onclick="imSubmit()" class="btn" style="background:#27ae60;color:white;padding:12px 20px;white-space:nowrap">✓ {{ _('OK') }}</button>
+            </div>
+            <div id="imResult" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px"></div>
+            <div style="margin-top:12px;display:flex;gap:8px">
+                <button type="button" onclick="closeInstallModal()" class="btn" style="flex:1;background:#eee;padding:10px">{{ _('Close') }}</button>
+                <button type="button" onclick="imStep1()" class="btn" style="flex:1;background:#eee;padding:10px">← {{ _('Back') }}</button>
+            </div>
+        </div>
+
+        <!-- Close button for step 1 -->
+        <div id="imStep1Close" style="margin-top:12px">
+            <button type="button" onclick="closeInstallModal()" class="btn" style="width:100%;background:#eee;padding:10px">{{ _('Cancel') }}</button>
+        </div>
     </div>
-    <div id="cylScanResult" style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px"></div>
 </div>
 
 {% set n2a = [] %}
@@ -269,6 +307,7 @@
     </div>
 </div>
 
+<script src="/static/js/scanner-common.js"></script>
 <script>
 var currentCylId = null;
 document.addEventListener('click', function(e) {
@@ -292,63 +331,119 @@ function setCylinderStatus(status) {
 }
 document.getElementById('cylinderMenu').addEventListener('click', function(e) { if (e.target === this) closeCylMenu(); });
 
-// === INLINE SCANNER ===
-var scanInput = document.getElementById('cylScanInput');
-var lastScannedCyl = '';
+// === INSTALL / ADD MODAL ===
+var imAction = 'install';
+var imSide = 'left';
+var imInput = 'scan';
+var imLastCode = '';
 
-scanInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        scanCylinder();
-    }
+function openInstallModal() {
+    document.getElementById('installModal').style.display = 'block';
+    imStep1();
+    imSetAction('install');
+    imSetSide('left');
+    imSetInput('scan');
+}
+function closeInstallModal() {
+    document.getElementById('installModal').style.display = 'none';
+}
+function imStep1() {
+    document.getElementById('imStep1').style.display = '';
+    document.getElementById('imStep1Close').style.display = '';
+    document.getElementById('imStep2').style.display = 'none';
+    document.getElementById('imResult').style.display = 'none';
+    document.getElementById('imCode').value = '';
+}
+function imSetAction(a) {
+    imAction = a;
+    var isInstall = a === 'install';
+    document.getElementById('imBtnInstall').style.background = isInstall ? '#27ae60' : '#eee';
+    document.getElementById('imBtnInstall').style.color = isInstall ? 'white' : '#333';
+    document.getElementById('imBtnStock').style.background = isInstall ? '#eee' : '#3498db';
+    document.getElementById('imBtnStock').style.color = isInstall ? '#333' : 'white';
+    document.getElementById('imSideWrap').style.display = isInstall ? '' : 'none';
+}
+function imSetSide(s) {
+    imSide = s;
+    document.getElementById('imBtnLeft').style.background = s === 'left' ? '#3498db' : '#eee';
+    document.getElementById('imBtnLeft').style.color = s === 'left' ? 'white' : '#333';
+    document.getElementById('imBtnRight').style.background = s === 'right' ? '#3498db' : '#eee';
+    document.getElementById('imBtnRight').style.color = s === 'right' ? 'white' : '#333';
+}
+function imSetInput(m) {
+    imInput = m;
+    document.getElementById('imBtnScan').style.background = m === 'scan' ? '#27ae60' : '#eee';
+    document.getElementById('imBtnScan').style.color = m === 'scan' ? 'white' : '#333';
+    document.getElementById('imBtnManual').style.background = m === 'manual' ? '#f39c12' : '#eee';
+    document.getElementById('imBtnManual').style.color = m === 'manual' ? 'white' : '#333';
+    // go to step 2
+    document.getElementById('imStep1').style.display = 'none';
+    document.getElementById('imStep1Close').style.display = 'none';
+    document.getElementById('imStep2').style.display = '';
+    document.getElementById('imCodeLabel').textContent = m === 'scan' ? '{{ _("Scan barcode or enter number") }}' : '{{ _("Enter cylinder number") }}';
+    setTimeout(function() { document.getElementById('imCode').focus(); }, 100);
+}
+document.getElementById('imCode').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); imSubmit(); }
 });
 
-function scanCylinder() {
-    var number = scanInput.value.trim();
-    if (!number) return;
-    if (number === lastScannedCyl) { scanInput.value = ''; return; }
-    lastScannedCyl = number;
+function imSubmit() {
+    var code = document.getElementById('imCode').value.trim();
+    if (!code) return;
+    // Russian keyboard layout fix: Я→Z etc.
+    if (typeof ScannerCommon !== 'undefined') code = ScannerCommon.normalizeCode(code);
+    if (code === imLastCode) { document.getElementById('imCode').value = ''; return; }
+    imLastCode = code;
 
-    var gasType = document.getElementById('cylScanGas').value;
-    var side = document.getElementById('cylScanSide').value;
-    var resultDiv = document.getElementById('cylScanResult');
+    var gasType = document.getElementById('imGas').value;
+    var resultDiv = document.getElementById('imResult');
     resultDiv.style.display = '';
     resultDiv.style.background = '#e8f4fd';
-    resultDiv.innerHTML = '<b>' + number + '</b> — installing...';
+    resultDiv.innerHTML = '⏳ <b>' + code + '</b> — processing...';
 
-    csrfFetch('/gas/api/cylinders/scan', {
+    var url = imAction === 'install' ? '/gas/api/cylinders/scan' : '/gas/api/cylinders/add';
+    var body = imAction === 'install'
+        ? {code: code, gas_type: gasType, side: imSide}
+        : {code: code, gas_type: gasType};
+
+    csrfFetch(url, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({code: number, gas_type: gasType, side: side})
+        body: JSON.stringify(body)
     })
     .then(function(r) { return r.json(); })
     .then(function(d) {
         if (d.error) {
             resultDiv.style.background = '#fde8e8';
             resultDiv.innerHTML = '❌ ' + d.error;
-            scanInput.value = '';
-            scanInput.focus();
+            document.getElementById('imCode').value = '';
+            document.getElementById('imCode').focus();
             return;
         }
-        var gasLabel = d.gas_type === 'nitrogen' ? 'N₂' : 'CO₂';
-        var sideLabel = side === 'left' ? '⬅ {{ _("Left") }}' : '➡ {{ _("Right") }}';
+        var gasLabel = gasType === 'nitrogen' ? 'N₂' : 'CO₂';
         var html = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
         html += '<span style="font-size:16px">✅</span>';
-        html += '<b>' + d.cylinder_number + '</b>';
-        html += '<span style="color:#f39c12;font-weight:700">IN USE</span>';
-        html += '<span class="badge" style="font-size:10px;background:#3498db;color:white">' + gasLabel + '</span>';
-        html += '<span style="font-size:11px;color:#555">' + sideLabel + '</span>';
-        if (d.old_status && d.old_status !== 'in_use') html += '<span style="font-size:10px;color:#888">(' + d.old_status + ' → in_use)</span>';
+        html += '<b>' + (d.cylinder_number || code) + '</b>';
+        if (d.already_exists) {
+            html += '<span class="badge" style="background:#f39c12;color:white;font-size:10px">{{ _("Already in DB") }}: ' + (d.status || '') + '</span>';
+        } else if (imAction === 'install') {
+            html += '<span class="badge" style="background:#27ae60;color:white;font-size:10px">FULL</span>';
+            html += '<span class="badge" style="background:#3498db;color:white;font-size:10px">' + gasLabel + '</span>';
+            if (imSide) html += '<span style="font-size:11px;color:#555">' + (imSide === 'left' ? '⬅ {{ _('Left') }}' : '➡ {{ _('Right') }}') + '</span>';
+            if (d.other_activated) html += '<div style="width:100%;font-size:11px;color:#27ae60">→ {{ _('Other cylinder') }} <b>' + d.other_activated + '</b> {{ _('is now IN USE') }}</div>';
+        } else {
+            html += '<span class="badge" style="background:#27ae60;color:white;font-size:10px">FULL</span>';
+            html += '<span style="font-size:11px;color:#888">{{ _('Added to stock') }}</span>';
+        }
         html += '</div>';
         resultDiv.style.background = '#f0fff0';
         resultDiv.innerHTML = html;
-        scanInput.value = '';
-        scanInput.focus();
-        setTimeout(function() { location.reload(); }, 1200);
+        imLastCode = '';
+        setTimeout(function() { location.reload(); }, 1500);
     })
     .catch(function() {
         resultDiv.style.background = '#fde8e8';
-        resultDiv.innerHTML = '❌ {{ _("Connection error") }}';
+        resultDiv.innerHTML = '❌ {{ _('Connection error') }}';
     });
 }
 

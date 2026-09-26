@@ -28,7 +28,11 @@
                 {% endfor %}
                 </optgroup>
                 {% endif %}
+                <optgroup label="📌 {{ _('Other') }}">
+                <option value="custom">✏️ {{ _('Custom / Other equipment...') }}</option>
+                </optgroup>
             </select>
+            <input type="text" id="customTarget" name="custom_target" placeholder="{{ _('Enter equipment name...') }}" style="display:none;margin-top:4px;width:100%" oninput="document.querySelector('[name=target]').value=this.value">
         </div>
         <div class="form-group">
             <label>{{ _('Title') }}</label>
@@ -74,6 +78,23 @@
         </div>
     </form>
 </div>
+
+<script>
+document.querySelector('[name=target]').addEventListener('change', function() {
+    const inp = document.getElementById('customTarget');
+    if (this.value === 'custom') {
+        inp.style.display = '';
+        inp.required = true;
+        this.name = 'target_type_selector';
+        inp.focus();
+    } else {
+        inp.style.display = 'none';
+        inp.required = false;
+        inp.value = '';
+        this.name = 'target';
+    }
+});
+</script>
 
 <div class="card" style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center">

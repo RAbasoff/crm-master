@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ _('Login') }} — ProMaster</title>
+    <link rel="icon" href="/static/logo.jpeg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="/static/logo.jpeg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1629; min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
@@ -35,9 +37,8 @@
 <body>
     <div class="login-card">
         <div class="logo-wrap">
-            <div class="logo-icon">🔧</div>
-            <div class="logo-text">A.B.A.S.O.F.F. <span>ProMaster</span></div>
-            <div class="logo-sub">CRM {{ _('System') }}</div>
+            <img src="/static/logo.jpeg" alt="ProMaster" style="width:140px;height:140px;object-fit:contain;border-radius:16px;box-shadow:0 8px 24px rgba(91,156,246,0.3);margin-bottom:12px">
+            <div class="logo-sub">CRM PRO systeem</div>
         </div>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}

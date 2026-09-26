@@ -1354,3 +1354,16 @@ class EquipmentServiceLog(db.Model):
     next_date = db.Column(db.Date)
     notes = db.Column(db.Text)
     performer = db.relationship('User', foreign_keys=[performed_by])
+
+class RecordLock(db.Model):
+    """Edit lock — prevents concurrent editing of the same record.
+    Admin can break any lock. Locks expire after 5 minutes."""
+    __tablename__ = 'record_lock'
+    id = db.Column(db.Integer, primary_key=True)
+    record_type = db.Column(db.String(50), nullable=False, index=True)   # 'machine', 'warehouse', 'fault', 'two', etc.
+    record_id = db.Column(db.Integer, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_name = db.Column(db.String(100))  # denormalized for display
+    locked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    user = db.relationship('User', foreign_keys=[user_id])

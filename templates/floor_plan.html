@@ -40,9 +40,9 @@
         <button onclick="zoomReset()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">1:1</button>
     </div>
     
-    <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;max-height:70vh">
-        <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.15s">
-            <img src="/static/floor_plan.jpeg" id="floorPlanImg" style="display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none" draggable="false">
+    <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;height:85vh">
+        <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.15s;width:100%;height:100%">
+            <img src="/static/floor_plan.jpeg" id="floorPlanImg" style="display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none" draggable="false">
             
             <!-- Grid overlay -->
             <div id="gridOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.15">
@@ -71,6 +71,23 @@
             </div>
             {% endfor %}
             
+            <!-- Equipment overlay (other equipment) -->
+            {% for e in equipment %}
+            <div class="machine-marker status-{{ e.status or 'active' }}"
+                 style="left:{{ e.floor_x }}%;top:{{ e.floor_y }}%"
+                 onclick="event.stopPropagation();showMachineInfo({{ e.id }}, '{{ e.name }}', '{{ e.status or 'active' }}', '{{ e.equipment_type or '' }}', '')"
+                 title="{{ e.name }}{% if e.equipment_type %} ({{ e.equipment_type }}){% endif %}"
+                 data-id="eq_{{ e.id }}"
+                 data-fault-status="loading">
+                <div class="machine-icon-wrap">
+                    <div class="machine-shape" style="width:40px;height:40px;background:linear-gradient(135deg,#e8eaf6,#c5cae9);border:2px solid {% if e.status == 'broken' %}#e74c3c{% elif e.status == 'maintenance' %}#f39c12{% else %}#3f51b5{% endif %};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px">
+                        ⚡
+                    </div>
+                </div>
+                <div class="machine-label" style="{% if e.status == 'broken' %}color:#e74c3c;font-weight:700{% endif %}">{{ e.name }}</div>
+            </div>
+            {% endfor %}
+
             <!-- Machines overlay -->
             {% for m in machines %}
             <div class="machine-marker status-{{ m.status }}"
@@ -399,6 +416,18 @@
     }
     #floorPlanContainer.grabbing {
         cursor: grabbing;
+    }
+    .machine-marker.status-broken .machine-shape {
+        animation: brokenPulse 1.5s infinite;
+        border-width: 3px !important;
+    }
+    .machine-marker.status-broken .machine-label {
+        color: #e74c3c;
+        font-weight: 700;
+    }
+    @keyframes brokenPulse {
+        0%, 100% { box-shadow: 0 0 4px rgba(231,76,60,0.4); }
+        50% { box-shadow: 0 0 16px rgba(231,76,60,0.9); }
     }
 </style>
 

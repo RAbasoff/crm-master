@@ -214,7 +214,12 @@ def warehouse_new():
 @role_required('admin', 'director', 'technician')
 def warehouse_edit(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
+    from utils import acquire_lock, release_lock
     if request.method == 'POST':
+        ok, lock_info = acquire_lock('warehouse', item_id, current_user.id, current_user.username)
+        if not ok:
+            flash(_('Record is being edited by %(user)s. Try again later.', user=lock_info.get('user_name', '?')), 'error')
+            return redirect(url_for('warehouse.warehouse_list'))
         item.naam = request.form['naam']
         item.description = request.form.get('description', '')
         item.categorie = request.form.get('categorie','')
@@ -246,7 +251,12 @@ def warehouse_edit(item_id):
         if not safe_commit():
             flash(_('Save failed. Please try again.'), 'error')
             return redirect(url_for('warehouse.warehouse_edit', item_id=item_id))
+        release_lock('warehouse', item_id, current_user.id)
         flash(_('Item updated'), 'success')
+        return redirect(url_for('warehouse.warehouse_list'))
+    ok, lock_info = acquire_lock('warehouse', item_id, current_user.id, current_user.username)
+    if not ok:
+        flash(_('⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now.', user=lock_info.get('user_name', '?'), time=lock_info.get('locked_at', '?')), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
     groups = WarehouseGroup.query.order_by(WarehouseGroup.name).all()
     contractors = Contractor.query.order_by(Contractor.company_name).all()

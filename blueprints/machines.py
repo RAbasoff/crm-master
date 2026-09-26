@@ -95,6 +95,12 @@ def machine_detail(machine_id):
 def machine_edit(machine_id):
     m = Machine.query.get_or_404(machine_id)
     if request.method == 'POST':
+        # Verify lock on save
+        from utils import acquire_lock, release_lock
+        ok, lock_info = acquire_lock('machine', machine_id, current_user.id, current_user.username)
+        if not ok:
+            flash(_('Record is being edited by %(user)s. Try again later.', user=lock_info.get('user_name', '?')), 'error')
+            return redirect(url_for('machines.machine_detail', machine_id=m.id))
         m.name = request.form['name']
         m.description = request.form.get('description', '')
         m.serial_number = request.form.get('serial_number', '')
@@ -123,7 +129,14 @@ def machine_edit(machine_id):
         if not safe_commit():
             flash(_('Save failed. Please try again.'), 'error')
             return redirect(url_for('machines.machine_edit', machine_id=m.id))
+        release_lock('machine', machine_id, current_user.id)
         flash(_('Machine updated'), 'success')
+        return redirect(url_for('machines.machine_detail', machine_id=m.id))
+    # GET: acquire lock
+    from utils import acquire_lock, release_lock
+    ok, lock_info = acquire_lock('machine', machine_id, current_user.id, current_user.username)
+    if not ok:
+        flash(_('⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now.', user=lock_info.get('user_name', '?'), time=lock_info.get('locked_at', '?')), 'error')
         return redirect(url_for('machines.machine_detail', machine_id=m.id))
     users = User.query.filter(User.is_active_user == True).all()
     sections = FactorySection.query.all()
@@ -463,3 +476,108 @@ def machines_qr_labels():
 @login_required
 def machine_scan_page():
     return render_template('machine_scan.html')
+
+
+# ============================================================
+# CONSUMABLES — link, write-off (consume), update-date, unlink
+# ============================================================
+
+@bp.route('/<int:machine_id>/consumables/link', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_consumables_link(machine_id):
+    m = Machine.query.get_or_404(machine_id)
+    warehouse_item_id = safe_int(request.form.get('warehouse_item_id'))
+    if not warehouse_item_id:
+        flash(_('Select a material'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    wi = VoorraadItem.query.get_or_404(warehouse_item_id)
+    # Check if already linked
+    existing = MachineConsumable.query.filter_by(machine_id=machine_id, warehouse_item_id=warehouse_item_id).first()
+    if existing:
+        flash(_('This material is already linked'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    mc = MachineConsumable(
+        machine_id=machine_id,
+        warehouse_item_id=warehouse_item_id,
+        quantity_per_use=safe_float(request.form.get('quantity_per_use'), 1),
+        notes=request.form.get('notes', '')
+    )
+    db.session.add(mc)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    flash(_('Consumable linked'), 'success')
+    return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+
+
+@bp.route('/<int:machine_id>/consumables/<int:mc_id>/consume', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_consumables_consume(machine_id, mc_id):
+    mc = MachineConsumable.query.get_or_404(mc_id)
+    if mc.machine_id != machine_id:
+        flash(_('Not found'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    qty = safe_float(request.form.get('quantity'), mc.quantity_per_use or 1)
+    if qty <= 0:
+        qty = mc.quantity_per_use or 1
+    wi = mc.warehouse_item
+    if not wi:
+        flash(_('Warehouse item not found'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    if wi.hoeveelheid < qty:
+        flash(_('Not enough stock. Available: %(qty)s %(unit)s', qty=wi.hoeveelheid, unit=wi.eenheid), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    # Deduct from warehouse
+    old_qty = wi.hoeveelheid
+    wi.hoeveelheid = old_qty - qty
+    # Record warehouse movement
+    mut = VoorraadMutatie(
+        voorraad_id=wi.id,
+        type='uitgaand',
+        aantal=qty,
+        datum=datetime.utcnow(),
+        gebruiker_id=current_user.id if current_user.is_authenticated else None,
+        opmerking=f'Consumable used on machine #{machine_id}'
+    )
+    db.session.add(mut)
+    mc.last_issued_at = datetime.utcnow()
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    flash(_('%(name)s written off: %(qty)s %(unit)s', name=wi.naam, qty=qty, unit=wi.eenheid), 'success')
+    return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+
+
+@bp.route('/<int:machine_id>/consumables/<int:mc_id>/update-date', methods=['POST'])
+@login_required
+@role_required('admin')
+def machine_consumables_update_date(machine_id, mc_id):
+    mc = MachineConsumable.query.get_or_404(mc_id)
+    if mc.machine_id != machine_id:
+        flash(_('Not found'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    d = safe_date(request.form.get('last_issued_at'))
+    mc.last_issued_at = datetime.combine(d, datetime.min.time()) if d else None
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    flash(_('Date updated'), 'success')
+    return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+
+
+@bp.route('/<int:machine_id>/consumables/<int:mc_id>/unlink', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_consumables_unlink(machine_id, mc_id):
+    mc = MachineConsumable.query.get_or_404(mc_id)
+    if mc.machine_id != machine_id:
+        flash(_('Not found'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    db.session.delete(mc)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=machine_id))
+    flash(_('Consumable unlinked'), 'success')
+    return redirect(url_for('machines.machine_detail', machine_id=machine_id))

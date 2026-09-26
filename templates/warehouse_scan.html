@@ -17,11 +17,11 @@
                 autocomplete="off" autofocus>
             <div style="font-size:11px;color:#888;margin-top:4px">{{ _('Honeywell scanner ready — scan to auto-submit') }}</div>
         </div>
-        <button id="btnCamera" class="btn btn-sm" style="background:#27ae60;color:white" onclick="toggleCamera()">📷 {{ _('Camera') }}</button>
+        <button id="btnCamera" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="toggleCamera()">📷 {{ _('Camera') }}</button>
     </div>
 </div>
 
-<!-- Camera -->
+<!-- Camera (mobile only) -->
 <div id="cameraBlock" style="display:none;margin-bottom:16px">
     <div class="card" style="padding:16px">
         <div id="reader" style="max-width:400px;margin:0 auto;border-radius:12px;overflow:hidden"></div>
@@ -44,6 +44,7 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/js/scanner-common.js"></script>
 <script>
 const history = [];
 let lastScan = '';
@@ -53,23 +54,11 @@ let scanner = null;
 
 const scannerInput = document.getElementById('scannerInput');
 
-// Honeywell auto-submit on Enter
-scannerInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const code = scannerInput.value.trim();
-        if (code) {
-            processScan(code);
-            scannerInput.value = '';
-        }
-    }
-});
-
-// Auto-refocus
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('a') && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('#reader')) {
-        scannerInput.focus();
-    }
+ScannerCommon.init({
+    inputId: 'scannerInput',
+    cameraBtnId: 'btnCamera',
+    cameraBlockId: 'cameraBlock',
+    onScan: processScan
 });
 
 // Camera toggle
@@ -178,7 +167,5 @@ function updateHistory() {
         return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0"><span><code>' + h.code + '</code></span><span style="color:#888">' + h.time + '</span></div>';
     }).join('');
 }
-
-scannerInput.focus();
 </script>
 {% endblock %}

@@ -283,6 +283,9 @@ document.addEventListener('click', function(e) {
 @media print {
     .page-header, .card:first-of-type, .btn, .nav { display: none !important; }
     .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    .print-logo { display: block !important; }
 }
+.print-logo { display: none; }
 </style>
+<img src="/static/logo.jpeg" alt="ProMaster" class="print-logo" style="width:60px;height:60px;object-fit:contain">
 {% endblock %}

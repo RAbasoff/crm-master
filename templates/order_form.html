@@ -34,7 +34,7 @@
                 <label>{{ _('Device') }}</label>
                 <div style="display:flex; gap:8px">
                     <input type="text" name="apparaat" id="apparaat" value="{{ order.apparaat if order else '' }}" required placeholder="{{ _('Smartphone, laptop...') }}" style="flex:1">
-                    <button type="button" class="btn btn-sm" style="background:#f39c12; color:white" onclick="scanForField('apparaat')">📷</button>
+                    <button type="button" class="btn btn-sm camera-btn" style="background:#f39c12; color:white" onclick="scanForField('apparaat')">📷</button>
                 </div>
             </div>
             <div class="form-group">
@@ -46,7 +46,7 @@
             <label>{{ _('Serial Number') }}</label>
             <div style="display:flex; gap:8px">
                 <input type="text" name="serienummer" id="serienummer" value="{{ order.serienummer if order else '' }}" style="flex:1">
-                <button type="button" class="btn btn-sm" style="background:#f39c12; color:white" onclick="scanForField('serienummer')">📷</button>
+                <button type="button" class="btn btn-sm camera-btn" style="background:#f39c12; color:white" onclick="scanForField('serienummer')">📷</button>
             </div>
         </div>
         <div class="form-group"><label>{{ _('Problem') }}</label><textarea name="probleem" id="probleem" rows="3" required>{{ order.probleem if order else '' }}</textarea></div>

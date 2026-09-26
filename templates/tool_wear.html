@@ -151,4 +151,61 @@ document.querySelectorAll('[id$="Modal"]').forEach(m => {
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
 });
 </script>
+
+<!-- Force-show knife reminder immediately on this page (for testing) -->
+<script>
+(function() {
+    // Immediately fetch and show tool wear warnings when entering this module
+    fetch('/api/tool-wear/warnings').then(r => r.json()).then(data => {
+        if (!data.warnings || data.warnings.length === 0) return;
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'toolWearWarning';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
+        
+        let list = '';
+        data.warnings.forEach(w => {
+            list += '<div style="padding:10px 16px;background:rgba(255,255,255,0.85);border-radius:8px;margin-bottom:6px;border:2px solid #000">' +
+                '<div style="font-size:16px;font-weight:700;color:#000">' + w.machine + '</div>' +
+                '<div style="font-size:14px;color:#000">' + w.tool + ' — {{ _("wear") }} ' + w.wear + '%</div>' +
+                '<div style="font-size:12px;color:#222">{{ _("Last replaced") }}: ' + w.last_replaced + '</div>' +
+                '</div>';
+        });
+        
+        overlay.innerHTML = '<div id="toolFlashBox" style="background:#f39c12;padding:40px 50px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(243,156,18,0.8);color:#000">' +
+            '<div style="font-size:64px;margin-bottom:16px">🔪</div>' +
+            '<div style="font-size:26px;font-weight:900;color:#000;margin-bottom:16px">{{ _("ATTENTION!") }}</div>' +
+            '<div style="font-size:14px;font-weight:600;color:#000;margin-bottom:16px">{{ _("Critical tool wear:") }}</div>' +
+            list +
+            '<div style="font-size:16px;font-weight:700;color:#000;margin:16px 0 20px">{{ _("REPLACEMENT NEEDED!") }}</div>' +
+            '<div style="display:flex;gap:10px;justify-content:center">' +
+            '<button onclick="document.getElementById(\'toolWearWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;color:#000;border-radius:10px;cursor:pointer">{{ _("UNDERSTOOD") }}</button>' +
+            {% if current_user.has_role('admin') or has_access('tool_wear') %}
+            '<button onclick="window.location.href=\'/tool-wear\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#e67e22;color:#000;border-radius:10px;cursor:pointer">{{ _("REPLACE") }}</button>' +
+            {% endif %}
+            '</div></div>';
+        
+        document.body.appendChild(overlay);
+        
+        // Blink for 4 seconds, text stays black
+        const box = document.getElementById('toolFlashBox');
+        let flashCount = 0;
+        const flashInterval = setInterval(() => {
+            if (flashCount % 2 === 0) {
+                box.style.background = '#f39c12';
+                box.style.boxShadow = '0 0 80px rgba(243,156,18,1)';
+            } else {
+                box.style.background = '#e67e22';
+                box.style.boxShadow = '0 0 30px rgba(230,126,34,0.4)';
+            }
+            flashCount++;
+            if (flashCount >= 8) {
+                clearInterval(flashInterval);
+                box.style.background = '#f39c12';
+                box.style.boxShadow = '0 0 60px rgba(243,156,18,0.8)';
+            }
+        }, 500);
+    }).catch(() => {});
+})();
+</script>
 {% endblock %}
