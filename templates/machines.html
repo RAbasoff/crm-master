@@ -44,6 +44,7 @@
     <div class="table-wrap"><table>
         <tr>
             <th style="width:36px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+            <th style="width:48px">{{ _('ID') }}</th>
             <th></th>
             <th>{{ _('Name') }}</th>
             <th>{{ _('Type') }}</th>
@@ -57,6 +58,7 @@
         {% for m in machines %}
         <tr>
             <td><input type="checkbox" class="machine-check" value="{{ m.id }}" onchange="updateSelection()"></td>
+            <td style="font-weight:600;color:#888">{{ m.id }}</td>
             <td>{% if m.photo %}<img src="/static/uploads/{{ m.photo }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{% else %}<div style="width:40px;height:40px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center">⚙️</div>{% endif %}</td>
             <td><a href="/machines/{{ m.id }}" style="font-weight:600">{{ m.name }}</a></td>
             <td>{{ m.machine_type or '—' }}</td>
@@ -68,7 +70,7 @@
                 {% if m.responsible_user %}{{ m.responsible_user.display_name or m.responsible_user.username }}{% endif %}
                 {% if not m.responsible_person and not m.responsible_user %}—{% endif %}
             </td>
-            <td><span class="badge badge-{{ m.status }}">{{ m.status }}</span></td>
+            <td><span class="badge badge-{{ m.status }}">{{ _(m.status) if m.status else _('Active') }}</span></td>
             <td>
                 {% if m.fault_reports|length > 0 %}
                 <span style="color:#e74c3c;font-weight:bold">{{ m.fault_reports|length }}</span>

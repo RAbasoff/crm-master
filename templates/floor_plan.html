@@ -41,8 +41,9 @@
     </div>
     
     <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;height:85vh">
-        <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.15s;width:100%;height:100%">
-            <img src="/static/floor_plan.jpeg" id="floorPlanImg" style="display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none" draggable="false">
+        <!-- Wrapper matches image aspect (1520×1080) so % overlays == % of drawing -->
+        <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.15s;width:100%;aspect-ratio:1520/1080;max-width:100%">
+            <img src="/static/floor_plan.jpeg" id="floorPlanImg" style="position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none" draggable="false">
             
             <!-- Grid overlay -->
             <div id="gridOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.15">
@@ -268,12 +269,25 @@
 <style>
     .floor-section {
         position: absolute;
-        border: 3px dashed;
-        border-radius: 8px;
+        border: 2px dashed;
+        border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
-        background: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.12);
         z-index: 5;
+    }
+    .floor-section .section-label {
+        font-size: 9px !important;
+        padding: 2px 6px !important;
+    }
+    .floor-section .section-name { font-size: 9px; }
+    .floor-section .section-count { font-size: 8px; }
+    .machine-marker .machine-label {
+        font-size: 8px !important;
+        max-width: 72px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .floor-section:hover {
         background: rgba(255,255,255,0.25);
@@ -331,6 +345,15 @@
     }
     .machine-marker .machine-shape {
         transition: all 0.2s;
+        /* compact markers */
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 10px !important;
+        border-width: 1.5px !important;
+    }
+    .machine-marker .machine-shape > div {
+        transform: scale(0.55);
+        transform-origin: center;
     }
     .machine-marker:hover .machine-shape {
         transform: scale(1.05);

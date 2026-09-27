@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import flash, redirect, url_for, request, session
 from flask_login import current_user
@@ -592,6 +593,8 @@ def run_migrations():
             locked_at DATETIME,
             expires_at DATETIME NOT NULL
         )"""),
+        ("equipment.floor_x", "ALTER TABLE equipment ADD COLUMN floor_x FLOAT"),
+        ("equipment.floor_y", "ALTER TABLE equipment ADD COLUMN floor_y FLOAT"),
     ]
 
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
@@ -1421,3 +1424,47 @@ def check_tool_wear_notifications():
                 continue
             create_notification(uid, _('Knife replacement needed'), msg, 'tool_wear', '/tool-wear')
             existing_notifs.add(uid)
+
+
+BELGIAN_HOLIDAYS_FIXED = {
+    (1, 1): "Nieuwjaar / Jour de l'An",
+    (5, 1): "Dag van de Arbeid / Fête du Travail",
+    (7, 21): "Nationale Feestdag / Fête nationale",
+    (8, 15): "O-L-V-Hemelvaart / Assomption",
+    (11, 1): "Allerheiligen / Toussaint",
+    (11, 11): "Wapenstilstand / Armistice",
+    (12, 25): "Kerstmis / Noël",
+}
+
+
+def get_easter(year):
+    """Calculate Easter Sunday using Meeus/Jones/Butcher algorithm."""
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return datetime(year, month, day).date()
+
+
+def get_belgian_holidays(year):
+    """Return dict of {date: name} for Belgian public holidays."""
+    holidays = {}
+    for (m, d), name in BELGIAN_HOLIDAYS_FIXED.items():
+        holidays[datetime(year, m, d).date()] = name
+    easter = get_easter(year)
+    holidays[easter - timedelta(days=2)] = "Goede Vrijdag / Vendredi saint"
+    holidays[easter] = "Pasen / Pâques"
+    holidays[easter + timedelta(days=1)] = "Paasmaandag / Lundi de Pâques"
+    holidays[easter + timedelta(days=39)] = "Hemelvaart / Ascension"
+    holidays[easter + timedelta(days=50)] = "Pinkstermaandag / Lundi de Pentecôte"
+    return holidays

@@ -3,14 +3,59 @@
 {% block content %}
 <div class="page-header">
     <h1>📊 {{ _('Monthly Archive') }}</h1>
-    {% if current_user.has_role('admin') %}
-    <form method="POST" action="/archive/create" onsubmit="return confirm('{{ _('Archive previous month data?') }}')">
-        <button type="submit" class="btn btn-primary">📦 {{ _('Archive Previous Month') }}</button>
-    </form>
-    {% endif %}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <form method="GET" action="/archive" style="display:flex;gap:6px">
+            <input type="text" name="q" value="{{ q or '' }}" placeholder="{{ _('Search in archive') }}..."
+                   style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;min-width:220px">
+            <button type="submit" class="btn btn-sm" style="background:#3498db;color:white">{{ _('Search') }}</button>
+            {% if q %}<a href="/archive" class="btn btn-sm" style="background:#eee">{{ _('Clear') }}</a>{% endif %}
+        </form>
+        {% if current_user.has_role('admin') %}
+        <form method="POST" action="/archive/create" onsubmit="return confirm('{{ _('Archive previous month data?') }}')">
+            <button type="submit" class="btn btn-primary">📦 {{ _('Archive Previous Month') }}</button>
+        </form>
+        {% endif %}
+    </div>
 </div>
 
-{% if months %}
+{% if q %}
+<div class="card">
+    <h2 style="margin:0 0 12px;font-size:15px">{{ _('Search results') }}: «{{ q }}» ({{ search_hits|length }})</h2>
+    {% if search_hits %}
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Month') }}</th>
+            <th>{{ _('Section') }}</th>
+            <th>{{ _('Data') }}</th>
+        </tr>
+        {% for hit in search_hits %}
+        <tr>
+            <td><a href="/archive/{{ hit.month }}/{{ hit.section }}">{{ hit.month }}</a></td>
+            <td>
+                {% if hit.section == 'faults' %}⚠️ {{ _('Faults') }}
+                {% elif hit.section == 'orders' %}📋 {{ _('Orders') }}
+                {% elif hit.section == 'work_reports' %}📝 {{ _('Work Reports') }}
+                {% elif hit.section == 'time_entries' %}⏱ {{ _('Time Entries') }}
+                {% elif hit.section == 'warehouse' %}📦 {{ _('Warehouse') }}
+                {% elif hit.section == 'maintenance_plans' %}🔧 {{ _('Maint. Plans') }}
+                {% elif hit.section == 'equipment_maintenance' %}🏭 {{ _('Mule Maintenance') }}
+                {% elif hit.section == 'two' %}📝 TWO
+                {% elif hit.section == 'statistics' %}📈 {{ _('Statistics') }}
+                {% else %}{{ hit.section }}{% endif %}
+            </td>
+            <td style="font-size:11px;word-break:break-word">
+                {% for k, v in hit.row.items() %}
+                    <strong>{{ k }}</strong>: {{ v }}{% if not loop.last %} · {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#888">{{ _('Nothing found') }}</p>
+    {% endif %}
+</div>
+{% elif months %}
 {% for month, items in months.items() %}
 <div class="card" style="margin-bottom:16px">
     <h2 style="margin-bottom:14px;font-size:16px">📅 {{ month }}</h2>
@@ -18,11 +63,29 @@
         {% for a in items %}
         <a href="/archive/{{ a.archive_month }}/{{ a.section }}" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f8f9fc;border-radius:10px;text-decoration:none;color:#333;border:1px solid #e8ecf1;transition:all 0.15s" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='#f8f9fc'">
             <span style="font-size:20px">
-                {% if a.section == 'faults' %}⚠️{% elif a.section == 'orders' %}📋{% elif a.section == 'work_reports' %}📝{% elif a.section == 'time_entries' %}⏱{% else %}📄{% endif %}
+                {% if a.section == 'faults' %}⚠️
+                {% elif a.section == 'orders' %}📋
+                {% elif a.section == 'work_reports' %}📝
+                {% elif a.section == 'time_entries' %}⏱
+                {% elif a.section == 'warehouse' %}📦
+                {% elif a.section == 'maintenance_plans' %}🔧
+                {% elif a.section == 'equipment_maintenance' %}🏭
+                {% elif a.section == 'two' %}📝
+                {% elif a.section == 'statistics' %}📈
+                {% else %}📄{% endif %}
             </span>
             <div>
                 <div style="font-weight:600;font-size:13px">
-                    {% if a.section == 'faults' %}{{ _('Faults') }}{% elif a.section == 'orders' %}{{ _('Orders') }}{% elif a.section == 'work_reports' %}{{ _('Work Reports') }}{% elif a.section == 'time_entries' %}{{ _('Time Entries') }}{% else %}{{ a.section }}{% endif %}
+                    {% if a.section == 'faults' %}{{ _('Faults') }}
+                    {% elif a.section == 'orders' %}{{ _('Orders') }}
+                    {% elif a.section == 'work_reports' %}{{ _('Work Reports') }}
+                    {% elif a.section == 'time_entries' %}{{ _('Time Entries') }}
+                    {% elif a.section == 'warehouse' %}{{ _('Warehouse') }}
+                    {% elif a.section == 'maintenance_plans' %}{{ _('Maint. Plans') }}
+                    {% elif a.section == 'equipment_maintenance' %}{{ _('Mule Maintenance') }}
+                    {% elif a.section == 'two' %}TWO
+                    {% elif a.section == 'statistics' %}{{ _('Statistics') }}
+                    {% else %}{{ a.section }}{% endif %}
                 </div>
                 <div style="font-size:11px;color:#888">{{ a.data_json|length }} {{ _('records') }}</div>
             </div>

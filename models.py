@@ -1298,6 +1298,8 @@ class Equipment(db.Model):
     building = db.Column(db.String(100))
     floor_level = db.Column(db.String(50))
     room = db.Column(db.String(100))
+    floor_x = db.Column(db.Float)
+    floor_y = db.Column(db.Float)
 
     # Статус и ответственные
     status = db.Column(db.String(20), default='active', index=True)  # active, maintenance, broken, retired, disposed
