@@ -432,6 +432,13 @@ def run_migrations():
             created_by INTEGER REFERENCES user(id),
             created_at DATETIME
         )"""),
+        ("equipment_mro_photo", """CREATE TABLE IF NOT EXISTS equipment_mro_photo (
+            id INTEGER PRIMARY KEY,
+            equipment_id INTEGER NOT NULL REFERENCES equipment_maintenance(id),
+            filename VARCHAR(300) NOT NULL,
+            description VARCHAR(300),
+            uploaded_at DATETIME
+        )"""),
         ("equipment_part", """CREATE TABLE IF NOT EXISTS equipment_part (
             id INTEGER PRIMARY KEY,
             equipment_id INTEGER NOT NULL REFERENCES equipment_maintenance(id),

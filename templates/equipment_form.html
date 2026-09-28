@@ -3,7 +3,7 @@
 {% block content %}
 <h1>{{ _('Edit Mule') + ': ' + eq.number if eq else _('New Mule Maintenance') }}</h1>
 <div class="card">
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <div class="form-row">
             <div class="form-group"><label>{{ _('Equipment Name') }} *</label><input type="text" name="name" value="{{ eq.name if eq else '' }}" required placeholder="Mule-01, Press-02..."></div>
             <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial" value="{{ eq.serial if eq and eq.serial else '' }}" placeholder="SN-12345"></div>
@@ -97,6 +97,29 @@
         </div>
 
         <div class="form-group"><label>{{ _('Notes') }}</label><textarea name="notes" rows="2">{{ eq.notes if eq else '' }}</textarea></div>
+
+        <!-- PHOTOS -->
+        <div class="card" style="background:#fff8f0;margin:16px 0;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="font-size:14px;margin:0">📷 {{ _('Photos') }}</h3>
+                <label class="btn btn-sm" style="background:#e67e22;color:white;cursor:pointer">
+                    + {{ _('Add Photos') }}
+                    <input type="file" name="photos" multiple accept="image/*" style="display:none" onchange="previewPhotos(this)">
+                </label>
+            </div>
+            {% if eq and eq.photos %}
+            <div id="existingPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                {% for p in eq.photos %}
+                <div style="position:relative">
+                    <img src="/static/uploads/{{ p.filename }}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee" onclick="window.open(this.src)" title="{{ p.filename }}">
+                    <button type="button" onclick="deletePhoto({{ p.id }})" style="position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:20px;text-align:center">✕</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+
         <div style="display:flex;gap:8px">
             <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
             <a href="/equipment" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
@@ -184,6 +207,27 @@ function toggleCompFields(select) {
     const length = row.querySelector('[name="comp_length"]');
     if (size) size.style.display = (type === 'knife' || type === 'gasket') ? '' : 'none';
     if (length) length.style.display = (type === 'gasket' || type === 'cable') ? '' : 'none';
+}
+
+function previewPhotos(input) {
+    const box = document.getElementById('photoPreview');
+    box.innerHTML = '';
+    Array.from(input.files).forEach(f => {
+        if (!f.type.startsWith('image/')) return;
+        const img = document.createElement('img');
+        img.style.cssText = 'width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee';
+        img.src = URL.createObjectURL(f);
+        box.appendChild(img);
+    });
+}
+
+function deletePhoto(photoId) {
+    if (!confirm('{{ _("Delete photo?") }}')) return;
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/equipment/photo/' + photoId + '/delete';
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 {% endblock %}

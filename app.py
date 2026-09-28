@@ -26,7 +26,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     FaultStatusHistory, WorkReportEntry, ToolWear, MonthlyArchive,
                     TWOChecklistItem, TWOSignature, TWOAssignment,
                     UserActivityLog, SystemLog,
-                    EquipmentMaintenance, EquipmentPart, EquipmentComponent, EquipmentPartOrder,
+                    EquipmentMaintenance, EquipmentPart, EquipmentComponent, EquipmentPartOrder, EquipmentMROPhoto,
                     Equipment, EquipmentDocument, EquipmentServiceLog,
                     WarehouseReservation, SupplierPrice,
                     GasCylinder, CylinderLog, CylinderOrder,
@@ -1415,6 +1415,12 @@ def equipment_new():
                     length=comp_lengths[i] if i < len(comp_lengths) else '',
                     quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1
                 ))
+        # Add photos
+        for photo in request.files.getlist('photos'):
+            if photo and photo.filename:
+                fn = secure_filename(f"mro_{eq.id}_{photo.filename}")
+                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+                db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('equipment_list'))
@@ -1482,6 +1488,12 @@ def equipment_edit(eq_id):
                     length=comp_lengths[i] if i < len(comp_lengths) else '',
                     quantity=float(comp_qtys[i]) if i < len(comp_qtys) and comp_qtys[i] else 1
                 ))
+        # Add new photos (existing ones are kept)
+        for photo in request.files.getlist('photos'):
+            if photo and photo.filename:
+                fn = secure_filename(f"mro_{eq.id}_{photo.filename}")
+                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+                db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('equipment_list'))
@@ -1502,6 +1514,23 @@ def equipment_delete(eq_id):
         return redirect(url_for('equipment_list'))
     flash(_('Equipment maintenance deleted'), 'success')
     return redirect(url_for('equipment_list'))
+
+@app.route('/equipment/photo/<int:photo_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def equipment_photo_delete(photo_id):
+    photo = EquipmentMROPhoto.query.get_or_404(photo_id)
+    eq_id = photo.equipment_id
+    try:
+        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], photo.filename))
+    except OSError:
+        pass
+    db.session.delete(photo)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        flash(_('Photo deleted'), 'success')
+    return redirect(url_for('equipment_edit', eq_id=eq_id))
 
 @app.route('/equipment/order', methods=['POST'])
 @login_required

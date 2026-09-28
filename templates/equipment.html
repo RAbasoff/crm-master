@@ -71,7 +71,7 @@
         <tr>
             <td><strong>{{ r.number }}</strong></td>
             <td>{{ r.date.strftime('%d-%m-%Y') }}</td>
-            <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ r.name }}</span></td>
+            <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ r.name }}</span>{% if r.photos %} <span title="{{ _('Photos') }}" style="font-size:11px;color:#e67e22">📷{{ r.photos|length }}</span>{% endif %}</td>
             <td style="font-size:12px;color:#888">{{ r.serial or '—' }}</td>
             <td>{{ r.machine.name if r.machine else '—' }}</td>
             <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.reason }}</td>

@@ -1209,6 +1209,15 @@ class EquipmentMaintenance(db.Model):
     creator = db.relationship('User', foreign_keys=[created_by])
     parts = db.relationship('EquipmentPart', backref='equipment', lazy=True, cascade='all, delete-orphan')
     components = db.relationship('EquipmentComponent', backref='equipment', lazy=True, cascade='all, delete-orphan')
+    photos = db.relationship('EquipmentMROPhoto', backref='equipment', lazy=True, cascade='all, delete-orphan')
+
+class EquipmentMROPhoto(db.Model):
+    __tablename__ = 'equipment_mro_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class EquipmentPart(db.Model):
     __tablename__ = 'equipment_part'
