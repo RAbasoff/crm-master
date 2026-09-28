@@ -2,7 +2,8 @@
 Machines blueprint — machine CRUD, parts, consumables, documents, floor plan, reports
 """
 from datetime import datetime, timedelta
-from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, send_file
+from flask import (Blueprint, request, redirect, url_for, flash, render_template,
+                   jsonify, send_file, current_app)
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
@@ -59,7 +60,7 @@ def machine_new():
         )
         if 'photo' in request.files and request.files['photo'].filename:
             filename = secure_filename(f"machine_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join('static/uploads', filename))
+            request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             m.photo = filename
         db.session.add(m)
         db.session.flush()
@@ -224,7 +225,7 @@ def machine_edit(machine_id):
         m.floor_y = safe_float(request.form.get('floor_y'), m.floor_y)
         if 'photo' in request.files and request.files['photo'].filename:
             filename = secure_filename(f"machine_{m.id}_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join('static/uploads', filename))
+            request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             m.photo = filename
         m.assigned_users = []
         for uid in request.form.getlist('assigned_users'):
@@ -366,7 +367,7 @@ def machine_upload_document(machine_id):
         return redirect(url_for('machines.machine_detail', machine_id=m.id))
     file = request.files['document']
     filename = secure_filename(f"doc_{m.id}_{file.filename}")
-    file.save(os.path.join('static/uploads', filename))
+    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     doc = MachineDocument(
         machine_id=m.id,
         doc_type=request.form.get('doc_type', 'other'),
@@ -412,7 +413,7 @@ def machine_add_maintenance(machine_id):
             for photo in request.files.getlist('photos'):
                 if photo.filename:
                     fn = secure_filename(f"maint_{mr.id}_{photo.filename}")
-                    photo.save(os.path.join('static/uploads', fn))
+                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
                     mp = MaintenancePhoto(maintenance_id=mr.id, filename=fn)
                     db.session.add(mp)
             safe_commit()

@@ -174,9 +174,19 @@ def date_plus_days(d, days):
         return d + timedelta(days=days)
     return None
 
+ALLOWED_UPLOAD_EXT = {
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg',
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt',
+    '.mp4', '.webm', '.mov', '.mp3', '.wav',
+    '.zip',
+}
+
 def save_uploaded_file(file, prefix=''):
     if file and file.filename:
         filename = secure_filename(f"{prefix}{file.filename}")
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in ALLOWED_UPLOAD_EXT:
+            return None
         from flask import current_app
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
         return filename
@@ -740,6 +750,15 @@ def run_data_migrations():
                             CylinderLog, CylinderOrder)
         from sqlalchemy import text, func
 
+        # ── -1. Scrub plaintext passwords from User (security) ──
+        try:
+            scrubbed = User.query.filter(User.password_plain.isnot(None)).update(
+                {User.password_plain: None}, synchronize_session=False)
+            if scrubbed:
+                print(f'Data migration: scrubbed password_plain on {scrubbed} users')
+        except Exception as _sp_err:
+            print(f'password_plain scrub skipped: {_sp_err}')
+
         # ── 0. Fix admin role (auto-repair from role-switcher corruption) ──
         admin_user = User.query.filter_by(username='admin').first()
         if admin_user and admin_user.role != 'admin':
@@ -846,7 +865,7 @@ def run_data_migrations():
                     counter += 1
                 mu = User(username=uname, display_name=m.naam, role='technician',
                           is_active_user=True)
-                mu.set_password(f'{uname}123')
+                mu.set_password(os.environ.get('DEFAULT_USER_PW', 'ChangeMe!123'))
                 db.session.add(mu)
                 db.session.flush()
                 m.user_id = mu.id

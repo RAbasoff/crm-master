@@ -55,8 +55,8 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password, save_plain=False):
         self.password_hash = generate_password_hash(password)
-        if save_plain:
-            self.password_plain = password
+        # Never persist plaintext passwords (save_plain kept for API compat)
+        self.password_plain = None
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)

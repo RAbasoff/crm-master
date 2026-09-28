@@ -44,7 +44,7 @@ from utils import (get_belgian_holidays, role_required, user_has_section_access,
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # no timeout for long sessions
+app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24 * 7  # 7 days (was: unlimited)
 app.config['WTF_CSRF_SSL_STRICT'] = False  # allow CSRF across HTTP/HTTPS (PythonAnywhere proxy)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance'), exist_ok=True)
@@ -297,14 +297,14 @@ with app.app_context():
             _conn.close()
     except Exception as _e:
         print(f"SQL fix skipped: {_e}")
-    # Ensure admin account is healthy: correct password + no force_change flag
+    # Ensure admin account is healthy: role/active flags only — do NOT reset password here
     _admin_user = User.query.filter_by(username='admin').first()
     if _admin_user:
         _needs_update = False
-        if not _admin_user.check_password('Aba103sov'):
-            _admin_user.set_password('Aba103sov', save_plain=True)
+        if not _admin_user.password_hash:
+            _admin_user.set_password(os.environ.get('BOOTSTRAP_ADMIN_PW', 'ChangeMe!123'), save_plain=False)
             _needs_update = True
-            print("STARTUP: admin password reset to Aba103sov")
+            print("STARTUP: admin password set (was empty)")
         if not _admin_user.is_active_user:
             _admin_user.is_active_user = True
             _needs_update = True
@@ -324,16 +324,16 @@ with app.app_context():
                 print('WARNING: safe_commit failed in startup')
     if User.query.count() == 0:
         admin = User(username='admin', display_name='Administrator', role='admin')
-        admin.set_password('Aba103sov', save_plain=True)
+        admin.set_password(os.environ.get('BOOTSTRAP_ADMIN_PW', 'ChangeMe!123'), save_plain=False)
         director = User(username='director', display_name='Director', role='director')
-        director.set_password('director123')
+        director.set_password(os.environ.get('BOOTSTRAP_DIRECTOR_PW', 'ChangeMe!123'))
         db.session.add_all([admin, director])
         if not safe_commit():
             print('WARNING: safe_commit failed in startup')
     # Ensure director exists (create if missing)
     if not User.query.filter_by(username='director').first():
         d = User(username='director', display_name='Director', role='director')
-        d.set_password('director123', save_plain=True)
+        d.set_password(os.environ.get('BOOTSTRAP_DIRECTOR_PW', 'ChangeMe!123'), save_plain=False)
         d.is_active_user = True
         db.session.add(d)
         if not safe_commit():
@@ -510,12 +510,40 @@ def favicon():
 # ROUTES — AUTH
 # ============================================================
 
+# ── Login rate limiting (in-memory, per IP) ─────────────────
+_LOGIN_ATTEMPTS = {}  # ip -> (count, window_start)
+_LOGIN_MAX = 10       # attempts per window
+_LOGIN_WINDOW = 300   # seconds (5 min)
+
+
+def _login_rate_ok(ip):
+    import time as _time
+    now = _time.time()
+    count, start = _LOGIN_ATTEMPTS.get(ip, (0, 0.0))
+    if now - start > _LOGIN_WINDOW:
+        _LOGIN_ATTEMPTS[ip] = (1, now)
+        return True
+    if count >= _LOGIN_MAX:
+        return False
+    _LOGIN_ATTEMPTS[ip] = (count + 1, start)
+    return True
+
+
+def _login_rate_reset(ip):
+    _LOGIN_ATTEMPTS.pop(ip, None)
+
+
 @app.route('/login', methods=['GET', 'POST'], strict_slashes=False)
 def login():
     try:
         if current_user.is_authenticated:
             return redirect(url_for('index'))
         if request.method == 'POST':
+            ip = request.remote_addr or 'unknown'
+            if not _login_rate_ok(ip):
+                log_system('WARN', 'auth', f'Login rate-limit hit for {ip}', source='login')
+                flash(_('Too many login attempts. Try again later.'), 'error')
+                return render_template('login.html'), 429
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
             if not username or not password:
@@ -524,6 +552,7 @@ def login():
             # Try User first
             user = User.query.filter_by(username=username).first()
             if user and user.check_password(password) and user.is_active_user:
+                _login_rate_reset(ip)
                 login_user(user, remember=True)
                 # Track login count
                 user.login_count = (user.login_count or 0) + 1
