@@ -26,11 +26,13 @@ def responsible_list():
     else:
         # Exclude persons without a group (technicians moved to Technische dienst)
         q = q.filter(Verantwoordelijke.group_id.isnot(None))
-    verantwoordelijken = q.order_by(Verantwoordelijke.naam).all()
+    page = request.args.get('page', 1, type=int)
+    pagination = q.order_by(Verantwoordelijke.naam).paginate(page=page, per_page=25, error_out=False)
+    verantwoordelijken = pagination.items
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
     all_sections = FactorySection.query.order_by(FactorySection.name).all()
     all_machines = Machine.query.order_by(Machine.name).all()
-    return render_template('responsible.html', verantwoordelijken=verantwoordelijken,
+    return render_template('responsible.html', pagination=pagination, verantwoordelijken=verantwoordelijken,
         groups=groups, group_filter=int(group_id) if group_id else None,
         all_sections=all_sections, all_machines=all_machines)
 

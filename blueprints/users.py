@@ -24,9 +24,12 @@ bp = Blueprint('users', __name__)
 @login_required
 @role_required('admin')
 def users_list():
-    users = User.query.all()
+    page = request.args.get('page', 1, type=int)
+    pagination = User.query.order_by(User.id).paginate(page=page, per_page=25, error_out=False)
+    users = pagination.items
     machines = Machine.query.order_by(Machine.name).all()
-    return render_template('users.html', users=users, section_keys=SECTION_KEYS, machines=machines)
+    return render_template('users.html', users=users, section_keys=SECTION_KEYS,
+                           machines=machines, pagination=pagination)
 
 
 @bp.route('/users/<int:user_id>')

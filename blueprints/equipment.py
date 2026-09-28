@@ -40,7 +40,9 @@ def equipment_list():
     serial = request.args.get('serial', '').strip()
     if serial:
         q = q.filter(EquipmentMaintenance.serial.ilike(f'%{sanitize_like(serial)}%'))
-    records = q.order_by(EquipmentMaintenance.date.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    pagination = q.order_by(EquipmentMaintenance.date.desc()).paginate(page=page, per_page=25, error_out=False)
+    records = pagination.items
     orders = EquipmentPartOrder.query.order_by(EquipmentPartOrder.created_at.desc()).limit(20).all()
     machines = Machine.query.order_by(Machine.name).all()
     # Find warehouse items linked to mule maintenance parts that are low or out of stock
@@ -51,7 +53,7 @@ def equipment_list():
         VoorraadItem.id.in_(used_wh_ids),
         VoorraadItem.hoeveelheid <= VoorraadItem.minimum
     ).order_by(VoorraadItem.naam).all() if used_wh_ids else []
-    return render_template('equipment.html', records=records, orders=orders, machines=machines, serial=serial, low_stock_parts=low_stock_parts)
+    return render_template('equipment.html', pagination=pagination, records=records, orders=orders, machines=machines, serial=serial, low_stock_parts=low_stock_parts)
 
 
 @bp.route('/equipment/report')

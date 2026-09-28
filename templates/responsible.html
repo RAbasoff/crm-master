@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Responsible persons') }} — ProMaster{% endblock %}
+{% block title %}{{ _('Responsible persons') }} — ProMaster{% include '_pagination.html' with context %}
+{% endblock %}
 {% block content %}
 <div class="page-header">
     <h1>{{ _('Responsible persons') }}</h1>

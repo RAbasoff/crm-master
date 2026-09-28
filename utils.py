@@ -202,11 +202,49 @@ def translate_text(text, target_lang):
     except Exception:
         return text
 
+
+SCHEMA_VERSION = 20260928
+
+def _migrations_already_applied():
+    """Fast-path: skip schema/data migrations when stamp matches."""
+    try:
+        import sqlite3
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+        if not os.path.exists(db_path):
+            return False
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS schema_version (id INTEGER PRIMARY KEY, version INTEGER NOT NULL, applied_at DATETIME)")
+        row = cur.execute("SELECT version FROM schema_version ORDER BY id DESC LIMIT 1").fetchone()
+        conn.close()
+        return bool(row and int(row[0]) >= SCHEMA_VERSION)
+    except Exception:
+        return False
+
+
+def _stamp_migrations_applied():
+    try:
+        import sqlite3
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
+        if not os.path.exists(db_path):
+            return
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS schema_version (id INTEGER PRIMARY KEY, version INTEGER NOT NULL, applied_at DATETIME)")
+        cur.execute("INSERT INTO schema_version (version, applied_at) VALUES (?, datetime('now'))", (SCHEMA_VERSION,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f'schema_version stamp failed: {e}')
+
+
 def run_migrations():
     import sqlite3
     from flask import current_app
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     if not os.path.exists(db_path):
+        return
+    if _migrations_already_applied():
         return
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -740,6 +778,8 @@ def run_migrations():
 
 def run_data_migrations():
     """Data migrations via SQLAlchemy ORM — works on both SQLite and PostgreSQL."""
+    if _migrations_already_applied():
+        return
     try:
         from models import (ResponsibleGroup, GroupPermission, User, UserSectionAccess,
                             Verantwoordelijke, Machine, Equipment, WarehouseGroup,

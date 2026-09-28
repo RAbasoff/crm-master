@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Mule Maintenance') }} — CRM{% endblock %}
+{% block title %}{{ _('Mule Maintenance') }} — CRM{% include '_pagination.html' with context %}
+{% endblock %}
 {% block content %}
 <div class="page-header">
     <h1>🔧 {{ _('Mule Maintenance') }}</h1>

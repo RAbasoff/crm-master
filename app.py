@@ -262,6 +262,12 @@ with app.app_context():
     db.create_all()
     run_migrations()
     run_data_migrations()
+    try:
+        from utils import _migrations_already_applied, _stamp_migrations_applied
+        if not _migrations_already_applied():
+            _stamp_migrations_applied()
+    except Exception as _st_err:
+        print(f'schema stamp skip: {_st_err}')
     # PDF export needs fpdf2 (often missing on PA) — install once at startup
     try:
         ensure_fpdf()
@@ -876,15 +882,31 @@ def index():
     # Responsible persons go directly to floor plan
     if hasattr(current_user, '_person') and current_user.role == 'responsible':
         return redirect(url_for('floor_plan'))
+
+    # Aggregate stats in one query (C2)
+    today_start = datetime.utcnow().date()
+    open_states = ['open', 'accepted', 'in_progress']
+    row = db.session.query(
+        func.count(Opdracht.id),
+        func.coalesce(func.sum(case((Opdracht.status.notin_(['afgeleverd', 'geannuleerd']), 1), else_=0)), 0),
+        func.coalesce(func.sum(case((Opdracht.aangemaakt >= today_start, 1), else_=0)), 0),
+    ).one()
+    ver_count = Verantwoordelijke.query.count()
+    mont_count = Monteur.query.filter_by(actief=True).count()
+    low_count = VoorraadItem.query.filter(VoorraadItem.hoeveelheid <= VoorraadItem.minimum).count()
+    fault_row = db.session.query(
+        func.coalesce(func.sum(case((FaultReport.status == 'open', 1), else_=0)), 0),
+        func.coalesce(func.sum(case((FaultReport.status.in_(open_states), 1), else_=0)), 0),
+    ).one()
     stats = {
-        'opdrachten_totaal': Opdracht.query.count(),
-        'opdrachten_actief': Opdracht.query.filter(Opdracht.status.notin_(['afgeleverd', 'geannuleerd'])).count(),
-        'opdrachten_vandaag': Opdracht.query.filter(Opdracht.aangemaakt >= datetime.utcnow().date()).count(),
-        'verantwoordelijken': Verantwoordelijke.query.count(),
-        'monteurs': Monteur.query.filter_by(actief=True).count(),
-        'voorraad_laag': VoorraadItem.query.filter(VoorraadItem.hoeveelheid <= VoorraadItem.minimum).count(),
-        'faults_open': FaultReport.query.filter_by(status='open').count(),
-        'faults_active': FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).count(),
+        'opdrachten_totaal': int(row[0] or 0),
+        'opdrachten_actief': int(row[1] or 0),
+        'opdrachten_vandaag': int(row[2] or 0),
+        'verantwoordelijken': ver_count,
+        'monteurs': mont_count,
+        'voorraad_laag': low_count,
+        'faults_open': int(fault_row[0] or 0),
+        'faults_active': int(fault_row[1] or 0),
     }
     recent = Opdracht.query.order_by(Opdracht.aangemaakt.desc()).limit(10).all()
     laag = VoorraadItem.query.filter(VoorraadItem.hoeveelheid <= VoorraadItem.minimum).all()
@@ -900,10 +922,15 @@ def index():
     # Dashboard statistics for admin/director
     dashboard_stats = {}
     if current_user.has_role('admin', 'director'):
-        dashboard_stats['low'] = FaultReport.query.filter_by(priority='low').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
-        dashboard_stats['normal'] = FaultReport.query.filter_by(priority='normal').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
-        dashboard_stats['high'] = FaultReport.query.filter_by(priority='high').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
-        dashboard_stats['critical'] = FaultReport.query.filter_by(priority='critical').filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened'])).count()
+        active_fault_states = ['open', 'accepted', 'in_progress', 'parts_ordered', 'reopened']
+        prio_rows = db.session.query(
+            FaultReport.priority, func.count()
+        ).filter(FaultReport.status.in_(active_fault_states)).group_by(FaultReport.priority).all()
+        prio_map = {p or 'normal': int(c or 0) for p, c in prio_rows}
+        dashboard_stats['low'] = prio_map.get('low', 0)
+        dashboard_stats['normal'] = prio_map.get('normal', 0)
+        dashboard_stats['high'] = prio_map.get('high', 0)
+        dashboard_stats['critical'] = prio_map.get('critical', 0)
         
         # Top machines with faults (single aggregated query)
         machine_stats = db.session.query(
