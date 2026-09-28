@@ -78,6 +78,14 @@
             {{ _('Set a new password for') }} <strong>{{ worker.user.name }}</strong>
             (@{{ worker.user.username }}). {{ _('Leave empty to auto-generate.') }}
         </p>
+        {% if current_user.has_role('admin') and worker.user.password_plain %}
+        <div style="margin-bottom:12px;padding:8px 12px;background:#fff;border-radius:6px;font-size:12px">
+            <strong>{{ _('Current password') }}:</strong>
+            <code id="wpw" style="font-size:13px;letter-spacing:1px">{{ worker.user.password_plain }}</code>
+            <button type="button" class="btn btn-sm" style="background:#eee;height:26px;padding:2px 8px"
+                    onclick="(function(b){var e=document.getElementById('wpw');e.style.visibility=e.style.visibility==='hidden'?'visible':'hidden';b.textContent=e.style.visibility==='hidden'?'👁':'🙈'})(this)">{{ '🙈' }}</button>
+        </div>
+        {% endif %}
         <form method="POST" action="{{ url_for('workers.worker_reset_password', worker_id=worker.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">

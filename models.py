@@ -66,10 +66,11 @@ class User(UserMixin, db.Model):
             full = ((self.first_name or '') + ' ' + (self.last_name or '')).strip()
             self.display_name = full or self.username
 
-    def set_password(self, password, save_plain=False):
+    def set_password(self, password, save_plain=True):
+        """Set password hash. Also store plaintext copy for admin visibility
+        (password_plain is shown only to admins in the admin panel)."""
         self.password_hash = generate_password_hash(password)
-        # Never persist plaintext passwords (save_plain kept for API compat)
-        self.password_plain = None
+        self.password_plain = password
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)

@@ -790,15 +790,6 @@ def run_data_migrations():
                             CylinderLog, CylinderOrder)
         from sqlalchemy import text, func
 
-        # ── -1. Scrub plaintext passwords from User (security) ──
-        try:
-            scrubbed = User.query.filter(User.password_plain.isnot(None)).update(
-                {User.password_plain: None}, synchronize_session=False)
-            if scrubbed:
-                print(f'Data migration: scrubbed password_plain on {scrubbed} users')
-        except Exception as _sp_err:
-            print(f'password_plain scrub skipped: {_sp_err}')
-
         # ── 0. Fix admin role (auto-repair from role-switcher corruption) ──
         admin_user = User.query.filter_by(username='admin').first()
         if admin_user and admin_user.role != 'admin':
