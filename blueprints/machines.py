@@ -463,9 +463,13 @@ def machines_export(format_type):
             pdf.alias_nb_pages()
             pdf.set_auto_page_break(auto=True, margin=15)
             if unicode_font:
-                pdf.add_font('AppFont', '', font_path)
-                pdf.add_font('AppFont', 'B', font_path)
-                base_font = 'AppFont'
+                try:
+                    pdf.add_font('AppFont', '', font_path)
+                    pdf.add_font('AppFont', 'B', font_path)
+                    base_font = 'AppFont'
+                except Exception:
+                    unicode_font = False
+                    base_font = 'Helvetica'
             else:
                 base_font = 'Helvetica'
             pdf.add_page()

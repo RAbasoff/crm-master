@@ -1381,9 +1381,11 @@ def equipment_export_pdf():
         fpdf_mod = ensure_fpdf()
         FPDF = fpdf_mod.FPDF
     except Exception as e:
-        print(f'equipment_export_pdf: fpdf unavailable: {e}')
-        log_system('error', 'export', f'PDF export failed: fpdf unavailable: {e}')
-        flash(_('PDF export is temporarily unavailable'), 'error')
+        import sys as _sys
+        msg = f'{e} | python={_sys.executable} | path0={(_sys.path[0] if _sys.path else "")}'
+        print(f'equipment_export_pdf: fpdf unavailable: {msg}')
+        log_system('error', 'export', f'PDF export failed: fpdf unavailable: {msg}')
+        flash(_('PDF export is temporarily unavailable') + f' — {e}', 'error')
         return redirect(url_for('equipment_list'))
     date_str = datetime.now().strftime('%d-%m-%Y %H:%M')
     title = _('Mule Maintenance Report')
@@ -1391,17 +1393,26 @@ def equipment_export_pdf():
     page_txt = _('page')
 
     font_path = find_pdf_font()
-    unicode_font = bool(font_path)
+    font_ok = {'unicode': bool(font_path)}
     print(f'equipment_export_pdf: font={font_path!r} records={len(records)}')
 
     def pdf_text(s):
         s = str(s if s is not None else '')
-        if unicode_font:
+        if font_ok['unicode']:
             return s
         return s.encode('latin-1', 'replace').decode('latin-1')
 
+    # Probe TTF embedding — stub fontTools cannot add_font
+    if font_ok['unicode']:
+        try:
+            _probe = FPDF()
+            _probe.add_font('AppFont', '', font_path)
+        except Exception as _font_err:
+            print(f'MRO PDF: add_font failed ({_font_err}), fallback Helvetica')
+            font_ok['unicode'] = False
+
     try:
-        return _build_mro_pdf(records, FPDF, unicode_font, font_path, pdf_text,
+        return _build_mro_pdf(records, FPDF, font_ok['unicode'], font_path, pdf_text,
                               title, date_str, footer_txt, page_txt)
     except Exception as e:
         import traceback
@@ -1435,9 +1446,13 @@ def _build_mro_pdf(records, FPDF, unicode_font, font_path, pdf_text,
     pdf.alias_nb_pages()
     pdf.set_auto_page_break(auto=True, margin=15)
     if unicode_font:
-        pdf.add_font('AppFont', '', font_path)
-        pdf.add_font('AppFont', 'B', font_path)
-        base_font = 'AppFont'
+        try:
+            pdf.add_font('AppFont', '', font_path)
+            pdf.add_font('AppFont', 'B', font_path)
+            base_font = 'AppFont'
+        except Exception:
+            unicode_font = False
+            base_font = 'Helvetica'
     else:
         base_font = 'Helvetica'
     pdf.add_page()
