@@ -5,8 +5,8 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, Message, User
-from utils import role_required, safe_commit, log_audit
+from models import db, Message, User, Verantwoordelijke
+from utils import role_required, safe_commit, log_audit, create_notification
 
 bp = Blueprint('messages', __name__)
 

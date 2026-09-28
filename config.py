@@ -66,3 +66,54 @@ SECTION_KEYS = [
     # System
     'settings', 'users', 'audit_log', 'sections',
 ]
+
+# Sections tree for permissions UI
+SECTIONS_TREE = [
+    {'group': 'Production', 'icon': '🏭', 'entries': [
+        ('dashboard', 'Dashboard', '🏠'),
+        ('floor', 'Floor Plan', '🏭'),
+        ('machines', 'Machines', '⚙️'),
+        ('equipment', 'Equipment / Mule Maintenance', '🔧'),
+        ('tool_wear', 'Knife Sharpening', '🔪'),
+        ('assets', 'Other Devices', '🏭'),
+        ('electricity', 'Electricity', '⚡'),
+        ('gas', 'Gas System', '🔴'),
+        ('maintenance', 'Maintenance Calendar', '📅'),
+        ('maintenance_plans', 'Maintenance Plans', '📋'),
+        ('repairs', 'Equipment Repairs', '🔧'),
+        ('faults', 'Faults', '⚠️'),
+        ('two', 'TWO', '📝'),
+    ]},
+    {'group': 'Communication', 'icon': '💬', 'entries': [
+        ('messages', 'Messages', '💬'),
+        ('notifications', 'Notifications', '🔔'),
+    ]},
+    {'group': 'Staff', 'icon': '👥', 'entries': [
+        ('schedule', 'Schedule', '📅'),
+        ('vacations', 'Vacations', '🏖'),
+        ('time_tracking', 'Time Tracking', '⏱'),
+    ]},
+    {'group': 'Business', 'icon': '📋', 'entries': [
+        ('orders', 'Work Orders', '📋'),
+        ('clients', 'Responsible / Clients', '👤'),
+        ('workers', 'Workers', '🔧'),
+        ('invoices', 'Invoices', '📄'),
+        ('contractors', 'Contractors', '🏢'),
+        ('warehouse', 'Warehouse', '📦'),
+        ('consumables', 'Replacement Reminders', '🔔'),
+        ('purchase_requests', 'Purchase Requests', '🛒'),
+    ]},
+    {'group': 'Analytics', 'icon': '📊', 'entries': [
+        ('reports', 'Reports', '📊'),
+        ('work_report', 'Work Report', '📋'),
+        ('archive', 'Archive', '📦'),
+        ('statistics', 'Statistics', '📈'),
+    ]},
+    {'group': 'System', 'icon': '⚙️', 'entries': [
+        ('settings', 'Settings', '⚙️'),
+        ('users', 'Users', '👥'),
+        ('audit_log', 'Audit Log', '📋'),
+    ]},
+]
+
+SECTIONS_LIST = [(key, name, icon) for section in SECTIONS_TREE for key, name, icon in section['entries']]

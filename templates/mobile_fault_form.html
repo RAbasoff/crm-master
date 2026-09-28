@@ -33,7 +33,7 @@
         <a href="/mobile">←</a>
         <h1>{{ _('Report Fault') }}</h1>
     </div>
-    <form method="POST" action="{{ url_for('mobile_fault_new') }}" class="form" id="faultForm">
+    <form method="POST" action="{{ url_for('mobile.mobile_fault_new') }}" class="form" id="faultForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrfToken">
         <div class="field">
             <label>{{ _('Title') }} *</label>

@@ -197,7 +197,7 @@
                 {% if m.type == 'inkomend' %}+{% else %}-{% endif %}{{ m.hoeveelheid }}
             </td>
             <td>{{ m.item.eenheid }}</td>
-            <td style="text-align:right">€{{ "%.2f"|format(m.hoeveelheid * m.item.prijs) }}</td>
+            <td style="text-align:right">€{{ "%.2f"|format((m.hoeveelheid or 0)|float * (m.item.prijs or 0)|float) }}</td>
             <td style="font-size:12px">{{ m.opmerking or '—' }}</td>
         </tr>
         {% endfor %}

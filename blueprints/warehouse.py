@@ -348,7 +348,7 @@ def warehouse_move(item_id):
         from utils import create_notification
         from models import User
         admins = User.query.filter_by(role='admin', is_active_user=True).all()
-        level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+        level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
         msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
         for a in admins:
             create_notification(a.id, msg, link='/warehouse/')
@@ -586,11 +586,11 @@ def warehouse_search_report():
         if key not in item_report:
             item_report[key] = {'item': m.item, 'in_qty': 0, 'out_qty': 0, 'in_val': 0, 'out_val': 0}
         if m.type == 'inkomend':
-            item_report[key]['in_qty'] += m.hoeveelheid
-            item_report[key]['in_val'] += m.hoeveelheid * m.item.prijs
+            item_report[key]['in_qty'] += float(m.hoeveelheid or 0)
+            item_report[key]['in_val'] += float(m.hoeveelheid or 0) * float(m.item.prijs or 0)
         else:
-            item_report[key]['out_qty'] += m.hoeveelheid
-            item_report[key]['out_val'] += m.hoeveelheid * m.item.prijs
+            item_report[key]['out_qty'] += float(m.hoeveelheid or 0)
+            item_report[key]['out_val'] += float(m.hoeveelheid or 0) * float(m.item.prijs or 0)
     item_report = sorted(item_report.values(), key=lambda x: x['item'].naam)
 
     cats = [c[0] for c in db.session.query(VoorraadItem.categorie).distinct().all() if c[0]]
@@ -639,7 +639,7 @@ def warehouse_qty_update():
         from utils import create_notification
         from models import User
         admins = User.query.filter_by(role='admin', is_active_user=True).all()
-        level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+        level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
         msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
         for a in admins:
             create_notification(a.id, msg, link='/warehouse/')
@@ -729,7 +729,7 @@ def warehouse_transfer(item_id):
             from utils import create_notification
             from models import User
             admins = User.query.filter_by(role='admin', is_active_user=True).all()
-            level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+            level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
             msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
             for a in admins:
                 create_notification(a.id, msg, link='/warehouse/')
@@ -760,7 +760,7 @@ def _notify_logistiek_low_stock(item):
     if not logistiek_resp:
         return
     persons = Verantwoordelijke.query.filter_by(group_id=logistiek_resp.id).all()
-    level = 'critical' if item.hoeveelheid <= (item.minimum * 0.5) else 'low'
+    level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
     msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
     for p in persons:
         if p.username:

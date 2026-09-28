@@ -1,0 +1,97 @@
+============================================================
+СЕССИЯ CRM_Мастерская — 2026-09-27 (день)
+============================================================
+
+ДАТА: 27.09.2026
+ДЕПЛОЙ: git push origin master → e44be2c
+ПА: осталось на консоли PA: cd ~/crm-master && git pull origin master → Web→Reload
+Данные: код + переводы; БД локально только CREATE TABLE IF NOT EXISTS / ALTER ADD COLUMN
+
+ПРАВИЛО: локаль и PA — близнецы. Данные сначала локально → тест → деплой на PA.
+
+============================================================
+ЧТО СДЕЛАНО
+============================================================
+
+1. ИСПРАВЛЕНИЯ ОШИБОК
+   - Карта цеха: Equipment без floor_x/floor_y → 500; добавлены колонки + миграция
+   - PDF экспорт станков: m.contractor → m.contractor_rel
+   - «Страница не найдена» на всех страницах:
+     404-handler делал flash для static/AJAX → flash на каждой странице.
+     Исправлено: static/API/XHR → 404 без flash и без redirect
+   - api_search: AttributeError на пустом verantwoordelijke
+   - Генератор ТО: day-out-of-range + сб/вс исключены из планов
+   - stats_full: NameError func → sqlalchemy import
+
+2. ЭКСПОРТЫ
+   - Станки PDF/Excel/CSV: язык пользователя, сортировка по ID, настоящий PDF (fpdf2)
+   - Календарь ТО: настоящий PDF; CSV убран
+   - Кнопка PDF больше не отдаёт CSV
+
+3. ЯЗЫКИ
+   - NL/RU/EN/PL: полный перевод (~1400–1800 строк), .mo скомпилированы
+   - Экспорт станков/календаря на языке пользователя
+
+4. ДАННЫЕ (восстановлено с PA, machine НЕ трогались)
+   - Storingsmeldingen: 17 → 39
+   - Газовые баллоны: были потеряны (1) → 33 с PA
+   - Overige apparaten: 0 → 3
+   - Mule-onderhoud (MRO): 0 → 5 + 1 заказ запчасти
+   - Gereedschapsslijtage: износ с PA (35.7% / 18.9%)
+   - TWO: +2 (id 2, 12)
+   - Maandplanning (weekend_shift): сен 55 + окт 36 (авг 104)
+   - Календарь ТО: 12 планов + 69 records + периодичность (weekly/biweekly/monthly/…)
+
+5. КАЛЕНДАРЬ ТО
+   - Удаление только admin
+   - Генератор периодичности: события в календаре, старт окт 2026
+   - Сб/вс не попадают в планы ТО (календарь-экран не трогали)
+
+6. КАРТА ЦЕХА
+   - Координаты % = % картинки (aspect-ratio 1520×1080, не letterbox)
+   - Цеха по комнатам плана; станки компактной сеткой по location
+   - Маркеры ~22px
+
+7. АРХИВ + НАПОМИНАНИЯ
+   - Ежемесячный архив: faults/orders/reports/time/warehouse/plans/MRO/TWO/statistics
+   - Поиск по архиву (/archive?q=…)
+   - Напоминание о ножах при входе: admin, director, мастера, ответственный с tool_wear
+
+8. BLUEPRINT-РЕФАКТОРИНГ (P1)
+   app.py: 8096 → 5047 строк
+   Новые blueprints: two, maintenance, stats, tool_wear, archive, messages, notifications
+   (были: electricity, monteurs, contractors, warehouse, faults, gas, chat, machines)
+   Итого 13 blueprints / 317 маршрутов
+   get_belgian_holidays перенесён в utils.py
+
+9. ПРОВЕРКА КНОПОК (P3)
+   - 58 GET-страниц: OK (orders/ 302 redirect)
+   - 8 файловых экспорта: PDF/XLSX/CSV валидны
+   - POST notifications/read-all: OK
+   - set_language: GET-only (405 на POST — ожидаемо)
+
+============================================================
+ПРАВИЛА / ЗАМЕТКИ
+============================================================
+- Не смешивать характеристики станков при сопоставлении PA↔локально (только по имени)
+- Не трогать таблицу machine при restore ТО
+- 404 static не должен давать flash
+- Weekly/biweekly/monthly generator: только будни (skip_weekend)
+
+============================================================
+ЗАДАЧИ НА СЛЕДУЮЩИЙ РАЗ
+============================================================
+1. PA: git pull + Reload (коммит уже в origin/master e44be2c)
+2. Дочинить blueprint-рефакторинг: responsible, users, settings/map,
+   equipment/assets/repairs, orders, invoices, workers, schedule,
+   time/vacations, reports, export, purchase, qr, mobile, work-report
+3. Точная ручная доводка карты цеха (если комнаты не совпали)
+4. Проверить генератор периодичности в UI (3 месяца, окт 2026+)
+
+============================================================
+КОММИТ
+============================================================
+e44be2c feat: blueprints refactor, calendar PDF, floor map, i18n, PA data restore
+23 файла, +22529 / -5176
+
+============================================================

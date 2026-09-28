@@ -3,7 +3,8 @@ TWO blueprint — technical work orders
 """
 from datetime import datetime, timedelta
 
-from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, send_file
+from flask import (Blueprint, request, redirect, url_for, flash, render_template,
+                   jsonify, send_file, current_app)
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
@@ -120,7 +121,7 @@ def two_new():
             for photo in request.files.getlist('photos'):
                 if photo.filename:
                     fn = secure_filename(f"two_{two.id}_{photo.filename}")
-                    photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
                     db.session.add(TWOPhoto(two_id=two.id, filename=fn))
             if not safe_commit():
                 flash(_('Save failed'), 'error')
@@ -477,7 +478,7 @@ def two_edit(two_id):
             for photo in request.files.getlist('photos'):
                 if photo.filename:
                     fn = secure_filename(f"two_{two.id}_{photo.filename}")
-                    photo.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
+                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
                     db.session.add(TWOPhoto(two_id=two.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')

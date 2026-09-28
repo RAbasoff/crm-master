@@ -1,0 +1,250 @@
+"""
+timekeeping blueprint
+"""
+from datetime import datetime, timedelta
+from flask import (Blueprint, render_template, request, redirect, url_for, flash,
+                   jsonify, send_file, session, g)
+from flask_login import login_required, current_user
+from flask_babel import gettext as _
+from werkzeug.utils import secure_filename
+import os, io, json
+
+from models import (db, TimeEntry, User, Vacation)
+from utils import create_notification, role_required, safe_commit, safe_int
+
+bp = Blueprint('timekeeping', __name__)
+
+@bp.route('/time-tracking')
+@login_required
+def time_tracking():
+    if current_user.has_role('admin', 'director'):
+        users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).all()
+    else:
+        users = [current_user]
+    
+    today = datetime.utcnow().date()
+    month_start = today.replace(day=1)
+    
+    entries = TimeEntry.query.filter(
+        TimeEntry.user_id.in_([u.id for u in users]),
+        TimeEntry.date >= month_start,
+        TimeEntry.date <= today
+    ).order_by(TimeEntry.date.desc()).all()
+    
+    return render_template('time_tracking.html', users=users, entries=entries, today=today, month_start=month_start)
+
+
+@bp.route('/time-tracking/clock-in', methods=['POST'])
+@login_required
+def clock_in():
+    today = datetime.utcnow().date()
+    existing = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
+    if existing and existing.clock_in:
+        flash(_('Already clocked in today'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    
+    if existing:
+        existing.clock_in = datetime.utcnow()
+        existing.status = 'present'
+    else:
+        entry = TimeEntry(
+            user_id=current_user.id,
+            date=today,
+            clock_in=datetime.utcnow(),
+            status='present'
+        )
+        db.session.add(entry)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    flash(_('Clocked in at') + ' ' + datetime.utcnow().strftime('%H:%M'), 'success')
+    return redirect(url_for('timekeeping.time_tracking'))
+
+
+@bp.route('/time-tracking/clock-out', methods=['POST'])
+@login_required
+def clock_out():
+    today = datetime.utcnow().date()
+    entry = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
+    if not entry or not entry.clock_in:
+        flash(_('Not clocked in today'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    if entry.clock_out:
+        flash(_('Already clocked out today'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    
+    entry.clock_out = datetime.utcnow()
+    delta = entry.clock_out - entry.clock_in
+    hours = delta.total_seconds() / 3600
+    entry.hours_worked = round(hours - (entry.break_minutes / 60), 2)
+    
+    # Calculate overtime (standard 8h)
+    if entry.hours_worked > 8:
+        entry.overtime_hours = round(entry.hours_worked - 8, 2)
+    
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    flash(_('Clocked out at') + ' ' + entry.clock_out.strftime('%H:%M') + '. ' + _('Hours worked') + ': ' + str(entry.hours_worked), 'success')
+    return redirect(url_for('timekeeping.time_tracking'))
+
+
+@bp.route('/time-tracking/manual', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def time_tracking_manual():
+    try:
+        user_id = int(request.form['user_id'])
+        date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+    except (ValueError, KeyError):
+        flash(_('Invalid user or date'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    status = request.form.get('status', 'present')
+    
+    entry = TimeEntry.query.filter_by(user_id=user_id, date=date).first()
+    if not entry:
+        entry = TimeEntry(user_id=user_id, date=date, status=status)
+        db.session.add(entry)
+    
+    entry.status = status
+    entry.notes = request.form.get('notes', '')
+    
+    if status == 'present':
+        try:
+            entry.clock_in = datetime.combine(date, datetime.strptime(request.form['clock_in'], '%H:%M').time())
+            entry.clock_out = datetime.combine(date, datetime.strptime(request.form['clock_out'], '%H:%M').time())
+        except (ValueError, KeyError):
+            flash(_('Invalid time format (use HH:MM)'), 'error')
+            return redirect(url_for('timekeeping.time_tracking'))
+        delta = entry.clock_out - entry.clock_in
+        hours = delta.total_seconds() / 3600
+        entry.break_minutes = safe_int(request.form.get('break_minutes'), 60)
+        entry.hours_worked = round(hours - (entry.break_minutes / 60), 2)
+        if entry.hours_worked > 8:
+            entry.overtime_hours = round(entry.hours_worked - 8, 2)
+    
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    flash(_('Time entry saved'), 'success')
+    return redirect(url_for('timekeeping.time_tracking'))
+
+
+@bp.route('/vacations')
+@login_required
+@role_required('admin', 'director', 'technician')
+def vacations_list():
+    if current_user.has_role('admin', 'director'):
+        vacations = Vacation.query.order_by(Vacation.created_at.desc()).all()
+    else:
+        vacations = Vacation.query.filter_by(user_id=current_user.id).order_by(Vacation.created_at.desc()).all()
+    return render_template('vacations.html', vacations=vacations)
+
+
+@bp.route('/vacations/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def vacation_new():
+    if request.method == 'POST':
+        try:
+            d_from = datetime.strptime(request.form['date_from'], '%Y-%m-%d').date()
+            d_to = datetime.strptime(request.form['date_to'], '%Y-%m-%d').date()
+        except (ValueError, KeyError):
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('timekeeping.vacation_new'))
+        days = (d_to - d_from).days + 1
+        v = Vacation(
+            user_id=current_user.id,
+            vacation_type=request.form['vacation_type'],
+            date_from=d_from,
+            date_to=d_to,
+            days_count=days,
+            reason=request.form.get('reason', '')
+        )
+        db.session.add(v)
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+            return redirect(url_for('timekeeping.vacation_new'))
+        
+        admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
+        for admin in admins:
+            create_notification(
+                admin.id,
+                _('New vacation request'),
+                f"{current_user.display_name}: {v.vacation_type} {v.date_from} - {v.date_to}",
+                'info',
+                url_for('timekeeping.vacations_list')
+            )
+        
+        flash(_('Vacation request submitted'), 'success')
+        return redirect(url_for('timekeeping.vacations_list'))
+    return render_template('vacation_form.html')
+
+
+@bp.route('/vacations/<int:vacation_id>/approve', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def vacation_approve(vacation_id):
+    v = Vacation.query.get_or_404(vacation_id)
+    v.status = 'approved'
+    v.approved_by = current_user.id
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('timekeeping.vacations_list'))
+    create_notification(v.user_id, _('Vacation approved'), f"{v.vacation_type} {v.date_from} - {v.date_to}", 'info')
+    flash(_('Vacation approved'), 'success')
+    return redirect(url_for('timekeeping.vacations_list'))
+
+
+@bp.route('/vacations/<int:vacation_id>/reject', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def vacation_reject(vacation_id):
+    v = Vacation.query.get_or_404(vacation_id)
+    v.status = 'rejected'
+    v.approved_by = current_user.id
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('timekeeping.vacations_list'))
+    create_notification(v.user_id, _('Vacation rejected'), f"{v.vacation_type} {v.date_from} - {v.date_to}", 'warning')
+    flash(_('Vacation rejected'), 'error')
+    return redirect(url_for('timekeeping.vacations_list'))
+
+
+@bp.route('/time-report/<int:user_id>')
+@login_required
+def time_report(user_id):
+    if not current_user.has_role('admin', 'director') and current_user.id != user_id:
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('timekeeping.time_tracking'))
+    
+    user = User.query.get_or_404(user_id)
+    month = request.args.get('month', datetime.utcnow().strftime('%Y-%m'))
+    year, mon = map(int, month.split('-'))
+    start = datetime(year, mon, 1).date()
+    if mon == 12:
+        end = datetime(year + 1, 1, 1).date()
+    else:
+        end = datetime(year, mon + 1, 1).date()
+    
+    entries = TimeEntry.query.filter(
+        TimeEntry.user_id == user_id,
+        TimeEntry.date >= start,
+        TimeEntry.date < end
+    ).order_by(TimeEntry.date).all()
+    
+    total_hours = sum(e.hours_worked for e in entries)
+    total_overtime = sum(e.overtime_hours for e in entries)
+    days_present = len([e for e in entries if e.status == 'present'])
+    days_absent = len([e for e in entries if e.status in ['absent', 'sick']])
+    
+    vacations = Vacation.query.filter(
+        Vacation.user_id == user_id,
+        Vacation.status == 'approved',
+        Vacation.date_from < end,
+        Vacation.date_to >= start
+    ).all()
+    
+    return render_template('time_report.html', user=user, entries=entries, month=month,
+                         total_hours=total_hours, total_overtime=total_overtime,
+                         days_present=days_present, days_absent=days_absent, vacations=vacations)
