@@ -26,6 +26,9 @@
             <td>
                 <div style="display:flex;gap:4px">
                     <a href="/workers/{{ w.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                    {% if current_user.has_role('admin', 'director') and w.user_id %}
+                    <a href="/workers/{{ w.id }}/edit#reset" class="btn btn-sm" style="background:#e67e22;color:white" title="{{ _('Reset password') }}">{{ '🔑' }}</a>
+                    {% endif %}
                     {% if current_user.has_role('admin') %}
                     <form method="POST" action="/workers/{{ w.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete worker') }} {{ w.naam }}?')">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

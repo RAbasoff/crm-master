@@ -63,5 +63,32 @@
         </form>
     </div>
     {% endif %}
+
+    {% if worker and worker.user_id and current_user.has_role('admin', 'director') %}
+    <div id="reset" style="margin-top:16px;padding:16px;background:#fff8f0;border-radius:8px;border-left:4px solid #e67e22">
+        <h3 style="font-size:14px;margin-bottom:8px">{{ '🔑' }} {{ _('Reset password') }}</h3>
+        <p style="font-size:12px;color:#888;margin-bottom:12px">
+            {{ _('Set a new password for') }} <strong>{{ worker.user.name }}</strong>
+            (@{{ worker.user.username }}). {{ _('Leave empty to auto-generate.') }}
+        </p>
+        <form method="POST" action="{{ url_for('workers.worker_reset_password', worker_id=worker.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('New password') }}</label>
+                    <input type="password" name="new_password" minlength="6" placeholder="{{ _('Auto-generate') }}">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px">
+                        <input type="checkbox" name="force_change" value="1" checked>
+                        {{ _('Require change at next login') }}
+                    </label>
+                </div>
+                <button type="submit" name="generate" value="1" class="btn btn-sm" style="background:#95a5a6;color:white;height:38px">{{ '🎲' }} {{ _('Generate') }}</button>
+                <button type="submit" class="btn btn-primary" style="height:38px">{{ '🔑' }} {{ _('Reset password') }}</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

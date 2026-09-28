@@ -126,3 +126,42 @@ def worker_create_user(worker_id):
     log_audit('create', 'user_from_worker', u.id, f'{w.naam} -> {username} (technician)')
     flash(_('Login created for') + f' {w.naam}: {username}', 'success')
     return redirect(url_for('workers.worker_edit', worker_id=worker_id))
+
+
+@bp.route('/workers/<int:worker_id>/reset-password', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def worker_reset_password(worker_id):
+    """Reset password for the worker's linked system user."""
+    w = Monteur.query.get_or_404(worker_id)
+    if not w.user_id:
+        flash(_('Worker has no system login yet. Create login first.'), 'error')
+        return redirect(url_for('workers.worker_edit', worker_id=worker_id))
+    u = User.query.get(w.user_id)
+    if not u:
+        flash(_('Linked user not found'), 'error')
+        return redirect(url_for('workers.worker_edit', worker_id=worker_id))
+
+    new_pass = (request.form.get('new_password') or '').strip()
+    gen = request.form.get('generate') == '1'
+    force = request.form.get('force_change') != '0'
+
+    if gen or not new_pass:
+        import secrets, string
+        alphabet = string.ascii_letters + string.digits
+        new_pass = ''.join(secrets.choice(alphabet) for _ in range(10))
+
+    if len(new_pass) < 6:
+        flash(_('Password must be at least 6 characters'), 'error')
+        return redirect(url_for('workers.worker_edit', worker_id=worker_id))
+
+    u.set_password(new_pass)
+    if force:
+        u.force_change_password = True
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('workers.worker_edit', worker_id=worker_id))
+
+    log_audit('reset_password', 'user', u.id, f'Password reset for {u.name} by {current_user.username}')
+    flash(_('Password reset for %(name)s: %(pw)s', name=w.naam, pw=new_pass), 'success')
+    return redirect(url_for('workers.worker_edit', worker_id=worker_id))
