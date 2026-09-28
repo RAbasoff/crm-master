@@ -42,25 +42,52 @@ def message_new():
                     skipped.append(v.naam)
         # If nobody selected — send to ALL active users
         if not receiver_ids:
-            all_users = User.query.filter(User.id != current_user.id, User.is_active_user == True).all()
+            all_users = User.query.filter(User.is_active_user == True).order_by(User.role, User.id).all()
             receiver_ids = [str(u.id) for u in all_users]
-        sent = 0
+        # de-dup receivers, keep order
+        seen = set()
+        uniq = []
         for rid in receiver_ids:
+            try:
+                ri = int(rid)
+            except (TypeError, ValueError):
+                continue
+            if ri in seen:
+                continue
+            seen.add(ri)
+            uniq.append(ri)
+        # Copy to sender inbox (so sender also receives a copy)
+        if current_user.id not in seen:
+            uniq.append(current_user.id)
+            seen.add(current_user.id)
+        # Non-admin sender: BCC admin for oversight
+        if not current_user.has_role('admin'):
+            admin = User.query.filter_by(role='admin', is_active_user=True).first()
+            if admin and admin.id not in seen:
+                uniq.append(admin.id)
+                seen.add(admin.id)
+
+        sent = 0
+        link = url_for('messages.messages_list')
+        for rid in uniq:
             m = Message(
                 sender_id=current_user.id,
-                receiver_id=int(rid),
+                receiver_id=rid,
                 subject=subject,
                 body=body,
                 fault_id=fault_id
             )
             db.session.add(m)
-            create_notification(
-                int(rid),
-                _('New message'),
-                f"{_('From')}: {current_user.display_name} - {subject}",
-                'message',
-                url_for('messages.messages_list')
-            )
+            try:
+                create_notification(
+                    rid,
+                    _('New message'),
+                    f"{_('From')}: {current_user.name} - {subject}",
+                    'message',
+                    link
+                )
+            except Exception:
+                db.session.rollback()
             sent += 1
         if not safe_commit():
             flash(_('Save failed'), 'error')
@@ -71,7 +98,7 @@ def message_new():
         flash(msg, 'success')
         return redirect(url_for('messages.messages_list'))
     
-    users = User.query.filter(User.id != current_user.id, User.is_active_user == True).all()
+    users = User.query.filter(User.is_active_user == True).order_by(User.role, User.id).all()
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
     fault_id = request.args.get('fault_id')
     return render_template('message_form.html', users=users, fault_id=fault_id, verantwoordelijken=verantwoordelijken)
@@ -80,23 +107,26 @@ def message_new():
 @login_required
 def message_detail(message_id):
     m = Message.query.get_or_404(message_id)
-    if m.sender_id != current_user.id and m.receiver_id != current_user.id:
-        from flask import abort
-        abort(403)
-    if m.receiver_id == current_user.id:
+    # Admin sees every message; participants see their own
+    if not current_user.has_role('admin'):
+        if m.sender_id != current_user.id and m.receiver_id != current_user.id:
+            from flask import abort
+            abort(403)
+    if m.receiver_id == current_user.id and not m.is_read:
         m.is_read = True
         if not safe_commit():
             flash(_('Save failed'), 'error')
-            return redirect(request.referrer or '/')
+            return redirect(url_for('messages.messages_list'))
     return render_template('message_detail.html', message=m)
 
 @bp.route('/messages/<int:message_id>/delete', methods=['POST'])
 @login_required
 def message_delete(message_id):
     m = Message.query.get_or_404(message_id)
-    if m.sender_id != current_user.id and m.receiver_id != current_user.id:
-        from flask import abort
-        abort(403)
+    if not current_user.has_role('admin'):
+        if m.sender_id != current_user.id and m.receiver_id != current_user.id:
+            from flask import abort
+            abort(403)
     db.session.delete(m)
     if not safe_commit():
         flash(_('Save failed'), 'error')
