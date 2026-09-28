@@ -3,11 +3,14 @@
 {% block content %}
 <div class="page-header">
     <h1>🔧 {{ _('Mule Maintenance') }}</h1>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
         {% if current_user.has_role('admin', 'technician') %}
         <button onclick="document.getElementById('orderModal').style.display='flex'" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Order Parts') }}</button>
         <a href="/equipment/new" class="btn btn-primary">+ {{ _('New Record') }}</a>
         {% endif %}
+        <button onclick="showReport()" class="btn btn-sm" style="background:#2c3e50;color:white">📊 {{ _('Report') }}</button>
+        <button onclick="printSelected()" class="btn btn-sm" style="background:#16a085;color:white">🖨️ {{ _('Print') }}</button>
+        <button onclick="exportPdf()" class="btn btn-sm" style="background:#e74c3c;color:white">📕 PDF</button>
     </div>
 </div>
 
@@ -49,13 +52,42 @@
     </form>
 </div>
 
+<!-- REPORT PANEL (скрыт, пока не нажмут «Report») -->
+<div class="card" id="reportPanel" style="display:none;margin-bottom:16px;border-left:4px solid #2c3e50">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 style="margin:0;font-size:15px">📊 {{ _('Report') }} <span id="reportCount" style="color:#888;font-weight:400;font-size:12px"></span></h2>
+        <div style="display:flex;gap:6px">
+            <button onclick="printSelected()" class="btn btn-sm" style="background:#16a085;color:white">🖨️ {{ _('Print') }}</button>
+            <button onclick="exportPdf()" class="btn btn-sm" style="background:#e74c3c;color:white">📕 PDF</button>
+            <button onclick="document.getElementById('reportPanel').style.display='none'" class="btn btn-sm" style="background:#eee">✕</button>
+        </div>
+    </div>
+    <div class="table-wrap"><table id="reportTable">
+        <tr>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Date') }}</th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Serial') }}</th>
+            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Reason') }}</th>
+            <th>{{ _('Parts') }}</th>
+            <th>{{ _('Next') }}</th>
+            <th>{{ _('Periodicity') }}</th>
+        </tr>
+    </table></div>
+</div>
+
 <!-- RECORDS -->
 <div class="card" style="padding:0">
-    <div style="padding:12px 16px;border-bottom:1px solid #eee">
+    <div style="padding:12px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0;font-size:15px">📋 {{ _('Maintenance Records') }}</h2>
+        <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="selectAll" onchange="toggleAll(this)"> {{ _('Select All') }}
+        </label>
     </div>
     <div class="table-wrap"><table>
         <tr>
+            <th style="width:32px"><input type="checkbox" id="selectAll2" onchange="toggleAll(this)"></th>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Date') }}</th>
             <th>{{ _('Name') }}</th>
@@ -68,8 +100,18 @@
             <th>{{ _('Actions') }}</th>
         </tr>
         {% for r in records %}
-        <tr>
-            <td><strong>{{ r.number }}</strong></td>
+        <tr data-id="{{ r.id }}"
+            data-number="{{ r.number }}"
+            data-date="{{ r.date.strftime('%d.%m.%Y') }}"
+            data-name="{{ r.name }}"
+            data-serial="{{ r.serial or '' }}"
+            data-machine="{{ r.machine.name if r.machine else '' }}"
+            data-reason="{{ r.reason }}"
+            data-parts="{{ r.parts|length }}"
+            data-next="{{ r.next_date.strftime('%d.%m.%Y') if r.next_date else '' }}"
+            data-periodicity="{{ r.periodicity or '' }}">
+            <td><input type="checkbox" class="row-check" value="{{ r.id }}" onchange="onRowCheck()"></td>
+            <td><a href="/equipment/{{ r.id }}" style="color:#2c3e50;font-weight:700;font-family:monospace;text-decoration:none;border-bottom:1px dotted #2c3e50">{{ r.number }}</a></td>
             <td>{{ r.date.strftime('%d-%m-%Y') }}</td>
             <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ r.name }}</span>{% if r.photos %} <span title="{{ _('Photos') }}" style="font-size:11px;color:#e67e22">📷{{ r.photos|length }}</span>{% endif %}</td>
             <td style="font-size:12px;color:#888">{{ r.serial or '—' }}</td>
@@ -80,6 +122,7 @@
             <td>{{ r.periodicity or '—' }}</td>
             <td>
                 <div style="display:flex;gap:4px">
+                    <a href="/equipment/{{ r.id }}" class="btn btn-sm" style="font-size:11px;background:#eee" title="{{ _('View') }}">👁</a>
                     {% if current_user.has_role('admin', 'technician') %}
                     <a href="/equipment/{{ r.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
                     {% endif %}
@@ -173,4 +216,75 @@
         </form>
     </div>
 </div>
+
+<script>
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.row-check:checked')).map(c => c.value);
+}
+
+function toggleAll(master) {
+    document.querySelectorAll('.row-check').forEach(c => { c.checked = master.checked; });
+    const other = master.id === 'selectAll' ? document.getElementById('selectAll2') : document.getElementById('selectAll');
+    if (other) other.checked = master.checked;
+    onRowCheck();
+}
+
+function onRowCheck() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    const total = document.querySelectorAll('.row-check').length;
+    const all = n === total && total > 0;
+    const sa = document.getElementById('selectAll');
+    const sa2 = document.getElementById('selectAll2');
+    if (sa) sa.checked = all;
+    if (sa2) sa2.checked = all;
+}
+
+function selectedOrAll() {
+    const ids = getSelectedIds();
+    return ids.length ? ids.join(',') : '';
+}
+
+function showReport() {
+    const panel = document.getElementById('reportPanel');
+    const table = document.getElementById('reportTable');
+    // убрать старые строки
+    table.querySelectorAll('tr:not(:first-child)').forEach(tr => tr.remove());
+    const ids = getSelectedIds();
+    const rows = [];
+    document.querySelectorAll('tr[data-id]').forEach(tr => {
+        if (!ids.length || ids.includes(tr.dataset.id)) rows.push(tr);
+    });
+    rows.forEach(tr => {
+        const d = tr.dataset;
+        const html = `<tr>
+            <td style="font-family:monospace;font-weight:600;white-space:nowrap">${d.number}</td>
+            <td style="white-space:nowrap">${d.date}</td>
+            <td>${d.name}</td>
+            <td>${d.serial || '—'}</td>
+            <td>${d.machine || '—'}</td>
+            <td>${d.reason}</td>
+            <td>${d.parts}</td>
+            <td style="white-space:nowrap">${d.next || '—'}</td>
+            <td>${d.periodicity || '—'}</td>
+        </tr>`;
+        table.insertAdjacentHTML('beforeend', html);
+    });
+    document.getElementById('reportCount').textContent =
+        ids.length ? `— ${rows.length} {{ _('selected') }}` : `— {{ _('all') }} (${rows.length})`;
+    panel.style.display = 'block';
+    panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function printSelected() {
+    const q = selectedOrAll();
+    const url = '/equipment/report' + (q ? '?ids=' + q : '');
+    window.open(url, '_blank');
+}
+
+function exportPdf() {
+    const q = selectedOrAll();
+    const url = '/equipment/export/pdf' + (q ? '?ids=' + q : '');
+    window.location.href = url;
+}
+</script>
 {% endblock %}

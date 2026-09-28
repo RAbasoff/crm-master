@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ eq.number }} — {{ _('Mule Maintenance') }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔧 {{ eq.number }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% if current_user.has_role('admin', 'technician') %}
+        <a href="/equipment/{{ eq.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
+        {% endif %}
+        <a href="/equipment/report?ids={{ eq.id }}" target="_blank" class="btn btn-sm" style="background:#2c3e50;color:white">🖨️ {{ _('Print') }}</a>
+        <a href="/equipment/export/pdf?ids={{ eq.id }}" class="btn btn-sm" style="background:#e74c3c;color:white">📕 PDF</a>
+        <a href="/equipment" class="btn" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card"><div class="number" style="font-size:18px">{{ eq.date.strftime('%d.%m.%Y') }}</div><div class="label">{{ _('Date') }}</div></div>
+    <div class="stat-card"><div class="number">{{ eq.parts|length }}</div><div class="label">{{ _('Used Parts') }}</div></div>
+    <div class="stat-card"><div class="number">{{ eq.components|length }}</div><div class="label">{{ _('Components') }}</div></div>
+    <div class="stat-card"><div class="number">{{ eq.photos|length }}</div><div class="label">{{ _('Photos') }}</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Основная информация -->
+    <div class="card">
+        <h2>{{ _('General Information') }}</h2>
+        <table style="width:100%;font-size:13px">
+            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Number') }}</td><td style="font-weight:600;font-family:monospace">{{ eq.number }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Date') }}</td><td>{{ eq.date.strftime('%d.%m.%Y') }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Name') }}</td><td style="font-weight:600">{{ eq.name }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Serial') }}</td><td style="font-family:monospace">{{ eq.serial or '—' }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Machine') }}</td><td>{{ eq.machine.name if eq.machine else '—' }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Status') }}</td><td><span class="badge badge-{{ 'active' if eq.status=='completed' else 'open' }}">{{ eq.status }}</span></td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Created by') }}</td><td>{{ (eq.creator.display_name or eq.creator.username) if eq.creator else '—' }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Created at') }}</td><td>{{ eq.created_at.strftime('%d.%m.%Y %H:%M') if eq.created_at else '—' }}</td></tr>
+        </table>
+    </div>
+
+    <!-- Планирование -->
+    <div class="card">
+        <h2>{{ _('Planning') }}</h2>
+        <table style="width:100%;font-size:13px">
+            <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Next Maintenance Date') }}</td><td>{{ eq.next_date.strftime('%d.%m.%Y') if eq.next_date else '—' }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Periodicity') }}</td><td>{{ eq.periodicity or '—' }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0;vertical-align:top">{{ _('Reason') }}</td><td style="white-space:pre-wrap">{{ eq.reason }}</td></tr>
+            {% if eq.notes %}
+            <tr><td style="color:#888;padding:6px 0;vertical-align:top">{{ _('Notes') }}</td><td style="white-space:pre-wrap">{{ eq.notes }}</td></tr>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- PARTS -->
+{% if eq.parts %}
+<div class="card" style="margin-top:16px">
+    <h2>🔩 {{ _('Used Parts') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Part') }}</th><th>SPN</th><th>{{ _('Qty') }}</th><th>{{ _('Notes') }}</th></tr>
+        {% for p in eq.parts %}
+        <tr>
+            <td style="font-weight:600">{{ p.name }}</td>
+            <td style="font-family:monospace;font-size:12px">{{ p.number or '—' }}</td>
+            <td>{{ p.quantity }}</td>
+            <td>{{ p.notes or '' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- COMPONENTS -->
+{% if eq.components %}
+<div class="card" style="margin-top:16px">
+    <h2>⚙️ {{ _('Components') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Type') }}</th><th>{{ _('Model') }}</th><th>{{ _('Size (mm)') }}</th><th>{{ _('Length') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Notes') }}</th></tr>
+        {% for c in eq.components %}
+        <tr>
+            <td>{{ c.component_type }}</td>
+            <td>{{ c.model or '—' }}</td>
+            <td>{{ c.size or '—' }}</td>
+            <td>{{ c.length or '—' }}</td>
+            <td>{{ c.quantity }}</td>
+            <td>{{ c.notes or '' }}</td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
+<!-- PHOTOS -->
+{% if eq.photos %}
+<div class="card" style="margin-top:16px">
+    <h2>📷 {{ _('Photos') }} ({{ eq.photos|length }})</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        {% for p in eq.photos %}
+        <div>
+            <img src="/static/uploads/{{ p.filename }}" style="width:140px;height:140px;object-fit:cover;border-radius:10px;border:1px solid #eee;cursor:pointer" onclick="window.open(this.src)" title="{{ p.filename }}">
+            {% if p.uploaded_at %}<div style="font-size:10px;color:#999;text-align:center;margin-top:2px">{{ p.uploaded_at.strftime('%d.%m.%Y') }}</div>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

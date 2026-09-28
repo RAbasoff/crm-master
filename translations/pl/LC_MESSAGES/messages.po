@@ -5472,3 +5472,27 @@ msgstr "⚠️ This record is being edited by %(user)s (since %(time)s). You can
 
 msgid "📷 Start Camera"
 msgstr "📷 Start Camera"
+
+msgid "Mule Maintenance Report"
+msgstr "Raport obsługi Mule"
+
+msgid "all"
+msgstr "wszystkie"
+
+msgid "Summary"
+msgstr "Podsumowanie"
+
+msgid "No records found"
+msgstr "Nie znaleziono rekordów"
+
+msgid "Planning"
+msgstr "Planowanie"
+
+msgid "Created at"
+msgstr "Utworzono"
+
+msgid "Signature"
+msgstr "Podpis"
+
+msgid "Created by"
+msgstr "Utworzył"
