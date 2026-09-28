@@ -59,7 +59,7 @@ msgstr "Ответственное лицо обновлено"
 
 #: app.py:227
 msgid "Workers"
-msgstr "Техническая Служба"
+msgstr "Работники (техслужба)"
 
 msgid "Permissions"
 msgstr "Права доступа"
