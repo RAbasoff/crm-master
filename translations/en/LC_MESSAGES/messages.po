@@ -5457,3 +5457,9 @@ msgstr "Signature"
 
 msgid "Created by"
 msgstr "Created by"
+
+msgid "PDF export is temporarily unavailable"
+msgstr "PDF export is temporarily unavailable"
+
+msgid "PDF export failed: %(err)s"
+msgstr "PDF export failed: %(err)s"

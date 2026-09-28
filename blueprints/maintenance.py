@@ -15,7 +15,8 @@ from models import (db, MaintenancePlan, MaintenanceSchedule, MaintenanceRecord,
                     MachinePart, PartMaintenanceLog, Machine, Monteur, FactorySection, User,
                     Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
-                   create_notification, log_audit, log_system, save_uploaded_file)
+                   create_notification, log_audit, log_system, save_uploaded_file,
+                   find_pdf_font, ensure_fpdf)
 
 bp = Blueprint('maintenance', __name__)
 
@@ -699,7 +700,11 @@ def maintenance_calendar_export():
     events.sort(key=lambda e: e['date'])
 
     # Real PDF via fpdf2 (user language)
-    from fpdf import FPDF
+    try:
+        FPDF = ensure_fpdf().FPDF
+    except Exception:
+        flash(_('PDF export is temporarily unavailable'), 'error')
+        return redirect(url_for('maintenance.maintenance_calendar'))
     month_title = month_start.strftime('%B %Y')
     title = _('Maintenance Calendar')
     headers = [_('Date'), _('Machine'), _('Part'), _('Type'), _('Status'), _('Overdue')]
@@ -717,15 +722,7 @@ def maintenance_calendar_export():
         'equipment_mro': _('MRO'),
     }
 
-    font_path = None
-    for cand in (
-        r'C:\Windows\Fonts\dejavu\DejaVuSans.ttf',
-        r'C:\Windows\Fonts\arial.ttf',
-        r'C:\Windows\Fonts\calibri.ttf',
-    ):
-        if os.path.exists(cand):
-            font_path = cand
-            break
+    font_path = find_pdf_font()
     unicode_font = bool(font_path)
 
     def pdf_text(s):

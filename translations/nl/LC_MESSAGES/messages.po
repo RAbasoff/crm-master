@@ -5493,3 +5493,9 @@ msgstr "Gegenereerd door ProMaster CRM"
 
 msgid "Created by"
 msgstr "Gemaakt door"
+
+msgid "PDF export is temporarily unavailable"
+msgstr "PDF-export is tijdelijk niet beschikbaar"
+
+msgid "PDF export failed: %(err)s"
+msgstr "PDF-export mislukt: %(err)s"

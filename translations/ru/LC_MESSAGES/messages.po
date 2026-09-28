@@ -5589,3 +5589,9 @@ msgstr "Сгенерировано ProMaster CRM"
 
 msgid "Created by"
 msgstr "Создал"
+
+msgid "PDF export is temporarily unavailable"
+msgstr "Экспорт PDF временно недоступен"
+
+msgid "PDF export failed: %(err)s"
+msgstr "Ошибка экспорта PDF: %(err)s"

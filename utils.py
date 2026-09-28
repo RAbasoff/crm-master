@@ -1240,6 +1240,48 @@ def sanitize_like(query_str):
     return query_str.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
+def find_pdf_font():
+    """Locate a Unicode TTF for fpdf2. Prefers bundled DejaVu, then system fonts."""
+    root = os.path.dirname(os.path.abspath(__file__))
+    for cand in (
+        os.path.join(root, 'static', 'fonts', 'DejaVuSans.ttf'),
+        os.path.join(root, 'static', 'fonts', 'arial.ttf'),
+        r'C:\Windows\Fonts\dejavu\DejaVuSans.ttf',
+        r'C:\Windows\Fonts\arial.ttf',
+        r'C:\Windows\Fonts\calibri.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/freefont/FreeSans.ttf',
+        '/home/rabasoff/.local/share/fonts/DejaVuSans.ttf',
+    ):
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+def ensure_fpdf():
+    """Import fpdf2; auto-install into current interpreter if missing (PA has no fpdf2)."""
+    try:
+        import fpdf
+        return fpdf
+    except ImportError:
+        pass
+    import sys
+    import subprocess
+    for args in (
+        [sys.executable, '-m', 'pip', 'install', 'fpdf2'],
+        [sys.executable, '-m', 'pip', 'install', '--user', 'fpdf2'],
+    ):
+        try:
+            subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            import fpdf
+            print(f'ensure_fpdf: installed fpdf2 via {" ".join(args)}')
+            return fpdf
+        except Exception as e:
+            print(f'ensure_fpdf: {args} failed: {e}')
+    raise ImportError('fpdf2 is not installed and pip install failed')
+
+
 def safe_int(value, default=0):
     """Parse int from user input without crashing. Returns default on failure."""
     if value is None:
