@@ -74,9 +74,23 @@ def worker_edit(worker_id):
 def worker_delete(worker_id):
     w = Monteur.query.get_or_404(worker_id)
     name = w.naam
+    # Unlink and clean FKs so delete does not fail
+    try:
+        from models import TechnicalWorkOrder, two_workers
+        db.session.execute(two_workers.delete().where(two_workers.c.worker_id == w.id))
+    except Exception:
+        pass
+    try:
+        TechnicalWorkOrder.query.filter_by(created_by=w.user_id).update({'created_by': None})
+    except Exception:
+        pass
+    if w.user_id:
+        # Keep the login account but detach; admin can delete user separately
+        w.user_id = None
+        db.session.flush()
     db.session.delete(w)
     if not safe_commit():
-        flash(_('Save failed'), 'error')
+        flash(_('Save failed — worker may be linked to orders. Unlink first.'), 'error')
         return redirect(url_for('workers.workers_list'))
     log_audit('delete', 'worker', worker_id, name)
     flash(_('Worker deleted') + f': {name}', 'success')
