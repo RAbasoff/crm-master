@@ -64,7 +64,7 @@
         <tr><th>{{ _('Name') }}</th><th>{{ _('Username') }}</th><th>{{ _('Role') }}</th></tr>
         {% for u in users %}
         <tr class="dir-row">
-            <td><strong>{{ u.display_name or u.username }}</strong></td>
+            <td><strong>{{ u.name }}</strong></td>
             <td>{{ u.username }}</td>
             <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
         </tr>

@@ -16,6 +16,79 @@ from utils import role_required, log_audit, create_notification, safe_commit, sa
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
 
+# Working set (норма): 1 in_use + 1 ready full spare per gas type
+WORKING_IN_USE = 1
+WORKING_READY_FULL = 1
+GAS_TYPES = ('nitrogen', 'co2')
+GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂'}
+
+
+def _inventory_balance():
+    """Per-gas inventory arithmetic.
+
+    Identity (must always hold):
+        full + in_use + empty + maintenance = total
+
+    Norm (рабочая пара):
+        in_use == 1 and full >= 1
+
+    Incoming goods (delivered orders) must appear as `full` cylinders,
+    so:  leftover_full + received_full + empty + in_use = total.
+    """
+    bal = {}
+    for gt in GAS_TYPES:
+        rows = db.session.query(
+            GasCylinder.status, db.func.count()
+        ).filter(GasCylinder.gas_type == gt).group_by(GasCylinder.status).all()
+        counts = {s or 'unknown': int(c or 0) for s, c in rows}
+        full = counts.get('full', 0)
+        in_use = counts.get('in_use', 0)
+        empty = counts.get('empty', 0)
+        maint = counts.get('maintenance', 0)
+        total = full + in_use + empty + maint
+        # delivered orders (informational): how many were supposed to arrive
+        ordered = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
+            CylinderOrder.gas_type == gt
+        ).scalar() or 0
+        delivered = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
+            CylinderOrder.gas_type == gt, CylinderOrder.status == 'delivered'
+        ).scalar() or 0
+        bal[gt] = {
+            'label': GAS_LABELS[gt],
+            'full': full,
+            'in_use': in_use,
+            'empty': empty,
+            'maintenance': maint,
+            'total': total,
+            'identity_ok': (full + in_use + empty + maint == total),
+            'has_working_pair': (in_use >= WORKING_IN_USE and full >= WORKING_READY_FULL),
+            'ready_full': full,  # full cylinders available to become in_use
+            'spare_full': max(0, full - WORKING_READY_FULL),  # stock beyond the working pair
+            'need_order': (in_use < WORKING_IN_USE or full < WORKING_READY_FULL),
+            'ordered_qty': int(ordered),
+            'delivered_qty': int(delivered),
+        }
+    return bal
+
+
+def _promote_full_to_in_use(gas_type, reason='', user_id=None):
+    """Take one full cylinder and put it into service (keeps 1+1 working set)."""
+    full = GasCylinder.query.filter(
+        GasCylinder.gas_type == gas_type,
+        GasCylinder.status == 'full'
+    ).order_by(GasCylinder.received_at.asc().nullslast(), GasCylinder.id.asc()).first()
+    if not full:
+        return None
+    full.status = 'in_use'
+    full.installed_at = datetime.utcnow()
+    db.session.add(CylinderLog(
+        cylinder_id=full.id,
+        action='status_full_to_in_use',
+        performed_by=user_id,
+        notes=reason or f'Auto-promoted to in_use ({gas_type})'
+    ))
+    return full
+
 
 @bp.before_request
 def check_gas_access():
@@ -56,11 +129,10 @@ def _auto_archive(now):
         data_json=json.dumps(snapshot, ensure_ascii=False)
     )
     db.session.add(archive)
-    for c in empty:
-        db.session.delete(c)
+    # Keep empty cylinders in stock — identity full+in_use+empty = total
     if not safe_commit():
         return
-    log_audit('auto_archive', 'gas_cylinders', 0, f'{len(empty)} empty cylinders auto-archived for {month_key}')
+    log_audit('auto_archive', 'gas_cylinders', 0, f'{len(empty)} empty cylinders snapshotted for {month_key}')
 
 
 # ============================================================
@@ -85,20 +157,19 @@ def gas_dashboard():
     n2_cylinders = [c for c in cylinders if c.gas_type == 'nitrogen']
     co2_cylinders = [c for c in cylinders if c.gas_type == 'co2']
 
+    balance = _inventory_balance()
     stats = {
-        'n2_full': len([c for c in n2_cylinders if c.status == 'full']),
-        'n2_in_use': len([c for c in n2_cylinders if c.status == 'in_use']),
-        'n2_empty': len([c for c in n2_cylinders if c.status == 'empty']),
-        'n2_maintenance': len([c for c in n2_cylinders if c.status == 'maintenance']),
-        'co2_full': len([c for c in co2_cylinders if c.status == 'full']),
-        'co2_in_use': len([c for c in co2_cylinders if c.status == 'in_use']),
-        'co2_empty': len([c for c in co2_cylinders if c.status == 'empty']),
-        'co2_maintenance': len([c for c in co2_cylinders if c.status == 'maintenance']),
-        'total_full': len([c for c in cylinders if c.status == 'full']),
-        'total_in_use': len([c for c in cylinders if c.status == 'in_use']),
-        'total_empty': len([c for c in cylinders if c.status == 'empty']),
-        'total_maintenance': len([c for c in cylinders if c.status == 'maintenance']),
-        'total': len(cylinders),
+        'n2_full': balance['nitrogen']['full'],
+        'n2_in_use': balance['nitrogen']['in_use'],
+        'n2_empty': balance['nitrogen']['empty'],
+        'n2_maintenance': balance['nitrogen']['maintenance'],
+        'n2_total': balance['nitrogen']['total'],
+        'co2_full': balance['co2']['full'],
+        'co2_in_use': balance['co2']['in_use'],
+        'co2_empty': balance['co2']['empty'],
+        'co2_maintenance': balance['co2']['maintenance'],
+        'co2_total': balance['co2']['total'],
+        # NOTE: never mix N₂ and CO₂ into one "total_*" — arithmetic is per gas type
     }
 
     # Monthly consumption: count cylinders that became empty this month
@@ -132,12 +203,12 @@ def gas_dashboard():
     n2_spare = [c for c in n2_cylinders if c.status == 'empty']
     co2_spare = [c for c in co2_cylinders if c.status == 'empty']
 
-    # Low stock warning: when only1 full cylinder remains per gas type
+    # Low stock: working pair broken (need 1 in_use + 1 ready full per gas)
     low_stock = []
-    if stats['n2_full'] <= 1 and stats['n2_full'] + stats['n2_in_use'] <= 2:
-        low_stock.append('N₂')
-    if stats['co2_full'] <= 1 and stats['co2_full'] + stats['co2_in_use'] <= 2:
-        low_stock.append('CO₂')
+    for gt in ('nitrogen', 'co2'):
+        b = balance[gt]
+        if not b['has_working_pair']:
+            low_stock.append(b['label'])
 
     return render_template('gas/dashboard.html',
                            cylinders=cylinders,
@@ -148,6 +219,7 @@ def gas_dashboard():
                            components=components,
                            orders=orders,
                            stats=stats,
+                           balance=balance,
                            low_stock=low_stock)
 
 
@@ -258,7 +330,11 @@ def cylinder_delete(cyl_id):
 @login_required
 @role_required('admin', 'technician')
 def cylinder_status(cyl_id):
-    """Quick status change from dashboard — with auto-switch logic"""
+    """Quick status change from dashboard.
+
+    Working set (норма): exactly 1 in_use + at least 1 full spare per gas type.
+    Identity: full + in_use + empty + maintenance = total.
+    """
     c = GasCylinder.query.get_or_404(cyl_id)
     data = request.get_json() if request.is_json else request.form
     new_status = data.get('status')
@@ -266,60 +342,45 @@ def cylinder_status(cyl_id):
         return jsonify({'error': 'Invalid status'}), 400
 
     old_status = c.status
+    if new_status == old_status:
+        if request.is_json:
+            return jsonify({'ok': True, 'old': old_status, 'new': new_status})
+        flash(_('Status updated'), 'success')
+        return redirect(url_for('gas.gas_dashboard'))
+
     c.status = new_status
     if new_status == 'in_use' and not c.installed_at:
         c.installed_at = datetime.utcnow()
     if new_status == 'empty':
         c.installed_at = None
 
-    # Limit: max 2 cylinders "in_use" per gas type
+    # Max 1 in_use per gas type (норма). If another is active → it becomes empty.
     if new_status == 'in_use':
-        active_count = GasCylinder.query.filter(
+        others = GasCylinder.query.filter(
             GasCylinder.gas_type == c.gas_type,
             GasCylinder.status == 'in_use',
             GasCylinder.id != c.id
-        ).count()
-        if active_count >= 2:
-            # Auto-empties the oldest in_use cylinder
-            oldest = GasCylinder.query.filter(
-                GasCylinder.gas_type == c.gas_type,
-                GasCylinder.status == 'in_use',
-                GasCylinder.id != c.id
-            ).order_by(GasCylinder.installed_at.asc().nullslast()).first()
-            if oldest:
-                oldest.status = 'empty'
-                oldest.installed_at = None
-                db.session.add(CylinderLog(
-                    cylinder_id=oldest.id,
-                    action='status_in_use_to_empty',
-                    performed_by=current_user.id,
-                    notes='Auto-emptied: replaced by %s (limit 2)' % c.cylinder_number
-                ))
+        ).order_by(GasCylinder.installed_at.asc().nullslast()).all()
+        for oldest in others:
+            oldest.status = 'empty'
+            oldest.installed_at = None
+            db.session.add(CylinderLog(
+                cylinder_id=oldest.id,
+                action='status_in_use_to_empty',
+                performed_by=current_user.id,
+                notes='Auto-emptied: replaced by %s (working set = 1 in_use)' % c.cylinder_number
+            ))
 
-    # Auto-switch: when setting to "empty", the "full" backup automatically becomes "in_use".
+    # When an in_use cylinder empties → promote one full spare into service
     if new_status == 'empty' and old_status == 'in_use':
-        # Find the backup (full) cylinder of same gas type
-        backup = GasCylinder.query.filter(
-            GasCylinder.gas_type == c.gas_type,
-            GasCylinder.status == 'full',
-            GasCylinder.id != c.id
-        ).first()
-        if backup:
-            # Check limit before activating backup
-            active_count = GasCylinder.query.filter(
-                GasCylinder.gas_type == c.gas_type,
-                GasCylinder.status == 'in_use',
-                GasCylinder.id != c.id
-            ).count()
-            if active_count < 2:
-                backup.status = 'in_use'
-                backup.installed_at = datetime.utcnow()
-                db.session.add(CylinderLog(
-                    cylinder_id=backup.id,
-                    action='status_full_to_in_use',
-                    performed_by=current_user.id,
-                    notes='Auto-switch: backup activated after %s emptied' % c.cylinder_number
-                ))
+        promoted = _promote_full_to_in_use(
+            c.gas_type,
+            reason=f'Auto-switch: backup activated after {c.cylinder_number} emptied',
+            user_id=current_user.id,
+        )
+        if not promoted:
+            flash(_('No full spare cylinder to activate! Order new %(gas)s cylinders.',
+                    gas=GAS_LABELS.get(c.gas_type, c.gas_type)), 'warning')
 
     if not safe_commit():
         if request.is_json:
@@ -327,13 +388,12 @@ def cylinder_status(cyl_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('gas.gas_dashboard'))
 
-    log = CylinderLog(
+    db.session.add(CylinderLog(
         cylinder_id=c.id,
         action='status_%s_to_%s' % (old_status, new_status),
         performed_by=current_user.id,
         notes='Status: %s -> %s' % (old_status, new_status)
-    )
-    db.session.add(log)
+    ))
     if not safe_commit():
         if request.is_json:
             return jsonify({'error': 'Save failed'}), 500
@@ -343,7 +403,8 @@ def cylinder_status(cyl_id):
               '%s #%s: %s -> %s' % (c.gas_type, c.cylinder_number, old_status, new_status))
 
     if request.is_json:
-        return jsonify({'ok': True, 'old': old_status, 'new': new_status})
+        bal = _inventory_balance().get(c.gas_type, {})
+        return jsonify({'ok': True, 'old': old_status, 'new': new_status, 'balance': bal})
     flash(_('Status updated'), 'success')
     return redirect(url_for('gas.gas_dashboard'))
 
@@ -352,7 +413,7 @@ def cylinder_status(cyl_id):
 @login_required
 @role_required('admin', 'technician')
 def cylinder_swap(cyl_id):
-    """Swap cylinder: mark current as empty, prompt for new"""
+    """Swap cylinder: mark current as empty, promote a full spare into service."""
     c = GasCylinder.query.get_or_404(cyl_id)
     old_number = c.cylinder_number
     c.status = 'empty'
@@ -361,27 +422,40 @@ def cylinder_swap(cyl_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('gas.gas_dashboard'))
 
-    log = CylinderLog(
+    db.session.add(CylinderLog(
         cylinder_id=c.id,
         action='removed',
         old_cylinder_number=old_number,
         performed_by=current_user.id,
         notes=f'Cylinder removed from service'
-    )
-    db.session.add(log)
+    ))
     if not safe_commit():
         flash(_('Cylinder marked as empty but log entry failed'), 'warning')
 
+    # Keep the working set: 1 in_use + 1 full spare
+    promoted = _promote_full_to_in_use(
+        c.gas_type,
+        reason=f'Auto-promoted after swap of {old_number}',
+        user_id=current_user.id,
+    )
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('gas.gas_dashboard'))
+
     log_audit('swap', 'gas_cylinder', c.id, f'{c.gas_type} #{old_number} swapped')
-    flash(_('Cylinder marked as empty. Add a new cylinder to replace it.'), 'info')
-    return redirect(url_for('gas.cylinder_new'))
+    if promoted:
+        flash(_('Cylinder %(old)s → empty. %(new)s is now in use.',
+                old=old_number, new=promoted.cylinder_number), 'success')
+    else:
+        flash(_('Cylinder marked as empty. No full spare — order new cylinders!'), 'warning')
+    return redirect(url_for('gas.gas_dashboard'))
 
 
 @bp.route('/archive', methods=['POST'])
 @login_required
 @role_required('admin')
 def gas_archive():
-    """Archive all empty cylinders to MonthlyArchive, then delete them."""
+    """Snapshot empty cylinders to MonthlyArchive (keep them in stock — balance identity)."""
     now = datetime.utcnow()
     month_key = now.strftime('%Y-%m')
 
@@ -390,7 +464,7 @@ def gas_archive():
         flash(_('No empty cylinders to archive'), 'info')
         return redirect(url_for('gas.gas_dashboard'))
 
-    # Save snapshot
+    # Save snapshot only — DO NOT delete (full + in_use + empty = total must hold)
     snapshot = []
     for c in empty:
         snapshot.append({
@@ -410,14 +484,11 @@ def gas_archive():
     db.session.add(archive)
 
     count = len(empty)
-    for c in empty:
-        db.session.delete(c)
-
     if not safe_commit():
         flash(_('Archive failed. Please try again.'), 'error')
         return redirect(url_for('gas.gas_dashboard'))
-    log_audit('archive', 'gas_cylinders', 0, f'{count} empty cylinders archived for {month_key}')
-    flash(_('%(count)d cylinders archived', count=count), 'success')
+    log_audit('archive', 'gas_cylinders', 0, f'{count} empty cylinders snapshotted for {month_key}')
+    flash(_('%(count)d empty cylinders snapshotted (kept in stock)', count=count), 'success')
     return redirect(url_for('gas.gas_dashboard'))
 
 
@@ -549,13 +620,54 @@ def order_new():
 def order_status(order_id):
     o = CylinderOrder.query.get_or_404(order_id)
     new_status = request.form.get('status', 'pending')
+    old_status = o.status
     o.status = new_status
     if new_status == 'delivered':
         o.delivered_at = datetime.utcnow()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('gas.orders_list'))
-    flash(_('Order status updated'), 'success')
+
+    # On delivery: add `quantity` full cylinders so inventory identity holds:
+    # leftover_full + received_full + empty + in_use = total
+    if new_status == 'delivered' and old_status != 'delivered':
+        qty = max(1, safe_int(o.quantity) or 1)
+        created = 0
+        for i in range(1, qty + 1):
+            number = f'ORD{o.id}-{i}'
+            if GasCylinder.query.filter(
+                (GasCylinder.cylinder_number == number) | (GasCylinder.barcode == number)
+            ).first():
+                continue
+            cyl = GasCylinder(
+                gas_type=o.gas_type,
+                cylinder_number=number,
+                barcode=number,
+                status='full',
+                received_at=o.delivered_at or datetime.utcnow(),
+                notes=f'From order #{o.id} ({o.supplier or "-"})'
+            )
+            db.session.add(cyl)
+            db.session.flush()
+            db.session.add(CylinderLog(
+                cylinder_id=cyl.id,
+                action='created',
+                new_cylinder_number=number,
+                performed_by=current_user.id,
+                notes=f'Received via order #{o.id} x{qty}'
+            ))
+            created += 1
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.orders_list'))
+        if created:
+            flash(_('Order delivered: %(n)d full %(gas)s cylinders added to stock',
+                    n=created, gas=GAS_LABELS.get(o.gas_type, o.gas_type)), 'success')
+        else:
+            flash(_('Order marked delivered (cylinders already in stock)'), 'info')
+        log_audit('deliver', 'cylinder_order', o.id, f'{o.gas_type} x{qty}, created={created}')
+    else:
+        flash(_('Order status updated'), 'success')
     return redirect(url_for('gas.orders_list'))
 
 

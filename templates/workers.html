@@ -18,7 +18,7 @@
             <td>{{ w.naam }}</td>
             <td>{{ w.specialisatie or '—' }}</td>
             <td>{{ w.hire_date.strftime('%d-%m-%Y') if w.hire_date else '—' }}</td>
-            <td>{% if w.user %}{{ w.user.display_name or w.user.username }}{% else %}—{% endif %}</td>
+            <td>{% if w.user %}{{ w.user.name }}{% else %}—{% endif %}</td>
             <td>{% if w.resp_group %}{{ w.resp_group.name }}{% else %}—{% endif %}</td>
             <td>€{{ "%.0f"|format(w.tarief_per_uur) }}/h</td>
             <td>{{ w.opdrachten|length }}</td>

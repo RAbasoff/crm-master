@@ -53,6 +53,19 @@ class User(UserMixin, db.Model):
     fault_reports = db.relationship('FaultReport', foreign_keys='FaultReport.reporter_id', back_populates='reporter', lazy=True)
     work_reports = db.relationship('WorkReport', backref='technician', lazy=True)
 
+    @property
+    def name(self):
+        """Human-readable name: display_name or first+last or username."""
+        if self.display_name and self.display_name.strip():
+            return self.display_name.strip()
+        full = ((self.first_name or '') + ' ' + (self.last_name or '')).strip()
+        return full or self.username
+
+    def ensure_display_name(self):
+        if not self.display_name or not self.display_name.strip():
+            full = ((self.first_name or '') + ' ' + (self.last_name or '')).strip()
+            self.display_name = full or self.username
+
     def set_password(self, password, save_plain=False):
         self.password_hash = generate_password_hash(password)
         # Never persist plaintext passwords (save_plain kept for API compat)

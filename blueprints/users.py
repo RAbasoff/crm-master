@@ -78,6 +78,7 @@ def user_cabinet_update(user_id):
     u.first_name = request.form.get('first_name', u.first_name)
     u.last_name = request.form.get('last_name', u.last_name)
     u.display_name = request.form.get('display_name', u.display_name)
+    u.ensure_display_name()
     u.phone = request.form.get('phone', u.phone)
     u.role = request.form.get('role', u.role)
     u.access_level = request.form.get('access_level', u.access_level)
@@ -181,6 +182,7 @@ def user_new():
             person_id=safe_int(request.form.get('person_id')) or None,
             hire_date=(d := safe_date(request.form.get('hire_date'))) and d.date() or None
         )
+        u.ensure_display_name()
         u.set_password(request.form['password'])
         db.session.add(u)
         db.session.flush()
@@ -218,6 +220,7 @@ def user_edit(user_id):
         u.first_name = request.form.get('first_name', u.first_name)
         u.last_name = request.form.get('last_name', u.last_name)
         u.display_name = request.form.get('display_name', u.display_name)
+        u.ensure_display_name()
         u.phone = request.form.get('phone', u.phone or '')
         u.role = request.form.get('role', u.role)
         u.access_level = request.form.get('access_level', u.access_level)

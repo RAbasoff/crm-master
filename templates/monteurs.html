@@ -26,10 +26,10 @@
             <div style="min-width:200px;flex:1">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
                     <div style="width:44px;height:44px;border-radius:50%;background:#3498db;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px">
-                        {{ (m.display_name or m.username)[0]|upper }}
+                        {{ (m.name)[0]|upper }}
                     </div>
                     <div>
-                        <div style="font-size:16px;font-weight:700">{{ m.display_name or m.username }}</div>
+                        <div style="font-size:16px;font-weight:700">{{ m.name }}</div>
                         <div style="font-size:12px;color:#888">@{{ m.username }}
                             {% if m.worker_profile %}
                             · {{ m.worker_profile.specialisatie or '' }}

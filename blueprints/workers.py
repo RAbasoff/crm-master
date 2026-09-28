@@ -104,12 +104,16 @@ def worker_create_user(worker_id):
         flash(_('Username already exists'), 'error')
         return redirect(url_for('workers.worker_edit', worker_id=worker_id))
     
+    parts = (w.naam or '').split(None, 1)
     u = User(
         username=username,
         display_name=w.naam,
+        first_name=parts[0] if parts else '',
+        last_name=parts[1] if len(parts) > 1 else '',
         role='technician',
         is_active_user=True,
     )
+    u.ensure_display_name()
     u.set_password(password)
     db.session.add(u)
     db.session.flush()

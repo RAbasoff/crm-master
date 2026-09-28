@@ -109,6 +109,33 @@
 </div>
 {% endif %}
 
+{% if balance %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+  {% for gt, b in balance.items() %}
+  <div style="background:{{ '#eaf3ff' if gt == 'nitrogen' else '#fdeaea' }};border-radius:8px;padding:8px 12px;font-size:11px">
+    <div style="font-weight:700;margin-bottom:4px;color:{{ '#1a5fa8' if gt == 'nitrogen' else '#b03a2e' }}">
+      {{ b.label }} — {{ _('Balance') }}:
+      {% if b.identity_ok %}<span style="color:#27ae60">✓</span>{% else %}<span style="color:#e74c3c">✗</span>{% endif %}
+    </div>
+    <div style="font-family:monospace;color:#333;line-height:1.5">
+      {{ _('in use') }} <b>{{ b.in_use }}</b>
+      + {{ _('full') }} <b>{{ b.full }}</b>
+      + {{ _('empty') }} <b>{{ b.empty }}</b>
+      {% if b.maintenance %}+ {{ _('TO') }} <b>{{ b.maintenance }}</b>{% endif %}
+      = {{ _('total') }} <b>{{ b.total }}</b>
+    </div>
+    <div style="margin-top:3px;color:#666">
+      {{ _('Working pair') }}:
+      {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('OK') }} (1+1)</span>
+      {% else %}<span style="color:#e74c3c">{{ _('BROKEN') }}</span>{% endif %}
+      · {{ _('spare full') }}: {{ b.spare_full }}
+      · {{ _('delivered') }}: +{{ b.delivered_qty }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="gas-grid">
 
 <!-- ═══ N₂ ═══ -->

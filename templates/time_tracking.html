@@ -45,7 +45,7 @@
         {% for e in entries %}
         <tr>
             <td>{{ e.date.strftime('%d-%m (%a)') }}</td>
-            <td>{{ e.user.display_name or e.user.username }}</td>
+            <td>{{ e.user.name }}</td>
             <td>{{ e.clock_in.strftime('%H:%M') if e.clock_in else '—' }}</td>
             <td>{{ e.clock_out.strftime('%H:%M') if e.clock_out else '—' }}</td>
             <td>{{ e.hours_worked }}</td>
@@ -68,7 +68,7 @@
                 <label>{{ _('Employee') }}</label>
                 <select name="user_id" required>
                     {% for u in users %}
-                    <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
+                    <option value="{{ u.id }}">{{ u.name }}</option>
                     {% endfor %}
                 </select>
             </div>

@@ -27,10 +27,10 @@
     <!-- HEADER ROW — always visible -->
     <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer" onclick="toggleUser({{ u.id }})">
         <div style="width:40px;height:40px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#f39c12{% elif u.role=='director' %}#3498db{% else %}#27ae60{% endif %};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">
-            {{ (u.display_name or u.username)[0]|upper }}
+            {{ (u.name)[0]|upper }}
         </div>
         <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:15px">{{ u.display_name or u.username }}</div>
+            <div style="font-weight:700;font-size:15px">{{ u.name }}</div>
             <div style="font-size:12px;color:#888">@{{ u.username }} · <span class="badge badge-{{ u.role }}" style="font-size:10px">{{ u.role }}</span>
                 {% if not u.is_active_user %} <span class="badge badge-offline" style="font-size:10px">{{ _('Inactive') }}</span>{% endif %}
             </div>
