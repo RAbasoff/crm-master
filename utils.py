@@ -1260,7 +1260,7 @@ def find_pdf_font():
 
 
 def ensure_fpdf():
-    """Import fpdf2; auto-install into current interpreter if missing (PA has no fpdf2)."""
+    """Import fpdf2; auto-install if missing. Works on PA venv (--user is NOT allowed there)."""
     try:
         import fpdf
         return fpdf
@@ -1268,18 +1268,38 @@ def ensure_fpdf():
         pass
     import sys
     import subprocess
-    for args in (
-        [sys.executable, '-m', 'pip', 'install', 'fpdf2'],
-        [sys.executable, '-m', 'pip', 'install', '--user', 'fpdf2'],
-    ):
+    root = os.path.dirname(os.path.abspath(__file__))
+    vendor = os.path.join(root, '.vendor')
+
+    # 1) install into current interpreter (normal venv: `pip install fpdf2`)
+    # 2) install into project .vendor and put on sys.path (works without venv write)
+    attempts = [
+        [sys.executable, '-m', 'pip', 'install', '--no-cache-dir', 'fpdf2'],
+        [sys.executable, '-m', 'pip', 'install', '--no-cache-dir', '--target', vendor, 'fpdf2'],
+    ]
+    last_err = ''
+    for args in attempts:
         try:
-            subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            p = subprocess.run(args, capture_output=True, text=True, timeout=120)
+            if p.returncode != 0:
+                last_err = f'{" ".join(args)} rc={p.returncode}: {(p.stderr or p.stdout or "")[-400:]}'
+                print(f'ensure_fpdf: {last_err}')
+                continue
+            if '--target' in args:
+                if vendor not in sys.path:
+                    sys.path.insert(0, vendor)
+                # clear failed partial imports
+                for mod in list(sys.modules):
+                    if mod == 'fpdf' or mod.startswith('fpdf.'):
+                        del sys.modules[mod]
             import fpdf
             print(f'ensure_fpdf: installed fpdf2 via {" ".join(args)}')
             return fpdf
         except Exception as e:
-            print(f'ensure_fpdf: {args} failed: {e}')
-    raise ImportError('fpdf2 is not installed and pip install failed')
+            last_err = f'{" ".join(args)}: {e}'
+            print(f'ensure_fpdf: {last_err}')
+    raise ImportError(f'fpdf2 is not installed and auto-install failed. {last_err}. '
+                      f'On PA console run: pip install fpdf2')
 
 
 def safe_int(value, default=0):
