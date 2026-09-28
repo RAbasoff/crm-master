@@ -12,6 +12,9 @@
         <a href="/machines/report" class="btn btn-sm" style="background:#9b59b6;color:white">📊 {{ _('Report') }}</a>
         {% endif %}
         <button id="btnPrintLabels" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="printSelectedLabels()">🖨 {{ _('Print Labels') }} (<span id="selectedCount">0</span>)</button>
+        <button id="btnBulkPlan" class="btn btn-sm" style="background:#3498db;color:white;display:none" onclick="openBulkPlan()">📋 {{ _('Plan TO') }}</button>
+        <button id="btnBulkStatus" class="btn btn-sm" style="background:#e67e22;color:white;display:none" onclick="openBulkStatus()">🔁 {{ _('Status') }}</button>
+        <button id="btnBulkExport" class="btn btn-sm" style="background:#16a085;color:white;display:none" onclick="bulkExport()">📊 {{ _('Export') }}</button>
         <button id="btnSelectAll" class="btn btn-sm" style="background:#eee" onclick="toggleSelectAll()">{{ _('Select All') }}</button>
         {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/new" class="btn btn-sm btn-primary">+ {{ _('New Machine') }}</a>
@@ -113,17 +116,70 @@ function toggleSelectAll() {
     document.getElementById('checkAll').checked = anyUnchecked;
     updateSelection();
 }
+function selectedIds() {
+    return [...document.querySelectorAll('.machine-check:checked')].map(cb => cb.value);
+}
 function updateSelection() {
     const checked = document.querySelectorAll('.machine-check:checked');
     const count = checked.length;
     document.getElementById('selectedCount').textContent = count;
-    document.getElementById('btnPrintLabels').style.display = count > 0 ? '' : 'none';
+    const show = count > 0 ? '' : 'none';
+    ['btnPrintLabels','btnBulkPlan','btnBulkStatus','btnBulkExport'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = show;
+    });
     document.getElementById('checkAll').checked = count === document.querySelectorAll('.machine-check').length;
 }
 function printSelectedLabels() {
-    const ids = [...document.querySelectorAll('.machine-check:checked')].map(cb => cb.value);
+    const ids = selectedIds();
     if (ids.length === 0) return;
     window.open('/machines/qr-labels?ids=' + ids.join(','), '_blank');
+}
+function bulkExport() {
+    const ids = selectedIds();
+    if (!ids.length) return;
+    window.location = '/machines/export/xlsx?ids=' + ids.join(',');
+}
+function bulkForm(action, extra) {
+    const ids = selectedIds();
+    if (!ids.length) return;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/machines/bulk';
+    const csrf = document.querySelector('meta[name="csrf-token"]');
+    if (csrf) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'csrf_token'; inp.value = csrf.content;
+        form.appendChild(inp);
+    }
+    const a = document.createElement('input');
+    a.type = 'hidden'; a.name = 'action'; a.value = action;
+    form.appendChild(a);
+    ids.forEach(id => {
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = 'ids'; i.value = id;
+        form.appendChild(i);
+    });
+    (extra || []).forEach(([name, value]) => {
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = name; i.value = value;
+        form.appendChild(i);
+    });
+    document.body.appendChild(form);
+    form.submit();
+}
+function openBulkPlan() {
+    const title = prompt('{{ _('Plan title') }}', '{{ _('Preventive maintenance') }}');
+    if (title === null) return;
+    const planned = prompt('{{ _('Date (YYYY-MM-DD)') }}', new Date().toISOString().slice(0,10));
+    if (planned === null) return;
+    const rec = prompt('{{ _('Recurrence (none/weekly/biweekly/monthly/quarterly/yearly)') }}', 'none');
+    bulkForm('plan_to', [['title', title], ['planned_start', planned], ['recurrence', rec || 'none']]);
+}
+function openBulkStatus() {
+    const st = prompt('{{ _('Status') }} (active/maintenance/broken/offline/retired/disposed)', 'maintenance');
+    if (!st) return;
+    bulkForm('set_status', [['status', st]]);
 }
 </script>
 {% include '_pagination.html' with context %}

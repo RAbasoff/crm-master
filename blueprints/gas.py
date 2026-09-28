@@ -377,7 +377,7 @@ def cylinder_swap(cyl_id):
     return redirect(url_for('gas.cylinder_new'))
 
 
-@bp.route('/archive')
+@bp.route('/archive', methods=['POST'])
 @login_required
 @role_required('admin')
 def gas_archive():

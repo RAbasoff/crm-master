@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+  <h1 style="margin:0;font-size:18px">🕒 {{ _('History Timeline') }} — {{ machine.name }}</h1>
+  <div style="display:flex;gap:6px">
+    <a class="btn btn-sm" style="background:#eee;color:#333;text-decoration:none" href="{{ url_for('machines.machine_detail', machine_id=machine.id) }}">← {{ _('Machine') }}</a>
+    <a class="btn btn-sm" style="background:#eee;color:#333;text-decoration:none" href="{{ url_for('machines.machine_timeline', machine_id=machine.id) }}">JSON</a>
+  </div>
+</div>
+
+<div class="table-wrap">
+  {% if timeline %}
+  <ol style="list-style:none;margin:0;padding:0">
+    {% for e in timeline %}
+    <li data-kind="{{ e.kind }}" style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #eee;align-items:flex-start">
+      <div style="flex:0 0 36px;height:36px;border-radius:50%;background:{{ e.color }}22;color:{{ e.color }};
+                  display:flex;align-items:center;justify-content:center;font-size:17px">{{ e.icon }}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <strong style="font-size:13px">
+            {% if e.url %}<a href="{{ e.url }}" style="color:inherit">{{ e.title }}</a>{% else %}{{ e.title }}{% endif %}
+          </strong>
+          {% if e.status %}<span class="badge" style="background:#ecf0f1;color:#2c3e50;font-size:10px">{{ e.status }}</span>{% endif %}
+          <span class="badge" style="background:{{ e.color }}22;color:{{ e.color }};font-size:10px">
+            {%- if e.kind == 'fault' %}{{ _('Fault') }}
+            {%- elif e.kind == 'plan' %}{{ _('Plan') }}
+            {%- elif e.kind == 'maintenance' %}{{ _('TO') }}
+            {%- elif e.kind == 'two' %}TWO
+            {%- elif e.kind == 'purchase' %}{{ _('Purchase') }}
+            {%- elif e.kind == 'part' %}{{ _('Part') }}
+            {%- else %}{{ e.kind }}{% endif -%}
+          </span>
+        </div>
+        {% if e.detail %}<div style="color:#7f8c8d;font-size:12px;margin-top:2px">{{ e.detail }}</div>{% endif %}
+      </div>
+      <div style="flex:0 0 auto;color:#95a5a6;font-size:11px;white-space:nowrap">{{ e.ts }}</div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p style="color:#95a5a6;padding:24px 0">{{ _('No history for this machine yet.') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

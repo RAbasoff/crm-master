@@ -1,0 +1,57 @@
+{# Machine timeline — unified event feed. Expects: machine, timeline #}
+<div class="table-wrap" style="margin-top:12px">
+  <h2 style="display:flex;align-items:center;gap:8px">
+    🕒 {{ _('History Timeline') }}
+    <span class="badge" style="background:#2c3e50;color:#eee;font-size:11px">{{ timeline|length }}</span>
+    <a class="btn btn-sm" style="margin-left:auto;background:#eee;color:#333;text-decoration:none"
+       href="{{ url_for('machines.machine_timeline', machine_id=machine.id, format='html') }}">
+       {{ _('Open full timeline') }} →
+    </a>
+  </h2>
+
+  {% if timeline %}
+  <ol class="machine-timeline" style="list-style:none;margin:10px 0 0;padding:0;position:relative">
+    {% for e in timeline[:25] %}
+    <li class="tl-item" data-kind="{{ e.kind }}" style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #eee;align-items:flex-start">
+      <div style="flex:0 0 36px;height:36px;border-radius:50%;background:{{ e.color }}22;color:{{ e.color }};
+                  display:flex;align-items:center;justify-content:center;font-size:17px">
+        {{ e.icon }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <strong style="font-size:13px">
+            {% if e.url %}<a href="{{ e.url }}" style="color:inherit">{{ e.title }}</a>{% else %}{{ e.title }}{% endif %}
+          </strong>
+          {% if e.status %}
+          <span class="badge" style="background:#ecf0f1;color:#2c3e50;font-size:10px">{{ e.status }}</span>
+          {% endif %}
+          <span class="badge" style="background:{{ e.color }}22;color:{{ e.color }};font-size:10px">
+            {%- if e.kind == 'fault' %}{{ _('Fault') }}
+            {%- elif e.kind == 'plan' %}{{ _('Plan') }}
+            {%- elif e.kind == 'maintenance' %}{{ _('TO') }}
+            {%- elif e.kind == 'two' %}TWO
+            {%- elif e.kind == 'purchase' %}{{ _('Purchase') }}
+            {%- elif e.kind == 'part' %}{{ _('Part') }}
+            {%- else %}{{ e.kind }}{% endif -%}
+          </span>
+        </div>
+        {% if e.detail %}
+        <div style="color:#7f8c8d;font-size:12px;margin-top:2px">{{ e.detail }}</div>
+        {% endif %}
+      </div>
+      <div style="flex:0 0 auto;color:#95a5a6;font-size:11px;white-space:nowrap">{{ e.ts }}</div>
+    </li>
+    {% endfor %}
+    {% if timeline|length > 25 %}
+    <li style="padding:12px 0;text-align:center">
+      <a class="btn btn-sm" style="background:#eee;color:#333;text-decoration:none"
+         href="{{ url_for('machines.machine_timeline', machine_id=machine.id, format='html') }}">
+         {{ _('Show all %(n)s events', n=timeline|length) }}
+      </a>
+    </li>
+    {% endif %}
+  </ol>
+  {% else %}
+  <p style="color:#95a5a6;padding:16px 0">{{ _('No history for this machine yet.') }}</p>
+  {% endif %}
+</div>

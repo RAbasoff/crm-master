@@ -11,7 +11,8 @@ import qrcode
 
 from models import (db, Machine, MachinePart, PartMaintenanceLog, MachineDocument,
                     MachineSparePart, MachineConsumable, MaintenanceRecord, MaintenancePhoto,
-                    FactorySection, User, Contractor, Verantwoordelijke, FaultReport,
+                    MaintenancePlan, FactorySection, User, Contractor, Verantwoordelijke, FaultReport,
+                    TechnicalWorkOrder, PurchaseRequest,
                     VoorraadItem, VoorraadMutatie)
 from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
                    safe_int, safe_float, safe_date, sanitize_like,
@@ -86,8 +87,111 @@ def machine_detail(machine_id):
     faults = FaultReport.query.filter_by(machine_id=m.id).order_by(FaultReport.created_at.desc()).all()
     maintenance = MaintenanceRecord.query.filter_by(machine_id=m.id).order_by(MaintenanceRecord.date_performed.desc()).all()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    timeline = _build_machine_timeline(m.id, limit=80)
     return render_template('machine_detail.html', machine=m, faults=faults, maintenance=maintenance,
-                           warehouse_items=warehouse_items)
+                           warehouse_items=warehouse_items, timeline=timeline)
+
+
+def _build_machine_timeline(machine_id, limit=100):
+    """Unified event feed for one machine: faults, TO, plans, TWO, parts, purchases."""
+    events = []
+
+    for f in FaultReport.query.filter_by(machine_id=machine_id).all():
+        ts = f.created_at
+        events.append({
+            'ts': ts, 'kind': 'fault', 'icon': '⚠️', 'color': '#e74c3c',
+            'title': f.title or f'#{f.id}',
+            'status': f.status, 'priority': getattr(f, 'priority', None),
+            'url': f'/faults/{f.id}',
+            'detail': (f.description or '')[:180],
+        })
+
+    for p in MaintenancePlan.query.filter_by(machine_id=machine_id).all():
+        ts = p.planned_start or p.created_at
+        events.append({
+            'ts': ts, 'kind': 'plan', 'icon': '📋', 'color': '#3498db',
+            'title': p.title or f'Plan #{p.id}',
+            'status': p.status,
+            'url': f'/maintenance-plans/{p.id}',
+            'detail': (p.description or '')[:180],
+        })
+
+    for r in MaintenanceRecord.query.filter_by(machine_id=machine_id).all():
+        ts = r.date_performed or r.created_at
+        events.append({
+            'ts': ts, 'kind': 'maintenance', 'icon': '🔧', 'color': '#27ae60',
+            'title': r.description or f'TO #{r.id}',
+            'status': r.maintenance_type or 'done',
+            'url': None,
+            'detail': (r.notes or '')[:180],
+        })
+
+    for t in TechnicalWorkOrder.query.filter_by(machine_id=machine_id).all():
+        ts = t.planned_date or t.created_at
+        events.append({
+            'ts': ts, 'kind': 'two', 'icon': '📝', 'color': '#9b59b6',
+            'title': f'{getattr(t, "number", "") or "TWO"} — {(t.description or "")[:60]}',
+            'status': t.status,
+            'url': f'/two/{t.id}',
+            'detail': (t.description or '')[:180],
+        })
+
+    for pr in PurchaseRequest.query.filter_by(machine_id=machine_id).all():
+        ts = pr.created_at
+        events.append({
+            'ts': ts, 'kind': 'purchase', 'icon': '🛒', 'color': '#e67e22',
+            'title': pr.part_name or f'PR #{pr.id}',
+            'status': pr.status,
+            'url': f'/purchase-requests/{pr.id}',
+            'detail': (getattr(pr, 'reason', '') or getattr(pr, 'notes', '') or '')[:180],
+        })
+
+    for mp in MachinePart.query.filter_by(machine_id=machine_id).all():
+        ts = mp.installed_date or mp.created_at
+        if not ts:
+            continue
+        events.append({
+            'ts': ts, 'kind': 'part', 'icon': '⚙️', 'color': '#16a085',
+            'title': mp.name or f'Part #{mp.id}',
+            'status': mp.status,
+            'url': f'/machines/{machine_id}/parts',
+            'detail': (mp.category or '')[:180],
+        })
+
+    # normalize ts to datetime for sorting
+    def _ts(e):
+        v = e['ts']
+        if v is None:
+            return datetime.min
+        if hasattr(v, 'year') and not hasattr(v, 'hour'):
+            return datetime(v.year, v.month, v.day)
+        return v
+
+    events.sort(key=_ts, reverse=True)
+
+    # serialize
+    out = []
+    for e in events[:limit]:
+        ts = e['ts']
+        if ts is None:
+            date_s = None
+        elif hasattr(ts, 'strftime'):
+            date_s = ts.strftime('%Y-%m-%d %H:%M') if hasattr(ts, 'hour') else ts.strftime('%Y-%m-%d')
+        else:
+            date_s = str(ts)
+        out.append({**e, 'ts': date_s, 'ts_raw': str(_ts(e))})
+    return out
+
+
+@bp.route('/<int:machine_id>/timeline')
+@login_required
+def machine_timeline(machine_id):
+    m = Machine.query.get_or_404(machine_id)
+    limit = min(max(request.args.get('limit', 100, type=int), 1), 500)
+    events = _build_machine_timeline(m.id, limit=limit)
+    if request.args.get('format') == 'html':
+        return render_template('machine_timeline.html', machine=m, timeline=events)
+    return jsonify({'machine_id': m.id, 'machine': m.name, 'count': len(events), 'events': events})
 
 
 @bp.route('/<int:machine_id>/edit', methods=['GET', 'POST'])
@@ -373,7 +477,12 @@ def machines_report():
 @login_required
 @role_required('admin', 'director')
 def machines_export(format_type):
-    machines = Machine.query.order_by(Machine.id).all()
+    ids_raw = request.args.get('ids', '')
+    id_list = [safe_int(x) for x in ids_raw.split(',') if x.strip()]
+    if id_list:
+        machines = Machine.query.filter(Machine.id.in_(id_list)).order_by(Machine.id).all()
+    else:
+        machines = Machine.query.order_by(Machine.id).all()
     status_labels = {
         'active': _('Active'),
         'maintenance': _('Maintenance'),
@@ -502,6 +611,78 @@ def machines_export(format_type):
             flash(_('PDF export failed: %(err)s', err=str(e)), 'error')
             return redirect(url_for('machines.machines_list'))
     flash(_('Unsupported format'), 'error')
+    return redirect(url_for('machines.machines_list'))
+
+
+@bp.route('/bulk', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def machines_bulk():
+    """Bulk actions for selected machines: plan TO, set status, export."""
+    action = request.form.get('action', '')
+    ids = [safe_int(x) for x in request.form.getlist('ids') if x]
+    if not ids:
+        flash(_('No machines selected'), 'error')
+        return redirect(url_for('machines.machines_list'))
+    machines = Machine.query.filter(Machine.id.in_(ids)).all()
+    if not machines:
+        flash(_('No machines selected'), 'error')
+        return redirect(url_for('machines.machines_list'))
+
+    if action == 'set_status':
+        status = request.form.get('status', '')
+        if status not in ('active', 'maintenance', 'broken', 'offline', 'retired', 'disposed'):
+            flash(_('Invalid status'), 'error')
+            return redirect(url_for('machines.machines_list'))
+        for m in machines:
+            m.status = status
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+            return redirect(url_for('machines.machines_list'))
+        log_audit('bulk_update', 'machine', 0, f'Status={status} for {len(machines)} machines')
+        flash(_('Updated %(n)d machines', n=len(machines)), 'success')
+
+    elif action == 'plan_to':
+        title = request.form.get('title') or _('Preventive maintenance')
+        try:
+            planned = datetime.strptime(request.form.get('planned_start', ''), '%Y-%m-%d').date()
+        except ValueError:
+            from datetime import date as _date
+            planned = _date.today()
+        # skip weekend
+        if planned.weekday() == 5:
+            planned += timedelta(days=2)
+        elif planned.weekday() == 6:
+            planned += timedelta(days=1)
+        rec = request.form.get('recurrence') or None
+        created = 0
+        for m in machines:
+            p = MaintenancePlan(
+                machine_id=m.id,
+                title=title,
+                description=title,
+                maintenance_type='preventive',
+                status='planned',
+                planned_start=planned,
+                recurrence=rec,
+                created_by=current_user.id,
+            )
+            db.session.add(p)
+            created += 1
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+            return redirect(url_for('machines.machines_list'))
+        log_audit('bulk_create', 'maintenance_plan', 0, f'{created} plans for {len(machines)} machines')
+        flash(_('Created %(n)d maintenance plans', n=created), 'success')
+
+    elif action == 'export_ids':
+        id_csv = ','.join(str(m.id) for m in machines)
+        fmt = request.form.get('format', 'xlsx')
+        return redirect(url_for('machines.machines_export', format_type=fmt, ids=id_csv))
+
+    else:
+        flash(_('Unknown action'), 'error')
+
     return redirect(url_for('machines.machines_list'))
 
 

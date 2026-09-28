@@ -23,7 +23,10 @@
     <h1 style="margin:0;font-size:18px">{{ _('Gas Cylinders') }}</h1>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
         {% if current_user.role == 'admin' %}
-        <a href="/gas/archive" class="btn btn-sm" style="background:#95a5a6;color:white" onclick="return confirm('{{ _('Archive all empty cylinders?') }}')">🗄️ {{ _('Archive') }}</a>
+        <form method="POST" action="{{ url_for('gas.gas_archive') }}" style="display:inline" onsubmit="return confirm('{{ _('Archive all empty cylinders?') }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm" style="background:#95a5a6;color:white">🗄️ {{ _('Archive') }}</button>
+        </form>
         {% endif %}
         <button onclick="openInstallModal()" class="btn btn-sm" style="background:#27ae60;color:white">＋ {{ _('Install / Add') }}</button>
         <a href="/gas/orders/new" class="btn btn-sm" style="background:#eee">📦 {{ _('Order') }}</a>

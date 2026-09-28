@@ -239,7 +239,7 @@ def _build_mro_pdf(records, FPDF, unicode_font, font_path, pdf_text,
                     if y0 > 250:
                         pdf.add_page()
                         y0 = pdf.get_y()
-                img_path = os.path.join(current_current_current_app.config['UPLOAD_FOLDER'], ph.filename)
+                img_path = os.path.join(current_app.config['UPLOAD_FOLDER'], ph.filename)
                 try:
                     pdf.image(img_path, x=x0 + (i % 4) * 40, y=y0, w=36, h=28)
                 except Exception:
@@ -350,7 +350,7 @@ def equipment_new():
         for photo in request.files.getlist('photos'):
             if photo and photo.filename:
                 fn = secure_filename(f"mro_{eq.id}_{photo.filename}")
-                photo.save(os.path.join(current_current_current_app.config['UPLOAD_FOLDER'], fn))
+                photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
                 db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
@@ -424,7 +424,7 @@ def equipment_edit(eq_id):
         for photo in request.files.getlist('photos'):
             if photo and photo.filename:
                 fn = secure_filename(f"mro_{eq.id}_{photo.filename}")
-                photo.save(os.path.join(current_current_current_app.config['UPLOAD_FOLDER'], fn))
+                photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
                 db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
@@ -456,7 +456,7 @@ def equipment_photo_delete(photo_id):
     photo = EquipmentMROPhoto.query.get_or_404(photo_id)
     eq_id = photo.equipment_id
     try:
-        os.remove(os.path.join(current_current_current_app.config['UPLOAD_FOLDER'], photo.filename))
+        os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename))
     except OSError:
         pass
     db.session.delete(photo)

@@ -147,6 +147,60 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Charts: faults & TO last 6 months -->
+{% if dashboard_stats.chart_labels is defined %}
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h2 style="margin:0;font-size:14px">📈 {{ _('Dynamics (6 months)') }}</h2>
+    <a href="/stats/faults" style="font-size:11px;color:#5b9cf6;text-decoration:none">{{ _('Statistics') }} →</a>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start" class="dashboard-grid">
+    <div>
+      {% set max_v = ([dashboard_stats.chart_faults + dashboard_stats.chart_to] | first | max) or 1 %}
+      <svg viewBox="0 0 360 120" width="100%" height="120" role="img" aria-label="chart">
+        {% set n = dashboard_stats.chart_labels|length %}
+        {% set bw = 360 / n %}
+        {% for label in dashboard_stats.chart_labels %}
+          {% set fv = dashboard_stats.chart_faults[loop.index0] %}
+          {% set tv = dashboard_stats.chart_to[loop.index0] %}
+          {% set fh = (fv / max_v) * 90 if max_v else 0 %}
+          {% set th = (tv / max_v) * 90 if max_v else 0 %}
+          <rect x="{{ (loop.index0 * bw + bw*0.15)|round(1) }}" y="{{ (100 - fh)|round(1) }}"
+                width="{{ (bw*0.3)|round(1) }}" height="{{ fh|round(1) }}" fill="#e74c3c" rx="2">
+            <title>{{ label }}: {{ fv }} {{ _('faults') }}</title>
+          </rect>
+          <rect x="{{ (loop.index0 * bw + bw*0.5)|round(1) }}" y="{{ (100 - th)|round(1) }}"
+                width="{{ (bw*0.3)|round(1) }}" height="{{ th|round(1) }}" fill="#27ae60" rx="2">
+            <title>{{ label }}: {{ tv }} {{ _('TO') }}</title>
+          </rect>
+          <text x="{{ (loop.index0 * bw + bw/2)|round(1) }}" y="115" text-anchor="middle"
+                font-size="9" fill="#888">{{ label }}</text>
+        {% endfor %}
+        <line x1="0" y1="100" x2="360" y2="100" stroke="#ddd" stroke-width="1"/>
+      </svg>
+      <div style="display:flex;gap:14px;justify-content:center;font-size:11px;color:#666;margin-top:4px">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#e74c3c;border-radius:2px"></span> {{ _('Faults') }}</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#27ae60;border-radius:2px"></span> {{ _('TO / Maintenance') }}</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">{{ _('Faults by status') }}</div>
+      {% set st_max = (dashboard_stats.chart_status | map(attribute='count') | max) or 1 %}
+      {% for row in dashboard_stats.chart_status %}
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#555">
+          <span>{{ row.status }}</span><strong>{{ row.count }}</strong>
+        </div>
+        <div style="background:#ecf0f1;border-radius:4px;height:8px;overflow:hidden">
+          <div style="width:{{ (row.count / st_max * 100)|round(1) }}%;height:100%;background:#5b9cf6;border-radius:4px"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endif %}
 
 <!-- Two column layout -->

@@ -904,7 +904,50 @@ def index():
         dashboard_stats['active_twos'] = len(active_twos)
         dashboard_stats['overdue_twos'] = len(overdue_twos)
         dashboard_stats['overdue_two_list'] = overdue_twos[:5]
-    
+
+        # ── Charts data (last 6 months) ─────────────────────
+        today = datetime.utcnow().date()
+        months = []
+        for i in range(5, -1, -1):
+            m0 = today.replace(day=1)
+            y, mo = m0.year, m0.month - i
+            while mo <= 0:
+                mo += 12
+                y -= 1
+            months.append((y, mo))
+        labels = [f'{mo:02d}.{y % 100:02d}' for y, mo in months]
+        faults_by_month = []
+        to_by_month = []
+        for y, mo in months:
+            start = datetime(y, mo, 1).date()
+            if mo == 12:
+                end = datetime(y + 1, 1, 1).date()
+            else:
+                end = datetime(y, mo + 1, 1).date()
+            faults_by_month.append(
+                FaultReport.query.filter(
+                    FaultReport.created_at >= start,
+                    FaultReport.created_at < end
+                ).count()
+            )
+            to_by_month.append(
+                MaintenanceRecord.query.filter(
+                    MaintenanceRecord.date_performed >= start,
+                    MaintenanceRecord.date_performed < end
+                ).count()
+            )
+        dashboard_stats['chart_labels'] = labels
+        dashboard_stats['chart_faults'] = faults_by_month
+        dashboard_stats['chart_to'] = to_by_month
+
+        # faults by status (all-time, for donut/bars)
+        status_rows = db.session.query(
+            FaultReport.status, func.count()
+        ).group_by(FaultReport.status).all()
+        dashboard_stats['chart_status'] = [
+            {'status': s or 'unknown', 'count': int(c or 0)} for s, c in status_rows
+        ]
+
     return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=datetime.utcnow(), dashboard_stats=dashboard_stats)
 
 # ============================================================
@@ -1047,7 +1090,62 @@ def automation_check():
 @login_required
 def search_page():
     q = request.args.get('q', '').strip()
-    return render_template('search.html', query=q)
+    type_f = request.args.get('type', '').strip()
+    results = []
+    if q and len(q) >= 2:
+        like = f'%{sanitize_like(q)}%'
+        if type_f in ('', 'machine'):
+            for m in Machine.query.filter(
+                Machine.name.ilike(like) | Machine.serial_number.ilike(like) | Machine.description.ilike(like)
+            ).limit(8).all():
+                results.append({'type': 'machine', 'icon': '⚙️', 'title': m.name,
+                                'subtitle': f'{m.machine_type or ""} {m.serial_number or ""}'.strip(),
+                                'url': f'/machines/{m.id}', 'status': m.status})
+        if type_f in ('', 'fault'):
+            for f in FaultReport.query.filter(
+                FaultReport.title.ilike(like) | FaultReport.description.ilike(like)
+            ).limit(8).all():
+                results.append({'type': 'fault', 'icon': '⚠️', 'title': f.title or f'#{f.id}',
+                                'subtitle': (f.machine.name if f.machine else '') + ' · ' + (f.priority or ''),
+                                'url': f'/faults/{f.id}', 'status': f.status})
+        if type_f in ('', 'order'):
+            for o in Opdracht.query.filter(
+                Opdracht.nummer.ilike(like) | Opdracht.apparaat.ilike(like) | Opdracht.model.ilike(like)
+            ).limit(8).all():
+                results.append({'type': 'order', 'icon': '📋', 'title': f'{o.nummer} — {o.apparaat}',
+                                'subtitle': o.model or '', 'url': f'/orders/{o.id}', 'status': o.status})
+        if type_f in ('', 'warehouse'):
+            for i in VoorraadItem.query.filter(
+                VoorraadItem.naam.ilike(like) | VoorraadItem.categorie.ilike(like) | VoorraadItem.locatie.ilike(like)
+            ).limit(8).all():
+                results.append({'type': 'warehouse', 'icon': '📦', 'title': i.naam,
+                                'subtitle': f'{i.categorie or ""} · {i.hoeveelheid} {i.eenheid or ""}',
+                                'url': f'/warehouse/{i.id}/edit',
+                                'status': 'low' if (i.minimum or 0) and i.hoeveelheid <= i.minimum else 'ok'})
+        if type_f in ('', 'client'):
+            for c in Verantwoordelijke.query.filter(
+                Verantwoordelijke.naam.ilike(like) | Verantwoordelijke.company.ilike(like) |
+                Verantwoordelijke.telefoon.ilike(like) | Verantwoordelijke.email.ilike(like)
+            ).limit(8).all():
+                results.append({'type': 'client', 'icon': '👤', 'title': c.naam,
+                                'subtitle': f'{c.company or ""} {c.telefoon or ""}'.strip(),
+                                'url': f'/responsible/{c.id}', 'status': 'active'})
+        if type_f in ('', 'two'):
+            for t in TechnicalWorkOrder.query.filter(
+                TechnicalWorkOrder.number.ilike(like) | TechnicalWorkOrder.description.ilike(like)
+            ).limit(8).all():
+                results.append({'type': 'two', 'icon': '🔧', 'title': t.number,
+                                'subtitle': (t.description or '')[:60], 'url': f'/two/{t.id}', 'status': t.status})
+        if type_f in ('', 'worker'):
+            for w in Monteur.query.filter(
+                Monteur.naam.ilike(like) | Monteur.specialisatie.ilike(like)
+            ).limit(5).all():
+                results.append({'type': 'worker', 'icon': '👷', 'title': w.naam,
+                                'subtitle': w.specialisatie or '', 'url': f'/monteurs', 'status': 'active' if w.actief else 'inactive'})
+    type_counts = {}
+    for r in results:
+        type_counts[r['type']] = type_counts.get(r['type'], 0) + 1
+    return render_template('search.html', query=q, type_f=type_f, results=results, type_counts=type_counts)
 
 # ============================================================
 # START
