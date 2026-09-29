@@ -189,3 +189,9 @@ Web → Reload
   - backup_database(force=False) skip if today's snapshot exists; login/settings force=True
   - schema.py extracted from utils.py (ensure_schema/run_migrations/run_data_migrations/safe_commit)
   - utils.py facade re-exports; 1763 → 537 lines
+
+2026-09-29 a231ead refactor: split utils.py into security/logs/pdf_utils modules
+  - security.py: roles, group permissions, section access
+  - logs.py: notifications, audit, activity, system log
+  - pdf_utils.py: fpdf2 bootstrap + fonts
+  - utils.py facade (re-exports), 526 → 329 lines
