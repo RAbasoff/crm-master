@@ -1,14 +1,18 @@
+"""Shared helpers (facade). Heavy logic lives in focused modules:
+
+- schema.py      — ensure_schema / migrations / safe_commit
+- security.py    — roles & section access
+- logs.py        — notifications & logs
+- pdf_utils.py   — fpdf2 / fonts
+"""
 from datetime import datetime, timedelta
-from functools import wraps
-from flask import flash, redirect, url_for, request, session
 from flask_login import current_user
-from flask_babel import gettext as _
 from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry, WarehouseGroup
 import os
 from werkzeug.utils import secure_filename
 import time as _time
 
-# ── Schema / migrations live in schema.py (kept import-compatible) ──
+# ── re-exports (import-compatible with old `from utils import …`) ──
 from schema import (
     SCHEMA_VERSION,
     ensure_schema,
@@ -18,139 +22,19 @@ from schema import (
     _migrations_already_applied,
     _stamp_migrations_applied,
 )
-
-# Role hierarchy: admin > director > technician > user
-# admin: full access, can modify program settings
-# director/technician/user: access controlled by allowed_sections and group permissions
-
-def role_required(*roles):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                return redirect(url_for('login'))
-            if not current_user.has_role(*roles):
-                flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
-                return redirect(url_for('index'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def get_user_group_permissions(user):
-    """Get permissions from user's group (via person_id link or role fallback)"""
-    if user.person_id:
-        person = Verantwoordelijke.query.get(user.person_id)
-        if person and person.group_id:
-            perms = GroupPermission.query.filter_by(group_id=person.group_id).all()
-            return {p.section_key: p for p in perms}
-    # Fallback: look up group by role name (e.g. role='technician' -> group 'Technician')
-    if user.role and user.role != 'admin':
-        group = ResponsibleGroup.query.filter_by(access_level=user.role).first()
-        if group:
-            perms = GroupPermission.query.filter_by(group_id=group.id).all()
-            return {p.section_key: p for p in perms}
-    return {}
-
-def user_has_section_access(section_key, action='view'):
-    # Admin always has full access
-    if current_user.role == 'admin':
-        return True
-    # Check group permissions first
-    group_perms = get_user_group_permissions(current_user)
-    if section_key in group_perms:
-        perm = group_perms[section_key]
-        if action == 'view': return perm.can_view
-        if action == 'create': return perm.can_create
-        if action == 'edit': return perm.can_edit
-        if action == 'delete': return perm.can_delete
-        return perm.can_view
-    # Section not in group permissions — check individual allowed_sections
-    # (allowed_sections grant full view+create+edit on top of group permissions)
-    if any(s.section_key == section_key for s in current_user.allowed_sections):
-        if action in ('view', 'create', 'edit'):
-            return True
-        return False
-    # No group perms and no individual override
-    if group_perms:
-        return False  # has a group but section not in group or allowed_sections
-    # Fallback to access_level (only when no group permissions exist)
-    if current_user.access_level == 'full':
-        return True
-    if current_user.access_level == 'limited':
-        return False
-    return any(s.section_key == section_key for s in current_user.allowed_sections)
-
-def section_access_required(section_key, action='view'):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                return redirect(url_for('login'))
-            if not user_has_section_access(section_key, action):
-                flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
-                return redirect(url_for('index'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def create_notification(user_id, title, message, ntype='info', link=None):
-    n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
-    db.session.add(n)
-    safe_commit()
-
-def log_audit(action, entity_type=None, entity_id=None, details=None):
-    try:
-        log = AuditLog(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            action=action, entity_type=entity_type, entity_id=entity_id,
-            details=details, ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        safe_commit()
-    except Exception:
-        db.session.rollback()
-
-def log_user_activity(action, page=None, method=None, entity_type=None, entity_id=None, details=None, duration_ms=None, status_code=None):
-    """Log user activity (page views, actions, etc.)"""
-    try:
-        from models import UserActivityLog
-        log = UserActivityLog(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            username=current_user.username if current_user.is_authenticated else None,
-            action=action,
-            page=page or (request.path if request else None),
-            method=method or (request.method if request else None),
-            entity_type=entity_type,
-            entity_id=entity_id,
-            details=details,
-            ip_address=request.remote_addr if request else None,
-            user_agent=str(request.user_agent)[:300] if request else None,
-            session_id=session.get('_id', '') if session else None,
-            duration_ms=duration_ms,
-            status_code=status_code
-        )
-        db.session.add(log)
-        safe_commit()
-    except Exception:
-        db.session.rollback()
-
-def log_system(level, category, message, details=None, source=None):
-    """Log system events (errors, warnings, info)"""
-    try:
-        from models import SystemLog
-        log = SystemLog(
-            level=level,
-            category=category,
-            message=message,
-            details=details,
-            source=source,
-            user_id=current_user.id if current_user.is_authenticated else None,
-            ip_address=request.remote_addr if request else None
-        )
-        db.session.add(log)
-        safe_commit()
-    except Exception:
-        db.session.rollback()
+from security import (
+    role_required,
+    get_user_group_permissions,
+    user_has_section_access,
+    section_access_required,
+)
+from logs import (
+    create_notification,
+    log_audit,
+    log_user_activity,
+    log_system,
+)
+from pdf_utils import find_pdf_font, ensure_fpdf
 
 def genereer_nummer():
     from models import Opdracht
@@ -206,87 +90,6 @@ def sanitize_like(query_str):
         return ''
     return query_str.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
-
-def find_pdf_font():
-    """Locate a Unicode TTF for fpdf2. Prefers bundled DejaVu, then system fonts."""
-    root = os.path.dirname(os.path.abspath(__file__))
-    for cand in (
-        os.path.join(root, 'static', 'fonts', 'DejaVuSans.ttf'),
-        os.path.join(root, 'static', 'fonts', 'arial.ttf'),
-        r'C:\Windows\Fonts\dejavu\DejaVuSans.ttf',
-        r'C:\Windows\Fonts\arial.ttf',
-        r'C:\Windows\Fonts\calibri.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/freefont/FreeSans.ttf',
-        '/home/rabasoff/.local/share/fonts/DejaVuSans.ttf',
-    ):
-        if os.path.exists(cand):
-            return cand
-    return None
-
-
-def ensure_fpdf():
-    """Import fpdf2. Order: system package → pip install → vendor_fpdf (Helvetica-only)."""
-    import sys
-    import subprocess
-
-    def _try_import():
-        try:
-            import fpdf
-            # Prefer the real library, not our vendor copy, when both exist
-            return fpdf
-        except ImportError:
-            return None
-
-    # already imported?
-    mod = _try_import()
-    if mod is not None:
-        return mod
-
-    root = os.path.dirname(os.path.abspath(__file__))
-    vendor = os.path.join(root, '.vendor')
-
-    # 1) install into current interpreter (venv: `pip install fpdf2` — NOT --user)
-    # 2) install into project .vendor
-    last_err = ''
-    for args in (
-        [sys.executable, '-m', 'pip', 'install', '--no-cache-dir', 'fpdf2'],
-        [sys.executable, '-m', 'pip', 'install', '--no-cache-dir', '--target', vendor, 'fpdf2'],
-    ):
-        try:
-            p = subprocess.run(args, capture_output=True, text=True, timeout=180)
-            if p.returncode != 0:
-                last_err = f'{" ".join(args)} rc={p.returncode}: {(p.stderr or p.stdout or "")[-400:]}'
-                print(f'ensure_fpdf: {last_err}')
-                continue
-            if '--target' in args and vendor not in sys.path:
-                sys.path.insert(0, vendor)
-            for m in list(sys.modules):
-                if m == 'fpdf' or m.startswith('fpdf.'):
-                    del sys.modules[m]
-            mod = _try_import()
-            if mod is not None:
-                print(f'ensure_fpdf: installed fpdf2 via {" ".join(args)}')
-                return mod
-        except Exception as e:
-            last_err = f'{" ".join(args)}: {e}'
-            print(f'ensure_fpdf: {last_err}')
-
-    # 3) bundled copy in vendor_fpdf/ (always present in the repo)
-    vendor_fp = os.path.join(root, 'vendor_fpdf')
-    if os.path.isdir(vendor_fp) and vendor_fp not in sys.path:
-        sys.path.insert(0, vendor_fp)
-    for m in list(sys.modules):
-        if m == 'fpdf' or m.startswith('fpdf.'):
-            del sys.modules[m]
-    mod = _try_import()
-    if mod is not None:
-        print(f'ensure_fpdf: using bundled vendor_fpdf ({mod.__file__})')
-        return mod
-
-    raise ImportError(f'fpdf2 is not installed and auto-install failed. {last_err}. '
-                      f'On PA console run: pip install fpdf2')
 
 
 def safe_int(value, default=0):
