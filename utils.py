@@ -206,10 +206,19 @@ def translate_text(text, target_lang):
         return text
 
 
-SCHEMA_VERSION = 20260929
+SCHEMA_VERSION = 20260930
+
+
+def _schema_log(msg):
+    print(f"SCHEMA: {msg}")
+
+
+def _schema_err(msg):
+    print(f"SCHEMA ERROR: {msg}")
+
 
 def _migrations_already_applied():
-    """Fast-path: skip schema/data migrations when stamp matches."""
+    """Fast-path for DATA migrations only. Schema always reconciles via ensure_schema()."""
     try:
         import sqlite3
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
@@ -221,7 +230,8 @@ def _migrations_already_applied():
         row = cur.execute("SELECT version FROM schema_version ORDER BY id DESC LIMIT 1").fetchone()
         conn.close()
         return bool(row and int(row[0]) >= SCHEMA_VERSION)
-    except Exception:
+    except Exception as e:
+        _schema_err(f"version check failed: {e}")
         return False
 
 
@@ -241,16 +251,82 @@ def _stamp_migrations_applied():
         print(f'schema_version stamp failed: {e}')
 
 
-def run_migrations():
+def _sqlite_col_type(col):
+    """Map a SQLAlchemy column to a SQLite type usable in ALTER ADD COLUMN."""
+    t = str(col.type).upper()
+    if 'INT' in t:
+        return 'INTEGER'
+    if 'BOOL' in t:
+        return 'BOOLEAN'
+    if 'DATETIME' in t:
+        return 'DATETIME'
+    if 'DATE' in t:
+        return 'DATE'
+    if any(x in t for x in ('FLOAT', 'REAL', 'NUMERIC', 'DECIMAL')):
+        return 'FLOAT'
+    if 'TEXT' in t or 'CLOB' in t or 'VARCHAR' in t or 'CHAR' in t:
+        return str(col.type)
+    return str(col.type)
+
+
+def _ensure_model_columns(cur):
+    """Add any column present in SQLAlchemy models but missing in SQLite.
+
+    Models are the source of truth. This catches legacy tables (old chat_message)
+    that CREATE TABLE IF NOT EXISTS cannot upgrade. Returns (changed, errors).
+    """
+    changed, errors = [], []
+    try:
+        from models import db
+    except Exception as e:
+        errors.append(f"import models: {e}")
+        return changed, errors
+
+    for table in db.metadata.tables.values():
+        tname = table.name
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (tname,)
+        )
+        if not cur.fetchone():
+            continue  # created by db.create_all() / SCHEMA_TABLES
+        cur.execute(f"PRAGMA table_info([{tname}])")
+        existing = {r[1] for r in cur.fetchall()}
+        for col in table.columns:
+            if col.name in existing:
+                continue
+            if col.primary_key:
+                errors.append(f"{tname}.{col.name}: cannot ALTER-add PRIMARY KEY")
+                continue
+            ddl = _sqlite_col_type(col)
+            sql = f"ALTER TABLE [{tname}] ADD COLUMN [{col.name}] {ddl}"
+            try:
+                cur.execute(sql)
+                changed.append(f"{tname}.{col.name}")
+            except Exception as e:
+                errors.append(f"{tname}.{col.name}: {e}")
+    return changed, errors
+
+
+def ensure_schema():
+    """Idempotent schema reconciliation. ALWAYS safe and cheap to call.
+
+    - creates missing tables (declared SCHEMA migrations)
+    - adds missing columns (SQLAlchemy models = source of truth + declared extras)
+    - runs known rebuilds and data backfills
+    - logs every change and every failure (no silent except:pass)
+
+    Returns dict with counts: tables_created, columns_added, rebuilds, backfills, errors.
+    """
     import sqlite3
-    from flask import current_app
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     if not os.path.exists(db_path):
-        return
-    if _migrations_already_applied():
-        return
+        _schema_log("no db file — skip (db.create_all will build fresh)")
+        return {'tables_created': 0, 'columns_added': 0, 'rebuilds': 0, 'backfills': 0, 'errors': []}
+
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
+    report = {'tables_created': 0, 'columns_added': 0, 'rebuilds': 0, 'backfills': 0, 'errors': []}
 
     migrations = [
         ("section_responsible", "CREATE TABLE IF NOT EXISTS section_responsible (section_id INTEGER REFERENCES factory_section(id), person_id INTEGER REFERENCES client(id), PRIMARY KEY (section_id, person_id))"),
@@ -659,11 +735,23 @@ def run_migrations():
         ("equipment.floor_y", "ALTER TABLE equipment ADD COLUMN floor_y FLOAT"),
     ]
 
+    def _col_notnull(table, column):
+        """True when table exists and column is NOT NULL."""
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (table,)
+        )
+        if not cur.fetchone():
+            return False
+        cur.execute(f"PRAGMA table_info({table})")
+        for r in cur.fetchall():
+            if r[1] == column:
+                return bool(r[3])  # notnull flag
+        return False
+
     # Fix cylinder_log.cylinder_id to be nullable (SQLite needs table rebuild)
-    try:
-        cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='cylinder_log'")
-        row = cur.fetchone()
-        if row and 'NOT NULL' in (row[0] or '') and 'cylinder_id' in (row[0] or ''):
+    if _col_notnull('cylinder_log', 'cylinder_id'):
+        try:
             cur.execute("ALTER TABLE cylinder_log RENAME TO cylinder_log_old")
             cur.execute("""CREATE TABLE cylinder_log (
                 id INTEGER PRIMARY KEY,
@@ -678,15 +766,15 @@ def run_migrations():
             cur.execute("INSERT INTO cylinder_log SELECT * FROM cylinder_log_old")
             cur.execute("DROP TABLE cylinder_log_old")
             conn.commit()
-            print("Migration: fixed cylinder_log.cylinder_id to nullable")
-    except Exception as e:
-        pass
+            report['rebuilds'] += 1
+            _schema_log("rebuilt cylinder_log (cylinder_id nullable)")
+        except Exception as e:
+            report['errors'].append(f"cylinder_log rebuild: {e}")
+            _schema_err(f"cylinder_log rebuild: {e}")
 
     # Fix fault_report.machine_id to be nullable (for equipment-only faults)
-    try:
-        cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='fault_report'")
-        row = cur.fetchone()
-        if row and 'NOT NULL' in (row[0] or '') and 'machine_id' in (row[0] or ''):
+    if _col_notnull('fault_report', 'machine_id'):
+        try:
             cur.execute("ALTER TABLE fault_report RENAME TO fault_report_old")
             cur.execute("""CREATE TABLE fault_report (
                 id INTEGER PRIMARY KEY,
@@ -706,15 +794,15 @@ def run_migrations():
             cur.execute("INSERT INTO fault_report SELECT * FROM fault_report_old")
             cur.execute("DROP TABLE fault_report_old")
             conn.commit()
-            print("Migration: fixed fault_report.machine_id to nullable")
-    except Exception as e:
-        pass
+            report['rebuilds'] += 1
+            _schema_log("rebuilt fault_report (machine_id nullable)")
+        except Exception as e:
+            report['errors'].append(f"fault_report rebuild: {e}")
+            _schema_err(f"fault_report rebuild: {e}")
 
     # Fix maintenance_schedule: make machine_id nullable
-    try:
-        cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='maintenance_schedule'")
-        row = cur.fetchone()
-        if row and 'NOT NULL' in (row[0] or '') and 'machine_id' in (row[0] or ''):
+    if _col_notnull('maintenance_schedule', 'machine_id'):
+        try:
             cur.execute("ALTER TABLE maintenance_schedule RENAME TO maintenance_schedule_old")
             cur.execute("""CREATE TABLE maintenance_schedule (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -735,18 +823,25 @@ def run_migrations():
             cur.execute("INSERT INTO maintenance_schedule SELECT * FROM maintenance_schedule_old")
             cur.execute("DROP TABLE maintenance_schedule_old")
             conn.commit()
-            print("Migration: fixed maintenance_schedule.machine_id to nullable")
-    except Exception as e:
-        pass
+            report['rebuilds'] += 1
+            _schema_log("rebuilt maintenance_schedule (machine_id nullable)")
+        except Exception as e:
+            report['errors'].append(f"maintenance_schedule rebuild: {e}")
+            _schema_err(f"maintenance_schedule rebuild: {e}")
 
+    # Declared CREATE TABLE / ALTER COLUMN (idempotent)
     for col_name, sql in migrations:
         try:
             if 'CREATE TABLE' in sql:
                 table_name = sql.split('IF NOT EXISTS ')[1].split(' ')[0]
-                cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                cur.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                    (table_name,)
+                )
                 if not cur.fetchone():
                     cur.execute(sql)
-                    print(f"Migration: created {table_name}")
+                    report['tables_created'] += 1
+                    _schema_log(f"created table {table_name}")
             elif 'ALTER TABLE' in sql:
                 table = sql.split('ALTER TABLE ')[1].split(' ADD COLUMN')[0]
                 col = sql.split('ADD COLUMN ')[1].split(' ')[0]
@@ -754,9 +849,20 @@ def run_migrations():
                 cols = [c[1] for c in cur.fetchall()]
                 if col not in cols:
                     cur.execute(sql)
-                    print(f"Migration: added {col} to {table}")
+                    report['columns_added'] += 1
+                    _schema_log(f"added column {table}.{col}")
         except Exception as e:
-            pass
+            report['errors'].append(f"{col_name}: {e}")
+            _schema_err(f"{col_name}: {e}")
+
+    # Model-driven columns (source of truth — catches legacy tables like old chat_message)
+    changed, errs = _ensure_model_columns(cur)
+    report['columns_added'] += len(changed)
+    report['errors'].extend(errs)
+    for name in changed:
+        _schema_log(f"added model column {name}")
+    for err in errs:
+        _schema_err(err)
 
     # Backfill new chat_message columns from legacy ones (chat_id/message)
     try:
@@ -766,12 +872,19 @@ def run_migrations():
             chat_cols = [c[1] for c in cur.fetchall()]
             if 'room_id' in chat_cols and 'chat_id' in chat_cols:
                 cur.execute("UPDATE chat_message SET room_id = chat_id WHERE room_id IS NULL AND chat_id IS NOT NULL")
+                if cur.rowcount:
+                    report['backfills'] += 1
+                    _schema_log(f"backfilled chat_message.room_id x{cur.rowcount}")
             if 'body' in chat_cols and 'message' in chat_cols:
                 cur.execute("UPDATE chat_message SET body = message WHERE body IS NULL AND message IS NOT NULL")
+                if cur.rowcount:
+                    report['backfills'] += 1
+                    _schema_log(f"backfilled chat_message.body x{cur.rowcount}")
             if 'status_json' in chat_cols:
                 cur.execute("UPDATE chat_message SET status_json = '{}' WHERE status_json IS NULL")
-    except Exception:
-        pass
+    except Exception as e:
+        report['errors'].append(f"chat_message backfill: {e}")
+        _schema_err(f"chat_message backfill: {e}")
 
     # Fix empty datetime strings that cause ValueError on read
     try:
@@ -788,14 +901,33 @@ def run_migrations():
                     try:
                         cur.execute(f"UPDATE [{table}] SET [{col}] = NULL WHERE [{col}] = '' OR [{col}] = 'None'")
                         if cur.rowcount > 0:
-                            print(f"Migration: fixed {cur.rowcount} empty {col} in {table}")
-                    except Exception:
-                        pass
-    except Exception:
-        pass
+                            report['backfills'] += 1
+                            _schema_log(f"fixed {cur.rowcount} empty {col} in {table}")
+                    except Exception as e:
+                        report['errors'].append(f"datetime fix {table}.{col}: {e}")
+                        _schema_err(f"datetime fix {table}.{col}: {e}")
+    except Exception as e:
+        report['errors'].append(f"datetime fixes: {e}")
+        _schema_err(f"datetime fixes: {e}")
 
-    conn.commit()
+    try:
+        conn.commit()
+    except Exception as e:
+        report['errors'].append(f"commit: {e}")
+        _schema_err(f"commit: {e}")
     conn.close()
+
+    if report['errors']:
+        _schema_err(f"finished with {len(report['errors'])} error(s): {report}")
+    else:
+        _schema_log(f"ok tables+{report['tables_created']} cols+{report['columns_added']} "
+                    f"rebuilds={report['rebuilds']} backfills={report['backfills']}")
+    return report
+
+
+def run_migrations():
+    """Schema reconciliation — always runs (idempotent). See ensure_schema()."""
+    return ensure_schema()
 
 
 def run_data_migrations():
