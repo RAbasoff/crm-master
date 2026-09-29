@@ -183,3 +183,9 @@ Web → Reload
   - rebuilds via PRAGMA notnull (no more every-startup rebuilds)
   - errors logged, no except:pass
   - SCHEMA_VERSION 20260930
+
+2026-09-29 a9a4d4a perf: lighter startup + split schema out of utils.py
+  - startup diagnostic: 1 line (no row counts of all tables)
+  - backup_database(force=False) skip if today's snapshot exists; login/settings force=True
+  - schema.py extracted from utils.py (ensure_schema/run_migrations/run_data_migrations/safe_commit)
+  - utils.py facade re-exports; 1763 → 537 lines
