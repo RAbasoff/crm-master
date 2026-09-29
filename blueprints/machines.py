@@ -58,12 +58,12 @@ def machine_new():
             floor_x=safe_float(request.form.get('floor_x'), 50),
             floor_y=safe_float(request.form.get('floor_y'), 50)
         )
-        if 'photo' in request.files and request.files['photo'].filename:
-            filename = secure_filename(f"machine_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            m.photo = filename
         db.session.add(m)
         db.session.flush()
+        if 'photo' in request.files and request.files['photo'].filename:
+            filename = save_uploaded_file(request.files['photo'], prefix=f"machine_{m.id}_")
+            if filename:
+                m.photo = filename
         for uid in request.form.getlist('assigned_users'):
             u = User.query.get(int(uid))
             if u:
@@ -224,9 +224,16 @@ def machine_edit(machine_id):
         m.floor_x = safe_float(request.form.get('floor_x'), m.floor_x)
         m.floor_y = safe_float(request.form.get('floor_y'), m.floor_y)
         if 'photo' in request.files and request.files['photo'].filename:
-            filename = secure_filename(f"machine_{m.id}_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            m.photo = filename
+            filename = save_uploaded_file(request.files['photo'], prefix=f"machine_{m.id}_")
+            if filename:
+                if m.photo:
+                    old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], m.photo)
+                    try:
+                        if os.path.isfile(old_path):
+                            os.remove(old_path)
+                    except OSError:
+                        pass
+                m.photo = filename
         m.assigned_users = []
         for uid in request.form.getlist('assigned_users'):
             u = User.query.get(int(uid))

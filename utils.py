@@ -182,11 +182,14 @@ ALLOWED_UPLOAD_EXT = {
 }
 
 def save_uploaded_file(file, prefix=''):
+    """Save upload with a unique filename to avoid collisions and stale browser cache."""
     if file and file.filename:
-        filename = secure_filename(f"{prefix}{file.filename}")
-        ext = os.path.splitext(filename)[1].lower()
+        original = secure_filename(file.filename)
+        ext = os.path.splitext(original)[1].lower()
         if ext not in ALLOWED_UPLOAD_EXT:
             return None
+        import uuid as _uuid
+        filename = f"{prefix}{_uuid.uuid4().hex[:16]}{ext}"
         from flask import current_app
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
         return filename
