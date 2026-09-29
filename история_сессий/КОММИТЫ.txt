@@ -170,3 +170,16 @@ Web → Reload
   - removed 10 temp/debug files (analyze.py, barcode_error.html, cyl_*.html, fix_*.py, improvements.py, etc.)
   - verified: 2 machines same original filename get unique photos; replace isolation OK
   - deployed to PA (user pulled + reloaded 2026-09-29)
+
+2026-09-29 d87664d fix: chat_message missing room_id/body on PA — schema migration
+  - ALTER chat_message ADD room_id/body/status_json for legacy tables (chat_id/message)
+  - backfill room_id=chat_id, body=message
+  - SCHEMA_VERSION 20260928 → 20260929 so PA re-runs migrations
+  - error.log review: OSError write = client disconnect (harmless); CSRF missing = noise/bots
+
+2026-09-29 c8578a3 refactor: honest ensure_schema() — model-driven columns, no silent errors
+  - ensure_schema() always runs, idempotent
+  - model columns are source of truth (ALTER ADD missing)
+  - rebuilds via PRAGMA notnull (no more every-startup rebuilds)
+  - errors logged, no except:pass
+  - SCHEMA_VERSION 20260930
