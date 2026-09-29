@@ -1,0 +1,194 @@
+================================================================================
+СЕССИЯ 2026-09-29 — CRM «Мастерская» / Werkplaats
+Ветка: master → github.com/RAbasoff/crm-master → PythonAnywhere
+================================================================================
+
+ЗАДАЧИ СЕССИИ
+1. Баг: фото в профиле станка прикреплялось не к тому станку (из предыдущего/старого)
+2. Удаление временных скриптов и отладочных файлов
+3. Деплой на PythonAnywhere + проверка
+4. Разбор error.log, фикс chat_message.room_id
+5. Архитектура: ensure_schema(), облегчение старта, разделение монолита
+
+================================================================================
+1. ФОТО СТАНКА — БАГ И ФИКС
+================================================================================
+
+СИМПТОМ:
+  При добавлении фото к профилю станка подставлялась фотография из
+  предыдущего или старого профиля.
+
+ПРИЧИНА:
+  Имена файлов не были уникальны:
+  - создание:  machine_{origname}          (без ID станка)
+  - правка:    machine_{id}_{origname}     (то же origname → тот же URL)
+  Два станка с одинаковым исходным именем (photo.png) перезаписывали
+  один файл. Плюс браузер кешировал картинку по неизменному URL.
+
+ФИКС (utils.py + blueprints/machines.py):
+  - save_uploaded_file(): имя = prefix + uuid4.hex[:16] + ext
+  - machine_new(): сначала flush (получаем id), потом save с machine_{id}_
+  - machine_edit(): при замене фото старый файл удаляется с диска
+
+ТЕСТ (Flask test client):
+  - станок A (красный) и B (зелёный), оба photo.png
+  - A.photo != B.photo, содержимое разное → OK
+  - замена фото у A не трогает B → OK
+
+КОММИТ: d525977
+
+================================================================================
+2. ОЧИСТКА ВРЕМЕННЫХ ФАЙЛОВ
+================================================================================
+
+Удалено ~150 файлов:
+  - _tmp_*, _*.py/_*.txt/_*.html (отладочные дампы, словари, отчёты)
+  - barcode_error.html, cyl_debug.html, cyl_output.html, debug_machines_output.html
+  - server_error.txt, server_output.txt, stderr.txt, stdout.txt
+  - contractors_page.png, dashboard.png, machines_page.png
+  - master.zip (56 МБ)
+  - analyze.py, check_*.py, fix_*.py, screenshot*.py, improvements.py, create_logistiek.py
+
+СОХРАНЕНО:
+  app.py, models.py, utils.py, config.py, blueprints/, templates/, static/,
+  migrations/, requirements.txt, тесты, деплой-файлы.
+
+================================================================================
+3. ДЕПЛОЙ И ПРОВЕРКИ НА PYTHONANYWHERE
+================================================================================
+
+ЦЕПОЧКА:
+  локально:  git push origin master
+  PA:        cd ~/crm-master && git pull origin master
+  PA:        Web → Reload
+
+СМОУЗ-ТЕСТЫ НА https://rabasoff.pythonanywhere.com
+  После фикса фото (d525977):
+    /login 200, /machines 200, /machines/new 200, /machines/1 200
+    /machines/1/edit 200 — форма редактирования (загрузка фото) открывается
+    Traceback / Internal Server Error — нет
+
+  После фикса чата (d87664d):
+    /chat/ 200 title='Чат — CRM' — OperationalError / no such column — нет
+    /, /machines, /machines/1 — 200, чисто
+
+================================================================================
+4. ERROR.LOG — РАЗБОР
+================================================================================
+
+ВСЕГО НАЙДЕНО:
+  A) OSError: write error (x4, 2026-09-28 16:50–16:56)
+     → клиент отключился при записи ответа (broken pipe). Безобидно.
+
+  B) sqlite3.OperationalError: no such column: chat_message.room_id
+     GET /chat/  (2026-09-28 16:53)
+     → РЕАЛЬНЫЙ БАГ. Таблица chat_message осталась со старой схемой:
+         БД:  chat_id, message, message_type, file_url, is_read, created_by
+         Нужно: room_id, body, status_json
+     CREATE TABLE IF NOT EXISTS не достраивает существующие таблицы.
+     SCHEMA_VERSION=20260928 уже стоял в штампе → новые миграции
+     молча пропускались (_migrations_already_applied).
+
+  C) The CSRF token is missing (2026-09-29 11:04)
+     → шум (боты / устаревшие формы). Сервер не падает.
+
+ФИКС (d87664d):
+  ALTER TABLE chat_message ADD COLUMN room_id / body / status_json
+  backfill: room_id=chat_id, body=message
+  SCHEMA_VERSION 20260928 → 20260929 (чтобы PA применил)
+
+ПОСЛЕ ОБНОВЛЕНИЯ PA:
+  Последняя запись в error.log 11:04 (до деплоя ~13:00).
+  Новых ошибок нет. HTTP-проверка /chat/ — 200, без OperationalError.
+
+================================================================================
+5. АРХИТЕКТУРА
+================================================================================
+
+5.1 ensure_schema() — честная сверка схемы (c8578a3)
+
+  Было:
+    - миграции пропускались по SCHEMA_VERSION
+    - CREATE TABLE IF NOT EXISTS не добавлял колонки
+    - except Exception: pass глотал ошибки
+    - rebuild 3 таблиц на КАЖДОМ старте (строчный поиск NOT NULL)
+
+  Стало:
+    - ensure_schema() ВСЕГДА запускается, идемпотентна
+    - модели SQLAlchemy = источник истины: недостающая колонка → ALTER ADD
+    - rebuild через PRAGMA notnull (только когда реально нужно)
+    - каждая ошибка → SCHEMA ERROR в лог
+    - SCHEMA_VERSION штампует ТОЛЬКО run_data_migrations()
+
+  ТЕСТ: легаси chat_message (chat_id/message) получил room_id/body/status_json
+  + backfill. Повторный запуск: cols+0 rebuilds=0. Запрос /chat/ работает.
+
+5.2 Облегчение старта + разделение монолита (a9a4d4a)
+
+  Старт:
+    - диагностика: 1 строка (было: подсчёт строк всех 84 таблиц)
+    - backup_database(force=False): пропуск, если бэкап за сегодня есть
+      (0.00с повторно). login/settings → force=True (свежий снимок).
+
+  Монолит:
+    schema.py  1238 строк  ensure_schema, миграции, safe_commit
+    utils.py    329 строк  фасад + uploads/convert/locks/dates
+    (было utils.py 1763 строки)
+
+5.3 Дальнейшее разделение utils.py (a231ead)
+
+    security.py    84 строки  role_required, get_user_group_permissions,
+                             user_has_section_access, section_access_required
+    logs.py        64 строки  create_notification, log_audit,
+                             log_user_activity, log_system
+    pdf_utils.py   86 строк   find_pdf_font, ensure_fpdf
+    utils.py      329 строк   фасад (re-export) + мелкие помощники
+
+  Все `from utils import …` работают — blueprint'ы не менялись.
+
+ИТОГОВАЯ КАРТА МОДУЛЕЙ:
+    schema.py      1238  схема и миграции
+    utils.py        329  фасад + загрузка/конвертация/локи/даты
+    security.py      84  роли и права
+    logs.py          64  логи и уведомления
+    pdf_utils.py     86  PDF
+    app.py, models.py, blueprints/ (37 модулей), templates/ (~130)
+
+================================================================================
+КОММИТЫ СЕССИИ
+================================================================================
+
+  d525977  fix: machine photo upload — unique filenames prevent cross-profile mixups
+  d87664d  fix: chat_message missing room_id/body on PA — schema migration
+  76f7cff  docs: log commit c8578a3 ensure_schema
+  c8578a3  refactor: honest ensure_schema() — model-driven columns
+  a9a4d4a  perf: lighter startup + split schema out of utils.py
+  ff091ff  docs: log commit a9a4d4a
+  a231ead  refactor: split utils.py into security/logs/pdf_utils modules
+  e87b543  docs: log commit a231ead
+
+  Подробности — в КОММИТЫ.txt
+
+================================================================================
+ПРАВИЛА, ВЫВЕДЕННЫЕ ИЗ СЕССИИ (добавлены в MEMORY.md)
+================================================================================
+
+  - Имена загрузок всегда уникальны (uuid). Никогда не хранить origname.
+  - CREATE TABLE IF NOT EXISTS не мигрирует старые таблицы — нужен ALTER
+    + поднимать SCHEMA_VERSION, иначе PA пропустит миграции.
+  - ensure_schema() — источник истины по схеме; never except:pass в схеме.
+  - Live-check после деплоя: /login /machines /chat на HTTP 200 и отсутствие
+    Traceback / OperationalError.
+
+================================================================================
+ОСТАЛОСЬ / ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ ШАГИ
+================================================================================
+
+  - Вынос файлов наружу (UPLOAD_URL): static/uploads, фото, PDF →
+    отдельный сервер/S3. Ядро (Flask + SQLite + авторизация) остаётся на PA.
+  - error.log PA: старые строки (28.09, 29.09 11:04) физически остаются
+    в файле; новые после ~13:00 29.09 отсутствуют.
+
+================================================================================
+КОНЕЦ СЕССИИ 2026-09-29
+================================================================================
