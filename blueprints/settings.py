@@ -77,7 +77,7 @@ def settings():
 @role_required('admin')
 def settings_backup():
     """Create database backup"""
-    path = backup_database()
+    path = backup_database(force=True)
     if path:
         flash(_('Backup created: {}').format(os.path.basename(path)), 'success')
     else:

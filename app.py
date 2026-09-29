@@ -170,24 +170,28 @@ except ImportError:
 # IMPROVEMENTS: Backup, Email, Cost Tracking
 # ============================================================
 
-def backup_database():
-    """Create automatic backup of the database — daily rotation, 30-day retention"""
+def backup_database(force=False):
+    """Daily DB backup with 30-day rotation.
+
+    Skips the copy when today's backup already exists unless force=True
+    (startup is cheap; login/settings can force a fresh snapshot).
+    """
     import shutil
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
-    # Daily backup — one file per day, overwrite if same day
     date_str = datetime.now().strftime('%Y%m%d')
     backup_path = os.path.join(backup_dir, f'werkplaats_{date_str}.db')
-    if os.path.exists(db_path):
-        shutil.copy2(db_path, backup_path)
-        # Keep only last 30 backups
-        backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
-        for old in backups[:-30]:
-            os.remove(os.path.join(backup_dir, old))
-        print(f"BACKUP: created {backup_path}")
+    if not os.path.exists(db_path):
+        return None
+    if not force and os.path.exists(backup_path):
         return backup_path
-    return None
+    shutil.copy2(db_path, backup_path)
+    backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
+    for old in backups[:-30]:
+        os.remove(os.path.join(backup_dir, old))
+    print(f"BACKUP: created {backup_path}")
+    return backup_path
 
 def send_email(to_email, subject, body):
     """Send email notification"""
@@ -230,33 +234,23 @@ with app.app_context():
                 print(f"STARTUP: removed {_ext} file")
             except Exception:
                 pass
-    # DEBUG: print DB diagnostics to error log on startup
+    # Compact startup diagnostic (no per-table row counts — those ran on every import)
     import sqlite3 as _diag_sqlite3
     _diag_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
-    print(f"=== DB DIAGNOSTIC ===")
-    print(f"  DB path: {_diag_path}")
-    print(f"  DB exists: {os.path.exists(_diag_path)}")
     if os.path.exists(_diag_path):
-        print(f"  DB size: {os.path.getsize(_diag_path)} bytes")
         try:
             _dc = _diag_sqlite3.connect(_diag_path)
             _dcur = _dc.cursor()
-            _dcur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-            _tables = [r[0] for r in _dcur.fetchall()]
-            print(f"  Tables: {len(_tables)}")
-            for _t in _tables:
-                _dcur.execute(f"SELECT COUNT(*) FROM [{_t}]")
-                _cnt = _dcur.fetchone()[0]
-                if _cnt > 0:
-                    print(f"    {_t}: {_cnt}")
+            _dcur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+            _ntables = _dcur.fetchone()[0]
             _dc.close()
+            print(f"STARTUP: db ok size={os.path.getsize(_diag_path)} tables={_ntables}")
         except Exception as _diag_err:
-            print(f"  DB read error: {_diag_err}")
+            print(f"STARTUP: db read error: {_diag_err}")
     else:
-        print(f"  WARNING: DB FILE DOES NOT EXIST — will create empty!")
-    print(f"=== END DIAGNOSTIC ===")
+        print("STARTUP: db missing — will create empty")
 
-    # Auto-backup on startup (daily)
+    # Daily backup only when today's snapshot is absent (skip if already taken)
     backup_database()
 
     db.create_all()
@@ -571,7 +565,7 @@ def login():
                 log_system('INFO', 'auth', f'User {username} logged in', source='login')
                 # Auto-backup DB on login — saves all changes from previous session
                 try:
-                    backup_database()
+                    backup_database(force=True)
                 except Exception as be:
                     print(f'LOGIN BACKUP WARNING: {be}')
                 # Reminders on login (tool wear etc.) for admin/director/masters/responsible
@@ -607,7 +601,7 @@ def login():
                 log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
                 log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
                 try:
-                    backup_database()
+                    backup_database(force=True)
                 except Exception as be:
                     print(f'LOGIN BACKUP WARNING: {be}')
                 try:
