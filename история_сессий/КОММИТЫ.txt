@@ -162,3 +162,11 @@ Web → Reload
 Пользователи: /users (пароль admin видит в карточке)
 
 ============================================================
+
+2026-09-29 d525977 fix: machine photo upload — unique filenames prevent cross-profile mixups
+  - utils.py save_uploaded_file: uuid-based unique names (collisions + stale browser cache)
+  - machines.py create: flush ID first, save as machine_{id}_{uuid}
+  - machines.py edit: delete old photo file on replace
+  - removed 10 temp/debug files (analyze.py, barcode_error.html, cyl_*.html, fix_*.py, improvements.py, etc.)
+  - verified: 2 machines same original filename get unique photos; replace isolation OK
+  - deployed to PA (user pulled + reloaded 2026-09-29)

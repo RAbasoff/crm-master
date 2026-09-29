@@ -206,7 +206,7 @@ def translate_text(text, target_lang):
         return text
 
 
-SCHEMA_VERSION = 20260928
+SCHEMA_VERSION = 20260929
 
 def _migrations_already_applied():
     """Fast-path: skip schema/data migrations when stamp matches."""
@@ -642,6 +642,10 @@ def run_migrations():
             created_at DATETIME,
             status_json TEXT DEFAULT '{}'
         )"""),
+        # Old chat_message schema (chat_id/message) → new (room_id/body)
+        ("chat_message.room_id", "ALTER TABLE chat_message ADD COLUMN room_id INTEGER"),
+        ("chat_message.body", "ALTER TABLE chat_message ADD COLUMN body TEXT"),
+        ("chat_message.status_json", "ALTER TABLE chat_message ADD COLUMN status_json TEXT DEFAULT '{}'"),
         ("record_lock", """CREATE TABLE IF NOT EXISTS record_lock (
             id INTEGER PRIMARY KEY,
             record_type VARCHAR(50) NOT NULL,
@@ -753,6 +757,21 @@ def run_migrations():
                     print(f"Migration: added {col} to {table}")
         except Exception as e:
             pass
+
+    # Backfill new chat_message columns from legacy ones (chat_id/message)
+    try:
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_message'")
+        if cur.fetchone():
+            cur.execute("PRAGMA table_info(chat_message)")
+            chat_cols = [c[1] for c in cur.fetchall()]
+            if 'room_id' in chat_cols and 'chat_id' in chat_cols:
+                cur.execute("UPDATE chat_message SET room_id = chat_id WHERE room_id IS NULL AND chat_id IS NOT NULL")
+            if 'body' in chat_cols and 'message' in chat_cols:
+                cur.execute("UPDATE chat_message SET body = message WHERE body IS NULL AND message IS NOT NULL")
+            if 'status_json' in chat_cols:
+                cur.execute("UPDATE chat_message SET status_json = '{}' WHERE status_json IS NULL")
+    except Exception:
+        pass
 
     # Fix empty datetime strings that cause ValueError on read
     try:
