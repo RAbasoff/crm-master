@@ -474,6 +474,32 @@ def machines_report():
                            selected_machines=machine_ids)
 
 
+MACHINE_EXPORT_FIELDS = {
+    'name':              lambda m: m.name,
+    'machine_type':      lambda m: m.machine_type or '',
+    'serial_number':     lambda m: m.serial_number or '',
+    'year_of_manufacture': lambda m: m.year_of_manufacture or '',
+    'manufacturer':      lambda m: m.manufacturer or '',
+    'status':            lambda m: m.status or 'active',
+    'installation_location': lambda m: m.installation_location or '',
+    'section':           lambda m: m.section.name if m.section else '',
+    'responsible':       lambda m: (m.responsible_user.display_name or m.responsible_user.username) if m.responsible_user else (m.responsible_person.naam if m.responsible_person else ''),
+    'contractor':        lambda m: m.contractor_rel.company_name if m.contractor_rel else '',
+}
+
+MACHINE_EXPORT_FIELD_LABELS = {
+    'name': 'Name', 'machine_type': 'Type', 'serial_number': 'Serial Number',
+    'year_of_manufacture': 'Year of Manufacture', 'manufacturer': 'Manufacturer',
+    'status': 'Status', 'installation_location': 'Location', 'section': 'Section',
+    'responsible': 'Responsible', 'contractor': 'Contractor',
+}
+
+# All fields in original export order
+MACHINE_EXPORT_ALL_FIELDS = ['name', 'machine_type', 'serial_number', 'manufacturer',
+                              'year_of_manufacture', 'installation_location', 'section',
+                              'responsible', 'contractor', 'status']
+
+
 @bp.route('/export/<format_type>')
 @login_required
 @role_required('admin', 'director')
@@ -484,27 +510,28 @@ def machines_export(format_type):
         machines = Machine.query.filter(Machine.id.in_(id_list)).order_by(Machine.id).all()
     else:
         machines = Machine.query.order_by(Machine.id).all()
+
+    fields_raw = request.args.get('fields', '')
+    field_keys = [f.strip() for f in fields_raw.split(',') if f.strip() in MACHINE_EXPORT_FIELDS] if fields_raw else MACHINE_EXPORT_ALL_FIELDS
+    if not field_keys:
+        field_keys = MACHINE_EXPORT_ALL_FIELDS
+
     status_labels = {
-        'active': _('Active'),
-        'maintenance': _('Maintenance'),
-        'broken': _('Broken'),
-        'offline': _('Offline'),
-        'retired': _('Retired'),
-        'disposed': _('Disposed'),
+        'active': _('Active'), 'maintenance': _('Maintenance'), 'broken': _('Broken'),
+        'offline': _('Offline'), 'retired': _('Retired'), 'disposed': _('Disposed'),
     }
-    headers = [_('ID'), _('Name'), _('Type'), _('Serial'), _('Manufacturer'), _('Year'),
-               _('Location'), _('Section'), _('Responsible'), _('Contractor'), _('Status')]
+
+    def get_val(m, key):
+        if key == 'status':
+            return status_labels.get(m.status or 'active', m.status or 'active')
+        return MACHINE_EXPORT_FIELDS[key](m)
+
+    header_map = {k: _(MACHINE_EXPORT_FIELD_LABELS[k]) for k in MACHINE_EXPORT_FIELDS}
+    headers = [header_map[k] for k in field_keys]
+
     rows = []
     for m in machines:
-        rows.append([
-            m.id, m.name, m.machine_type or '', m.serial_number or '',
-            m.manufacturer or '', m.year_of_manufacture or '',
-            m.installation_location or '',
-            m.section.name if m.section else '',
-            m.responsible_user.display_name if m.responsible_user else '',
-            m.contractor_rel.company_name if m.contractor_rel else '',
-            status_labels.get(m.status or 'active', m.status or 'active')
-        ])
+        rows.append([str(get_val(m, k)) for k in field_keys])
     if format_type == 'xlsx':
         try:
             from openpyxl import Workbook
@@ -584,7 +611,10 @@ def machines_export(format_type):
                 base_font = 'Helvetica'
             pdf.add_page()
 
-            col_w = [10, 35, 22, 28, 28, 14, 30, 28, 28, 30, 18]
+            # Dynamic column widths: distribute available space evenly
+            n_cols = len(headers)
+            page_w = 277  # A4 landscape usable width in mm
+            col_w = [page_w / n_cols] * n_cols
             pdf.set_font(base_font, 'B', 7)
             pdf.set_fill_color(44, 62, 80)
             pdf.set_text_color(255)

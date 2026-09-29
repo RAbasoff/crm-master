@@ -12,6 +12,8 @@
         <button onclick="showReport()" class="btn btn-sm" style="background:#2c3e50;color:white">📊 {{ _('Report') }}</button>
         <button onclick="printSelected()" class="btn btn-sm" style="background:#16a085;color:white">🖨️ {{ _('Print') }}</button>
         <button onclick="exportPdf()" class="btn btn-sm" style="background:#e74c3c;color:white">📕 PDF</button>
+        <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="openExportModal('xlsx')">📊 Excel</button>
+        <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="openExportModal('pdf')">📄 PDF</button>
     </div>
 </div>
 
@@ -287,5 +289,76 @@ function exportPdf() {
     const url = '/equipment/export/pdf' + (q ? '?ids=' + q : '');
     window.location.href = url;
 }
+
+// ---- EXPORT FIELD SELECTION MODAL ----
+const EXPORT_FIELDS = [
+    {key:'number', label:'{{ _("Number")|e }}', def:true},
+    {key:'date', label:'{{ _("Date")|e }}', def:true},
+    {key:'name', label:'{{ _("Name")|e }}', def:true},
+    {key:'serial', label:'{{ _("Serial")|e }}', def:true},
+    {key:'machine', label:'{{ _("Machine")|e }}', def:true},
+    {key:'reason', label:'{{ _("Reason")|e }}', def:true},
+    {key:'next_date', label:'{{ _("Next Date")|e }}', def:false},
+    {key:'periodicity', label:'{{ _("Periodicity")|e }}', def:false},
+    {key:'status', label:'{{ _("Status")|e }}', def:false},
+    {key:'notes', label:'{{ _("Notes")|e }}', def:false},
+    {key:'parts_count', label:'{{ _("Parts")|e }}', def:false},
+];
+const EXPORT_FIELDS_KEY = 'export_fields_mro';
+let exportFormat = 'xlsx';
+
+function loadSavedFields() {
+    try {
+        const saved = localStorage.getItem(EXPORT_FIELDS_KEY);
+        if (saved) return new Set(JSON.parse(saved));
+    } catch(e) {}
+    return null;
+}
+function saveFields(fieldKeys) {
+    try { localStorage.setItem(EXPORT_FIELDS_KEY, JSON.stringify([...fieldKeys])); } catch(e) {}
+}
+
+function openExportModal(fmt) {
+    exportFormat = fmt || 'xlsx';
+    const saved = loadSavedFields();
+    const box = document.getElementById('exportFieldCheckboxes');
+    box.innerHTML = EXPORT_FIELDS.map(f => {
+        const checked = saved ? saved.has(f.key) : f.def;
+        return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:6px">
+            <input type="checkbox" class="export-field-cb" value="${f.key}" ${checked?'checked':''} style="width:16px;height:16px">
+            <span style="font-size:13px">${f.label}</span>
+        </label>`;
+    }).join('');
+    const ids = getSelectedIds();
+    document.getElementById('exportSelectionInfo').textContent =
+        ids.length ? '{{ _("Selected")|e }}: ' + ids.length : '{{ _("All records")|e }}';
+    document.getElementById('exportModal').style.display = 'flex';
+}
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+function confirmExport() {
+    const checked = [...document.querySelectorAll('.export-field-cb:checked')].map(cb => cb.value);
+    if (!checked.length) { alert('{{ _("Select at least one field")|e }}'); return; }
+    saveFields(checked);
+    const ids = getSelectedIds();
+    let url = '/equipment/export-table/' + exportFormat + '?fields=' + checked.join(',');
+    if (ids.length) url += '&ids=' + ids.join(',');
+    window.location = url;
+    closeExportModal();
+}
 </script>
+
+<!-- EXPORT FIELD SELECTION MODAL -->
+<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;padding:24px;width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+        <h3 style="margin:0 0 6px;font-size:16px">{{ _('Select fields to export') }}</h3>
+        <p id="exportSelectionInfo" style="margin:0 0 14px;font-size:12px;color:#888"></p>
+        <div id="exportFieldCheckboxes" style="display:flex;flex-direction:column;gap:2px;margin-bottom:18px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="closeExportModal()" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</button>
+            <button onclick="confirmExport()" class="btn btn-sm btn-primary">{{ _('Export') }}</button>
+        </div>
+    </div>
+</div>
 {% endblock %}

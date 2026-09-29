@@ -3,8 +3,11 @@
 {% block content %}
 <div class="page-header">
     <h1>🏭 {{ _('Other Devices') }}</h1>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/machines" class="btn" style="background:#eee">← {{ _('Back') }}</a>
+        <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="openExportModal('xlsx')">📊 Excel</button>
+        <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="openExportModal('pdf')">📄 PDF</button>
+        <button id="btnSelectAll" class="btn btn-sm" style="background:#eee" onclick="toggleSelectAll()">{{ _('Select All') }}</button>
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/assets/new" class="btn btn-primary">+ {{ _('Add Device') }}</a>
         {% endif %}
@@ -47,6 +50,7 @@
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
         <tr>
+            <th style="width:36px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
             <th>{{ _('Photo') }}</th>
             <th>{{ _('Name') }}</th>
             <th>{{ _('Type') }}</th>
@@ -60,6 +64,7 @@
         </tr>
         {% for eq in items %}
         <tr>
+            <td><input type="checkbox" class="asset-check" value="{{ eq.id }}" onchange="updateSelection()"></td>
             <td>{% if eq.photo %}<img src="/static/uploads/{{ eq.photo }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{% else %}<div style="width:40px;height:40px;background:#e8ecf1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>{% endif %}</td>
             <td><a href="/assets/{{ eq.id }}" style="font-weight:600;color:#2c3e50;text-decoration:none">{{ eq.name }}</a></td>
             <td style="font-size:12px">{{ eq.equipment_type or '—' }}</td>
@@ -80,5 +85,91 @@
         </tr>
         {% endfor %}
     </table></div>
+</div>
+
+<script>
+function toggleAll(src) {
+    document.querySelectorAll('.asset-check').forEach(cb => { cb.checked = src.checked; });
+}
+function toggleSelectAll() {
+    const all = document.querySelectorAll('.asset-check');
+    const anyUnchecked = [...all].some(cb => !cb.checked);
+    all.forEach(cb => { cb.checked = anyUnchecked; });
+    document.getElementById('checkAll').checked = anyUnchecked;
+}
+function selectedIds() {
+    return [...document.querySelectorAll('.asset-check:checked')].map(cb => cb.value);
+}
+
+const EXPORT_FIELDS = [
+    {key:'name', label:'{{ _("Name")|e }}', def:true},
+    {key:'equipment_type', label:'{{ _("Type")|e }}', def:true},
+    {key:'serial_number', label:'{{ _("Serial Number")|e }}', def:true},
+    {key:'year_of_manufacture', label:'{{ _("Year of Manufacture")|e }}', def:true},
+    {key:'manufacturer', label:'{{ _("Manufacturer")|e }}', def:true},
+    {key:'status', label:'{{ _("Status")|e }}', def:true},
+    {key:'category', label:'{{ _("Category")|e }}', def:false},
+    {key:'model_name', label:'{{ _("Model")|e }}', def:false},
+    {key:'inventory_number', label:'{{ _("Inventory Number")|e }}', def:false},
+    {key:'condition', label:'{{ _("Condition")|e }}', def:false},
+    {key:'installation_location', label:'{{ _("Location")|e }}', def:false},
+    {key:'section', label:'{{ _("Section")|e }}', def:false},
+];
+const EXPORT_FIELDS_KEY = 'export_fields_assets';
+let exportFormat = 'xlsx';
+
+function loadSavedFields() {
+    try {
+        const saved = localStorage.getItem(EXPORT_FIELDS_KEY);
+        if (saved) return new Set(JSON.parse(saved));
+    } catch(e) {}
+    return null;
+}
+function saveFields(fieldKeys) {
+    try { localStorage.setItem(EXPORT_FIELDS_KEY, JSON.stringify([...fieldKeys])); } catch(e) {}
+}
+
+function openExportModal(fmt) {
+    exportFormat = fmt || 'xlsx';
+    const saved = loadSavedFields();
+    const box = document.getElementById('exportFieldCheckboxes');
+    box.innerHTML = EXPORT_FIELDS.map(f => {
+        const checked = saved ? saved.has(f.key) : f.def;
+        return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:6px">
+            <input type="checkbox" class="export-field-cb" value="${f.key}" ${checked?'checked':''} style="width:16px;height:16px">
+            <span style="font-size:13px">${f.label}</span>
+        </label>`;
+    }).join('');
+    const ids = selectedIds();
+    document.getElementById('exportSelectionInfo').textContent =
+        ids.length ? '{{ _("Selected")|e }}: ' + ids.length : '{{ _("All items")|e }}';
+    document.getElementById('exportModal').style.display = 'flex';
+}
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+function confirmExport() {
+    const checked = [...document.querySelectorAll('.export-field-cb:checked')].map(cb => cb.value);
+    if (!checked.length) { alert('{{ _("Select at least one field")|e }}'); return; }
+    saveFields(checked);
+    const ids = selectedIds();
+    let url = '/assets/export/' + exportFormat + '?fields=' + checked.join(',');
+    if (ids.length) url += '&ids=' + ids.join(',');
+    window.location = url;
+    closeExportModal();
+}
+</script>
+
+<!-- EXPORT FIELD SELECTION MODAL -->
+<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;padding:24px;width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+        <h3 style="margin:0 0 6px;font-size:16px">{{ _('Select fields to export') }}</h3>
+        <p id="exportSelectionInfo" style="margin:0 0 14px;font-size:12px;color:#888"></p>
+        <div id="exportFieldCheckboxes" style="display:flex;flex-direction:column;gap:2px;margin-bottom:18px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="closeExportModal()" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</button>
+            <button onclick="confirmExport()" class="btn btn-sm btn-primary">{{ _('Export') }}</button>
+        </div>
+    </div>
 </div>
 {% endblock %}

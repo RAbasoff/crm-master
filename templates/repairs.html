@@ -8,6 +8,9 @@
         <a href="/repairs/new" class="btn btn-primary">+ {{ _('New Repair') }}</a>
         {% endif %}
         <a href="/repairs/stats" class="btn btn-sm" style="background:#eee">📊 {{ _('Statistics') }}</a>
+        <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="openExportModal('xlsx')">📊 Excel</button>
+        <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="openExportModal('pdf')">📄 PDF</button>
+        <button class="btn btn-sm" style="background:#eee" onclick="toggleSelectAll()">{{ _('Select All') }}</button>
     </div>
 </div>
 
@@ -31,6 +34,7 @@
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
         <tr>
+            <th style="width:36px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
             <th>#</th>
             <th>{{ _('Component') }}</th>
             <th>{{ _('Gas') }}</th>
@@ -44,6 +48,7 @@
         </tr>
         {% for r in repairs %}
         <tr>
+            <td><input type="checkbox" class="repair-check" value="{{ r.id }}"></td>
             <td>{{ r.id }}</td>
             <td>
                 <strong>{{ r.component.name if r.component else '?' }}</strong>
@@ -107,4 +112,91 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+function toggleAll(src) {
+    document.querySelectorAll('.repair-check').forEach(cb => { cb.checked = src.checked; });
+}
+function toggleSelectAll() {
+    const all = document.querySelectorAll('.repair-check');
+    const anyUnchecked = [...all].some(cb => !cb.checked);
+    all.forEach(cb => { cb.checked = anyUnchecked; });
+    document.getElementById('checkAll').checked = anyUnchecked;
+}
+function selectedIds() {
+    return [...document.querySelectorAll('.repair-check:checked')].map(cb => cb.value);
+}
+
+const EXPORT_FIELDS = [
+    {key:'id', label:'ID', def:true},
+    {key:'component', label:'{{ _("Component")|e }}', def:true},
+    {key:'gas_type', label:'{{ _("Gas")|e }}', def:true},
+    {key:'fault_description', label:'{{ _("Fault")|e }}', def:true},
+    {key:'date_broken', label:'{{ _("Date Broken")|e }}', def:true},
+    {key:'repair_company', label:'{{ _("Company")|e }}', def:true},
+    {key:'repair_cost', label:'{{ _("Cost")|e }}', def:true},
+    {key:'status', label:'{{ _("Status")|e }}', def:true},
+    {key:'repair_description', label:'{{ _("Repair Description")|e }}', def:false},
+    {key:'date_sent', label:'{{ _("Date Sent")|e }}', def:false},
+    {key:'date_repaired', label:'{{ _("Date Repaired")|e }}', def:false},
+    {key:'date_installed', label:'{{ _("Date Installed")|e }}', def:false},
+    {key:'notes', label:'{{ _("Notes")|e }}', def:false},
+];
+const EXPORT_FIELDS_KEY = 'export_fields_repairs';
+let exportFormat = 'xlsx';
+
+function loadSavedFields() {
+    try {
+        const saved = localStorage.getItem(EXPORT_FIELDS_KEY);
+        if (saved) return new Set(JSON.parse(saved));
+    } catch(e) {}
+    return null;
+}
+function saveFields(fieldKeys) {
+    try { localStorage.setItem(EXPORT_FIELDS_KEY, JSON.stringify([...fieldKeys])); } catch(e) {}
+}
+
+function openExportModal(fmt) {
+    exportFormat = fmt || 'xlsx';
+    const saved = loadSavedFields();
+    const box = document.getElementById('exportFieldCheckboxes');
+    box.innerHTML = EXPORT_FIELDS.map(f => {
+        const checked = saved ? saved.has(f.key) : f.def;
+        return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:6px">
+            <input type="checkbox" class="export-field-cb" value="${f.key}" ${checked?'checked':''} style="width:16px;height:16px">
+            <span style="font-size:13px">${f.label}</span>
+        </label>`;
+    }).join('');
+    const ids = selectedIds();
+    document.getElementById('exportSelectionInfo').textContent =
+        ids.length ? '{{ _("Selected")|e }}: ' + ids.length : '{{ _("All records")|e }}';
+    document.getElementById('exportModal').style.display = 'flex';
+}
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+function confirmExport() {
+    const checked = [...document.querySelectorAll('.export-field-cb:checked')].map(cb => cb.value);
+    if (!checked.length) { alert('{{ _("Select at least one field")|e }}'); return; }
+    saveFields(checked);
+    const ids = selectedIds();
+    let url = '/repairs/export/' + exportFormat + '?fields=' + checked.join(',');
+    if (ids.length) url += '&ids=' + ids.join(',');
+    window.location = url;
+    closeExportModal();
+}
+</script>
+
+<!-- EXPORT FIELD SELECTION MODAL -->
+<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;padding:24px;width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+        <h3 style="margin:0 0 6px;font-size:16px">{{ _('Select fields to export') }}</h3>
+        <p id="exportSelectionInfo" style="margin:0 0 14px;font-size:12px;color:#888"></p>
+        <div id="exportFieldCheckboxes" style="display:flex;flex-direction:column;gap:2px;margin-bottom:18px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="closeExportModal()" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</button>
+            <button onclick="confirmExport()" class="btn btn-sm btn-primary">{{ _('Export') }}</button>
+        </div>
+    </div>
+</div>
 {% endblock %}

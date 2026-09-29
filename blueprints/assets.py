@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, Contractor, Equipment, EquipmentServiceLog, FactorySection, User, Verantwoordelijke)
-from utils import log_audit, role_required, safe_commit, safe_date, safe_float, safe_int, save_uploaded_file
+from utils import log_audit, role_required, safe_commit, safe_date, safe_float, safe_int, save_uploaded_file, ensure_fpdf, find_pdf_font
 
 bp = Blueprint('assets', __name__)
 
@@ -226,3 +226,174 @@ def assets_add_service(eq_id):
         return redirect(url_for('assets.assets_detail', eq_id=eq.id))
     flash(_('Service record added'), 'success')
     return redirect(url_for('assets.assets_detail', eq_id=eq.id))
+
+
+EQUIPMENT_EXPORT_FIELDS = {
+    'name':              lambda e: e.name,
+    'equipment_type':    lambda e: e.equipment_type or '',
+    'serial_number':     lambda e: e.serial_number or '',
+    'year_of_manufacture': lambda e: e.year_of_manufacture or '',
+    'manufacturer':      lambda e: e.manufacturer or '',
+    'status':            lambda e: e.status or 'active',
+    'category':          lambda e: e.category or '',
+    'model_name':        lambda e: e.model_name or '',
+    'inventory_number':  lambda e: e.inventory_number or '',
+    'condition':         lambda e: e.condition or '',
+    'installation_location': lambda e: e.installation_location or '',
+    'section':           lambda e: e.section.name if e.section else '',
+}
+
+EQUIPMENT_EXPORT_FIELD_LABELS = {
+    'name': 'Name', 'equipment_type': 'Type', 'serial_number': 'Serial Number',
+    'year_of_manufacture': 'Year of Manufacture', 'manufacturer': 'Manufacturer',
+    'status': 'Status', 'category': 'Category', 'model_name': 'Model',
+    'inventory_number': 'Inventory Number', 'condition': 'Condition',
+    'installation_location': 'Location', 'section': 'Section',
+}
+
+EQUIPMENT_EXPORT_ALL_FIELDS = ['name', 'equipment_type', 'serial_number', 'manufacturer',
+                                'year_of_manufacture', 'status', 'category', 'model_name',
+                                'inventory_number', 'condition', 'installation_location', 'section']
+
+
+@bp.route('/assets/export/<format_type>')
+@login_required
+@role_required('admin', 'director')
+def assets_export(format_type):
+    ids_raw = request.args.get('ids', '')
+    id_list = [safe_int(x) for x in ids_raw.split(',') if x.strip()]
+    if id_list:
+        items = Equipment.query.filter(Equipment.id.in_(id_list)).order_by(Equipment.id).all()
+    else:
+        items = Equipment.query.order_by(Equipment.id).all()
+
+    fields_raw = request.args.get('fields', '')
+    field_keys = [f.strip() for f in fields_raw.split(',') if f.strip() in EQUIPMENT_EXPORT_FIELDS] if fields_raw else EQUIPMENT_EXPORT_ALL_FIELDS
+    if not field_keys:
+        field_keys = EQUIPMENT_EXPORT_ALL_FIELDS
+
+    status_labels = {
+        'active': _('Active'), 'maintenance': _('Maintenance'), 'broken': _('Broken'),
+        'offline': _('Offline'), 'retired': _('Retired'), 'disposed': _('Disposed'),
+    }
+
+    def get_val(e, key):
+        if key == 'status':
+            return status_labels.get(e.status or 'active', e.status or 'active')
+        return EQUIPMENT_EXPORT_FIELDS[key](e)
+
+    header_map = {k: _(EQUIPMENT_EXPORT_FIELD_LABELS[k]) for k in EQUIPMENT_EXPORT_FIELDS}
+    headers = [header_map[k] for k in field_keys]
+
+    rows = []
+    for e in items:
+        rows.append([str(get_val(e, k)) for k in field_keys])
+
+    if format_type == 'xlsx':
+        try:
+            from openpyxl import Workbook
+            wb = Workbook()
+            ws = wb.active
+            ws.title = 'Equipment'
+            ws.append(headers)
+            for row in rows:
+                ws.append(row)
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                             download_name=f'equipment_{datetime.now().strftime("%Y%m%d")}.xlsx', as_attachment=True)
+        except ImportError:
+            flash(_('Excel export is temporarily unavailable'), 'error')
+            return redirect(url_for('assets.assets_list'))
+    elif format_type == 'csv':
+        import csv
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        buf.seek(0)
+        return send_file(io.BytesIO(buf.getvalue().encode('utf-8-sig')), mimetype='text/csv',
+                         download_name=f'equipment_{datetime.now().strftime("%Y%m%d")}.csv', as_attachment=True)
+    elif format_type == 'pdf':
+        try:
+            fpdf_mod = ensure_fpdf()
+            FPDF = fpdf_mod.FPDF
+        except Exception:
+            flash(_('PDF export is temporarily unavailable'), 'error')
+            return redirect(url_for('assets.assets_list'))
+        date_str = datetime.now().strftime('%d-%m-%Y %H:%M')
+        title = _('Equipment')
+        subtitle = f'{date_str} - {len(items)} {_("items")}'
+        footer_txt = _('Generated by ProMaster CRM')
+        page_txt = _('page')
+
+        font_path = find_pdf_font()
+        unicode_font = bool(font_path)
+
+        def pdf_text(s):
+            s = str(s if s is not None else '')
+            if unicode_font:
+                return s
+            return s.encode('latin-1', 'replace').decode('latin-1')
+
+        try:
+            class EquipPDF(FPDF):
+                def header(self):
+                    fn = 'AppFont' if unicode_font else 'Helvetica'
+                    self.set_font(fn, 'B', 12)
+                    self.cell(0, 8, pdf_text(f'{title} - ProMaster'), new_x='LMARGIN', new_y='NEXT')
+                    self.set_font(fn, '', 8)
+                    self.cell(0, 5, pdf_text(subtitle), new_x='LMARGIN', new_y='NEXT')
+                    self.ln(2)
+
+                def footer(self):
+                    fn = 'AppFont' if unicode_font else 'Helvetica'
+                    self.set_y(-12)
+                    self.set_font(fn, '', 7)
+                    self.set_text_color(128)
+                    self.cell(0, 8, pdf_text(f'{footer_txt} - {page_txt} {self.page_no()}/{{nb}}'), align='C')
+
+            pdf = EquipPDF(orientation='L', unit='mm', format='A4')
+            pdf.alias_nb_pages()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            if unicode_font:
+                try:
+                    pdf.add_font('AppFont', '', font_path)
+                    pdf.add_font('AppFont', 'B', font_path)
+                    base_font = 'AppFont'
+                except Exception:
+                    unicode_font = False
+                    base_font = 'Helvetica'
+            else:
+                base_font = 'Helvetica'
+            pdf.add_page()
+
+            n_cols = len(headers)
+            col_w = [277 / n_cols] * n_cols
+            pdf.set_font(base_font, 'B', 7)
+            pdf.set_fill_color(44, 62, 80)
+            pdf.set_text_color(255)
+            for i, h in enumerate(headers):
+                pdf.cell(col_w[i], 7, pdf_text(h), border=1, fill=True)
+            pdf.ln()
+            pdf.set_font(base_font, '', 6.5)
+            pdf.set_text_color(51)
+            for idx, row in enumerate(rows):
+                fill = (idx % 2 == 1)
+                if fill:
+                    pdf.set_fill_color(249, 249, 249)
+                for i, val in enumerate(row):
+                    pdf.cell(col_w[i], 6, pdf_text(val), border=1, fill=fill)
+                pdf.ln()
+
+            buf = io.BytesIO()
+            pdf.output(buf)
+            buf.seek(0)
+            return send_file(buf, mimetype='application/pdf',
+                             download_name=f'equipment_{datetime.now().strftime("%Y%m%d")}.pdf', as_attachment=True)
+        except Exception as e:
+            flash(_('PDF export failed: %(err)s', err=str(e)), 'error')
+            return redirect(url_for('assets.assets_list'))
+    flash(_('Unsupported format'), 'error')
+    return redirect(url_for('assets.assets_list'))
