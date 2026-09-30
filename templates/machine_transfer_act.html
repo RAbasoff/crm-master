@@ -25,6 +25,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a
 .party .row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
 .party .label { font-size: 11px; color: #666; white-space: nowrap; min-width: 70px; }
 .party input, .party select { flex: 1; border: none; border-bottom: 1px solid #999; font-size: 12px; padding: 2px 4px; background: transparent; }
+.party .blank-line { flex: 1; border-bottom: 1px solid #999; min-height: 18px; }
 .reason { margin-bottom: 14px; display: flex; align-items: baseline; gap: 8px; }
 .reason label { font-weight: 600; color: #555; white-space: nowrap; }
 .reason input { flex: 1; border: none; border-bottom: 1px solid #999; font-size: 12px; padding: 3px 4px; background: transparent; }
@@ -87,10 +88,10 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
 <div class="toolbar no-print">
     <button class="btn btn-print" onclick="window.print()">🖨️ {{ _('Print') }}</button>
     <a class="btn btn-ghost" href="/machines/{{ machine.id }}">← {{ _('Back') }}</a>
-    <label class="photo-add-btn" style="margin:0">
+    <button type="button" class="photo-add-btn" style="margin:0" onclick="document.getElementById('photoInput').click()">
         📷 {{ _('Add photos') }}
-        <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
-    </label>
+    </button>
+    <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
     {% if machine.photo %}
     <button class="btn btn-ghost" type="button" onclick="addMachinePhoto()" title="{{ _('Machine photo') }}">🖼 {{ _('Machine photo') }}</button>
     {% endif %}
@@ -163,7 +164,7 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
         </div>
         <div class="row">
             <span class="label">{{ _('Full name') }}</span>
-            <input type="text" id="giverName" placeholder="{{ _('Enter name') }}">
+            <span class="blank-line" id="giverName"></span>
         </div>
         <div class="row">
             <span class="label">{{ _('Job title') }}</span>
@@ -174,23 +175,15 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
         <h3>{{ _('Receiver') }}</h3>
         <div class="row">
             <span class="label">{{ _('Name') }}</span>
-            <select id="receiverSelect" onchange="fillParty('receiver')">
-                <option value="">—</option>
-                {% for u in users %}
-                <option value="{{ u.display_name or u.username }}">{{ u.display_name or u.username }}</option>
-                {% endfor %}
-                {% for p in persons %}
-                <option value="{{ p.naam }}">{{ p.naam }}{% if p.position %} ({{ p.position }}){% endif %}</option>
-                {% endfor %}
-            </select>
+            <span class="blank-line" id="receiverSelect"></span>
         </div>
         <div class="row">
             <span class="label">{{ _('Full name') }}</span>
-            <input type="text" id="receiverName" placeholder="{{ _('Enter name') }}">
+            <span class="blank-line" id="receiverName"></span>
         </div>
         <div class="row">
             <span class="label">{{ _('Job title') }}</span>
-            <input type="text" id="receiverPos" placeholder="{{ _('Job title') }}">
+            <span class="blank-line" id="receiverPos"></span>
         </div>
     </div>
 </div>
@@ -295,10 +288,10 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
 <div class="photos-section" id="photosSection">
     <h2>📷 {{ _('Photos') }} <span id="photoCount" style="color:#888;font-weight:400">(0)</span></h2>
     <div class="photo-tools no-print" style="margin-bottom:8px">
-        <label class="photo-add-btn">
+        <button type="button" class="photo-add-btn" onclick="document.getElementById('photoInput2').click()">
             ＋ {{ _('Add photos') }}
-            <input type="file" id="photoInput2" accept="image/*" multiple style="display:none">
-        </label>
+        </button>
+        <input type="file" id="photoInput2" accept="image/*" multiple style="display:none">
         <span style="font-size:11px;color:#888;margin-left:8px">{{ _('Photo hint') }}</span>
     </div>
     <div class="photos-grid" id="photosGrid"></div>
@@ -425,9 +418,15 @@ function addPhotoCard(src, caption, isObjectUrl) {
 function handlePhotoFiles(files) {
     if (!files || !files.length) return;
     Array.prototype.forEach.call(files, function (file) {
-        if (!file.type || file.type.indexOf('image/') !== 0) return;
-        var url = URL.createObjectURL(file);
-        addPhotoCard(url, file.name, true);
+        var isImg = (file.type && file.type.indexOf('image/') === 0) ||
+                    /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.name || '');
+        if (!isImg) return;
+        // data: URL — image is embedded and survives window.print()
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+            addPhotoCard(ev.target.result, file.name, false);
+        };
+        reader.readAsDataURL(file);
     });
 }
 
@@ -447,7 +446,7 @@ if (photoInput2) {
 }
 
 function addMachinePhoto() {
-    var src = '/static/uploads/' + {{ machine.photo|tojson if machine.photo else '""' }};
+    var src = '/static/uploads/' + {{ (machine.photo or '')|tojson }};
     addPhotoCard(src, {{ machine.name|tojson }}, false);
 }
 
