@@ -1,6 +1,6 @@
 Сессия 011 — 30.09.2026
 Проект: CRM Мастерская
-Время: ~19:00–20:00
+Время: ~19:00–21:00
 Ветка: master → github.com/RAbasoff/crm-master → PythonAnywhere
 
 ============================================================
@@ -82,6 +82,30 @@
      гибрид (FK + текст) отклонён: раз автоматы есть —
      проще только FK, без рассинхрона.
 
+5) INFRA: Автоматический SSH-деплой на PythonAnywhere
+   Дата: 30.09.2026
+   Коммиты: 3887ab2 (docs), деплой на PA подтверждён
+   Описание:
+     Настроен passwordless SSH с PA. Деплой теперь делается
+     агентом без участия пользователя.
+   Как настроено:
+     - Ключ уже был: C:\Users\abaso\.ssh\id_ed25519 (ed25519)
+       pub: ssh-ed25519 AAAA...Pl abasoff-pa-deploy
+     - Раздела «SSH keys» в веб-морде PA НЕТ (ошибка в инструкции).
+       Ключ добавляется в файл ~/.ssh/authorized_keys на сервере.
+     - Через Bash-консоль PA выполнена команда:
+       mkdir -p ~/.ssh && echo 'ssh-ed25519 ...' >> ~/.ssh/authorized_keys
+       && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys
+       → KEY_ADDED
+     - Проверка: ssh rabasoff@ssh.pythonanywhere.com "echo OK" → SSH_OK
+   Процедура деплоя (агент делает сам):
+     1) git push origin master
+     2) ssh rabasoff@ssh.pythonanywhere.com "cd ~/crm-master && git pull origin master"
+     3) ssh ... "touch /var/www/rabasoff_pythonanywhere_com_wsgi.py"
+        (перезагрузка веб-приложения)
+   Статус: 30.09.2026 — задеплоено, пользователь подтвердил:
+     «страница открывается, всё работает» (/electricity/outlets).
+
 ============================================================
 КОММИТЫ СЕССИИ
 ============================================================
@@ -89,30 +113,31 @@
            Verantwoordelijke.actief does not exist
   08262af  feat: power outlets 220V/380V per factory section
            with photos, status, notes
+  1fc72e8  docs: session 011 — warehouse transfer fix,
+           power outlets module
   943935a  feat: link power outlets to circuit breakers
            (optional select by cabinet)
+  3887ab2  docs: log breaker-link commit 943935a in session 011
 
 ============================================================
-ДЕПЛОЙ
+ДЕПЛОЙ (ИТОГ)
 ============================================================
-  git push origin master → ВЫПОЛНЕНО (20da39e..08262af)
-
-  На PA (вручную пользователя, SSH-ключа нет):
-    cd ~/crm-master
-    git pull origin master
-    Web → Reload
-
-  После деплоя — smoke:
-    https://rabasoff.pythonanywhere.com
-    /login /electricity/outlets /warehouse/1/transfer → 200
+  git push origin master → ВЫПОЛНЕНО
+  PA: git pull → 3887ab2, touch wsgi.py → RELOAD_OK
+  Smoke: https://rabasoff.pythonanywhere.com/electricity/outlets
+    — страница розеток работает, пользователь подтвердил.
 
 ============================================================
 ЗАМЕЧАНИЯ
 ============================================================
-  - SSH к rabasoff@ssh.pythonanywhere.com — Permission denied.
-    Деплой на PA руками.
+  - SSH-деплой настроен и работает. Ручной git pull на PA больше
+    не нужен. Перезагрузка: touch /var/www/rabasoff_pythonanywhere_com_wsgi.py
+  - Username на PA: rabasoff (case-sensitive).
+    Хост: ssh.pythonanywhere.com (global/US).
   - Розетки: quantity = сколько штук в одной точке (быстрый
     ввод группы). Сводка суммирует quantity по цеху и напряжению.
+  - «Номер автомата» = FK на CircuitBreaker (не свободный текст).
+    Можно не привязывать («Не привязан»).
   - Задача «посчитать розетки 380/220 по цехам» на 01.10.2026 —
     инструмент готов, заполнять на /electricity/outlets.
 

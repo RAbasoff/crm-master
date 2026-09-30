@@ -141,11 +141,15 @@ eaf61c6 — 28.09.2026 — fix: gas arithmetic + user names
 - 14 битых url_for, импорты, current_app, Decimal
 
 ============================================================
-КАК ДЕПЛОИТЬ (PA)
+КАК ДЕПЛОИТЬ (PA) — SSH настроен 30.09.2026
 ============================================================
-cd ~/crm-master
-git pull origin master
-Web → Reload
+Автоматически агентом:
+  git push origin master
+  ssh rabasoff@ssh.pythonanywhere.com "cd ~/crm-master && git pull origin master"
+  ssh rabasoff@ssh.pythonanywhere.com "touch /var/www/rabasoff_pythonanywhere_com_wsgi.py"
+Вручную (если SSH недоступен):
+  Consoles → Bash: cd ~/crm-master && git pull origin master
+  затем Web → Reload
 (pip install -r requirements.txt если менялись зависимости)
 
 ============================================================
@@ -243,4 +247,19 @@ Web → Reload
   - models: PowerOutlet, PowerOutletPhoto; schema 20261001
   - i18n ru/en/nl/pl: Розетки / Исправна / Неисправна и др.
   - fix: schema.py run_data_migrations missing `db` import
+
+2026-09-30 943935a feat: link power outlets to circuit breakers
+  - PowerOutlet.breaker_id → circuit_breaker.id (optional)
+  - select «Щиток → Автомат» (optgroup), можно «Не привязан»
+  - список: метка автомата (Q1) + название шкафа
+
+============================================================
+SSH-ДЕПЛОЙ (настроено 30.09.2026)
+============================================================
+Ключ: C:\Users\abaso\.ssh\id_ed25519
+На PA: ~/.ssh/authorized_keys (добавлен через Bash-консоль)
+Деплой (агент делает сам после git push):
+  ssh rabasoff@ssh.pythonanywhere.com "cd ~/crm-master && git pull origin master"
+  ssh rabasoff@ssh.pythonanywhere.com "touch /var/www/rabasoff_pythonanywhere_com_wsgi.py"
+
 
