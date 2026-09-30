@@ -5535,3 +5535,15 @@ msgstr "Object of transfer"
 
 msgid "Uncheck items that are not transferred"
 msgstr "Uncheck items that are not transferred"
+
+msgid "Add photos"
+msgstr "Add photos"
+
+msgid "Machine photo"
+msgstr "Machine photo"
+
+msgid "Photo hint"
+msgstr "Photos will appear on the printed act"
+
+msgid "No photos added"
+msgstr "No photos added"

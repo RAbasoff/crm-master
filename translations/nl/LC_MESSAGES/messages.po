@@ -5571,3 +5571,15 @@ msgstr "Overdrachtsobject"
 
 msgid "Uncheck items that are not transferred"
 msgstr "Vink artikelen uit die niet worden overgedragen"
+
+msgid "Add photos"
+msgstr "Foto's toevoegen"
+
+msgid "Machine photo"
+msgstr "Machinefoto"
+
+msgid "Photo hint"
+msgstr "Foto's komen op de afgedrukte akte"
+
+msgid "No photos added"
+msgstr "Geen foto's toegevoegd"

@@ -5574,3 +5574,15 @@ msgstr "Przedmiot przekazania"
 
 msgid "Uncheck items that are not transferred"
 msgstr "Odznacz pozycje, które nie są przekazywane"
+
+msgid "Add photos"
+msgstr "Dodaj zdjęcia"
+
+msgid "Machine photo"
+msgstr "Zdjęcie maszyny"
+
+msgid "Photo hint"
+msgstr "Zdjęcia trafią do wydrukowanego protokołu"
+
+msgid "No photos added"
+msgstr "Nie dodano zdjęć"

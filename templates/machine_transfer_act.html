@@ -56,14 +56,29 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
 .btn-print { background: #1a1a2e; color: #fff; }
 .btn-ghost { background: #e2e8f0; color: #222; text-decoration: none; display: inline-block; }
 .notes-area { width: 100%; min-height: 54px; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px; font-size: 12px; font-family: inherit; resize: vertical; }
+.photos-section { margin: 16px 0 12px; }
+.photos-section h2 { font-size: 12px; color: #1a1a2e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.3px; }
+.photos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.photo-card { border: 1px solid #d5dbe2; border-radius: 6px; padding: 6px; background: #fff; page-break-inside: avoid; position: relative; }
+.photo-card img { width: 100%; height: 140px; object-fit: contain; background: #f4f6f8; border-radius: 4px; display: block; }
+.photo-card .caption { margin-top: 4px; font-size: 10px; color: #666; word-break: break-all; }
+.photo-card .photo-del { position: absolute; top: 2px; right: 2px; background: rgba(231,76,60,0.92); color: #fff; border: none; border-radius: 4px; width: 22px; height: 22px; font-size: 12px; cursor: pointer; line-height: 22px; padding: 0; }
+.photos-empty { color: #999; font-size: 11px; font-style: italic; }
+.photo-add-btn { display: inline-block; padding: 8px 14px; background: #27ae60; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
 @media print {
     body { padding: 8px 12px; }
-    .no-print, .toolbar { display: none !important; }
+    .no-print, .toolbar, .photo-del, .photo-tools { display: none !important; }
     .machine-box { background: #fff; border-color: #999; }
     table.items th { background: #1a1a2e !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     table.items tr.row-machine { background: #eef3f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     input, select, textarea { border-color: #333 !important; }
     .signatures { margin-top: 28px; }
+    .photo-card { border-color: #999; }
+    .photo-card img { height: 150px; }
+    .photos-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .photos-section { page-break-inside: avoid; }
+    .photos-empty { display: none !important; }
+    .photos-section:not(.has-photos) { display: none !important; }
 }
 </style>
 </head>
@@ -72,6 +87,13 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
 <div class="toolbar no-print">
     <button class="btn btn-print" onclick="window.print()">🖨️ {{ _('Print') }}</button>
     <a class="btn btn-ghost" href="/machines/{{ machine.id }}">← {{ _('Back') }}</a>
+    <label class="photo-add-btn" style="margin:0">
+        📷 {{ _('Add photos') }}
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+    </label>
+    {% if machine.photo %}
+    <button class="btn btn-ghost" type="button" onclick="addMachinePhoto()" title="{{ _('Machine photo') }}">🖼 {{ _('Machine photo') }}</button>
+    {% endif %}
     <label style="font-size:12px;display:flex;align-items:center;gap:4px">
         <input type="checkbox" id="toggleAll" checked> {{ _('Select all') }}
     </label>
@@ -270,6 +292,19 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
     <textarea class="notes-area" id="actNotes" placeholder="{{ _('Condition, completeness, remarks...') }}"></textarea>
 </div>
 
+<div class="photos-section" id="photosSection">
+    <h2>📷 {{ _('Photos') }} <span id="photoCount" style="color:#888;font-weight:400">(0)</span></h2>
+    <div class="photo-tools no-print" style="margin-bottom:8px">
+        <label class="photo-add-btn">
+            ＋ {{ _('Add photos') }}
+            <input type="file" id="photoInput2" accept="image/*" multiple style="display:none">
+        </label>
+        <span style="font-size:11px;color:#888;margin-left:8px">{{ _('Photo hint') }}</span>
+    </div>
+    <div class="photos-grid" id="photosGrid"></div>
+    <div class="photos-empty" id="photosEmpty">{{ _('No photos added') }}</div>
+</div>
+
 <div style="margin-top:14px;font-size:11px;line-height:1.55;color:#333">
     {{ _('The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property.') }}
 </div>
@@ -338,6 +373,85 @@ if (toggleAll) {
 }
 
 renumber();
+
+/* ===== Photos ===== */
+var photoSeq = 0;
+var photosGrid = document.getElementById('photosGrid');
+var photosEmpty = document.getElementById('photosEmpty');
+var photoCount = document.getElementById('photoCount');
+
+function updatePhotoCount() {
+    var n = photosGrid.querySelectorAll('.photo-card').length;
+    if (photoCount) photoCount.textContent = '(' + n + ')';
+    if (photosEmpty) photosEmpty.style.display = n ? 'none' : 'block';
+    var section = document.getElementById('photosSection');
+    if (section) section.classList.toggle('has-photos', n > 0);
+}
+
+function addPhotoCard(src, caption, isObjectUrl) {
+    photoSeq += 1;
+    var card = document.createElement('div');
+    card.className = 'photo-card';
+    card.dataset.photoId = 'photo-' + photoSeq;
+
+    var img = document.createElement('img');
+    img.src = src;
+    img.alt = caption || ('photo-' + photoSeq);
+
+    var cap = document.createElement('div');
+    cap.className = 'caption';
+    cap.textContent = caption || ('photo-' + photoSeq);
+
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'photo-del no-print';
+    del.title = '{{ _('Delete') }}';
+    del.textContent = '✕';
+    del.addEventListener('click', function () {
+        if (isObjectUrl) {
+            try { URL.revokeObjectURL(src); } catch (e) {}
+        }
+        card.remove();
+        updatePhotoCount();
+    });
+
+    card.appendChild(del);
+    card.appendChild(img);
+    card.appendChild(cap);
+    photosGrid.appendChild(card);
+    updatePhotoCount();
+}
+
+function handlePhotoFiles(files) {
+    if (!files || !files.length) return;
+    Array.prototype.forEach.call(files, function (file) {
+        if (!file.type || file.type.indexOf('image/') !== 0) return;
+        var url = URL.createObjectURL(file);
+        addPhotoCard(url, file.name, true);
+    });
+}
+
+var photoInput = document.getElementById('photoInput');
+var photoInput2 = document.getElementById('photoInput2');
+if (photoInput) {
+    photoInput.addEventListener('change', function () {
+        handlePhotoFiles(this.files);
+        this.value = '';
+    });
+}
+if (photoInput2) {
+    photoInput2.addEventListener('change', function () {
+        handlePhotoFiles(this.files);
+        this.value = '';
+    });
+}
+
+function addMachinePhoto() {
+    var src = '/static/uploads/' + {{ machine.photo|tojson if machine.photo else '""' }};
+    addPhotoCard(src, {{ machine.name|tojson }}, false);
+}
+
+updatePhotoCount();
 </script>
 </body>
 </html>
