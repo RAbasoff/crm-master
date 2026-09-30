@@ -7,8 +7,8 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
-from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument
-from utils import role_required, safe_commit, safe_int, safe_float, safe_date
+from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument, PowerOutlet, PowerOutletPhoto, FactorySection
+from utils import role_required, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file, log_audit
 from sqlalchemy.orm import subqueryload
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
@@ -416,3 +416,173 @@ def switch_log_add_global():
         return redirect(url_for('electricity.switch_log_global'))
     flash(_('Switch logged'), 'success')
     return redirect(url_for('electricity.switch_log_global'))
+
+
+# ── POWER OUTLETS (розетки 220В / 380В) ─────────────────────
+
+@bp.route('/outlets')
+@login_required
+def outlets_list():
+    """Summary of 220V/380V outlets per factory section + full list."""
+    sections = FactorySection.query.order_by(FactorySection.name).all()
+    outlets = PowerOutlet.query.options(
+        db.joinedload(PowerOutlet.photos)
+    ).order_by(PowerOutlet.section_id, PowerOutlet.voltage, PowerOutlet.location).all()
+
+    summary = []
+    for s in sections:
+        items = [o for o in outlets if o.section_id == s.id]
+        q220 = sum(o.quantity or 0 for o in items if o.voltage == '220')
+        q380 = sum(o.quantity or 0 for o in items if o.voltage == '380')
+        broken = sum(o.quantity or 0 for o in items if o.status == 'broken')
+        summary.append({
+            'section': s,
+            'count_220': q220,
+            'count_380': q380,
+            'count_total': q220 + q380,
+            'count_broken': broken,
+            'count_ok': q220 + q380 - broken,
+            'entries': len(items),
+        })
+    # outlets without section
+    no_sec = [o for o in outlets if not o.section_id]
+    if no_sec:
+        q220 = sum(o.quantity or 0 for o in no_sec if o.voltage == '220')
+        q380 = sum(o.quantity or 0 for o in no_sec if o.voltage == '380')
+        broken = sum(o.quantity or 0 for o in no_sec if o.status == 'broken')
+        summary.append({
+            'section': None,
+            'count_220': q220,
+            'count_380': q380,
+            'count_total': q220 + q380,
+            'count_broken': broken,
+            'count_ok': q220 + q380 - broken,
+            'entries': len(no_sec),
+        })
+
+    totals = {
+        'count_220': sum(s['count_220'] for s in summary),
+        'count_380': sum(s['count_380'] for s in summary),
+        'count_broken': sum(s['count_broken'] for s in summary),
+    }
+    totals['count_total'] = totals['count_220'] + totals['count_380']
+    totals['count_ok'] = totals['count_total'] - totals['count_broken']
+
+    return render_template('outlets.html',
+                           summary=summary, outlets=outlets, totals=totals,
+                           sections=sections)
+
+
+@bp.route('/outlets/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def outlet_new():
+    if request.method == 'POST':
+        voltage = request.form.get('voltage', '220')
+        if voltage not in ('220', '380'):
+            voltage = '220'
+        qty = max(1, safe_int(request.form.get('quantity'), 1))
+        o = PowerOutlet(
+            section_id=safe_int(request.form.get('section_id')) or None,
+            voltage=voltage,
+            location=request.form.get('location', '').strip(),
+            quantity=qty,
+            status=request.form.get('status', 'ok') if request.form.get('status') in ('ok', 'broken') else 'ok',
+            notes=request.form.get('notes', '').strip(),
+        )
+        db.session.add(o)
+        db.session.flush()
+        for f in request.files.getlist('photos'):
+            filename = save_uploaded_file(f, prefix=f'outlet_{o.id}_')
+            if filename:
+                db.session.add(PowerOutletPhoto(outlet_id=o.id, filename=filename))
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('electricity.outlet_new'))
+        log_audit('create', 'power_outlet', o.id, f'{voltage}V x{qty} @ {o.location or "-"}')
+        flash(_('Outlet added'), 'success')
+        return redirect(url_for('electricity.outlets_list'))
+    sections = FactorySection.query.order_by(FactorySection.name).all()
+    return render_template('outlet_form.html', outlet=None, sections=sections)
+
+
+@bp.route('/outlets/<int:outlet_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def outlet_edit(outlet_id):
+    o = PowerOutlet.query.get_or_404(outlet_id)
+    if request.method == 'POST':
+        voltage = request.form.get('voltage', '220')
+        if voltage not in ('220', '380'):
+            voltage = '220'
+        o.section_id = safe_int(request.form.get('section_id')) or None
+        o.voltage = voltage
+        o.location = request.form.get('location', '').strip()
+        o.quantity = max(1, safe_int(request.form.get('quantity'), 1))
+        status = request.form.get('status', 'ok')
+        o.status = status if status in ('ok', 'broken') else 'ok'
+        o.notes = request.form.get('notes', '').strip()
+        for f in request.files.getlist('photos'):
+            filename = save_uploaded_file(f, prefix=f'outlet_{o.id}_')
+            if filename:
+                db.session.add(PowerOutletPhoto(outlet_id=o.id, filename=filename))
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('electricity.outlet_edit', outlet_id=outlet_id))
+        log_audit('update', 'power_outlet', o.id, f'{o.voltage}V status={o.status}')
+        flash(_('Outlet saved'), 'success')
+        return redirect(url_for('electricity.outlets_list'))
+    sections = FactorySection.query.order_by(FactorySection.name).all()
+    return render_template('outlet_form.html', outlet=o, sections=sections)
+
+
+@bp.route('/outlets/<int:outlet_id>/toggle-status', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def outlet_toggle_status(outlet_id):
+    o = PowerOutlet.query.get_or_404(outlet_id)
+    o.status = 'broken' if o.status == 'ok' else 'ok'
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+    else:
+        log_audit('update', 'power_outlet', o.id, f'status={o.status}')
+        flash(_('Status: {}').format(_('Defective') if o.status == 'broken' else _('Working')), 'success')
+    return redirect(request.referrer or url_for('electricity.outlets_list'))
+
+
+@bp.route('/outlets/<int:outlet_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def outlet_delete(outlet_id):
+    o = PowerOutlet.query.get_or_404(outlet_id)
+    for p in list(o.photos):
+        try:
+            os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], p.filename))
+        except OSError:
+            pass
+    name = o.location or f'{o.voltage}V'
+    db.session.delete(o)
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+        return redirect(url_for('electricity.outlets_list'))
+    log_audit('delete', 'power_outlet', outlet_id, name)
+    flash(_('Outlet deleted'), 'success')
+    return redirect(url_for('electricity.outlets_list'))
+
+
+@bp.route('/outlets/photo/<int:photo_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def outlet_photo_delete(photo_id):
+    p = PowerOutletPhoto.query.get_or_404(photo_id)
+    outlet_id = p.outlet_id
+    try:
+        os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], p.filename))
+    except OSError:
+        pass
+    db.session.delete(p)
+    if not safe_commit():
+        flash(_('Delete failed. Please try again.'), 'error')
+    else:
+        flash(_('Photo deleted'), 'success')
+    return redirect(request.referrer or url_for('electricity.outlet_edit', outlet_id=outlet_id))

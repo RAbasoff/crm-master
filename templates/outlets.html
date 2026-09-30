@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Power Outlets') }} — {{ _('Electricity') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔌 {{ _('Power Outlets') }}</h1>
+    <div>
+        <a href="/electricity/outlets/new" class="btn btn-sm btn-primary">+ {{ _('Add Outlet') }}</a>
+        <a href="/electricity" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+    </div>
+</div>
+
+<!-- TOTALS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+    <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:11px;color:#888">{{ _('Total outlets') }}</div>
+        <div style="font-size:26px;font-weight:700">{{ totals.count_total }}</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;border-left:4px solid #27ae60">
+        <div style="font-size:11px;color:#888">220V</div>
+        <div style="font-size:26px;font-weight:700;color:#27ae60">{{ totals.count_220 }}</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;border-left:4px solid #e67e22">
+        <div style="font-size:11px;color:#888">380V</div>
+        <div style="font-size:26px;font-weight:700;color:#e67e22">{{ totals.count_380 }}</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;border-left:4px solid #e74c3c">
+        <div style="font-size:11px;color:#888">{{ _('Defective') }}</div>
+        <div style="font-size:26px;font-weight:700;color:#e74c3c">{{ totals.count_broken }}</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;border-left:4px solid #27ae60">
+        <div style="font-size:11px;color:#888">{{ _('Working') }}</div>
+        <div style="font-size:26px;font-weight:700;color:#27ae60">{{ totals.count_ok }}</div>
+    </div>
+</div>
+
+<!-- SUMMARY BY SECTION -->
+<div class="card" style="padding:0">
+    <div style="padding:12px 16px;background:#f0f7ff;border-bottom:1px solid #e0e8f0">
+        <h2 style="margin:0;font-size:15px">🏭 {{ _('Summary by section') }}</h2>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Section') }}</th>
+                <th style="text-align:right">220V</th>
+                <th style="text-align:right">380V</th>
+                <th style="text-align:right">{{ _('Total') }}</th>
+                <th style="text-align:right">{{ _('Working') }}</th>
+                <th style="text-align:right">{{ _('Defective') }}</th>
+            </tr>
+            {% for row in summary %}
+            <tr {% if row.count_broken %}style="background:#fff5f5"{% endif %}>
+                <td>
+                    {% if row.section %}
+                        <a href="/floor?section={{ row.section.id }}" style="color:#2c3e50;font-weight:600">{{ row.section.name }}</a>
+                    {% else %}
+                        <span style="color:#999">{{ _('No section') }}</span>
+                    {% endif %}
+                    {% if row.entries %}
+                    <button class="btn btn-sm" style="background:#eee;padding:2px 8px;font-size:11px;margin-left:6px"
+                            onclick="filterOutlets({{ row.section.id if row.section else 'null' }})">{{ _('View') }}</button>
+                    {% endif %}
+                </td>
+                <td style="text-align:right;font-weight:600;color:#27ae60">{{ row.count_220 }}</td>
+                <td style="text-align:right;font-weight:600;color:#e67e22">{{ row.count_380 }}</td>
+                <td style="text-align:right;font-weight:700">{{ row.count_total }}</td>
+                <td style="text-align:right;color:#27ae60">{{ row.count_ok }}</td>
+                <td style="text-align:right;color:#e74c3c;font-weight:600">{{ row.count_broken or '—' }}</td>
+            </tr>
+            {% endfor %}
+            <tr style="background:#f0f2f5;font-weight:700">
+                <td>{{ _('Total') }}</td>
+                <td style="text-align:right;color:#27ae60">{{ totals.count_220 }}</td>
+                <td style="text-align:right;color:#e67e22">{{ totals.count_380 }}</td>
+                <td style="text-align:right">{{ totals.count_total }}</td>
+                <td style="text-align:right;color:#27ae60">{{ totals.count_ok }}</td>
+                <td style="text-align:right;color:#e74c3c">{{ totals.count_broken }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<!-- FILTERS + FULL LIST -->
+<div class="card" style="padding:0;margin-top:16px">
+    <div style="padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <h2 style="margin:0;font-size:15px;flex:1">📋 {{ _('All outlets') }} ({{ outlets|length }})</h2>
+        <select id="filterSection" onchange="applyFilters()" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+            <option value="">{{ _('All Sections') }}</option>
+            {% for s in sections %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <select id="filterVoltage" onchange="applyFilters()" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+            <option value="">{{ _('All voltages') }}</option>
+            <option value="220">220V</option>
+            <option value="380">380V</option>
+        </select>
+        <select id="filterStatus" onchange="applyFilters()" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px">
+            <option value="">{{ _('All statuses') }}</option>
+            <option value="ok">{{ _('Working') }}</option>
+            <option value="broken">{{ _('Defective') }}</option>
+        </select>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Section') }}</th>
+                <th>{{ _('Voltage') }}</th>
+                <th>{{ _('Location') }}</th>
+                <th style="text-align:right">{{ _('Quantity') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Notes') }}</th>
+                <th>{{ _('Photos') }}</th>
+                <th></th>
+            </tr>
+            {% for o in outlets %}
+            <tr class="outlet-row"
+                data-section="{{ o.section_id or '' }}"
+                data-voltage="{{ o.voltage }}"
+                data-status="{{ o.status }}"
+                {% if o.status == 'broken' %}style="background:#fff5f5"{% endif %}>
+                <td>{{ o.section.name if o.section else '—' }}</td>
+                <td>
+                    <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:white;background:{% if o.voltage == '380' %}#e67e22{% else %}#27ae60{% endif %}">
+                        {{ o.voltage }}V
+                    </span>
+                </td>
+                <td>{{ o.location or '—' }}</td>
+                <td style="text-align:right;font-weight:600">{{ o.quantity }}</td>
+                <td>
+                    {% if o.status == 'broken' %}
+                    <span style="color:#e74c3c;font-weight:600">⛔ {{ _('Defective') }}</span>
+                    {% else %}
+                    <span style="color:#27ae60;font-weight:600">✅ {{ _('Working') }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:12px;color:#666;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                    title="{{ o.notes or '' }}">{{ o.notes or '—' }}</td>
+                <td>
+                    {% if o.photos %}
+                        <span style="font-size:12px">📷 {{ o.photos|length }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="white-space:nowrap">
+                    <a href="/electricity/outlets/{{ o.id }}/edit" class="btn btn-sm btn-primary" style="padding:3px 8px;font-size:11px">✏️</a>
+                    <form method="POST" action="/electricity/outlets/{{ o.id }}/toggle-status" style="display:inline">
+                        <button type="submit" class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:{% if o.status == 'ok' %}#e74c3c{% else %}#27ae60{% endif %};color:white"
+                                title="{{ _('Toggle status') }}">
+                            {% if o.status == 'ok' %}⛔{% else %}✅{% endif %}
+                        </button>
+                    </form>
+                    <form method="POST" action="/electricity/outlets/{{ o.id }}/delete" style="display:inline"
+                          onsubmit="return confirm('{{ _('Delete') }}?')">
+                        <button type="submit" class="btn btn-sm" style="padding:3px 8px;font-size:11px;background:#eee">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" style="text-align:center;padding:24px;color:#888">
+                    {{ _('No outlets recorded yet') }}.
+                    <a href="/electricity/outlets/new">{{ _('Add Outlet') }}</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<script>
+function filterOutlets(sectionId) {
+    document.getElementById('filterSection').value = sectionId === null ? '' : String(sectionId);
+    applyFilters();
+    document.querySelectorAll('.outlet-row')[0]?.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function applyFilters() {
+    const sec = document.getElementById('filterSection').value;
+    const volt = document.getElementById('filterVoltage').value;
+    const stat = document.getElementById('filterStatus').value;
+    document.querySelectorAll('.outlet-row').forEach(row => {
+        let show = true;
+        if (sec && row.dataset.section !== sec) show = false;
+        if (volt && row.dataset.voltage !== volt) show = false;
+        if (stat && row.dataset.status !== stat) show = false;
+        row.style.display = show ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

@@ -5598,3 +5598,63 @@ msgstr "Naam van de persoon die meldde"
 
 msgid "Who reported (if not you)"
 msgstr "Wie meldde (als jij het niet bent)"
+
+msgid "Power Outlets"
+msgstr "Krachtstroomcontactdozen"
+
+msgid "Add Outlet"
+msgstr "Contactdoos toevoegen"
+
+msgid "Edit Outlet"
+msgstr "Contactdoos bewerken"
+
+msgid "Total outlets"
+msgstr "Totaal contactdozen"
+
+msgid "Summary by section"
+msgstr "Overzicht per sectie"
+
+msgid "All outlets"
+msgstr "Alle contactdozen"
+
+msgid "All voltages"
+msgstr "Alle spanningen"
+
+msgid "No outlets recorded yet"
+msgstr "Nog geen contactdozen vastgelegd"
+
+msgid "Toggle status"
+msgstr "Status wisselen"
+
+msgid "Outlet added"
+msgstr "Contactdoos toegevoegd"
+
+msgid "Outlet saved"
+msgstr "Contactdoos opgeslagen"
+
+msgid "Outlet deleted"
+msgstr "Contactdoos verwijderd"
+
+msgid "Photo deleted"
+msgstr "Foto verwijderd"
+
+msgid "You can select multiple photos"
+msgstr "U kunt meerdere foto’s selecteren"
+
+msgid "Current photos"
+msgstr "Huidige foto’s"
+
+msgid "e.g. wall near gate, column 3, workbench..."
+msgstr "bijv. muur bij poort, kolom 3, werkbank..."
+
+msgid "Description, remarks, defects..."
+msgstr "Beschrijving, opmerkingen, defecten..."
+
+msgid "Working"
+msgstr "Werkend"
+
+msgid "Defective"
+msgstr "Defect"
+
+msgid "Status: {}"
+msgstr "Status: {}"

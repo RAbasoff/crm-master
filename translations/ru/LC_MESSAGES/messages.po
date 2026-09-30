@@ -5694,3 +5694,63 @@ msgstr "Имя человека, который сообщил"
 
 msgid "Who reported (if not you)"
 msgstr "Кто сообщил (если не вы)"
+
+msgid "Power Outlets"
+msgstr "Розетки"
+
+msgid "Add Outlet"
+msgstr "Добавить розетку"
+
+msgid "Edit Outlet"
+msgstr "Редактировать розетку"
+
+msgid "Total outlets"
+msgstr "Всего розеток"
+
+msgid "Summary by section"
+msgstr "Сводка по цехам"
+
+msgid "All outlets"
+msgstr "Все розетки"
+
+msgid "All voltages"
+msgstr "Все напряжения"
+
+msgid "No outlets recorded yet"
+msgstr "Розетки пока не добавлены"
+
+msgid "Toggle status"
+msgstr "Сменить статус"
+
+msgid "Outlet added"
+msgstr "Розетка добавлена"
+
+msgid "Outlet saved"
+msgstr "Розетка сохранена"
+
+msgid "Outlet deleted"
+msgstr "Розетка удалена"
+
+msgid "Photo deleted"
+msgstr "Фото удалено"
+
+msgid "You can select multiple photos"
+msgstr "Можно выбрать несколько фото"
+
+msgid "Current photos"
+msgstr "Текущие фотографии"
+
+msgid "e.g. wall near gate, column 3, workbench..."
+msgstr "напр. стена у ворот, колонна 3, верстак..."
+
+msgid "Description, remarks, defects..."
+msgstr "Описание, замечания, дефекты..."
+
+msgid "Working"
+msgstr "Исправна"
+
+msgid "Defective"
+msgstr "Неисправна"
+
+msgid "Status: {}"
+msgstr "Статус: {}"

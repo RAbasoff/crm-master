@@ -1203,6 +1203,30 @@ class ElectricalDocument(db.Model):
     cabinet = db.relationship('ElectricalCabinet', backref=db.backref('documents', lazy=True, cascade='all, delete-orphan'))
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
 
+class PowerOutlet(db.Model):
+    """Розетки 220В / 380В по цехам"""
+    __tablename__ = 'power_outlet'
+    id = db.Column(db.Integer, primary_key=True)
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
+    voltage = db.Column(db.String(10), nullable=False, default='220')  # '220' | '380'
+    location = db.Column(db.String(300))
+    quantity = db.Column(db.Integer, default=1)
+    status = db.Column(db.String(20), default='ok')  # ok | broken
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    section = db.relationship('FactorySection', backref='power_outlets')
+    photos = db.relationship('PowerOutletPhoto', backref='outlet', lazy=True, cascade='all, delete-orphan')
+
+class PowerOutletPhoto(db.Model):
+    __tablename__ = 'power_outlet_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    outlet_id = db.Column(db.Integer, db.ForeignKey('power_outlet.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class MonthlyArchive(db.Model):
     __tablename__ = 'monthly_archive'
     id = db.Column(db.Integer, primary_key=True)

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{% if outlet %}{{ _('Edit Outlet') }}{% else %}{{ _('Add Outlet') }}{% endif %} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔌 {% if outlet %}{{ _('Edit Outlet') }}{% else %}{{ _('Add Outlet') }}{% endif %}</h1>
+    <a href="/electricity/outlets" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>{{ _('Section') }}</label>
+            <select name="section_id">
+                <option value="">{{ _('No section') }}</option>
+                {% for s in sections %}
+                <option value="{{ s.id }}" {% if outlet and outlet.section_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div class="form-group">
+                <label>{{ _('Voltage') }} *</label>
+                <select name="voltage" required>
+                    <option value="220" {% if not outlet or outlet.voltage == '220' %}selected{% endif %}>220V</option>
+                    <option value="380" {% if outlet and outlet.voltage == '380' %}selected{% endif %}>380V</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Quantity') }}</label>
+                <input type="number" name="quantity" min="1" max="99" value="{{ outlet.quantity if outlet else 1 }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    <option value="ok" {% if not outlet or outlet.status == 'ok' %}selected{% endif %}>✅ {{ _('Working') }}</option>
+                    <option value="broken" {% if outlet and outlet.status == 'broken' %}selected{% endif %}>⛔ {{ _('Defective') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Location') }}</label>
+            <input type="text" name="location" value="{{ outlet.location if outlet else '' }}"
+                   placeholder="{{ _('e.g. wall near gate, column 3, workbench...') }}">
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="3" placeholder="{{ _('Description, remarks, defects...') }}">{{ outlet.notes if outlet else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Photos') }}</label>
+            <input type="file" name="photos" accept="image/*" multiple>
+            <small style="color:#888">{{ _('You can select multiple photos') }}</small>
+        </div>
+
+        {% if outlet and outlet.photos %}
+        <div class="form-group">
+            <label>{{ _('Current photos') }}</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+                {% for p in outlet.photos %}
+                <div style="position:relative">
+                    <img src="/static/uploads/{{ p.filename }}" alt=""
+                         style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid #ddd">
+                    <form method="POST" action="/electricity/outlets/photo/{{ p.id }}/delete" style="position:absolute;top:4px;right:4px"
+                          onsubmit="return confirm('{{ _('Delete') }}?')">
+                        <button type="submit" style="background:#e74c3c;color:white;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:11px">✕</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="btn-group">
+            <button type="submit" class="btn btn-primary">💾 {{ _('Save') }}</button>
+            <a href="/electricity/outlets" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

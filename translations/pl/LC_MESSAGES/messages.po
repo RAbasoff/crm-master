@@ -5601,3 +5601,63 @@ msgstr "Imię osoby, która zgłosiła"
 
 msgid "Who reported (if not you)"
 msgstr "Kto zgłosił (jeśli nie ty)"
+
+msgid "Power Outlets"
+msgstr "Gniazdka elektryczne"
+
+msgid "Add Outlet"
+msgstr "Dodaj gniazdko"
+
+msgid "Edit Outlet"
+msgstr "Edytuj gniazdko"
+
+msgid "Total outlets"
+msgstr "Wszystkie gniazdka"
+
+msgid "Summary by section"
+msgstr "Podsumowanie według sekcji"
+
+msgid "All outlets"
+msgstr "Wszystkie gniazdka"
+
+msgid "All voltages"
+msgstr "Wszystkie napięcia"
+
+msgid "No outlets recorded yet"
+msgstr "Brak zapisanych gniazdek"
+
+msgid "Toggle status"
+msgstr "Zmień status"
+
+msgid "Outlet added"
+msgstr "Dodano gniazdko"
+
+msgid "Outlet saved"
+msgstr "Zapisano gniazdko"
+
+msgid "Outlet deleted"
+msgstr "Usunięto gniazdko"
+
+msgid "Photo deleted"
+msgstr "Usunięto zdjęcie"
+
+msgid "You can select multiple photos"
+msgstr "Można wybrać wiele zdjęć"
+
+msgid "Current photos"
+msgstr "Obecne zdjęcia"
+
+msgid "e.g. wall near gate, column 3, workbench..."
+msgstr "np. ściana przy bramie, kolumna 3, warsztat..."
+
+msgid "Description, remarks, defects..."
+msgstr "Opis, uwagi, usterki..."
+
+msgid "Working"
+msgstr "Sprawne"
+
+msgid "Defective"
+msgstr "Uszkodzone"
+
+msgid "Status: {}"
+msgstr "Status: {}"

@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20260930
+SCHEMA_VERSION = 20261001
 
 
 def _schema_log(msg):
@@ -471,6 +471,24 @@ def ensure_schema():
             uploaded_by INTEGER REFERENCES user(id),
             uploaded_at DATETIME
         )"""),
+        ("power_outlet", """CREATE TABLE IF NOT EXISTS power_outlet (
+            id INTEGER PRIMARY KEY,
+            section_id INTEGER REFERENCES factory_section(id),
+            voltage VARCHAR(10) NOT NULL DEFAULT '220',
+            location VARCHAR(300),
+            quantity INTEGER DEFAULT 1,
+            status VARCHAR(20) DEFAULT 'ok',
+            notes TEXT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("power_outlet_photo", """CREATE TABLE IF NOT EXISTS power_outlet_photo (
+            id INTEGER PRIMARY KEY,
+            outlet_id INTEGER NOT NULL REFERENCES power_outlet(id),
+            filename VARCHAR(300) NOT NULL,
+            description VARCHAR(300),
+            uploaded_at DATETIME
+        )"""),
         ("machine_consumable.last_issued_at", "ALTER TABLE machine_consumable ADD COLUMN last_issued_at DATETIME"),
         ("fault_report.equipment_id", "ALTER TABLE fault_report ADD COLUMN equipment_id INTEGER REFERENCES equipment(id)"),
         ("user.password_plain", "ALTER TABLE user ADD COLUMN password_plain VARCHAR(200)"),
@@ -752,7 +770,7 @@ def run_data_migrations():
     if _migrations_already_applied():
         return
     try:
-        from models import (ResponsibleGroup, GroupPermission, User, UserSectionAccess,
+        from models import (db, ResponsibleGroup, GroupPermission, User, UserSectionAccess,
                             Verantwoordelijke, Machine, Equipment, WarehouseGroup,
                             fault_technicians, user_machine, FaultReport,
                             Notification, Message, AuditLog, SystemLog,

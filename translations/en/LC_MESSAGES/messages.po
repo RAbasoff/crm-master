@@ -5562,3 +5562,63 @@ msgstr "Name of the person who reported"
 
 msgid "Who reported (if not you)"
 msgstr "Who reported (if not you)"
+
+msgid "Power Outlets"
+msgstr "Power Outlets"
+
+msgid "Add Outlet"
+msgstr "Add Outlet"
+
+msgid "Edit Outlet"
+msgstr "Edit Outlet"
+
+msgid "Total outlets"
+msgstr "Total outlets"
+
+msgid "Summary by section"
+msgstr "Summary by section"
+
+msgid "All outlets"
+msgstr "All outlets"
+
+msgid "All voltages"
+msgstr "All voltages"
+
+msgid "No outlets recorded yet"
+msgstr "No outlets recorded yet"
+
+msgid "Toggle status"
+msgstr "Toggle status"
+
+msgid "Outlet added"
+msgstr "Outlet added"
+
+msgid "Outlet saved"
+msgstr "Outlet saved"
+
+msgid "Outlet deleted"
+msgstr "Outlet deleted"
+
+msgid "Photo deleted"
+msgstr "Photo deleted"
+
+msgid "You can select multiple photos"
+msgstr "You can select multiple photos"
+
+msgid "Current photos"
+msgstr "Current photos"
+
+msgid "e.g. wall near gate, column 3, workbench..."
+msgstr "e.g. wall near gate, column 3, workbench..."
+
+msgid "Description, remarks, defects..."
+msgstr "Description, remarks, defects..."
+
+msgid "Working"
+msgstr "Working"
+
+msgid "Defective"
+msgstr "Defective"
+
+msgid "Status: {}"
+msgstr "Status: {}"

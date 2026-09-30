@@ -5,6 +5,7 @@
     <h1>⚡ {{ _('Electricity') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/electricity/schematic" class="btn btn-sm" style="background:#9b59b6;color:white">🗺️ {{ _('Interactive Schematic') }}</a>
+        <a href="/electricity/outlets" class="btn btn-sm" style="background:#16a085;color:white">🔌 {{ _('Power Outlets') }}</a>
         <a href="/electricity/switch-log" class="btn btn-sm" style="background:#8e44ad;color:white">📋 {{ _('Switch Log') }}</a>
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <button class="btn btn-sm" style="background:#2980b9;color:white" onclick="document.getElementById('uploadDoc').style.display='block'">📄 {{ _('Upload Document') }}</button>
