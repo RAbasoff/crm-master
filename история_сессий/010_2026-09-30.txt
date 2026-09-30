@@ -1,0 +1,143 @@
+Сессия 010 — 30.09.2026
+Проект: CRM Мастерская
+Время: 07:15
+Ветка: master → github.com/RAbasoff/crm-master → PythonAnywhere
+
+============================================================
+
+ЗАДАЧА: Доделать фото в акте передачи ТМЦ, закоммитить, задеплоить
+
+============================================================
+
+1. ИСХОДНОЕ СОСТОЯНИЕ (конец сессии 29.09 / раннее утро 30.09)
+
+  Последний коммит: 986fe3a feat: material-assets transfer act for machines
+  Незакоммичено:
+    - templates/machine_transfer_act.html (+112) — блок фото
+    - translations/{ru,en,nl,pl} messages.po/.mo — новые строки
+    - _tmp_test_photos.py, _tmp_tr_photos.py — временные скрипты
+
+  Фото в акте — только клиентское (object URLs): картинки видны на
+  экране и в печати, на сервер не сохраняются. Подсказка в UI:
+  «Фото попадут в печатный акт».
+
+============================================================
+
+2. ЧТО СДЕЛАНО В ЭТОЙ СЕССИИ
+
+  2.1 Проверка переводов
+    - .mo для ru/en/nl/pl содержат: Add photos, Machine photo,
+      Photos, Photo hint, No photos added (проверка babel read_mo)
+    - Размеры .mo корректные (92–129 КБ, не «мусорные» ~395 байт)
+
+  2.2 Тест рендера
+    - GET /machines/1/transfer-act → 200
+    - Все фото-хуки на месте: photoInput, photoInput2, photosGrid,
+      addPhotoCard, handlePhotoFiles, addMachinePhoto, photosSection,
+      print CSS hide del
+
+  2.3 Полировка перед коммитом
+    - Печать: пустая секция фото НЕ уходит в акт
+        .photos-empty { display: none !important }
+        .photos-section:not(.has-photos) { display: none !important }
+      + JS toggle class has-photos в updatePhotoCount()
+    - Безопасные JS-строки: machine.photo|tojson, machine.name|tojson
+      (имена вида "Octopus MAX [1]" не ломают JS)
+
+  2.4 Очистка
+    - Удалены _tmp_test_photos.py, _tmp_tr_photos.py, _tmp_check_mo.py
+
+  2.5 Журнал коммитов
+    - В КОММИТЫ.txt дописаны пропущенные bbfe9d4, 986fe3a
+      и новый 26f46e2
+
+============================================================
+
+3. КОММИТЫ СЕССИИ
+
+  26f46e2  feat: photo attachments on machine transfer act for print
+           9 файлов: machine_transfer_act.html + po/mo ru/en/nl/pl
+  825180d  docs: log transfer-act commits bbfe9d4 986fe3a 26f46e2
+
+  Также в этой сессии доведены до журнала (сделаны ранее, без записи):
+  bbfe9d4  docs: full session history 2026-09-29
+  986fe3a  feat: material-assets transfer act for machines with print support
+
+============================================================
+
+4. ФУНКЦИОНАЛЬНОСТЬ ФОТО В АКТЕ (итог)
+
+  templates/machine_transfer_act.html:
+    - Секция «Фотографии»: сетка 3 колонки, счётчик, пустое состояние
+    - Загрузка нескольких фото (accept=image/*, multiple) — 2 входа:
+      тулбар и кнопка в секции
+    - Кнопка «Фото станка» — вставка machine.photo из /static/uploads/
+      (видна только если у станка есть photo; в локальной БД фото пока нет)
+    - Удаление фото (✕), revokeObjectURL
+    - Печать: скрываются .no-print, .toolbar, .photo-del, .photo-tools,
+      пустая секция; page-break-inside: avoid; 3 колонки, img height 150px
+
+  Роут: GET /machines/<id>/transfer-act (blueprints/machines.py:432)
+  Кнопка: machine_detail.html → «Акт передачи» target=_blank
+
+  i18n (новые msgid):
+    Add photos      ru: Добавить фото
+    Machine photo   ru: Фото станка
+    Photo hint      ru: Фото попадут в печатный акт
+    No photos added ru: Фотографии не добавлены
+    (Photos — уже был в каталоге)
+
+============================================================
+
+5. ДЕПЛОЙ
+
+  Локально: git push origin master → ВЫПОЛНЕНО (986fe3a..825180d)
+
+  На PA (пользователь вручную, SSH-ключа у агента нет):
+
+    cd ~/crm-master
+    git pull origin master
+
+  Затем: Web → Reload
+
+  После деплоя — smoke:
+    https://rabasoff.pythonanywhere.com
+    /login /machines /machines/1/transfer-act → 200,
+    без Traceback / OperationalError
+
+============================================================
+
+6. ЗАМЕЧАНИЯ / ОГРАНИЧЕНИЯ
+
+  - Фото в акте не персистентны: после F5 пропадают. Для печати
+    достаточно. Если нужно сохранение — отдельная модель + upload.
+  - SSH к PA (rabasoff@ssh.pythonanywhere.com) с ключом id_ed25519
+    не проходит (Permission denied). Деплой на PA — руками пользователя.
+  - Локально у всех станков photo=None — кнопка «Фото станка» в
+    локальной копии не появится, пока не загрузят фото.
+
+============================================================
+
+Сессия 010 — 30.09.2026 — КОНЕЦ
+
+
+============================================================
+ЗАДАЧА 2 (та же сессия): Заявитель в заявках (faults)
+
+СИМПТОМ: «я действительно не вижу кто ее подал»
+ПРИЧИНА: в форме заявки нет поля «Кто подал» — reporter_id всегда
+  current_user (часто Administrator). Реальный оператор терялся.
+  В списке «Заявки на закупку» вообще не было колонки «Заявитель».
+
+РЕШЕНИЕ (21ca65e):
+  - FaultReport.reporter_name + property reporter_label
+  - Форма: select «Заявитель» (по умолчанию я) + «Другое лицо» (текст)
+  - Моб. форма: опциональное «Кто сообщил (если не вы)»
+  - Список/детали/QR/отчёты/экспорт/TWO — reporter_label
+  - Уведомления, лента работ, крит. email — с заявителем
+  - purchase_requests — колонка «Заявитель»
+
+ТЕСТ: Piet de Operator (текст) и Directeur (select) — видны в
+  списке и карточке. Заявки на закупку: колонка Заявитель есть.
+
+Деплой: git push (локально) → PA git pull + Web→Reload

@@ -211,3 +211,13 @@ Web → Reload
   - safe JS embedding via tojson (machine.name / machine.photo)
   - i18n: Add photos / Machine photo / Photo hint / No photos added (ru/en/nl/pl)
   - verified: GET /machines/1/transfer-act 200, all photo UI hooks present
+
+2026-09-30 21ca65e fix: show who reported the fault — selectable reporter + free-text name
+  - FaultReport.reporter_name + reporter_label (prefer free-text, else User.name)
+  - fault form: Reporter select (default me) + Other person free-text
+  - mobile form: optional Reporter name
+  - list/detail/QR/reports/export/TWO use reporter_label
+  - notifications, work feed, critical email include reporter
+  - purchase_requests list: Requester column
+  - i18n: Other person / Who reported the fault / Reporter name / ...
+  - tested: free-text Piet de Operator + select other user; list+detail show who
