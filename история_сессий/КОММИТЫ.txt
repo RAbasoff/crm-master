@@ -221,3 +221,12 @@ Web → Reload
   - purchase_requests list: Requester column
   - i18n: Other person / Who reported the fault / Reporter name / ...
   - tested: free-text Piet de Operator + select other user; list+detail show who
+
+2026-09-30 b008fe8 fix: transfer-act photos JS syntax + blank receiver/giver name fields
+  - ROOT CAUSE photos not adding: Jinja escaped else-branch '""' to &#34;&#34;
+    inside <script> -> SyntaxError, all JS dead (handlers never bound)
+  - addMachinePhoto: {{ (machine.photo or '')|tojson }} (safe empty string)
+  - file pick via button + input.click(); FileReader data: URLs (print-safe)
+  - image accept by MIME or extension
+  - ONTVANGER: Name/Full name/Job title = blank lines (label only)
+  - AFGEVER: Full name = blank line; Name select + Job title kept
