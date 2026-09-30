@@ -5595,3 +5595,75 @@ msgstr "Экспорт PDF временно недоступен"
 
 msgid "PDF export failed: %(err)s"
 msgstr "Ошибка экспорта PDF: %(err)s"
+
+msgid "Transfer Act of Material Assets"
+msgstr "Акт передачи ТМЦ"
+
+msgid "ACT OF TRANSFER"
+msgstr "АКТ ПЕРЕДАЧИ"
+
+msgid "Act No"
+msgstr "№ акта"
+
+msgid "Giver"
+msgstr "Сдал"
+
+msgid "Receiver"
+msgstr "Получил"
+
+msgid "Full name"
+msgstr "ФИО"
+
+msgid "Enter name"
+msgstr "Введите ФИО"
+
+msgid "Job title"
+msgstr "Должность"
+
+msgid "Reason for transfer"
+msgstr "Основание передачи"
+
+msgid "Item Name"
+msgstr "Наименование"
+
+msgid "Specification"
+msgstr "Характеристика"
+
+msgid "Note"
+msgstr "Примечание"
+
+msgid "pcs"
+msgstr "шт."
+
+msgid "Spare part"
+msgstr "Запасная часть"
+
+msgid "Consumable"
+msgstr "Расходный материал"
+
+msgid "Total items"
+msgstr "Всего позиций"
+
+msgid "Notes / Condition"
+msgstr "Примечания / Состояние"
+
+msgid "Condition, completeness, remarks..."
+msgstr "Состояние, комплектность, замечания..."
+
+msgid "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
+msgstr "Настоящим нижеподписавшиеся подтверждают, что перечисленные выше товарно-материальные ценности переданы от Сдавшего к Получившему в количестве и состоянии, указанных в настоящем Акте. Получивший принимает на себя ответственность за сохранность и надлежащее использование переданного имущества."
+
+msgid "signature / full name"
+msgstr "подпись / ФИО"
+
+msgid "date"
+msgstr "дата"
+
+msgid "Transfer Act"
+msgstr "Акт передачи"
+
+msgid "Object of transfer"
+msgstr "Объект передачи"
+
+msgid "Uncheck items that are not transferred"
+msgstr "Снимите отметки с позиций, которые не передаются"

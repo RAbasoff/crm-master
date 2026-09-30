@@ -429,6 +429,20 @@ def machine_add_maintenance(machine_id):
     return render_template('maintenance_form.html', machine=m, now=datetime.utcnow())
 
 
+@bp.route('/<int:machine_id>/transfer-act')
+@login_required
+def machine_transfer_act(machine_id):
+    """Printable transfer act of material assets (ТМЦ) for a machine."""
+    m = Machine.query.get_or_404(machine_id)
+    users = User.query.filter(User.is_active_user == True).order_by(User.username).all()
+    persons = Verantwoordelijke.query.filter_by(is_active=True).order_by(Verantwoordelijke.naam).all()
+    items_total = 1 + len(m.parts) + len([sp for sp in m.spare_parts if sp.warehouse_item]) \
+                  + len([mc for mc in m.consumables if mc.warehouse_item])
+    return render_template('machine_transfer_act.html',
+                           machine=m, users=users, persons=persons,
+                           items_total=items_total, now=datetime.utcnow())
+
+
 @bp.route('/report', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director')

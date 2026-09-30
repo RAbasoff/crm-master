@@ -5502,3 +5502,75 @@ msgstr "Eksport PDF jest tymczasowo niedostępny"
 
 msgid "PDF export failed: %(err)s"
 msgstr "Eksport PDF nie powiódł się: %(err)s"
+
+msgid "Transfer Act of Material Assets"
+msgstr "Protokół przekazania materiałów"
+
+msgid "ACT OF TRANSFER"
+msgstr "PROTOKÓŁ PRZEKAZANIA"
+
+msgid "Act No"
+msgstr "Nr protokołu"
+
+msgid "Giver"
+msgstr "Wydający"
+
+msgid "Receiver"
+msgstr "Przyjmujący"
+
+msgid "Full name"
+msgstr "Imię i nazwisko"
+
+msgid "Enter name"
+msgstr "Wprowadź imię"
+
+msgid "Job title"
+msgstr "Stanowisko"
+
+msgid "Reason for transfer"
+msgstr "Powód przekazania"
+
+msgid "Item Name"
+msgstr "Nazwa pozycji"
+
+msgid "Specification"
+msgstr "Specyfikacja"
+
+msgid "Note"
+msgstr "Uwagi"
+
+msgid "pcs"
+msgstr "szt."
+
+msgid "Spare part"
+msgstr "Część zamienna"
+
+msgid "Consumable"
+msgstr "Materiał eksploatacyjny"
+
+msgid "Total items"
+msgstr "Razem pozycji"
+
+msgid "Notes / Condition"
+msgstr "Uwagi / Stan"
+
+msgid "Condition, completeness, remarks..."
+msgstr "Stan, kompletność, uwagi..."
+
+msgid "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
+msgstr "Niżej podpisani potwierdzają, że wymienione powyżej materiały zostały przekazane przez Wydającego Przyjmującemu w ilości i stanie wskazanym w niniejszym protokole. Przyjmujący przejmuje odpowiedzialność za bezpieczeństwo i właściwe użytkowanie przekazanego mienia."
+
+msgid "signature / full name"
+msgstr "podpis / imię i nazwisko"
+
+msgid "date"
+msgstr "data"
+
+msgid "Transfer Act"
+msgstr "Protokół przekazania"
+
+msgid "Object of transfer"
+msgstr "Przedmiot przekazania"
+
+msgid "Uncheck items that are not transferred"
+msgstr "Odznacz pozycje, które nie są przekazywane"

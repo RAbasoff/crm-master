@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="{{ g.lang if g.lang is defined else 'ru' }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ _('Transfer Act of Material Assets') }} — {{ machine.name }}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 20px 30px; }
+.header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1a1a2e; padding-bottom: 14px; }
+.header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.4px; }
+.header .subtitle { font-size: 12px; color: #555; }
+.header-row { display: flex; align-items: center; gap: 12px; justify-content: center; }
+.act-meta { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 16px; font-size: 12px; }
+.act-meta .field { display: flex; align-items: baseline; gap: 6px; }
+.act-meta .label { color: #666; white-space: nowrap; }
+.act-meta input { border: none; border-bottom: 1px solid #999; min-width: 120px; font-size: 12px; padding: 2px 4px; background: transparent; }
+.machine-box { border: 1px solid #cfd4dc; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; background: #f8fafc; }
+.machine-box h2 { font-size: 12px; color: #1a1a2e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.3px; }
+.machine-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 16px; }
+.machine-grid .cell label { display: block; font-size: 10px; color: #777; text-transform: uppercase; }
+.machine-grid .cell .val { font-size: 12px; font-weight: 600; min-height: 18px; }
+.parties { display: flex; gap: 20px; margin-bottom: 16px; }
+.party { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; }
+.party h3 { font-size: 11px; color: #1a1a2e; text-transform: uppercase; margin-bottom: 8px; }
+.party .row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+.party .label { font-size: 11px; color: #666; white-space: nowrap; min-width: 70px; }
+.party input, .party select { flex: 1; border: none; border-bottom: 1px solid #999; font-size: 12px; padding: 2px 4px; background: transparent; }
+.reason { margin-bottom: 14px; display: flex; align-items: baseline; gap: 8px; }
+.reason label { font-weight: 600; color: #555; white-space: nowrap; }
+.reason input { flex: 1; border: none; border-bottom: 1px solid #999; font-size: 12px; padding: 3px 4px; background: transparent; }
+table.items { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+table.items th { background: #1a1a2e; color: #fff; padding: 7px 8px; text-align: left; font-size: 11px; }
+table.items th:nth-child(1) { width: 32px; text-align: center; }
+table.items th:nth-child(2) { width: 36px; text-align: center; }
+table.items th:nth-child(5) { width: 60px; text-align: center; }
+table.items th:nth-child(6) { width: 55px; text-align: center; }
+table.items td { padding: 6px 8px; border-bottom: 1px solid #e2e6ea; font-size: 12px; vertical-align: top; }
+table.items td:nth-child(1), table.items td:nth-child(2),
+table.items td:nth-child(5), table.items td:nth-child(6) { text-align: center; }
+table.items tr:nth-child(even) { background: #f8f9fa; }
+table.items tr.row-machine { background: #eef3f8; font-weight: 600; }
+table.items tr.off { opacity: 0.4; }
+table.items input.qty { width: 52px; text-align: center; border: none; border-bottom: 1px solid #bbb; background: transparent; font-size: 12px; padding: 1px 2px; }
+.kind-tag { display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 8px; background: #e8eef5; color: #456; margin-left: 4px; vertical-align: middle; }
+.totals { font-size: 12px; margin-bottom: 18px; }
+.totals strong { color: #1a1a2e; }
+.signatures { display: flex; justify-content: space-between; margin-top: 36px; gap: 32px; }
+.sig-block { flex: 1; max-width: 280px; }
+.sig-block .title { font-weight: 600; font-size: 11px; color: #555; text-transform: uppercase; margin-bottom: 36px; }
+.sig-block .line { border-bottom: 1px solid #222; margin-bottom: 4px; }
+.sig-block .hint { font-size: 10px; color: #999; }
+.footer { margin-top: 28px; text-align: center; font-size: 10px; color: #aaa; border-top: 1px solid #e0e0e0; padding-top: 8px; }
+.toolbar { margin-bottom: 14px; padding: 12px; background: #f0f4f8; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .hint { font-size: 11px; color: #666; margin-left: auto; }
+.btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.btn-print { background: #1a1a2e; color: #fff; }
+.btn-ghost { background: #e2e8f0; color: #222; text-decoration: none; display: inline-block; }
+.notes-area { width: 100%; min-height: 54px; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px; font-size: 12px; font-family: inherit; resize: vertical; }
+@media print {
+    body { padding: 8px 12px; }
+    .no-print, .toolbar { display: none !important; }
+    .machine-box { background: #fff; border-color: #999; }
+    table.items th { background: #1a1a2e !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table.items tr.row-machine { background: #eef3f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    input, select, textarea { border-color: #333 !important; }
+    .signatures { margin-top: 28px; }
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+    <button class="btn btn-print" onclick="window.print()">🖨️ {{ _('Print') }}</button>
+    <a class="btn btn-ghost" href="/machines/{{ machine.id }}">← {{ _('Back') }}</a>
+    <label style="font-size:12px;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="toggleAll" checked> {{ _('Select all') }}
+    </label>
+    <span class="hint">{{ _('Uncheck items that are not transferred') }}</span>
+</div>
+
+<div class="header">
+    <div class="header-row">
+        <img src="/static/logo.jpeg" alt="ProMaster" style="width:52px;height:52px;object-fit:contain">
+        <div>
+            <h1>{{ _('Transfer Act of Material Assets') }}</h1>
+            <div class="subtitle">{{ _('ACT OF TRANSFER') }} · ProMaster</div>
+        </div>
+    </div>
+</div>
+
+<div class="act-meta">
+    <div class="field">
+        <span class="label">{{ _('Act No') }}:</span>
+        <input type="text" id="actNo" value="ACT-{{ machine.id }}-{{ now.strftime('%Y%m%d') }}">
+    </div>
+    <div class="field">
+        <span class="label">{{ _('Date') }}:</span>
+        <input type="text" id="actDate" value="{{ now.strftime('%d.%m.%Y') }}">
+    </div>
+    <div class="field">
+        <span class="label">{{ _('Location') }}:</span>
+        <input type="text" id="actLocation" value="{{ machine.installation_location or (machine.section.name if machine.section else '') }}">
+    </div>
+</div>
+
+<div class="machine-box">
+    <h2>{{ _('Machine') }} / {{ _('Object of transfer') }}</h2>
+    <div class="machine-grid">
+        <div class="cell"><label>{{ _('Name') }}</label><div class="val">{{ machine.name }}</div></div>
+        <div class="cell"><label>{{ _('Machine Type') }}</label><div class="val">{{ machine.machine_type or '—' }}</div></div>
+        <div class="cell"><label>{{ _('Serial Number') }}</label><div class="val">{{ machine.serial_number or '—' }}</div></div>
+        <div class="cell"><label>{{ _('Manufacturer') }}</label><div class="val">{{ machine.manufacturer or '—' }}</div></div>
+        <div class="cell"><label>{{ _('Year of Manufacture') }}</label><div class="val">{{ machine.year_of_manufacture or '—' }}</div></div>
+        <div class="cell"><label>{{ _('Status') }}</label><div class="val">{{ machine.status or '—' }}</div></div>
+        {% if machine.section %}
+        <div class="cell"><label>{{ _('Section') }}</label><div class="val">{{ machine.section.name }}</div></div>
+        {% endif %}
+        {% if machine.responsible_person %}
+        <div class="cell"><label>{{ _('Responsible person') }}</label><div class="val">{{ machine.responsible_person.naam }}</div></div>
+        {% endif %}
+        {% if machine.contractor_rel %}
+        <div class="cell"><label>{{ _('Contractor') }}</label><div class="val">{{ machine.contractor_rel.company_name }}</div></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="parties">
+    <div class="party">
+        <h3>{{ _('Giver') }}</h3>
+        <div class="row">
+            <span class="label">{{ _('Name') }}</span>
+            <select id="giverSelect" onchange="fillParty('giver')">
+                <option value="">—</option>
+                {% for u in users %}
+                <option value="{{ u.display_name or u.username }}">{{ u.display_name or u.username }}</option>
+                {% endfor %}
+                {% for p in persons %}
+                <option value="{{ p.naam }}">{{ p.naam }}{% if p.position %} ({{ p.position }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="row">
+            <span class="label">{{ _('Full name') }}</span>
+            <input type="text" id="giverName" placeholder="{{ _('Enter name') }}">
+        </div>
+        <div class="row">
+            <span class="label">{{ _('Job title') }}</span>
+            <input type="text" id="giverPos" placeholder="{{ _('Job title') }}">
+        </div>
+    </div>
+    <div class="party">
+        <h3>{{ _('Receiver') }}</h3>
+        <div class="row">
+            <span class="label">{{ _('Name') }}</span>
+            <select id="receiverSelect" onchange="fillParty('receiver')">
+                <option value="">—</option>
+                {% for u in users %}
+                <option value="{{ u.display_name or u.username }}">{{ u.display_name or u.username }}</option>
+                {% endfor %}
+                {% for p in persons %}
+                <option value="{{ p.naam }}">{{ p.naam }}{% if p.position %} ({{ p.position }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="row">
+            <span class="label">{{ _('Full name') }}</span>
+            <input type="text" id="receiverName" placeholder="{{ _('Enter name') }}">
+        </div>
+        <div class="row">
+            <span class="label">{{ _('Job title') }}</span>
+            <input type="text" id="receiverPos" placeholder="{{ _('Job title') }}">
+        </div>
+    </div>
+</div>
+
+<div class="reason">
+    <label>{{ _('Reason') }}:</label>
+    <input type="text" id="actReason" placeholder="{{ _('Reason for transfer') }}">
+</div>
+
+<table class="items" id="itemsTable">
+    <thead>
+        <tr>
+            <th class="no-print">✓</th>
+            <th>№</th>
+            <th>{{ _('Item Name') }}</th>
+            <th>{{ _('Specification') }}</th>
+            <th>{{ _('Qty') }}</th>
+            <th>{{ _('Unit') }}</th>
+            <th>{{ _('Note') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-machine" data-row>
+            <td class="no-print"><input type="checkbox" class="row-check" checked></td>
+            <td class="row-num">1</td>
+            <td>
+                {{ machine.name }}
+                <span class="kind-tag">{{ _('Machine') }}</span>
+            </td>
+            <td>
+                {{ [machine.machine_type, machine.manufacturer, machine.serial_number, machine.year_of_manufacture]
+                   | select | list | join(' · ') or '—' }}
+            </td>
+            <td><input class="qty" type="number" value="1" min="0.01" step="0.01"></td>
+            <td>{{ _('pcs') }}</td>
+            <td>{{ machine.description[:60] if machine.description else '' }}</td>
+        </tr>
+        {% set ns = namespace(num=1) %}
+        {% for p in machine.parts %}
+        {% set ns.num = ns.num + 1 %}
+        <tr data-row>
+            <td class="no-print"><input type="checkbox" class="row-check" checked></td>
+            <td class="row-num">{{ ns.num }}</td>
+            <td>
+                {{ p.name }}
+                <span class="kind-tag">{{ _('Component') }}</span>
+            </td>
+            <td>{{ [p.part_number, p.category] | select | list | join(' · ') or '—' }}</td>
+            <td><input class="qty" type="number" value="1" min="0.01" step="0.01"></td>
+            <td>{{ _('pcs') }}</td>
+            <td>{{ p.notes or '' }}</td>
+        </tr>
+        {% endfor %}
+        {% for sp in machine.spare_parts %}
+        {% if sp.warehouse_item %}
+        {% set ns.num = ns.num + 1 %}
+        <tr data-row>
+            <td class="no-print"><input type="checkbox" class="row-check" checked></td>
+            <td class="row-num">{{ ns.num }}</td>
+            <td>
+                {{ sp.warehouse_item.naam }}
+                <span class="kind-tag">{{ _('Spare part') }}</span>
+            </td>
+            <td>{{ [sp.warehouse_item.categorie, sp.warehouse_item.supplier_part_number] | select | list | join(' · ') or '—' }}</td>
+            <td><input class="qty" type="number" value="{{ sp.quantity_needed or 1 }}" min="0.01" step="0.01"></td>
+            <td>{{ sp.warehouse_item.eenheid or _('pcs') }}</td>
+            <td></td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% for mc in machine.consumables %}
+        {% if mc.warehouse_item %}
+        {% set ns.num = ns.num + 1 %}
+        <tr data-row>
+            <td class="no-print"><input type="checkbox" class="row-check" checked></td>
+            <td class="row-num">{{ ns.num }}</td>
+            <td>
+                {{ mc.warehouse_item.naam }}
+                <span class="kind-tag">{{ _('Consumable') }}</span>
+            </td>
+            <td>{{ [mc.warehouse_item.categorie, mc.warehouse_item.consumable_type] | select | list | join(' · ') or '—' }}</td>
+            <td><input class="qty" type="number" value="{{ mc.quantity_per_use or 1 }}" min="0.01" step="0.01"></td>
+            <td>{{ mc.warehouse_item.eenheid or _('pcs') }}</td>
+            <td>{{ mc.notes or '' }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="totals">
+    <strong>{{ _('Total items') }}:</strong> <span id="totalCount">{{ items_total }}</span>
+    &nbsp;&nbsp;&nbsp;
+    <strong>{{ _('Machine') }}:</strong> {{ machine.name }}
+</div>
+
+<div class="reason" style="display:block">
+    <label style="display:block;margin-bottom:6px">{{ _('Notes / Condition') }}:</label>
+    <textarea class="notes-area" id="actNotes" placeholder="{{ _('Condition, completeness, remarks...') }}"></textarea>
+</div>
+
+<div style="margin-top:14px;font-size:11px;line-height:1.55;color:#333">
+    {{ _('The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property.') }}
+</div>
+
+<div class="signatures">
+    <div class="sig-block">
+        <div class="title">{{ _('Giver') }}</div>
+        <div class="line">&nbsp;</div>
+        <div class="hint">{{ _('signature / full name') }}</div>
+    </div>
+    <div class="sig-block">
+        <div class="title">{{ _('Receiver') }}</div>
+        <div class="line">&nbsp;</div>
+        <div class="hint">{{ _('signature / full name') }}</div>
+    </div>
+    <div class="sig-block">
+        <div class="title">{{ _('Date') }}</div>
+        <div class="line">&nbsp;</div>
+        <div class="hint">{{ _('date') }}</div>
+    </div>
+</div>
+
+<div class="footer">
+    ProMaster CRM — {{ _('Transfer Act of Material Assets') }} — {{ machine.name }} — {{ now.strftime('%d.%m.%Y %H:%M') }}
+</div>
+
+<script>
+function fillParty(who) {
+    var sel = document.getElementById(who + 'Select');
+    var name = document.getElementById(who + 'Name');
+    if (sel && name && sel.value) {
+        name.value = sel.value;
+    }
+}
+
+function renumber() {
+    var rows = document.querySelectorAll('#itemsTable tbody tr');
+    var n = 0;
+    rows.forEach(function (row) {
+        var check = row.querySelector('.row-check');
+        if (check && !check.checked) {
+            row.classList.add('off');
+            return;
+        }
+        row.classList.remove('off');
+        n += 1;
+        var numCell = row.querySelector('.row-num');
+        if (numCell) numCell.textContent = n;
+    });
+    var total = document.getElementById('totalCount');
+    if (total) total.textContent = n;
+}
+
+document.querySelectorAll('.row-check').forEach(function (c) {
+    c.addEventListener('change', renumber);
+});
+
+var toggleAll = document.getElementById('toggleAll');
+if (toggleAll) {
+    toggleAll.addEventListener('change', function () {
+        document.querySelectorAll('.row-check').forEach(function (c) {
+            c.checked = toggleAll.checked;
+        });
+        renumber();
+    });
+}
+
+renumber();
+</script>
+</body>
+</html>

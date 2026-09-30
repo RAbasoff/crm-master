@@ -14,6 +14,7 @@
         </form>
         {% endif %}
         <a href="/machines/{{ machine.id }}/parts" class="btn btn-sm" style="background:#8e44ad;color:white">⚙️ {{ _('Parts') }}</a>
+        <a href="/machines/{{ machine.id }}/transfer-act" target="_blank" class="btn btn-sm" style="background:#16a085;color:white" title="{{ _('Transfer Act of Material Assets') }}">📜 {{ _('Transfer Act') }}</a>
         {% if current_user.has_role('admin', 'technician') %}
         <a href="/machines/{{ machine.id }}/add-maintenance" class="btn btn-sm btn-success">🔧 {{ _('Add Maintenance') }}</a>
         <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="document.getElementById('uploadDoc').style.display='block'">📄 {{ _('Upload Document') }}</button>

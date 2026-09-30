@@ -5463,3 +5463,75 @@ msgstr "PDF export is temporarily unavailable"
 
 msgid "PDF export failed: %(err)s"
 msgstr "PDF export failed: %(err)s"
+
+msgid "Transfer Act of Material Assets"
+msgstr "Transfer Act of Material Assets"
+
+msgid "ACT OF TRANSFER"
+msgstr "ACT OF TRANSFER"
+
+msgid "Act No"
+msgstr "Act No"
+
+msgid "Giver"
+msgstr "Giver"
+
+msgid "Receiver"
+msgstr "Receiver"
+
+msgid "Full name"
+msgstr "Full name"
+
+msgid "Enter name"
+msgstr "Enter name"
+
+msgid "Job title"
+msgstr "Job title"
+
+msgid "Reason for transfer"
+msgstr "Reason for transfer"
+
+msgid "Item Name"
+msgstr "Item Name"
+
+msgid "Specification"
+msgstr "Specification"
+
+msgid "Note"
+msgstr "Note"
+
+msgid "pcs"
+msgstr "pcs"
+
+msgid "Spare part"
+msgstr "Spare part"
+
+msgid "Consumable"
+msgstr "Consumable"
+
+msgid "Total items"
+msgstr "Total items"
+
+msgid "Notes / Condition"
+msgstr "Notes / Condition"
+
+msgid "Condition, completeness, remarks..."
+msgstr "Condition, completeness, remarks..."
+
+msgid "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
+msgstr "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
+
+msgid "signature / full name"
+msgstr "signature / full name"
+
+msgid "date"
+msgstr "date"
+
+msgid "Transfer Act"
+msgstr "Transfer Act"
+
+msgid "Object of transfer"
+msgstr "Object of transfer"
+
+msgid "Uncheck items that are not transferred"
+msgstr "Uncheck items that are not transferred"

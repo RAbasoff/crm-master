@@ -5499,3 +5499,75 @@ msgstr "PDF-export is tijdelijk niet beschikbaar"
 
 msgid "PDF export failed: %(err)s"
 msgstr "PDF-export mislukt: %(err)s"
+
+msgid "Transfer Act of Material Assets"
+msgstr "Overdrachtsaktestuk Materiële Activa"
+
+msgid "ACT OF TRANSFER"
+msgstr "OVERDRACHTSAKTEN"
+
+msgid "Act No"
+msgstr "Aktenr."
+
+msgid "Giver"
+msgstr "Afgever"
+
+msgid "Receiver"
+msgstr "Ontvanger"
+
+msgid "Full name"
+msgstr "Volledige naam"
+
+msgid "Enter name"
+msgstr "Naam invoeren"
+
+msgid "Job title"
+msgstr "Functie"
+
+msgid "Reason for transfer"
+msgstr "Reden van overdracht"
+
+msgid "Item Name"
+msgstr "Artikelnaam"
+
+msgid "Specification"
+msgstr "Specificatie"
+
+msgid "Note"
+msgstr "Opmerking"
+
+msgid "pcs"
+msgstr "st"
+
+msgid "Spare part"
+msgstr "Onderdeel"
+
+msgid "Consumable"
+msgstr "Verbruiksmateriaal"
+
+msgid "Total items"
+msgstr "Totaal artikelen"
+
+msgid "Notes / Condition"
+msgstr "Opmerkingen / Staat"
+
+msgid "Condition, completeness, remarks..."
+msgstr "Staat, volledigheid, opmerkingen..."
+
+msgid "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
+msgstr "Ondergetekenden bevestigen dat de bovenstaande materiële activa zijn overgedragen van de Afgever aan de Ontvanger in de in dit akten vermelde hoeveelheid en staat. De Ontvanger aanvaardt verantwoordelijkheid voor de veiligheid en het juiste gebruik van het overgedragen eigendom."
+
+msgid "signature / full name"
+msgstr "handtekening / naam"
+
+msgid "date"
+msgstr "datum"
+
+msgid "Transfer Act"
+msgstr "Overdrachtsakte"
+
+msgid "Object of transfer"
+msgstr "Overdrachtsobject"
+
+msgid "Uncheck items that are not transferred"
+msgstr "Vink artikelen uit die niet worden overgedragen"

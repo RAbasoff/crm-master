@@ -306,6 +306,8 @@ class MachineSparePart(db.Model):
     warehouse_item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False)
     quantity_needed = db.Column(db.Float, default=0)
 
+    warehouse_item = db.relationship('VoorraadItem')
+
 class MachineConsumable(db.Model):
     __tablename__ = 'machine_consumable'
     id = db.Column(db.Integer, primary_key=True)
