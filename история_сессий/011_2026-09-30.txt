@@ -65,6 +65,23 @@
      from models import db. Падал NameError при перезапуске
      миграций (всплыло при смене SCHEMA_VERSION).
 
+4) FEATURE: Розетки — привязка к автомату в электрощите
+   Дата: 30.09.2026
+   Коммит: 943935a
+   Описание:
+     Поле «Номер автомата» = опциональная связь с CircuitBreaker
+     (автоматы уже заведены в модуле ⚡). Свободный текст заменён
+     на select с группировкой по шкафам.
+   Детали:
+     - PowerOutlet.breaker_id → circuit_breaker.id (optional)
+     - Форма: select «Щиток → Автомат» (optgroup по шкафам),
+       можно «Не привязан»
+     - Список: метка автомата (Q1) + название шкафа
+     - breaker_label = schematic_label или label
+   Обсуждение:
+     гибрид (FK + текст) отклонён: раз автоматы есть —
+     проще только FK, без рассинхрона.
+
 ============================================================
 КОММИТЫ СЕССИИ
 ============================================================
@@ -72,6 +89,8 @@
            Verantwoordelijke.actief does not exist
   08262af  feat: power outlets 220V/380V per factory section
            with photos, status, notes
+  943935a  feat: link power outlets to circuit breakers
+           (optional select by cabinet)
 
 ============================================================
 ДЕПЛОЙ
