@@ -141,3 +141,41 @@
   списке и карточке. Заявки на закупку: колонка Заявитель есть.
 
 Деплой: git push (локально) → PA git pull + Web→Reload
+
+
+============================================================
+ЗАДАЧА 3 (та же сессия): Акт передачи — фото + ONTVANGER/AFGEVER
+
+СИМПТОМ: «в акт передачи не добавляются фотографии»
+КОРНЕВАЯ ПРИЧИНА (b008fe8):
+  Jinja экранировал else-ветку tojson в addMachinePhoto:
+    {{ machine.photo|tojson if machine.photo else '""' }}
+  При photo=None в <script> попадало &#34;&#34; → SyntaxError всего
+  блока → обработчики photoInput не навешивались, «Добавить фото»
+  не делал ничего.
+
+ИСПРАВЛЕНИЯ:
+  - JS: {{ (machine.photo or '')|tojson }} — безопасная пустая строка
+  - Кнопки + input.click() вместо label+display:none
+  - FileReader → data: URL (фото переживают window.print())
+  - Приём картинок по MIME или расширению
+  - ONTVANGER: Имя / Полное имя / Должность — только заголовки
+    и пустые линии (заполнение от руки)
+  - AFGEVER: Полное имя — только заголовок + линия;
+    Имя (select) и Должность — оставлены
+
+ПРОВЕРКА: entity &#34; в script нет; photoInput/handlePhotoFiles/
+  readAsDataURL на месте. Пользователь: «все работает».
+
+ИТОГОВЫЕ КОММИТЫ СЕССИИ 010:
+  26f46e2  feat: photo attachments on machine transfer act
+  825180d  docs: log transfer-act commits
+  21ca65e  fix: who reported the fault (select + free-text)
+  d4f9abf  docs: log reporter-fix, session 010
+  b008fe8  fix: transfer-act photos JS + blank receiver/giver fields
+  182a14f  docs: log transfer-act photo fix
+
+СТАТУС: пользователь подтвердил работу. Деплой на PA — руками
+  пользователя (git pull origin master → Web→Reload).
+
+Сессия 010 — 30.09.2026 — КОНЕЦ
