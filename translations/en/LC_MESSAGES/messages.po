@@ -5622,3 +5622,12 @@ msgstr "Defective"
 
 msgid "Status: {}"
 msgstr "Status: {}"
+
+msgid "Breaker number"
+msgstr "Breaker number"
+
+msgid "e.g. Q3, F5, 12..."
+msgstr "e.g. Q3, F5, 12..."
+
+msgid "Select the circuit breaker from the electrical cabinet"
+msgstr "Select the circuit breaker from the electrical cabinet"

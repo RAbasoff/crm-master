@@ -5754,3 +5754,12 @@ msgstr "Неисправна"
 
 msgid "Status: {}"
 msgstr "Статус: {}"
+
+msgid "Breaker number"
+msgstr "Номер автомата"
+
+msgid "e.g. Q3, F5, 12..."
+msgstr "напр. Q3, F5, 12..."
+
+msgid "Select the circuit breaker from the electrical cabinet"
+msgstr "Выберите автомат из электрического шкафа"

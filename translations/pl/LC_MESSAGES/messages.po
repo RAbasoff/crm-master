@@ -5661,3 +5661,12 @@ msgstr "Uszkodzone"
 
 msgid "Status: {}"
 msgstr "Status: {}"
+
+msgid "Breaker number"
+msgstr "Numer wyłącznika"
+
+msgid "e.g. Q3, F5, 12..."
+msgstr "np. Q3, F5, 12..."
+
+msgid "Select the circuit breaker from the electrical cabinet"
+msgstr "Wybierz wyłącznik z rozdzielni"

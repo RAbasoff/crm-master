@@ -46,6 +46,23 @@
         </div>
 
         <div class="form-group">
+            <label>{{ _('Breaker number') }}</label>
+            <select name="breaker_id">
+                <option value="">{{ _('Not linked') }}</option>
+                {% for cab in cabinets %}
+                <optgroup label="{{ cab.name }}">
+                    {% for b in cab.breakers %}
+                    <option value="{{ b.id }}" {% if outlet and outlet.breaker_id == b.id %}selected{% endif %}>
+                        {{ b.schematic_label or b.label }}{% if b.description %} — {{ b.description }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+            <small style="color:#888">{{ _('Select the circuit breaker from the electrical cabinet') }}</small>
+        </div>
+
+        <div class="form-group">
             <label>{{ _('Notes') }}</label>
             <textarea name="notes" rows="3" placeholder="{{ _('Description, remarks, defects...') }}">{{ outlet.notes if outlet else '' }}</textarea>
         </div>

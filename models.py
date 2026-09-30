@@ -1210,6 +1210,7 @@ class PowerOutlet(db.Model):
     section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
     voltage = db.Column(db.String(10), nullable=False, default='220')  # '220' | '380'
     location = db.Column(db.String(300))
+    breaker_id = db.Column(db.Integer, db.ForeignKey('circuit_breaker.id'))  # номер автомата (связь)
     quantity = db.Column(db.Integer, default=1)
     status = db.Column(db.String(20), default='ok')  # ok | broken
     notes = db.Column(db.Text)
@@ -1217,7 +1218,15 @@ class PowerOutlet(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     section = db.relationship('FactorySection', backref='power_outlets')
+    breaker = db.relationship('CircuitBreaker', foreign_keys=[breaker_id], backref='power_outlets')
     photos = db.relationship('PowerOutletPhoto', backref='outlet', lazy=True, cascade='all, delete-orphan')
+
+    @property
+    def breaker_label(self):
+        """Номер/метка автомата для отображения."""
+        if not self.breaker:
+            return None
+        return self.breaker.schematic_label or self.breaker.label
 
 class PowerOutletPhoto(db.Model):
     __tablename__ = 'power_outlet_photo'

@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument, PowerOutlet, PowerOutletPhoto, FactorySection
 from utils import role_required, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file, log_audit
-from sqlalchemy.orm import subqueryload
+from sqlalchemy.orm import subqueryload, joinedload
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
 
@@ -426,7 +426,8 @@ def outlets_list():
     """Summary of 220V/380V outlets per factory section + full list."""
     sections = FactorySection.query.order_by(FactorySection.name).all()
     outlets = PowerOutlet.query.options(
-        db.joinedload(PowerOutlet.photos)
+        joinedload(PowerOutlet.photos),
+        joinedload(PowerOutlet.breaker).joinedload(CircuitBreaker.cabinet),
     ).order_by(PowerOutlet.section_id, PowerOutlet.voltage, PowerOutlet.location).all()
 
     summary = []
@@ -486,6 +487,7 @@ def outlet_new():
             section_id=safe_int(request.form.get('section_id')) or None,
             voltage=voltage,
             location=request.form.get('location', '').strip(),
+            breaker_id=safe_int(request.form.get('breaker_id')) or None,
             quantity=qty,
             status=request.form.get('status', 'ok') if request.form.get('status') in ('ok', 'broken') else 'ok',
             notes=request.form.get('notes', '').strip(),
@@ -503,7 +505,10 @@ def outlet_new():
         flash(_('Outlet added'), 'success')
         return redirect(url_for('electricity.outlets_list'))
     sections = FactorySection.query.order_by(FactorySection.name).all()
-    return render_template('outlet_form.html', outlet=None, sections=sections)
+    cabinets = ElectricalCabinet.query.options(
+        subqueryload(ElectricalCabinet.breakers)
+    ).filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    return render_template('outlet_form.html', outlet=None, sections=sections, cabinets=cabinets)
 
 
 @bp.route('/outlets/<int:outlet_id>/edit', methods=['GET', 'POST'])
@@ -518,6 +523,7 @@ def outlet_edit(outlet_id):
         o.section_id = safe_int(request.form.get('section_id')) or None
         o.voltage = voltage
         o.location = request.form.get('location', '').strip()
+        o.breaker_id = safe_int(request.form.get('breaker_id')) or None
         o.quantity = max(1, safe_int(request.form.get('quantity'), 1))
         status = request.form.get('status', 'ok')
         o.status = status if status in ('ok', 'broken') else 'ok'
@@ -533,7 +539,10 @@ def outlet_edit(outlet_id):
         flash(_('Outlet saved'), 'success')
         return redirect(url_for('electricity.outlets_list'))
     sections = FactorySection.query.order_by(FactorySection.name).all()
-    return render_template('outlet_form.html', outlet=o, sections=sections)
+    cabinets = ElectricalCabinet.query.options(
+        subqueryload(ElectricalCabinet.breakers)
+    ).filter_by(is_active=True).order_by(ElectricalCabinet.name).all()
+    return render_template('outlet_form.html', outlet=o, sections=sections, cabinets=cabinets)
 
 
 @bp.route('/outlets/<int:outlet_id>/toggle-status', methods=['POST'])

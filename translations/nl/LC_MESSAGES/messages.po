@@ -5658,3 +5658,12 @@ msgstr "Defect"
 
 msgid "Status: {}"
 msgstr "Status: {}"
+
+msgid "Breaker number"
+msgstr "Automaatnummer"
+
+msgid "e.g. Q3, F5, 12..."
+msgstr "bijv. Q3, F5, 12..."
+
+msgid "Select the circuit breaker from the electrical cabinet"
+msgstr "Selecteer de automaat in het schakelbord"

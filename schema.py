@@ -476,6 +476,7 @@ def ensure_schema():
             section_id INTEGER REFERENCES factory_section(id),
             voltage VARCHAR(10) NOT NULL DEFAULT '220',
             location VARCHAR(300),
+            breaker_id INTEGER REFERENCES circuit_breaker(id),
             quantity INTEGER DEFAULT 1,
             status VARCHAR(20) DEFAULT 'ok',
             notes TEXT,

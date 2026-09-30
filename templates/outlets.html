@@ -107,6 +107,7 @@
                 <th>{{ _('Section') }}</th>
                 <th>{{ _('Voltage') }}</th>
                 <th>{{ _('Location') }}</th>
+                <th>{{ _('Breaker number') }}</th>
                 <th style="text-align:right">{{ _('Quantity') }}</th>
                 <th>{{ _('Status') }}</th>
                 <th>{{ _('Notes') }}</th>
@@ -126,6 +127,14 @@
                     </span>
                 </td>
                 <td>{{ o.location or '—' }}</td>
+                <td>
+                    {% if o.breaker %}
+                        <strong title="{{ o.breaker.cabinet.name if o.breaker.cabinet else '' }}">{{ o.breaker_label }}</strong>
+                        {% if o.breaker.cabinet %}
+                        <div style="font-size:10px;color:#888">{{ o.breaker.cabinet.name }}</div>
+                        {% endif %}
+                    {% else %}—{% endif %}
+                </td>
                 <td style="text-align:right;font-weight:600">{{ o.quantity }}</td>
                 <td>
                     {% if o.status == 'broken' %}
@@ -157,7 +166,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="8" style="text-align:center;padding:24px;color:#888">
+                <td colspan="9" style="text-align:center;padding:24px;color:#888">
                     {{ _('No outlets recorded yet') }}.
                     <a href="/electricity/outlets/new">{{ _('Add Outlet') }}</a>
                 </td>
