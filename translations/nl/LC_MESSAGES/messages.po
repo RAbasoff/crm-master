@@ -5583,3 +5583,18 @@ msgstr "Foto's komen op de afgedrukte akte"
 
 msgid "No photos added"
 msgstr "Geen foto's toegevoegd"
+
+msgid "Other person"
+msgstr "Andere persoon"
+
+msgid "Who reported the fault"
+msgstr "Wie meldde de storing"
+
+msgid "Reporter name"
+msgstr "Naam melder"
+
+msgid "Name of the person who reported"
+msgstr "Naam van de persoon die meldde"
+
+msgid "Who reported (if not you)"
+msgstr "Wie meldde (als jij het niet bent)"

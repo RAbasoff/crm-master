@@ -120,7 +120,7 @@ def export_faults():
     for f in faults:
         tech = User.query.get(f.technician_id) if f.technician_id else None
         writer.writerow([f.id, f.title, f.target_name, f.priority, f.status,
-                         f.reporter.display_name if f.reporter else '',
+                         f.reporter_label,
                          tech.display_name if tech else '',
                          f.created_at.strftime('%Y-%m-%d'),
                          f.resolved_at.strftime('%Y-%m-%d') if f.resolved_at else ''])

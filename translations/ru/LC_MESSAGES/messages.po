@@ -5679,3 +5679,18 @@ msgstr "Фото попадут в печатный акт"
 
 msgid "No photos added"
 msgstr "Фотографии не добавлены"
+
+msgid "Other person"
+msgstr "Другое лицо"
+
+msgid "Who reported the fault"
+msgstr "Кто сообщил о неисправности"
+
+msgid "Reporter name"
+msgstr "Имя заявителя"
+
+msgid "Name of the person who reported"
+msgstr "Имя человека, который сообщил"
+
+msgid "Who reported (if not you)"
+msgstr "Кто сообщил (если не вы)"

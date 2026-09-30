@@ -59,6 +59,14 @@ def fault_new():
                 equipment_id=int(equipment_id) if equipment_id else None,
                 reporter_id=current_user.id
             )
+            # Actual reporter: selected user, or free-text name (someone without an account)
+            rid = (request.form.get('reporter_id') or '').strip()
+            rname = (request.form.get('reporter_name') or '').strip()
+            if rid and rid.isdigit() and int(rid) != current_user.id:
+                if User.query.get(int(rid)):
+                    f.reporter_id = int(rid)
+            if rname:
+                f.reporter_name = rname[:200]
             db.session.add(f)
             db.session.flush()
 
@@ -78,6 +86,7 @@ def fault_new():
                 return redirect(url_for('faults.fault_new'))
 
             target = f.target_name
+            who = f.reporter_label
 
             if 'photos' in request.files:
                 for photo in request.files.getlist('photos'):
@@ -101,7 +110,7 @@ def fault_new():
                 create_notification(
                     tech.id,
                     _('Fault assigned to you'),
-                    f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority})",
+                    f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})",
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
@@ -110,13 +119,13 @@ def fault_new():
                     create_notification(
                         tech.id,
                         _('New fault report'),
-                        f"{_('Machine')}: {target} - {f.title}",
+                        f"{_('Machine')}: {target} - {f.title} ({_('Reporter')}: {who})",
                         'fault',
                         url_for('faults.fault_detail', fault_id=f.id)
                     )
 
-            log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority})')
-            add_work_report(f'⚠️ Новая поломка: {f.title} — {target} (приоритет: {f.priority})')
+            log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
+            add_work_report(f'⚠️ Новая поломка: {f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
 
             if f.priority == 'critical':
                 from app import send_email
@@ -128,6 +137,7 @@ def fault_new():
                             f'🔴 КРИТИЧЕСКАЯ ЗАЯВКА: {f.title}',
                             f'<h2>Критическая заявка #{f.id}</h2>'
                             f'<p><strong>Станок/Оборудование:</strong> {target}</p>'
+                            f'<p><strong>Заявитель:</strong> {who}</p>'
                             f'<p><strong>Описание:</strong> {f.description[:200]}</p>'
                             f'<p><a href="https://rabasoff.pythonanywhere.com/faults/{f.id}">Открыть заявку</a></p>'
                         )
@@ -142,7 +152,8 @@ def fault_new():
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     machines = Machine.query.order_by(Machine.name).all()
     equipment_list = Equipment.query.order_by(Equipment.name).all()
-    return render_template('fault_form.html', fault=None, machines=machines, equipment_list=equipment_list, technicians=technicians)
+    users = User.query.filter(User.is_active_user == True).order_by(User.username).all()
+    return render_template('fault_form.html', fault=None, machines=machines, equipment_list=equipment_list, technicians=technicians, users=users)
 
 
 @bp.route('/<int:fault_id>')

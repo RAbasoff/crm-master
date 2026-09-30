@@ -98,7 +98,7 @@
             <p><strong>{{ _('Machine / Equipment') }}:</strong> {% if fault.machine %}🏭 <a href="/floor?highlight={{ fault.machine_id }}">{{ fault.machine.name }}</a>{% elif fault.equipment %}⚙️ {{ fault.equipment.name }}{% else %}—{% endif %}</p>
             <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span></p>
             <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ fault.status }}</span></p>
-            <p><strong>{{ _('Reporter') }}:</strong> {{ fault.reporter.display_name or fault.reporter.username }}</p>
+            <p><strong>{{ _('Reporter') }}:</strong> {{ fault.reporter_label }}</p>
             <p><strong>{{ _('Created') }}:</strong> {{ fault.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
             {% if fault.assigned_technicians %}
             <p><strong>{{ _('Assigned technicians') }}:</strong></p>

@@ -737,6 +737,7 @@ class FaultReport(db.Model):
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=True, index=True)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=True, index=True)
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    reporter_name = db.Column(db.String(200))  # actual person when not the logged-in filer
     technician_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # primary technician (legacy)
     contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'), index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -760,6 +761,15 @@ class FaultReport(db.Model):
         if self.equipment:
             return self.equipment.name
         return '?'
+
+    @property
+    def reporter_label(self):
+        """Who actually reported the fault (may differ from the logged-in filer)."""
+        if self.reporter_name and self.reporter_name.strip():
+            return self.reporter_name.strip()
+        if self.reporter:
+            return self.reporter.name
+        return '—'
 
 class FaultStatusHistory(db.Model):
     __tablename__ = 'fault_status_history'

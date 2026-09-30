@@ -75,7 +75,7 @@
         {% for f in faults %}
         <div class="fault-card">
             <div class="f-title">{{ f.title }}</div>
-            <div class="f-meta">{{ f.created_at.strftime('%d-%m-%Y %H:%M') }} · {{ f.reporter.display_name if f.reporter else '—' }}</div>
+            <div class="f-meta">{{ f.created_at.strftime('%d-%m-%Y %H:%M') }} · {{ f.reporter_label }}</div>
             <span class="badge badge-{{ 'critical' if f.priority=='critical' else 'open' }}">{{ f.priority|upper }}</span>
         </div>
         {% endfor %}

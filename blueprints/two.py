@@ -700,6 +700,6 @@ def two_from_fault(fault_id):
         'section_id': f.machine.section_id if f.machine else None,
         'section_name': f.machine.section.name if f.machine and f.machine.section else '',
         'priority': f.priority,
-        'reporter': f.reporter.display_name if f.reporter else ''
+        'reporter': f.reporter_label
     })
 

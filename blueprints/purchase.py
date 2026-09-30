@@ -54,15 +54,15 @@ def purchase_request_new():
             flash(_('Save failed'), 'error')
             return redirect(url_for('purchase.purchase_request_new'))
         
-        log_audit('create', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name} (срочность: {pr.urgency})')
-        add_work_report(f'🛒 Новая заявка: {pr.part_name} x{pr.quantity} — {pr.machine.name} (срочность: {pr.urgency})')
-        
+        log_audit('create', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name} (срочность: {pr.urgency}, заявитель: {pr.requester.name if pr.requester else "?"})')
+        add_work_report(f'🛒 Новая заявка: {pr.part_name} x{pr.quantity} — {pr.machine.name} (срочность: {pr.urgency}, заявитель: {pr.requester.name if pr.requester else "?"})')
+
         admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
         for admin in admins:
             create_notification(
                 admin.id,
                 _('New purchase request'),
-                f"{pr.part_name} x{pr.quantity} — {pr.machine.name}",
+                f"{pr.part_name} x{pr.quantity} — {pr.machine.name} ({_('Requester')}: {pr.requester.name if pr.requester else '?'})",
                 'fault',
                 url_for('purchase.purchase_request_detail', request_id=pr.id)
             )

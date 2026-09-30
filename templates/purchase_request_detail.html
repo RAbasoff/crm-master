@@ -38,7 +38,7 @@
             
             <h2 style="margin-top:16px">{{ _('Status') }}</h2>
             <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ pr.status }}">{{ pr.status }}</span></p>
-            <p><strong>{{ _('Requester') }}:</strong> {{ pr.requester.display_name or pr.requester.username }}</p>
+            <p><strong>{{ _('Requester') }}:</strong> {{ pr.requester.name if pr.requester else '—' }}</p>
             <p><strong>{{ _('Created') }}:</strong> {{ pr.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
             {% if pr.reviewer %}
             <p><strong>{{ _('Reviewed by') }}:</strong> {{ pr.reviewer.display_name or pr.reviewer.username }}</p>

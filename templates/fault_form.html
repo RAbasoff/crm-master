@@ -48,6 +48,22 @@
         </div>
         <div class="form-group"><label>{{ _('Title') }} *</label><input type="text" name="title" required placeholder="{{ _('Brief description of the fault') }}"></div>
         <div class="form-group"><label>{{ _('Description') }} *</label><textarea name="description" rows="5" required placeholder="{{ _('Detailed description of the fault, symptoms, when it occurs...') }}"></textarea></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Reporter') }}</label>
+                <select name="reporter_id" id="reporterSelect" onchange="onReporterChange()">
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if u.id == current_user.id %}selected{% endif %}>{{ u.name }}</option>
+                    {% endfor %}
+                    <option value="other">{{ _('Other person') }}…</option>
+                </select>
+                <small style="color:#888">{{ _('Who reported the fault') }}</small>
+            </div>
+            <div class="form-group" id="reporterNameGroup" style="display:none">
+                <label>{{ _('Reporter name') }}</label>
+                <input type="text" name="reporter_name" id="reporterNameInput" placeholder="{{ _('Name of the person who reported') }}" maxlength="200">
+            </div>
+        </div>
 
         <div class="card" style="background:#fff5f5;margin:16px 0;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">👷 {{ _('Assign technicians') }} ({{ _('select 1 or 2') }})</h3>
@@ -228,9 +244,23 @@ function onTargetChange(sel) {
     }
 }
 
+function onReporterChange() {
+    const sel = document.getElementById('reporterSelect');
+    const group = document.getElementById('reporterNameGroup');
+    const input = document.getElementById('reporterNameInput');
+    if (sel && sel.value === 'other') {
+        group.style.display = '';
+        if (input) input.required = true;
+    } else {
+        group.style.display = 'none';
+        if (input) { input.required = false; input.value = ''; }
+    }
+}
+
 // Init on page load
 document.addEventListener('DOMContentLoaded', function() {
     onTargetChange(document.getElementById('targetSelect'));
+    onReporterChange();
 });
 </script>
 <style>#faultScanner{border:2px solid #3498db;border-radius:12px;overflow:hidden}#faultScanner video{border-radius:10px}</style>

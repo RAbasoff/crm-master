@@ -5586,3 +5586,18 @@ msgstr "Zdjęcia trafią do wydrukowanego protokołu"
 
 msgid "No photos added"
 msgstr "Nie dodano zdjęć"
+
+msgid "Other person"
+msgstr "Inna osoba"
+
+msgid "Who reported the fault"
+msgstr "Kto zgłosił usterkę"
+
+msgid "Reporter name"
+msgstr "Imię zgłaszającego"
+
+msgid "Name of the person who reported"
+msgstr "Imię osoby, która zgłosiła"
+
+msgid "Who reported (if not you)"
+msgstr "Kto zgłosił (jeśli nie ty)"

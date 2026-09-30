@@ -228,7 +228,7 @@ def reports_export():
         q = FaultReport.query.filter(FaultReport.created_at >= d_from, FaultReport.created_at < d_to)
         if user_id: q = q.filter_by(reporter_id=safe_int(user_id))
         for f in q.order_by(FaultReport.created_at.desc()).all():
-            rows.append([str(f.id), f.created_at.strftime('%Y-%m-%d %H:%M'), f.title or '', f.machine.name if f.machine else '', f.priority or '', f.status or '', f.reporter.display_name if f.reporter else ''])
+            rows.append([str(f.id), f.created_at.strftime('%Y-%m-%d %H:%M'), f.title or '', f.machine.name if f.machine else '', f.priority or '', f.status or '', f.reporter_label])
     elif report_type == 'warehouse':
         title = 'Движение склада'
         headers = ['Дата', 'Товар', 'Тип', 'Количество', 'Комментарий']

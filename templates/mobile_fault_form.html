@@ -44,6 +44,10 @@
             <textarea name="description" id="faultDesc" placeholder="{{ _('Describe the problem in detail...') }}" required></textarea>
         </div>
         <div class="field">
+            <label>{{ _('Reporter') }}</label>
+            <input type="text" name="reporter_name" placeholder="{{ _('Who reported (if not you)') }}" maxlength="200">
+        </div>
+        <div class="field">
             <label>{{ _('Machine') }}</label>
             <select name="machine_id" id="faultMachine">
                 <option value="">{{ _('— Select —') }}</option>

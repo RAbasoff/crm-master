@@ -159,7 +159,7 @@ new Chart(document.getElementById('gasChart'), {
             <td>{{ f.machine.name if f.machine else '—' }}</td>
             <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
             <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
-            <td>{{ f.reporter.display_name if f.reporter else '—' }}</td>
+            <td>{{ f.reporter_label }}</td>
         </tr>
         {% endfor %}
         

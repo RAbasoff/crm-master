@@ -70,21 +70,25 @@ def mobile_fault_new():
             status='open',
             reporter_id=current_user.id
         )
+        rname = (request.form.get('reporter_name') or '').strip()
+        if rname:
+            fault.reporter_name = rname[:200]
         db.session.add(fault)
         if not safe_commit():
             flash(_('Error saving fault report. Please try again.'), 'error')
             return redirect(url_for('mobile.mobile_fault_new'))
 
         target = fault.target_name
-        log_audit('create', 'fault_report', fault.id, f'Mobile: {title} — {target}')
-        add_work_report(f'⚠️ Новая поломка (моб.): {title} — {target} (приоритет: {priority})')
+        who = fault.reporter_label
+        log_audit('create', 'fault_report', fault.id, f'Mobile: {title} — {target} (заявитель: {who})')
+        add_work_report(f'⚠️ Новая поломка (моб.): {title} — {target} (приоритет: {priority}, заявитель: {who})')
 
         # Notify all technicians
         for tech in User.query.filter_by(role='technician', is_active_user=True).all():
             create_notification(
                 tech.id,
                 _('New fault report'),
-                f"{_('Machine')}: {target} - {title}",
+                f"{_('Machine')}: {target} - {title} ({_('Reporter')}: {who})",
                 'fault',
                 url_for('faults.fault_detail', fault_id=fault.id)
             )

@@ -5547,3 +5547,18 @@ msgstr "Photos will appear on the printed act"
 
 msgid "No photos added"
 msgstr "No photos added"
+
+msgid "Other person"
+msgstr "Other person"
+
+msgid "Who reported the fault"
+msgstr "Who reported the fault"
+
+msgid "Reporter name"
+msgstr "Reporter name"
+
+msgid "Name of the person who reported"
+msgstr "Name of the person who reported"
+
+msgid "Who reported (if not you)"
+msgstr "Who reported (if not you)"
