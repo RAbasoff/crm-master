@@ -681,7 +681,7 @@ def warehouse_transfer(item_id):
     """Transfer item quantity to a responsible person."""
     from models import Verantwoordelijke
     item = VoorraadItem.query.get_or_404(item_id)
-    persons = Verantwoordelijke.query.filter_by(actief=True).order_by(Verantwoordelijke.naam).all()
+    persons = Verantwoordelijke.query.filter_by(is_active=True).order_by(Verantwoordelijke.naam).all()
 
     if request.method == 'POST':
         person_id = safe_int(request.form.get('person_id'))
