@@ -230,3 +230,17 @@ Web → Reload
   - image accept by MIME or extension
   - ONTVANGER: Name/Full name/Job title = blank lines (label only)
   - AFGEVER: Full name = blank line; Name select + Job title kept
+
+2026-09-30 16e94bf fix: warehouse transfer InvalidRequestError
+  - Verantwoordelijke.filter_by(actief=True) — поля actief нет (is_active)
+  - Entity namespace for "client" has no property "actief"
+  - кнопка 📦 Перемещение на /warehouse снова работает
+
+2026-09-30 08262af feat: power outlets 220V/380V per factory section
+  - /electricity/outlets — сводка по цехам (220/380/итого/исправна/неисправна)
+  - CRUD розеток: цех, напряжение, расположение, количество, статус, заметки
+  - фото (несколько), toggle ✅/⛔ из списка
+  - models: PowerOutlet, PowerOutletPhoto; schema 20261001
+  - i18n ru/en/nl/pl: Розетки / Исправна / Неисправна и др.
+  - fix: schema.py run_data_migrations missing `db` import
+

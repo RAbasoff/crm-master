@@ -1,0 +1,100 @@
+Сессия 011 — 30.09.2026
+Проект: CRM Мастерская
+Время: ~19:00–20:00
+Ветка: master → github.com/RAbasoff/crm-master → PythonAnywhere
+
+============================================================
+ОБНОВЛЕНИЯ СЕССИИ (наименование / описание / дата)
+============================================================
+
+1) FIX: Склад — кнопка «Перемещение» (InvalidRequestError)
+   Дата: 30.09.2026
+   Коммит: 16e94bf
+   Описание:
+     Кнопка 📦 «Перемещение» на /warehouse выкидывала на страницу
+     InvalidRequestError. Причина: в blueprints/warehouse.py:684
+     запрос Verantwoordelijke.query.filter_by(actief=True) —
+     у модели Verantwoordelijke (таблица client) поле is_active,
+     а actief есть только у Monteur. SQLAlchemy:
+     «Entity namespace for "client" has no property "actief"».
+   Исправление:
+     actief=True → is_active=True.
+   Проверка:
+     GET /warehouse/1/transfer → 200, форма с выбором лица;
+     POST → количество списывается, движение + резерв создаются.
+
+2) FEATURE: Модуль «Розетки» 220В / 380В по цехам
+   Дата: 30.09.2026
+   Коммит: 08262af
+   Описание:
+     Страница в модуле ⚡ Electriciteit для подсчёта розеток
+     380В и 220В с привязкой к каждому цеху фабрики.
+     Назначение: инвентаризация розеток (задача на 01.10.2026).
+   Функциональность:
+     - Сводка по цехам: 220V / 380V / Итого / Исправна / Неисправна
+       + общие итоги (карточки сверху)
+     - Список всех розеток с фильтрами: цех, напряжение, статус
+     - Поля розетки: цех (FactorySection), напряжение 220|380,
+       расположение, количество, статус (ok|broken),
+       замечания/описание
+     - Фотографии: несколько фото к каждой розетке
+       (загрузка, просмотр, удаление)
+     - Быстрая смена статуса ✅/⛔ прямо из списка
+     - CRUD: добавить / редактировать / удалить
+   Где:
+     /electricity → кнопка «🔌 Розетки» → /electricity/outlets
+     Форма: /electricity/outlets/new, /outlets/<id>/edit
+   Технически:
+     - models.py: PowerOutlet, PowerOutletPhoto
+     - schema.py: CREATE TABLE power_outlet / power_outlet_photo,
+       SCHEMA_VERSION 20260930 → 20261001
+     - blueprints/electricity.py: роуты outlets CRUD + toggle-status
+       + photo delete
+     - templates/outlets.html, outlet_form.html
+     - i18n ru/en/nl/pl: Power Outlets, Working (Исправна),
+       Defective (Неисправна) и др.
+   Проверка:
+     создание 380x3 и 220x2, сводка, toggle status,
+     загрузка/удаление фото, русские подписи — всё ок.
+
+3) FIX (попутно): schema.py — отсутствующий импорт db
+   Дата: 30.09.2026
+   В составе коммита 08262af
+   Описание:
+     В run_data_migrations() использовался db.session без
+     from models import db. Падал NameError при перезапуске
+     миграций (всплыло при смене SCHEMA_VERSION).
+
+============================================================
+КОММИТЫ СЕССИИ
+============================================================
+  16e94bf  fix: warehouse transfer InvalidRequestError —
+           Verantwoordelijke.actief does not exist
+  08262af  feat: power outlets 220V/380V per factory section
+           with photos, status, notes
+
+============================================================
+ДЕПЛОЙ
+============================================================
+  git push origin master → ВЫПОЛНЕНО (20da39e..08262af)
+
+  На PA (вручную пользователя, SSH-ключа нет):
+    cd ~/crm-master
+    git pull origin master
+    Web → Reload
+
+  После деплоя — smoke:
+    https://rabasoff.pythonanywhere.com
+    /login /electricity/outlets /warehouse/1/transfer → 200
+
+============================================================
+ЗАМЕЧАНИЯ
+============================================================
+  - SSH к rabasoff@ssh.pythonanywhere.com — Permission denied.
+    Деплой на PA руками.
+  - Розетки: quantity = сколько штук в одной точке (быстрый
+    ввод группы). Сводка суммирует quantity по цеху и напряжению.
+  - Задача «посчитать розетки 380/220 по цехам» на 01.10.2026 —
+    инструмент готов, заполнять на /electricity/outlets.
+
+Сессия 011 — 30.09.2026 — КОНЕЦ
