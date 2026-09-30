@@ -195,3 +195,19 @@ Web → Reload
   - logs.py: notifications, audit, activity, system log
   - pdf_utils.py: fpdf2 bootstrap + fonts
   - utils.py facade (re-exports), 526 → 329 lines
+
+2026-09-29 bbfe9d4 docs: full session history 2026-09-29
+  - история_сессий/session_2026-09-29.txt (photo bug, cleanup, PA deploy, schema work)
+
+2026-09-30 986fe3a feat: material-assets transfer act for machines with print support
+  - templates/machine_transfer_act.html — printable ТМЦ act (parties, items table, signatures)
+  - route GET /machines/<id>/transfer-act (blueprints/machines.py)
+  - button on machine_detail.html opens act in new tab
+  - client-side select/deselect items + renumber + notes
+
+2026-09-30 26f46e2 feat: photo attachments on machine transfer act for print
+  - photos section: multi-upload, machine photo insert, delete, count
+  - print: hide controls/empty section; 3-col photo grid with page-break-inside
+  - safe JS embedding via tojson (machine.name / machine.photo)
+  - i18n: Add photos / Machine photo / Photo hint / No photos added (ru/en/nl/pl)
+  - verified: GET /machines/1/transfer-act 200, all photo UI hooks present
