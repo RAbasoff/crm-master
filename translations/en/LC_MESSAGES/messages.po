@@ -5884,3 +5884,54 @@ msgstr "Cast iron"
 
 msgid "PEX"
 msgstr "PEX"
+
+msgid "Undo"
+msgstr "Undo"
+
+msgid "Thin"
+msgstr "Thin"
+
+msgid "Thick"
+msgstr "Thick"
+
+msgid "Air color"
+msgstr "Air color"
+
+msgid "Water color"
+msgstr "Water color"
+
+msgid "Undo last point"
+msgstr "Undo last point"
+
+msgid "Delete line"
+msgstr "Delete line"
+
+msgid "— select line —"
+msgstr "— select line —"
+
+msgid "click = add point, double-click = finish"
+msgstr "click = add point, double-click = finish"
+
+msgid "Undo removes last point"
+msgstr "Undo removes last point"
+
+msgid "Select a line to edit or delete"
+msgstr "Select a line to edit or delete"
+
+msgid "Points"
+msgstr "Points"
+
+msgid "Draw"
+msgstr "Draw"
+
+msgid "Machine specifications"
+msgstr "Machine specifications"
+
+msgid "Compressed air"
+msgstr "Compressed air"
+
+msgid "Natural gas"
+msgstr "Natural gas"
+
+msgid "Gases used"
+msgstr "Gases used"

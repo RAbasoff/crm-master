@@ -22,6 +22,16 @@ from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
 bp = Blueprint('machines', __name__, url_prefix='/machines')
 
 
+def _optf(value):
+    """Optional float: empty/invalid -> None (0 stays 0)."""
+    if value is None or str(value).strip() == '':
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
 @bp.route('/')
 @login_required
 def machines_list():
@@ -56,7 +66,20 @@ def machine_new():
             marker_size=safe_int(request.form.get('marker_size'), 45),
             marker_shape=request.form.get('marker_shape', 'circle'),
             floor_x=safe_float(request.form.get('floor_x'), 50),
-            floor_y=safe_float(request.form.get('floor_y'), 50)
+            floor_y=safe_float(request.form.get('floor_y'), 50),
+            dim_length_mm=_optf(request.form.get('dim_length_mm')),
+            dim_width_mm=_optf(request.form.get('dim_width_mm')),
+            dim_height_mm=_optf(request.form.get('dim_height_mm')),
+            power_voltage=request.form.get('power_voltage', '').strip() or None,
+            power_kw=_optf(request.form.get('power_kw')),
+            air_usage_m3h=_optf(request.form.get('air_usage_m3h')),
+            water_usage_lmin=_optf(request.form.get('water_usage_lmin')),
+            gas_usage_m3h=_optf(request.form.get('gas_usage_m3h')),
+            gas_natural=bool(request.form.get('gas_natural')),
+            gas_nitrogen=bool(request.form.get('gas_nitrogen')),
+            gas_co2=bool(request.form.get('gas_co2')),
+            nitrogen_usage_m3h=_optf(request.form.get('nitrogen_usage_m3h')),
+            co2_usage_m3h=_optf(request.form.get('co2_usage_m3h')),
         )
         db.session.add(m)
         db.session.flush()
@@ -223,6 +246,19 @@ def machine_edit(machine_id):
         m.status = request.form.get('status', m.status)
         m.floor_x = safe_float(request.form.get('floor_x'), m.floor_x)
         m.floor_y = safe_float(request.form.get('floor_y'), m.floor_y)
+        m.dim_length_mm = _optf(request.form.get('dim_length_mm'))
+        m.dim_width_mm = _optf(request.form.get('dim_width_mm'))
+        m.dim_height_mm = _optf(request.form.get('dim_height_mm'))
+        m.power_voltage = request.form.get('power_voltage', '').strip() or None
+        m.power_kw = _optf(request.form.get('power_kw'))
+        m.air_usage_m3h = _optf(request.form.get('air_usage_m3h'))
+        m.water_usage_lmin = _optf(request.form.get('water_usage_lmin'))
+        m.gas_usage_m3h = _optf(request.form.get('gas_usage_m3h'))
+        m.gas_natural = bool(request.form.get('gas_natural'))
+        m.gas_nitrogen = bool(request.form.get('gas_nitrogen'))
+        m.gas_co2 = bool(request.form.get('gas_co2'))
+        m.nitrogen_usage_m3h = _optf(request.form.get('nitrogen_usage_m3h'))
+        m.co2_usage_m3h = _optf(request.form.get('co2_usage_m3h'))
         if 'photo' in request.files and request.files['photo'].filename:
             filename = save_uploaded_file(request.files['photo'], prefix=f"machine_{m.id}_")
             if filename:

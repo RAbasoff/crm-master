@@ -167,6 +167,20 @@ class Machine(db.Model):
     status = db.Column(db.String(20), default='active', index=True)
     floor_x = db.Column(db.Float, default=50)
     floor_y = db.Column(db.Float, default=50)
+    # Характеристики станка
+    dim_length_mm = db.Column(db.Float)   # габарит Д×Ш×В
+    dim_width_mm = db.Column(db.Float)
+    dim_height_mm = db.Column(db.Float)
+    power_voltage = db.Column(db.String(20))  # 220 / 380 / 400 / other
+    power_kw = db.Column(db.Float)            # мощность, кВт
+    air_usage_m3h = db.Column(db.Float)       # сжатый воздух, м³/ч
+    water_usage_lmin = db.Column(db.Float)    # вода, л/мин
+    gas_usage_m3h = db.Column(db.Float)       # природный газ, м³/ч
+    gas_natural = db.Column(db.Boolean, default=False)   # природный газ
+    gas_nitrogen = db.Column(db.Boolean, default=False)  # азот
+    gas_co2 = db.Column(db.Boolean, default=False)       # углекислый газ
+    nitrogen_usage_m3h = db.Column(db.Float)  # азот, м³/ч
+    co2_usage_m3h = db.Column(db.Float)       # CO₂, м³/ч
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     responsible_user = db.relationship('User', foreign_keys=[responsible_user_id], backref='responsible_machines')

@@ -6026,3 +6026,54 @@ msgstr "Чугун"
 
 msgid "PEX"
 msgstr "PEX"
+
+msgid "Undo"
+msgstr "Отменить"
+
+msgid "Thin"
+msgstr "Тонкая"
+
+msgid "Thick"
+msgstr "Толстая"
+
+msgid "Air color"
+msgstr "Цвет воздуха"
+
+msgid "Water color"
+msgstr "Цвет воды"
+
+msgid "Undo last point"
+msgstr "Убрать последнюю точку"
+
+msgid "Delete line"
+msgstr "Удалить линию"
+
+msgid "— select line —"
+msgstr "— выбрать линию —"
+
+msgid "click = add point, double-click = finish"
+msgstr "клик = точка, двойной клик = конец"
+
+msgid "Undo removes last point"
+msgstr "↩ убирает последнюю точку"
+
+msgid "Select a line to edit or delete"
+msgstr "Выберите линию для правки или удаления"
+
+msgid "Points"
+msgstr "Точки"
+
+msgid "Draw"
+msgstr "Рисование"
+
+msgid "Machine specifications"
+msgstr "Характеристики станка"
+
+msgid "Compressed air"
+msgstr "Сжатый воздух"
+
+msgid "Natural gas"
+msgstr "Природный газ"
+
+msgid "Gases used"
+msgstr "Используемые газы"

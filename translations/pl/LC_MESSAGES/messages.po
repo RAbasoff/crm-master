@@ -5924,3 +5924,54 @@ msgstr "Żeliwo"
 
 msgid "PEX"
 msgstr "PEX"
+
+msgid "Undo"
+msgstr "Cofnij"
+
+msgid "Thin"
+msgstr "Cienka"
+
+msgid "Thick"
+msgstr "Gruba"
+
+msgid "Air color"
+msgstr "Kolor powietrza"
+
+msgid "Water color"
+msgstr "Kolor wody"
+
+msgid "Undo last point"
+msgstr "Cofnij ostatni punkt"
+
+msgid "Delete line"
+msgstr "Usuń linię"
+
+msgid "— select line —"
+msgstr "— wybierz linię —"
+
+msgid "click = add point, double-click = finish"
+msgstr "klik = punkt, podwójne kliknięcie = koniec"
+
+msgid "Undo removes last point"
+msgstr "↩ usuwa ostatni punkt"
+
+msgid "Select a line to edit or delete"
+msgstr "Wybierz linię do edycji lub usunięcia"
+
+msgid "Points"
+msgstr "Punkty"
+
+msgid "Draw"
+msgstr "Rysowanie"
+
+msgid "Machine specifications"
+msgstr "Specyfikacja maszyny"
+
+msgid "Compressed air"
+msgstr "Powietrze sprężone"
+
+msgid "Natural gas"
+msgstr "Gaz ziemny"
+
+msgid "Gases used"
+msgstr "Używane gazy"

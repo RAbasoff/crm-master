@@ -41,6 +41,37 @@
             <p><strong>{{ _('Serial Number') }}:</strong> {{ machine.serial_number or '—' }}</p>
             <p><strong>{{ _('Year of Manufacture') }}:</strong> {{ machine.year_of_manufacture or '—' }}</p>
             <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ machine.status }}">{{ machine.status }}</span></p>
+            <div style="margin-top:12px;padding:10px 12px;background:#f4f8fb;border-radius:8px;border-left:3px solid #5dade2">
+                <div style="font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:6px">{{ _('Machine specifications') }}</div>
+                <div style="font-size:12px;color:#444;line-height:1.7">
+                    <div>📐 {{ _('Dimensions') }}:
+                        {% if machine.dim_length_mm or machine.dim_width_mm or machine.dim_height_mm %}
+                            {{ machine.dim_length_mm or '—' }} × {{ machine.dim_width_mm or '—' }} × {{ machine.dim_height_mm or '—' }} мм
+                        {% else %}—{% endif %}
+                    </div>
+                    <div>⚡ {{ _('Voltage') }}: {{ machine.power_voltage or '—' }}{% if machine.power_voltage and machine.power_voltage != 'other' %} V{% endif %}
+                        &nbsp;·&nbsp; {{ _('Power') }}: {{ machine.power_kw if machine.power_kw is not none else '—' }} кВт</div>
+                    <div>💨 {{ _('Compressed air') }}: {{ machine.air_usage_m3h if machine.air_usage_m3h is not none else '—' }} м³/ч</div>
+                    <div>💧 {{ _('Water') }}: {{ machine.water_usage_lmin if machine.water_usage_lmin is not none else '—' }} л/мин</div>
+                    <div style="margin-top:4px">
+                        <strong>{{ _('Gases used') }}:</strong>
+                        {% set gases = [] %}
+                        {% if machine.gas_natural %}{% set _ = gases.append('🔥 ' + _('Natural gas')) %}{% endif %}
+                        {% if machine.gas_nitrogen %}{% set _ = gases.append('🧪 ' + _('Nitrogen') + ' (N₂)') %}{% endif %}
+                        {% if machine.gas_co2 %}{% set _ = gases.append('💨 ' + _('Carbon dioxide') + ' (CO₂)') %}{% endif %}
+                        {% if gases %}{{ gases | join(' · ') }}{% else %}—{% endif %}
+                    </div>
+                    {% if machine.gas_natural or machine.gas_usage_m3h is not none %}
+                    <div style="padding-left:12px;color:#666">🔥 {{ _('Natural gas') }}: {{ machine.gas_usage_m3h if machine.gas_usage_m3h is not none else '—' }} м³/ч</div>
+                    {% endif %}
+                    {% if machine.gas_nitrogen or machine.nitrogen_usage_m3h is not none %}
+                    <div style="padding-left:12px;color:#666">🧪 {{ _('Nitrogen') }}: {{ machine.nitrogen_usage_m3h if machine.nitrogen_usage_m3h is not none else '—' }} м³/ч</div>
+                    {% endif %}
+                    {% if machine.gas_co2 or machine.co2_usage_m3h is not none %}
+                    <div style="padding-left:12px;color:#666">💨 {{ _('Carbon dioxide') }}: {{ machine.co2_usage_m3h if machine.co2_usage_m3h is not none else '—' }} м³/ч</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
         <div>
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">

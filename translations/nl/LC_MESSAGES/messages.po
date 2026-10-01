@@ -5941,3 +5941,54 @@ msgstr "Gietijzer"
 
 msgid "PEX"
 msgstr "PEX"
+
+msgid "Undo"
+msgstr "Ongedaan maken"
+
+msgid "Thin"
+msgstr "Dun"
+
+msgid "Thick"
+msgstr "Dik"
+
+msgid "Air color"
+msgstr "Luchtkleur"
+
+msgid "Water color"
+msgstr "Waterkleur"
+
+msgid "Undo last point"
+msgstr "Laatste punt ongedaan"
+
+msgid "Delete line"
+msgstr "Lijn verwijderen"
+
+msgid "— select line —"
+msgstr "— lijn selecteren —"
+
+msgid "click = add point, double-click = finish"
+msgstr "klik = punt, dubbelklik = klaar"
+
+msgid "Undo removes last point"
+msgstr "↩ verwijdert laatste punt"
+
+msgid "Select a line to edit or delete"
+msgstr "Selecteer lijn om te bewerken of verwijderen"
+
+msgid "Points"
+msgstr "Punten"
+
+msgid "Draw"
+msgstr "Tekenen"
+
+msgid "Machine specifications"
+msgstr "Machine specificaties"
+
+msgid "Compressed air"
+msgstr "Perslucht"
+
+msgid "Natural gas"
+msgstr "Aardgas"
+
+msgid "Gases used"
+msgstr "Gebruikte gassen"

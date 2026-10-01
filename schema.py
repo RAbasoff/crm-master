@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261005
+SCHEMA_VERSION = 20261007
 
 
 def _schema_log(msg):
@@ -574,6 +574,19 @@ def ensure_schema():
             map_x FLOAT NOT NULL,
             map_y FLOAT NOT NULL
         )"""),
+        ("machine.dim_length_mm", "ALTER TABLE machine ADD COLUMN dim_length_mm FLOAT"),
+        ("machine.dim_width_mm", "ALTER TABLE machine ADD COLUMN dim_width_mm FLOAT"),
+        ("machine.dim_height_mm", "ALTER TABLE machine ADD COLUMN dim_height_mm FLOAT"),
+        ("machine.power_voltage", "ALTER TABLE machine ADD COLUMN power_voltage VARCHAR(20)"),
+        ("machine.power_kw", "ALTER TABLE machine ADD COLUMN power_kw FLOAT"),
+        ("machine.air_usage_m3h", "ALTER TABLE machine ADD COLUMN air_usage_m3h FLOAT"),
+        ("machine.water_usage_lmin", "ALTER TABLE machine ADD COLUMN water_usage_lmin FLOAT"),
+        ("machine.gas_usage_m3h", "ALTER TABLE machine ADD COLUMN gas_usage_m3h FLOAT"),
+        ("machine.gas_natural", "ALTER TABLE machine ADD COLUMN gas_natural BOOLEAN DEFAULT 0"),
+        ("machine.gas_nitrogen", "ALTER TABLE machine ADD COLUMN gas_nitrogen BOOLEAN DEFAULT 0"),
+        ("machine.gas_co2", "ALTER TABLE machine ADD COLUMN gas_co2 BOOLEAN DEFAULT 0"),
+        ("machine.nitrogen_usage_m3h", "ALTER TABLE machine ADD COLUMN nitrogen_usage_m3h FLOAT"),
+        ("machine.co2_usage_m3h", "ALTER TABLE machine ADD COLUMN co2_usage_m3h FLOAT"),
         ("offline_mutation", """CREATE TABLE IF NOT EXISTS offline_mutation (
             id INTEGER PRIMARY KEY,
             client_id VARCHAR(64) NOT NULL UNIQUE,

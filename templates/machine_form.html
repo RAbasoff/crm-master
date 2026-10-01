@@ -58,6 +58,79 @@
 
         <div class="form-group"><label>{{ _('Installation Location') }}</label><input type="text" name="installation_location" value="{{ machine.installation_location if machine else '' }}" placeholder="{{ _('Building A, Floor 2, Zone 3...') }}"></div>
 
+        <fieldset style="border:1px solid #ddd;border-radius:8px;padding:12px;margin:12px 0">
+            <legend style="font-size:12px;font-weight:700;color:#555;padding:0 6px">{{ _('Machine specifications') }}</legend>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Length') }}, мм</label>
+                    <input type="number" name="dim_length_mm" step="0.1" min="0" value="{{ machine.dim_length_mm if machine and machine.dim_length_mm is not none else '' }}">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Width') }}, мм</label>
+                    <input type="number" name="dim_width_mm" step="0.1" min="0" value="{{ machine.dim_width_mm if machine and machine.dim_width_mm is not none else '' }}">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Height') }}, мм</label>
+                    <input type="number" name="dim_height_mm" step="0.1" min="0" value="{{ machine.dim_height_mm if machine and machine.dim_height_mm is not none else '' }}">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Power') }}, кВт</label>
+                    <input type="number" name="power_kw" step="0.1" min="0" value="{{ machine.power_kw if machine and machine.power_kw is not none else '' }}">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Voltage') }}</label>
+                    <select name="power_voltage">
+                        <option value="">{{ _('—') }}</option>
+                        {% for v in ['220', '380', '400'] %}
+                        <option value="{{ v }}" {% if machine and machine.power_voltage == v %}selected{% endif %}>{{ v }} V</option>
+                        {% endfor %}
+                        <option value="other" {% if machine and machine.power_voltage == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Compressed air') }}, м³/ч</label>
+                    <input type="number" name="air_usage_m3h" step="0.1" min="0" value="{{ machine.air_usage_m3h if machine and machine.air_usage_m3h is not none else '' }}">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Water') }}, л/мин</label>
+                    <input type="number" name="water_usage_lmin" step="0.1" min="0" value="{{ machine.water_usage_lmin if machine and machine.water_usage_lmin is not none else '' }}">
+                </div>
+            </div>
+            <div style="margin-top:12px;padding:10px 12px;background:#fff8f0;border-radius:6px;border:1px solid #f0d0a0">
+                <div style="font-size:12px;font-weight:700;color:#8a5a20;margin-bottom:8px">{{ _('Gases used') }}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:10px">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+                        <input type="checkbox" name="gas_natural" value="1" {% if machine and machine.gas_natural %}checked{% endif %}>
+                        🔥 {{ _('Natural gas') }}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+                        <input type="checkbox" name="gas_nitrogen" value="1" {% if machine and machine.gas_nitrogen %}checked{% endif %}>
+                        🧪 {{ _('Nitrogen') }} (N₂)
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+                        <input type="checkbox" name="gas_co2" value="1" {% if machine and machine.gas_co2 %}checked{% endif %}>
+                        💨 {{ _('Carbon dioxide') }} (CO₂)
+                    </label>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                    <div class="form-group" style="margin:0">
+                        <label>{{ _('Natural gas') }}, м³/ч</label>
+                        <input type="number" name="gas_usage_m3h" step="0.1" min="0" value="{{ machine.gas_usage_m3h if machine and machine.gas_usage_m3h is not none else '' }}">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label>{{ _('Nitrogen') }}, м³/ч</label>
+                        <input type="number" name="nitrogen_usage_m3h" step="0.1" min="0" value="{{ machine.nitrogen_usage_m3h if machine and machine.nitrogen_usage_m3h is not none else '' }}">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label>{{ _('Carbon dioxide') }}, м³/ч</label>
+                        <input type="number" name="co2_usage_m3h" step="0.1" min="0" value="{{ machine.co2_usage_m3h if machine and machine.co2_usage_m3h is not none else '' }}">
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
         <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">👥 {{ _('Responsible persons') }}</h3>
             <div class="form-row">
