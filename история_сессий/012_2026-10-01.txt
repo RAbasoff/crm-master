@@ -84,6 +84,17 @@
   - Для боевого теста: открыть форму, выключить Wi-Fi/интернет,
     отправить → toast с OFFLINE-…; включить интернет →
     синк, в тосте реальный номер.
-  - Деплой на PA не выполнялся (по запросу).
+============================================================
+ДЕПЛОЙ (ИТОГ)
+============================================================
+  Коммиты:
+    6a0e77d  feat: offline mode — local save with temp numbers,
+             sync + server renumbering
+    68e361d  docs: session 012 — offline mode with local queue
+             and server renumbering
+  git push origin master → ВЫПОЛНЕНО
+  PA: git pull → 68e361d, touch wsgi.py → RELOAD_OK
+  Smoke: https://rabasoff.pythonanywhere.com/static/js/offline-queue.js
+    → HTTP 200. Главная → 302 (login, ожидаемо).
 
 Сессия 012 — 01.10.2026 — КОНЕЦ
