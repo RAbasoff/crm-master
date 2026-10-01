@@ -1,0 +1,89 @@
+Сессия 012 — 01.10.2026
+Проект: CRM Мастерская
+Ветка: master → github.com/RAbasoff/crm-master → PythonAnywhere
+
+============================================================
+ОБНОВЛЕНИЯ СЕССИИ (наименование / описание / дата)
+============================================================
+
+1) FEATURE: Оффлайн-режим — локальное сохранение + синхронизация
+   Дата: 01.10.2026
+   Описание:
+     При отсутствии интернета все POST-формы CRM сохраняются на
+     устройстве (IndexedDB) с временным номером OFFLINE-ГГГГММДД-NNNN.
+     При появлении сети очередь автоматически отправляется на сервер.
+     Сервер при приёме присваивает настоящий номер документа
+     (перенумерация: TWO-…, EQ-…, EPO-… и т.д.).
+   Охват:
+     - Все POST-формы (универсальный перехват submit + form.submit)
+     - JSON/fetch-мутации (csrfFetch и др.)
+     - Файлы/фото — как Blob в IndexedDB, уходят multipart
+   Нумерация:
+     - Оффлайн: OFFLINE-YYYYMMDD-NNNN (локальный счётчик)
+     - На сервере: gen_two_number / gen_eq_number / …
+     - В UI после синка: «было OFFLINE-… → стало TWO-…»
+   Идемпотентность:
+     - Клиент шлёт X-Offline-Client-Id (uuid) + _offline_client_id
+     - Таблица offline_mutation: повторная отправка не создаёт дубль
+   Функциональность клиента:
+     - Toast «Сохранено локально» с временным номером
+     - Кнопка 📴 в топбаре + счётчик очереди
+     - Панель «Оффлайн-очередь»: список + «Синхронизировать»
+     - Автосинк: событие online, visibilitychange, интервал 15с
+     - CSRF: автообновление через /api/offline/csrf, повтор 1 раз
+   Функциональность сервера:
+     - before_request: отдача сохранённого результата по client_id
+     - after_request (X-Offline-Queue): redirect/HTML → JSON
+       {ok, redirect, flashes, number}
+     - Ошибки auth/CSRF (redirect на /login) → ok:false, НЕ пишутся
+       как успех (баг найден и исправлен при тесте)
+     - /api/offline/csrf — свежий CSRF-токен
+     - /api/offline/status — журнал повторов (для отладки)
+   Где:
+     static/js/offline-queue.js
+     blueprints/offline.py
+     app.py (hooks + blueprint)
+     models.py: OfflineMutation
+     schema.py: offline_mutation, SCHEMA_VERSION 20261001 → 20261002
+     templates/base.html (UI + toast + панель)
+     static/sw.js (cache v2)
+     static/offline.html (текст про локальную очередь)
+   Проверка (Flask test client):
+     - TWO create через X-Offline-Queue → TWO-20261001-0001
+       (было OFFLINE-…), redirect /two/13
+     - Повтор того же client_id → duplicate, номер тот же,
+       количество TWO не растёт
+     - Fault create → «Заявка создана», ok:true
+     - Без CSRF → ok:false auth_or_csrf, дубль не фиксируется
+     - /api/offline/csrf и /api/offline/status работают
+   Ограничения:
+     - Страницы форм должны быть открыты хотя бы раз онлайн
+       (иначе SW отдаст offline.html)
+     - Справочники в select (станки и т.п.) берутся из кэша
+       той страницы — свежие записи добавленные на сервере
+       после кэша не видны оффлайн
+     - form.submit() тоже перехватывается (иначе минует событие)
+
+============================================================
+ФАЙЛЫ
+============================================================
+  models.py                  + OfflineMutation
+  schema.py                  + offline_mutation, SCHEMA_VERSION 20261002
+  app.py                     + offline blueprint, before/after_request
+  blueprints/offline.py      NEW
+  static/js/offline-queue.js NEW
+  templates/base.html        + кнопка/панель/toast/скрипт
+  static/sw.js               cache v2
+  static/offline.html        текст
+
+============================================================
+ЗАМЕЧАНИЯ
+============================================================
+  - Пароль admin в локальной БД не admin123 (password_plain
+    «test12345» не совпадает с hash). Тесты шли через session.
+  - Для боевого теста: открыть форму, выключить Wi-Fi/интернет,
+    отправить → toast с OFFLINE-…; включить интернет →
+    синк, в тосте реальный номер.
+  - Деплой на PA не выполнялся (по запросу).
+
+Сессия 012 — 01.10.2026 — КОНЕЦ
