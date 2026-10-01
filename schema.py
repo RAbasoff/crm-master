@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261001
+SCHEMA_VERSION = 20261002
 
 
 def _schema_log(msg):
@@ -489,6 +489,19 @@ def ensure_schema():
             filename VARCHAR(300) NOT NULL,
             description VARCHAR(300),
             uploaded_at DATETIME
+        )"""),
+        ("offline_mutation", """CREATE TABLE IF NOT EXISTS offline_mutation (
+            id INTEGER PRIMARY KEY,
+            client_id VARCHAR(64) NOT NULL UNIQUE,
+            user_id INTEGER REFERENCES user(id),
+            path VARCHAR(300) NOT NULL,
+            method VARCHAR(10) DEFAULT 'POST',
+            temp_number VARCHAR(50),
+            title VARCHAR(200),
+            status VARCHAR(20) DEFAULT 'done',
+            result_json TEXT,
+            created_at DATETIME,
+            completed_at DATETIME
         )"""),
         ("machine_consumable.last_issued_at", "ALTER TABLE machine_consumable ADD COLUMN last_issued_at DATETIME"),
         ("fault_report.equipment_id", "ALTER TABLE fault_report ADD COLUMN equipment_id INTEGER REFERENCES equipment(id)"),

@@ -30,7 +30,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     Equipment, EquipmentDocument, EquipmentServiceLog,
                     WarehouseReservation, SupplierPrice,
                     GasCylinder, CylinderLog, CylinderOrder,
-                    ChatRoom, ChatParticipant, ChatMessage)
+                    ChatRoom, ChatParticipant, ChatMessage, OfflineMutation)
 from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -118,6 +118,8 @@ from blueprints.equipment import bp as equipment_bp
 app.register_blueprint(equipment_bp)
 from blueprints.users import bp as users_bp
 app.register_blueprint(users_bp)
+from blueprints.offline import bp as offline_bp, remember_mutation, find_mutation
+app.register_blueprint(offline_bp)
 
 csrf = CSRFProtect(app)
 db.init_app(app)
@@ -376,6 +378,20 @@ def before_request():
         if request.endpoint and request.endpoint not in allowed:
             return redirect(url_for('change_password'))
 
+    # Offline queue idempotency: a replayed mutation with a known client_id
+    # must not create a second document.
+    if request.method == 'POST':
+        client_id = request.headers.get('X-Offline-Client-Id') or (request.form.get('_offline_client_id') if request.form else None)
+        if client_id and len(client_id) <= 64:
+            existing = find_mutation(client_id)
+            if existing and existing.result_json:
+                try:
+                    payload = json.loads(existing.result_json)
+                    payload['duplicate'] = True
+                    return jsonify(payload), 200
+                except Exception:
+                    pass
+
 @app.context_processor
 def inject_section_access():
     """Make user_has_section_access available in all templates"""
@@ -412,6 +428,104 @@ def inject_section_access():
             pass
 
     return dict(has_access=has_access, reminder_count=reminder_count, chat_unread=chat_unread)
+
+
+@app.after_request
+def offline_queue_response(response):
+    """When a mutation is replayed from the offline queue, wrap classic
+    form-POST responses (redirect / HTML) as JSON so the client can finish
+    the sync without parsing HTML. Document numbers assigned by the server
+    are extracted from flash messages or the redirect Location."""
+    if request.headers.get('X-Offline-Queue') != '1':
+        return response
+    if request.method not in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        return response
+    ct = (response.headers.get('Content-Type') or '')
+    if 'application/json' in ct:
+        # Already JSON (API endpoints) — record for idempotency and pass through.
+        client_id = request.headers.get('X-Offline-Client-Id')
+        if client_id and response.status_code < 400:
+            try:
+                body = response.get_data(as_text=True)
+                remember_mutation(
+                    client_id, request.path, request.method,
+                    request.headers.get('X-Offline-Temp-Number'),
+                    request.headers.get('X-Offline-Title'),
+                    'done', body,
+                )
+            except Exception:
+                pass
+        return response
+
+    flashes = []
+    try:
+        flashes = session.pop('_flashes', [])
+        session.modified = True
+    except Exception:
+        pass
+    flash_list = [{'category': c, 'message': m} for c, m in flashes]
+    has_error_flash = any((f.get('category') or '') in ('error', 'danger') for f in flash_list)
+
+    location = response.headers.get('Location')
+    number = None
+    import re as _re
+    num_re = _re.compile(r'\b((?:TWO|EQ|EPO|WO|INV|ORD|OFFLINE)-[A-Z0-9]{4,}-\d{2,6})\b')
+    for f in flash_list:
+        found = num_re.search(f.get('message') or '')
+        if found:
+            number = found.group(1)
+            break
+    if not number and location:
+        found = num_re.search(location)
+        if found:
+            number = found.group(1)
+
+    # Redirect back to /login means auth/CSRF failure — not a successful mutation.
+    login_redirect = bool(location and location.startswith('/login'))
+
+    if 300 <= response.status_code < 400:
+        ok = (not has_error_flash) and (not login_redirect)
+        error = None
+        if login_redirect:
+            error = 'auth_or_csrf'
+        elif has_error_flash:
+            error = 'flash_error'
+        payload = {'ok': ok, 'error': error, 'redirect': location, 'flashes': flash_list, 'number': number}
+        client_id = request.headers.get('X-Offline-Client-Id')
+        if client_id and ok:
+            remember_mutation(
+                client_id, request.path, request.method,
+                request.headers.get('X-Offline-Temp-Number'),
+                request.headers.get('X-Offline-Title'),
+                'done', json.dumps(payload, ensure_ascii=False),
+            )
+        resp = jsonify(payload)
+        resp.status_code = 200
+        return resp
+
+    if response.status_code == 200:
+        # Successful non-redirect (rare) or validation re-render with 200.
+        # Treat as validation failure when flashes contain an error.
+        has_error = any((f.get('category') or '') == 'error' for f in flash_list)
+        payload = {
+            'ok': not has_error,
+            'error': 'validation' if has_error else None,
+            'redirect': location,
+            'flashes': flash_list,
+            'number': number,
+        }
+        client_id = request.headers.get('X-Offline-Client-Id')
+        if client_id and payload['ok']:
+            remember_mutation(
+                client_id, request.path, request.method,
+                request.headers.get('X-Offline-Temp-Number'),
+                request.headers.get('X-Offline-Title'),
+                'done', json.dumps(payload, ensure_ascii=False),
+            )
+        return jsonify(payload)
+
+    payload = {'ok': False, 'error': f'http_{response.status_code}', 'status': response.status_code, 'flashes': flash_list}
+    return jsonify(payload), response.status_code
 
 @app.route('/set_language/<lang>')
 def set_language(lang):

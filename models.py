@@ -1437,3 +1437,21 @@ class RecordLock(db.Model):
     locked_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=False)
     user = db.relationship('User', foreign_keys=[user_id])
+
+class OfflineMutation(db.Model):
+    """Idempotent record of an offline-queued mutation replayed to the server.
+    client_id is generated on the device when the form is saved offline;
+    the server assigns the real document number during replay."""
+    __tablename__ = 'offline_mutation'
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    path = db.Column(db.String(300), nullable=False)
+    method = db.Column(db.String(10), default='POST')
+    temp_number = db.Column(db.String(50))
+    title = db.Column(db.String(200))
+    status = db.Column(db.String(20), default='done')  # done, failed
+    result_json = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    user = db.relationship('User', foreign_keys=[user_id])

@@ -4,7 +4,7 @@
  *  - HTML pages: network-first, fallback to cache, fallback to offline.html
  *  - API / POST: always network (never cache mutations)
  */
-const CACHE = 'promaster-v1';
+const CACHE = 'promaster-v2';
 const OFFLINE_URL = '/static/offline.html';
 
 const PRECACHE = [
@@ -46,7 +46,8 @@ function isNoCache(url) {
          url.pathname.includes('/download') ||
          url.pathname.includes('/print') ||
          url.pathname.includes('/qr/') ||
-         url.pathname.includes('/scan');
+         url.pathname.includes('/scan') ||
+         url.pathname.includes('/offline/');
 }
 
 self.addEventListener('fetch', (event) => {
