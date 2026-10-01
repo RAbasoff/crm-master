@@ -96,5 +96,6 @@
   PA: git pull → 68e361d, touch wsgi.py → RELOAD_OK
   Smoke: https://rabasoff.pythonanywhere.com/static/js/offline-queue.js
     → HTTP 200. Главная → 302 (login, ожидаемо).
+  Пользователь: «Протестировал — сейчас работает всё.» (01.10.2026)
 
 Сессия 012 — 01.10.2026 — КОНЕЦ
