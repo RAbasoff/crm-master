@@ -399,8 +399,11 @@ msgstr "Gekoppelde verantwoordelijke"
 msgid "None"
 msgstr "Geen"
 
-msgid "Link user to a responsible person to show their sections on the floor plan"
-msgstr "Koppel gebruiker aan een verantwoordelijke om hun secties op de plattegrond te tonen"
+msgid ""
+"Link user to a responsible person to show their sections on the floor plan"
+msgstr ""
+"Koppel gebruiker aan een verantwoordelijke om hun secties op de plattegrond "
+"te tonen"
 
 msgid "Login Access"
 msgstr "Toegang inloggen"
@@ -1232,7 +1235,8 @@ msgid "Camera not available"
 msgstr "Camera niet beschikbaar"
 
 msgid "Camera not available. Use manual entry or USB scanner."
-msgstr "Camera niet beschikbaar. Gebruik handmatige invoer of een USB-scanner."
+msgstr ""
+"Camera niet beschikbaar. Gebruik handmatige invoer of een USB-scanner."
 
 msgid "Camera requires HTTPS. Use https:// URL"
 msgstr "Camera vereist HTTPS. Gebruik een https://-URL"
@@ -1244,7 +1248,9 @@ msgid "Cannot chat with yourself"
 msgstr "Kunt niet met uzelf chatten"
 
 msgid "Cannot delete item with movement history. Deactivate instead."
-msgstr "Kan artikel met mutatiegeschiedenis niet verwijderen. Deactiveer in plaats daarvan."
+msgstr ""
+"Kan artikel met mutatiegeschiedenis niet verwijderen. Deactiveer in plaats "
+"daarvan."
 
 msgid "Cannot delete machine with {} open fault reports"
 msgstr "Kan machine met {} open storingsmeldingen niet verwijderen"
@@ -1286,7 +1292,9 @@ msgid "Chat"
 msgstr "Chat"
 
 msgid "Check modules each user/Responsible can access. Press Save to apply."
-msgstr "Controleer welke modules elke gebruiker/verantwoordelijke kan openen. Klik op Opslaan om toe te passen."
+msgstr ""
+"Controleer welke modules elke gebruiker/verantwoordelijke kan openen. Klik "
+"op Opslaan om toe te passen."
 
 msgid "Checklist"
 msgstr "Controlelijst"
@@ -1309,8 +1317,12 @@ msgstr "Alles wissen"
 msgid "Click \"Archive Previous Month\" to create first archive"
 msgstr "Klik op \"Vorige maand archiveren\" om het eerste archief aan te maken"
 
-msgid "Click \"Auto-create from machines\" to generate groups from machine manufacturers"
-msgstr "Klik op \"Automatisch aanmaken vanuit machines\" om groepen van machinefabrikanten te genereren"
+msgid ""
+"Click \"Auto-create from machines\" to generate groups from machine "
+"manufacturers"
+msgstr ""
+"Klik op \"Automatisch aanmaken vanuit machines\" om groepen van "
+"machinefabrikanten te genereren"
 
 msgid "Click breaker to toggle"
 msgstr "Klik op automaat om te schakelen"
@@ -1400,7 +1412,9 @@ msgid "Confirm Close"
 msgstr "Sluiten bevestigen"
 
 msgid "Confirm that all work is complete before closing this fault report."
-msgstr "Bevestig dat alle werkzaamheden voltooid zijn voordat u deze storingsmelding sluit."
+msgstr ""
+"Bevestig dat alle werkzaamheden voltooid zijn voordat u deze storingsmelding"
+" sluit."
 
 msgid "Confirmed and closed"
 msgstr "Bevestigd en gesloten"
@@ -1466,7 +1480,9 @@ msgid "Cost"
 msgstr "Kosten"
 
 msgid "Count actual quantities and compare with system. Click Save to update."
-msgstr "Tel de werkelijke hoeveelheden en vergelijk met het systeem. Klik op Opslaan om bij te werken."
+msgstr ""
+"Tel de werkelijke hoeveelheden en vergelijk met het systeem. Klik op Opslaan"
+" om bij te werken."
 
 msgid "Country"
 msgstr "Land"
@@ -1568,7 +1584,8 @@ msgid "Cylinder marked as empty but log entry failed"
 msgstr "Cilinder gemarkeerd als leeg, maar logvermelding mislukt"
 
 msgid "Cylinder marked as empty. Add a new cylinder to replace it."
-msgstr "Cilinder gemarkeerd als leeg. Voeg een nieuwe cilinder toe ter vervanging."
+msgstr ""
+"Cilinder gemarkeerd als leeg. Voeg een nieuwe cilinder toe ter vervanging."
 
 msgid "Cylinder number / barcode..."
 msgstr "Cilindernummer / barcode..."
@@ -1700,7 +1717,8 @@ msgid "Delete this item?"
 msgstr "Dit artikel verwijderen?"
 
 msgid "Delete this machine? All maintenance records will be removed."
-msgstr "Deze machine verwijderen? Alle onderhoudsregistraties worden verwijderd."
+msgstr ""
+"Deze machine verwijderen? Alle onderhoudsregistraties worden verwijderd."
 
 msgid "Delete this message?"
 msgstr "Dit bericht verwijderen?"
@@ -1778,7 +1796,9 @@ msgid "Deselect all"
 msgstr "Alles deselecteren"
 
 msgid "Detailed description of the fault, symptoms, when it occurs..."
-msgstr "Gedetailleerde beschrijving van de storing, symptomen, wanneer deze optreedt..."
+msgstr ""
+"Gedetailleerde beschrijving van de storing, symptomen, wanneer deze "
+"optreedt..."
 
 msgid "Diff"
 msgstr "Verschil"
@@ -2347,11 +2367,16 @@ msgstr "IBAN"
 msgid "IP Rating"
 msgstr "IP-klasse"
 
-msgid "If checked, a Technical Work Order will be created and assigned to the selected technician"
-msgstr "Indien aangevinkt wordt een technische werkorder (TWO) aangemaakt en toegewezen aan de geselecteerde monteur"
+msgid ""
+"If checked, a Technical Work Order will be created and assigned to the "
+"selected technician"
+msgstr ""
+"Indien aangevinkt wordt een technische werkorder (TWO) aangemaakt en "
+"toegewezen aan de geselecteerde monteur"
 
 msgid "If nobody selected — message will be sent to ALL users"
-msgstr "Als niemand is geselecteerd — bericht wordt naar ALLE gebruikers gestuurd"
+msgstr ""
+"Als niemand is geselecteerd — bericht wordt naar ALLE gebruikers gestuurd"
 
 msgid "If none selected, all technicians will be notified"
 msgstr "Als er geen selectie is, worden alle monteurs geïnformeerd"
@@ -2545,11 +2570,19 @@ msgstr "Artikelen"
 msgid "Items found"
 msgstr "Artikelen gevonden"
 
-msgid "Items with identical names (case-insensitive). Consider merging or deleting duplicates."
-msgstr "Artikelen met identieke namen (hoofdletterongevoelig). Overweeg duplicaten samen te voegen of te verwijderen."
+msgid ""
+"Items with identical names (case-insensitive). Consider merging or deleting "
+"duplicates."
+msgstr ""
+"Artikelen met identieke namen (hoofdletterongevoelig). Overweeg duplicaten "
+"samen te voegen of te verwijderen."
 
-msgid "Items with identical supplier part numbers. These are likely true duplicates."
-msgstr "Artikelen met identieke leveranciersartikelnummers. Dit zijn waarschijnlijk echte duplicaten."
+msgid ""
+"Items with identical supplier part numbers. These are likely true "
+"duplicates."
+msgstr ""
+"Artikelen met identieke leveranciersartikelnummers. Dit zijn waarschijnlijk "
+"echte duplicaten."
 
 msgid "KVK"
 msgstr "KVK"
@@ -3230,7 +3263,8 @@ msgid "No switch log entries yet"
 msgstr "Nog geen schakelingslogvermeldingen"
 
 msgid "No technicians available. Create users with role \"technician\" first."
-msgstr "Geen monteurs beschikbaar. Maak eerst gebruikers met de rol \"monteur\" aan."
+msgstr ""
+"Geen monteurs beschikbaar. Maak eerst gebruikers met de rol \"monteur\" aan."
 
 msgid "No text recognized. Try again."
 msgstr "Geen tekst herkend. Probeer opnieuw."
@@ -3401,7 +3435,8 @@ msgid "Overtime"
 msgstr "Overuren"
 
 msgid "PDF plan shown as background — match breaker labels to floor points"
-msgstr "PDF-plattegrond als achtergrond — koppel automaatlabels aan vloerpunten"
+msgstr ""
+"PDF-plattegrond als achtergrond — koppel automaatlabels aan vloerpunten"
 
 msgid "Page"
 msgstr "Pagina"
@@ -3973,11 +4008,16 @@ msgstr "Scan magazijnbarcode of typ naam/code..."
 msgid "Scan warehouse items, parts, materials"
 msgstr "Scan magazijnartikelen, onderdelen, materialen"
 
-msgid "Scanned cylinder will be set as IN USE on the selected side. Current cylinder on that side will become EMPTY."
-msgstr "Gescande cilinder wordt op de geselecteerde zijde op IN GEBRUIK gezet. De huidige cilinder aan die zijde wordt LEEG."
+msgid ""
+"Scanned cylinder will be set as IN USE on the selected side. Current "
+"cylinder on that side will become EMPTY."
+msgstr ""
+"Gescande cilinder wordt op de geselecteerde zijde op IN GEBRUIK gezet. De "
+"huidige cilinder aan die zijde wordt LEEG."
 
 msgid "Scanned cylinder → FULL. Other cylinder of same gas → IN USE."
-msgstr "Gescande cilinder → VOL. Andere cilinder van hetzelfde gas → IN GEBRUIK."
+msgstr ""
+"Gescande cilinder → VOL. Andere cilinder van hetzelfde gas → IN GEBRUIK."
 
 msgid "Scanners"
 msgstr "Scanners"
@@ -4015,8 +4055,12 @@ msgstr "Zoeken en rapporten"
 msgid "Search Results"
 msgstr "Zoekresultaten"
 
-msgid "Search across all modules: machines, faults, orders, warehouse, clients, workers"
-msgstr "Zoek in alle modules: machines, storingen, bestellingen, magazijn, klanten, monteurs"
+msgid ""
+"Search across all modules: machines, faults, orders, warehouse, clients, "
+"workers"
+msgstr ""
+"Zoek in alle modules: machines, storingen, bestellingen, magazijn, klanten, "
+"monteurs"
 
 msgid "Search by barcode or name"
 msgstr "Zoek op barcode of naam"
@@ -4093,8 +4137,12 @@ msgstr "Selecteer minstens één monteur of servicepartner"
 msgid "Select cabinet"
 msgstr "Selecteer kast"
 
-msgid "Select departments where work will be performed. Each department has its own work list."
-msgstr "Selecteer de afdelingen waar het werk wordt uitgevoerd. Elke afdeling heeft een eigen werklijst."
+msgid ""
+"Select departments where work will be performed. Each department has its own"
+" work list."
+msgstr ""
+"Selecteer de afdelingen waar het werk wordt uitgevoerd. Elke afdeling heeft "
+"een eigen werklijst."
 
 msgid "Select from warehouse..."
 msgstr "Selecteer uit magazijn..."
@@ -4109,7 +4157,8 @@ msgid "Select machine"
 msgstr "Selecteer machine"
 
 msgid "Select machines for maintenance. Each machine has its own work list."
-msgstr "Selecteer machines voor onderhoud. Elke machine heeft een eigen werklijst."
+msgstr ""
+"Selecteer machines voor onderhoud. Elke machine heeft een eigen werklijst."
 
 msgid "Select material"
 msgstr "Selecteer materiaal"
@@ -4402,8 +4451,12 @@ msgstr "Temperatuurbereik"
 msgid "Temperature Sensor"
 msgstr "Temperatuursensor"
 
-msgid "The Electricity module is currently under maintenance. Please try again later."
-msgstr "De module Elektriciteit is momenteel in onderhoud. Probeer het later opnieuw."
+msgid ""
+"The Electricity module is currently under maintenance. Please try again "
+"later."
+msgstr ""
+"De module Elektriciteit is momenteel in onderhoud. Probeer het later "
+"opnieuw."
 
 msgid "This Month"
 msgstr "Deze maand"
@@ -4414,8 +4467,12 @@ msgstr "Dit materiaal is al gekoppeld"
 msgid "This month is already archived"
 msgstr "Deze maand is al gearchiveerd"
 
-msgid "This will create a User account with role \"technician\" so the worker can log in and receive notifications."
-msgstr "Dit maakt een gebruikersaccount met de rol \"monteur\" aan, zodat de monteur kan inloggen en meldingen ontvangt."
+msgid ""
+"This will create a User account with role \"technician\" so the worker can "
+"log in and receive notifications."
+msgstr ""
+"Dit maakt een gebruikersaccount met de rol \"monteur\" aan, zodat de monteur"
+" kan inloggen en meldingen ontvangt."
 
 msgid "Thursday"
 msgstr "Donderdag"
@@ -4766,7 +4823,9 @@ msgid "Why is this part needed?"
 msgstr "Waarom is dit onderdeel nodig?"
 
 msgid "Why was this switch made? e.g. overload on F12, moved to F18"
-msgstr "Waarom is deze schakeling uitgevoerd? bijv. overbelasting op F12, verplaatst naar F18"
+msgstr ""
+"Waarom is deze schakeling uitgevoerd? bijv. overbelasting op F12, verplaatst"
+" naar F18"
 
 msgid "Wiring Diagram"
 msgstr "Bedradingsschema"
@@ -4834,8 +4893,12 @@ msgstr "Werkrapport ingevuld?"
 msgid "Work report is required to close this fault"
 msgstr "Werkrapport is verplicht om deze storing te sluiten"
 
-msgid "Work report must be filled before closing. Please create a work report first."
-msgstr "Werkrapport moet vóór sluiting worden ingevuld. Maak eerst een werkrapport aan."
+msgid ""
+"Work report must be filled before closing. Please create a work report "
+"first."
+msgstr ""
+"Werkrapport moet vóór sluiting worden ingevuld. Maak eerst een werkrapport "
+"aan."
 
 msgid "Work report saved but photo upload failed"
 msgstr "Werkrapport opgeslagen, maar foto-upload mislukt"
@@ -5122,8 +5185,12 @@ msgstr "— Selecteren —"
 msgid "⏹ Stop Camera"
 msgstr "Camera stoppen"
 
-msgid "⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now."
-msgstr "⚠️ Deze registratie wordt bewerkt door %(user)s (sinds %(time)s). U kunt deze nu niet bewerken."
+msgid ""
+"⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit"
+" it now."
+msgstr ""
+"⚠️ Deze registratie wordt bewerkt door %(user)s (sinds %(time)s). U kunt "
+"deze nu niet bewerken."
 
 msgid "📷 Start Camera"
 msgstr "Camera starten"
@@ -5153,7 +5220,8 @@ msgid "Attach videos of the fault (mp4, mov, avi, webm)"
 msgstr "Voeg video's van de storing toe (mp4, mov, avi, webm)"
 
 msgid "Auto-set when section is selected, or set manually"
-msgstr "Automatisch ingesteld wanneer sectie is geselecteerd, of handmatig instellen"
+msgstr ""
+"Automatisch ingesteld wanneer sectie is geselecteerd, of handmatig instellen"
 
 msgid "Back to Machine"
 msgstr "Terug naar machine"
@@ -5554,8 +5622,16 @@ msgstr "Opmerkingen / Staat"
 msgid "Condition, completeness, remarks..."
 msgstr "Staat, volledigheid, opmerkingen..."
 
-msgid "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
-msgstr "Ondergetekenden bevestigen dat de bovenstaande materiële activa zijn overgedragen van de Afgever aan de Ontvanger in de in dit akten vermelde hoeveelheid en staat. De Ontvanger aanvaardt verantwoordelijkheid voor de veiligheid en het juiste gebruik van het overgedragen eigendom."
+msgid ""
+"The undersigned confirm that the material assets listed above have been "
+"transferred from the Giver to the Receiver in the quantity and condition "
+"indicated in this Act. The Receiver assumes responsibility for the safety "
+"and proper use of the transferred property."
+msgstr ""
+"Ondergetekenden bevestigen dat de bovenstaande materiële activa zijn "
+"overgedragen van de Afgever aan de Ontvanger in de in dit akten vermelde "
+"hoeveelheid en staat. De Ontvanger aanvaardt verantwoordelijkheid voor de "
+"veiligheid en het juiste gebruik van het overgedragen eigendom."
 
 msgid "signature / full name"
 msgstr "handtekening / naam"
@@ -5667,3 +5743,201 @@ msgstr "bijv. Q3, F5, 12..."
 
 msgid "Select the circuit breaker from the electrical cabinet"
 msgstr "Selecteer de automaat in het schakelbord"
+
+msgid "Passwords are not stored in plain text"
+msgstr "Wachtwoorden worden niet in platte tekst opgeslagen"
+
+msgid "use New Password to reset"
+msgstr "gebruik Nieuw wachtwoord om te resetten"
+
+msgid "not stored in plain text"
+msgstr "niet opgeslagen in platte tekst"
+
+msgid "Passwords are not stored in plain text — use reset."
+msgstr "Wachtwoorden worden niet in platte tekst opgeslagen — gebruik reset."
+
+msgid "Compressed Air"
+msgstr "Perslucht"
+
+msgid "Air Map"
+msgstr "Luchtkaart"
+
+msgid "Compressed Air Map"
+msgstr "Persluchtkaart"
+
+msgid "Connection points"
+msgstr "Aansluitpunten"
+
+msgid "Add point"
+msgstr "Punt toevoegen"
+
+msgid "Add connection point"
+msgstr "Aansluitpunt toevoegen"
+
+msgid "Edit point"
+msgstr "Punt bewerken"
+
+msgid "Add line"
+msgstr "Lijn toevoegen"
+
+msgid "Add air line"
+msgstr "Luchtlijn toevoegen"
+
+msgid "Edit line"
+msgstr "Lijn bewerken"
+
+msgid "Delete point?"
+msgstr "Punt verwijderen?"
+
+msgid "Delete line?"
+msgstr "Lijn verwijderen?"
+
+msgid "Air lines"
+msgstr "Luchtlijnen"
+
+msgid "Lines"
+msgstr "Lijnen"
+
+msgid "No connection points yet"
+msgstr "Nog geen aansluitpunten"
+
+msgid "No lines yet"
+msgstr "Nog geen lijnen"
+
+msgid "Total length"
+msgstr "Totale lengte"
+
+msgid "Line characteristics"
+msgstr "Lijnkenmerken"
+
+msgid "Diameter"
+msgstr "Diameter"
+
+msgid "Map color"
+msgstr "Kaartkleur"
+
+msgid "From point"
+msgstr "Vanaf punt"
+
+msgid "To point"
+msgstr "Naar punt"
+
+msgid "Draw on map"
+msgstr "Tekenen op kaart"
+
+msgid "Map"
+msgstr "Kaart"
+
+msgid "Leak"
+msgstr "Lekkage"
+
+msgid "Draw line"
+msgstr "Lijn tekenen"
+
+msgid "Cancel draw"
+msgstr "Tekenen annuleren"
+
+msgid "Save geometry"
+msgstr "Geometrie opslaan"
+
+msgid "Geometry saved"
+msgstr "Geometrie opgeslagen"
+
+msgid "Select a line first"
+msgstr "Selecteer eerst een lijn"
+
+msgid "Line name"
+msgstr "Lijnnaam"
+
+msgid "Color (hex)"
+msgstr "Kleur (hex)"
+
+msgid "— edit existing line —"
+msgstr "— bestaande lijn bewerken —"
+
+msgid "Draw: click to add vertex, double-click to finish"
+msgstr "Tekenen: klik om punt toe te voegen, dubbelklik om te voltooien"
+
+msgid "Save geometry stores the polyline"
+msgstr "Geometrie opslaan bewaart de polylijn"
+
+msgid "Select line to edit path"
+msgstr "Selecteer lijn om pad te bewerken"
+
+msgid "Click to change status"
+msgstr "Klik om status te wijzigen"
+
+msgid "Name is required"
+msgstr "Naam is verplicht"
+
+msgid "Connection point added"
+msgstr "Aansluitpunt toegevoegd"
+
+msgid "Air line added"
+msgstr "Luchtlijn toegevoegd"
+
+msgid "e.g. Compressor outlet A"
+msgstr "bijv. Compressoruitgang A"
+
+msgid "e.g. Main line — Workshop 1"
+msgstr "bijv. Hoofdleiding — Werkplaats 1"
+
+msgid "e.g. wall near press, column 2, ceiling..."
+msgstr "bijv. muur bij pers, kolom 2, plafond..."
+
+msgid "Сталь"
+msgstr "Staal"
+
+msgid "Медь"
+msgstr "Koper"
+
+msgid "Пластик"
+msgstr "Kunststof"
+
+msgid "Алюминий"
+msgstr "Aluminium"
+
+msgid "Другое"
+msgstr "Overig"
+
+msgid "Version"
+msgstr "Versie"
+
+msgid "Water Supply"
+msgstr "Watervoorziening"
+
+msgid "Water Map"
+msgstr "Waterkaart"
+
+msgid "Water Supply Map"
+msgstr "Watervoorzieningkaart"
+
+msgid "Water points"
+msgstr "Waterpunten"
+
+msgid "Water lines"
+msgstr "Waterleidingen"
+
+msgid "Add water point"
+msgstr "Waterpunt toevoegen"
+
+msgid "Add water line"
+msgstr "Waterleiding toevoegen"
+
+msgid "Water point added"
+msgstr "Waterpunt toegevoegd"
+
+msgid "Water line added"
+msgstr "Waterleiding toegevoegd"
+
+msgid "Water tap / valve A"
+msgstr "Waterkraan / ventiel A"
+
+msgid "Main water line — Workshop 1"
+msgstr "Hoofdwaterleiding — Werkplaats 1"
+
+msgid "Чугун"
+msgstr "Gietijzer"
+
+msgid "PEX"
+msgstr "PEX"

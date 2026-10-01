@@ -1,0 +1,83 @@
+Сессия 015 — 01.10.2026
+Проект: CRM Мастерская (ProMaster Version 2.11)
+Ветка: master
+
+============================================================
+ОБНОВЛЕНИЯ СЕССИИ
+============================================================
+
+1) FIX: карта фабрики в модулях воздух/вода — ВИДНА
+   Дата: 01.10.2026
+   Проблема: пользователь не видел карту.
+   Причины:
+     - air_map.html смотрел на air_map_bg.png (нет файла, 404)
+     - fallback /static/uploads/floor_plan.jpeg (тоже 404)
+     - Flask debug=False кэшировал старый шаблон
+     - opacity 0.35 на тёмном фоне — почти невидима
+   Фикс:
+     - скопирован static/floor_plan.jpeg →
+       static/uploads/air_map_bg.jpeg
+       static/uploads/water_map_bg.jpeg
+     - fallback /static/floor_plan.jpeg
+     - opacity 0.95, фон #e8eef3, z-index слои
+     - перезапуск локального сервера
+   Проверка: GET jpeg → 200, пользователь: «карту вижу, спасибо»
+
+2) FEATURE: модуль «ВОДОСНАБЖЕНИЕ» (water) — почти готов
+   Дата: 01.10.2026
+   Состав (как air):
+     - models: WaterConnectionPoint, WaterConnectionPhoto,
+       WaterLine, WaterLineVertex
+     - schema: 4 таблицы water_*, SCHEMA_VERSION 20261005
+     - blueprints/water.py (сгенерирован из air)
+     - templates: water.html, water_point_form.html,
+       water_line_form.html, water_map.html
+     - config: SECTION_KEYS + TREE += water (💧 Water Supply)
+     - base.html: меню после Сжатый воздух + Water Map
+     - app.py: register water_bp
+     - права: director/tech CRUD, user view
+     - i18n: Water Supply / Water Map / Чугун / PEX и др.
+   Материалы воды: steel, copper, plastic, cast_iron, pex, other
+   Карта: /water/map, фон water_map_bg.jpeg
+
+3) VERSION 2.11 — i18n
+   msgid "Version": ru Версия / en Version / nl Versie / pl Wersja
+   base.html, login.html
+
+4) ЛОКАЛЬНАЯ СРЕДА
+   - http://127.0.0.1:5000 (_run_local.py)
+   - admin / Aba103sov (сброшен, проверен)
+   - логи server_out.txt / server_err.txt
+
+5) SECURITY (из сессии 013, всё ещё не в git отдельно)
+   SECRET_KEY, password_plain, .gitignore — в общем диффе
+
+============================================================
+СТАТУС: ДЕПЛОЙ НА PA — ЗАПРОШЕН, НЕ ВЫПОЛНЕН
+============================================================
+Пользователь: «задеплой на РА»
+План:
+  1. git add (без _run_local.py, server_*.txt, _gen_*.py)
+  2. commit (air + water + version + security)
+  3. git push origin master
+  4. ssh rabasoff@ssh.pythonanywhere.com
+     "cd ~/crm-master && git pull origin master"
+  5. touch /var/www/rabasoff_pythonanywhere_com_wsgi.py
+  6. smoke: air_map_bg / water_map_bg /login
+ВНИМАНИЕ: на PA будет SCHEMA_VERSION 20261005,
+  создадутся таблицы air_* и water_*, очистится password_plain
+
+============================================================
+ФАЙЛЫ (изменены/новые, НЕ закоммичены)
+============================================================
+  app.py, config.py, models.py, schema.py
+  blueprints/air.py, blueprints/water.py (NEW)
+  templates/air*.html, templates/water*.html (NEW)
+  templates/base.html, login.html, users.html, worker_form.html, monteurs.html
+  translations/*/messages.{po,mo}
+  .gitignore, EMAIL_CONFIG.txt (untracked)
+  история_сессий/013, 014, 015
+Служебные (НЕ в git): _run_local.py, _gen_water.py,
+  _gen_water_tpl.py, server_out.txt, server_err.txt
+
+Сессия 015 — 01.10.2026 — КОНЕЦ

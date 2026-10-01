@@ -1,18 +1,25 @@
 import os, secrets
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_VERSION = '2.11'
 
 def _get_secret_key():
+    # Prefer env var (production: set SECRET_KEY on the server / PA)
     key = os.environ.get('SECRET_KEY')
     if key:
         return key
-    # In development, persist a random key so sessions survive restarts
+    # Fallback: persist a random key outside git (instance/ is gitignored)
     key_file = os.path.join(BASE_DIR, 'instance', '.secret_key')
     if os.path.exists(key_file):
         with open(key_file, 'r') as f:
-            return f.read().strip()
-    # Fixed fallback for production — ensures sessions survive server reloads
-    return 'werkplaats-crm-prod-2026-abasoff-stable-key'
+            key = f.read().strip()
+            if key:
+                return key
+    key = secrets.token_urlsafe(64)
+    os.makedirs(os.path.dirname(key_file), exist_ok=True)
+    with open(key_file, 'w') as f:
+        f.write(key)
+    return key
 
 class Config:
     SECRET_KEY = _get_secret_key()
@@ -52,7 +59,7 @@ LANGUAGES = {'nl': 'Nederlands', 'en': 'English', 'ru': 'Русский', 'pl': 
 SECTION_KEYS = [
     # Production
     'dashboard', 'floor', 'machines', 'equipment', 'tool_wear', 'assets',
-    'electricity', 'gas', 'maintenance', 'maintenance_plans', 'repairs',
+    'electricity', 'gas', 'air', 'water', 'maintenance', 'maintenance_plans', 'repairs',
     'faults', 'two',
     # Communication
     'messages', 'notifications',
@@ -78,6 +85,8 @@ SECTIONS_TREE = [
         ('assets', 'Other Devices', '🏭'),
         ('electricity', 'Electricity', '⚡'),
         ('gas', 'Gas System', '🔴'),
+        ('air', 'Compressed Air', '💨'),
+        ('water', 'Water Supply', '💧'),
         ('maintenance', 'Maintenance Calendar', '📅'),
         ('maintenance_plans', 'Maintenance Plans', '📋'),
         ('repairs', 'Equipment Repairs', '🔧'),

@@ -11,9 +11,9 @@
     <link rel="apple-touch-icon" href="/static/logo.jpeg">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ProMaster">
+    <meta name="apple-mobile-web-app-title" content="ProMaster 2.11">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}A.B.A.S.O.F.F. - ProMaster{% endblock %}</title>
+    <title>{% block title %}A.B.A.S.O.F.F. - ProMaster {{ _('Version') }} 2.11{% endblock %}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html { font-size: 16px; }
@@ -415,7 +415,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header" style="display:flex;align-items:center;gap:10px">
             <img src="/static/logo.jpeg" alt="ProMaster" style="width:36px;height:36px;object-fit:contain;border-radius:8px">
-            <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span></div>
+            <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span> <span style="font-size:10px;opacity:0.75;font-weight:600;letter-spacing:0">{{ _('Version') }} 2.11</span></div>
         </div>
         <nav class="sidebar-nav">
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Production') }} <span class="sb-arrow">▼</span></div>
@@ -447,6 +447,14 @@
             {% if has_access('gas') or has_access('machines') %}
             <a href="/gas" class="sb-item {% if 'gas' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas System') }}</a>
             <a href="/gas/scan" class="sb-item {% if request.endpoint == 'gas.cylinder_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Cylinders') }}</a>
+            {% endif %}
+            {% if has_access('air') %}
+            <a href="/air" class="sb-item {% if request.endpoint and request.endpoint.startswith('air.') and request.endpoint != 'air.air_map' %}active{% endif %}" data-section="air"><span class="sb-icon">💨</span>{{ _('Compressed Air') }}</a>
+            <a href="/air/map" class="sb-item {% if request.endpoint == 'air.air_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Air Map') }}</a>
+            {% endif %}
+            {% if has_access('water') %}
+            <a href="/water" class="sb-item {% if request.endpoint and request.endpoint.startswith('water.') and request.endpoint != 'water.water_map' %}active{% endif %}" data-section="water"><span class="sb-icon">💧</span>{{ _('Water Supply') }}</a>
+            <a href="/water/map" class="sb-item {% if request.endpoint == 'water.water_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Water Map') }}</a>
             {% endif %}
             {% if has_access('maintenance') %}
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>

@@ -58,16 +58,10 @@
                 </div>
                 {% if current_user.has_role('admin') %}
                 <div class="form-group" style="margin-bottom:0">
-                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Current Password') }} (admin)</label>
-                    <div style="display:flex;gap:4px;align-items:center">
-                        <input type="password" id="pw-{{ u.id }}" value="{{ u.password_plain or '' }}" readonly
-                               style="padding:6px 8px;font-size:13px;flex:1;background:#f8f9fa">
-                        <button type="button" class="btn btn-sm" style="background:#eee;height:30px"
-                                onclick="(function(b){var i=document.getElementById('pw-'+{{ u.id }});i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'})(this)">{{ '👁' }}</button>
+                    <label style="font-size:11px;color:#888;font-weight:600">{{ _('Password') }}</label>
+                    <div style="padding:6px 8px;font-size:12px;color:#888;background:#f8f9fa;border-radius:4px">
+                        {{ _('Passwords are not stored in plain text') }} — {{ _('use New Password to reset') }}
                     </div>
-                    {% if not u.password_plain %}
-                    <small style="color:#999;font-size:10px">{{ _('Set after next password change') }}</small>
-                    {% endif %}
                 </div>
                 {% endif %}
                 <div class="form-group" style="margin-bottom:0">
@@ -78,9 +72,8 @@
             {% if u.role != 'admin' %}
             <div style="margin-bottom:12px;padding:8px 12px;background:#f0f7ff;border-radius:6px;font-size:12px;display:flex;gap:12px;align-items:center">
                 <span style="color:#888">{{ _('Password') }}:</span>
-                <code style="background:#e8f4fd;padding:2px 8px;border-radius:4px;font-size:13px;color:#2c3e50;cursor:pointer"
-                    onclick="this.textContent=this.textContent==='••••'?'{{ u.password_plain or '—' }}':'••••'">••••</code>
-                <span style="font-size:10px;color:#aaa">({{ _('click to show') }})</span>
+                <code style="background:#e8f4fd;padding:2px 8px;border-radius:4px;font-size:13px;color:#2c3e50">••••</code>
+                <span style="font-size:10px;color:#aaa">({{ _('not stored in plain text') }})</span>
                 {% if u.force_change_password %}<span class="badge badge-offline" style="font-size:10px">{{ _('Must change') }}</span>{% endif %}
                 <span style="font-size:10px;color:#aaa">{{ _('Logins') }}: {{ u.login_count or 0 }}</span>
             </div>

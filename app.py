@@ -62,6 +62,10 @@ from blueprints.faults import bp as faults_bp
 app.register_blueprint(faults_bp)
 from blueprints.gas import bp as gas_bp
 app.register_blueprint(gas_bp)
+from blueprints.air import bp as air_bp
+app.register_blueprint(air_bp)
+from blueprints.water import bp as water_bp
+app.register_blueprint(water_bp)
 from blueprints.chat import bp as chat_bp
 app.register_blueprint(chat_bp)
 from blueprints.machines import bp as machines_bp

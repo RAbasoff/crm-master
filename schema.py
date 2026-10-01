@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261002
+SCHEMA_VERSION = 20261005
 
 
 def _schema_log(msg):
@@ -490,6 +490,90 @@ def ensure_schema():
             description VARCHAR(300),
             uploaded_at DATETIME
         )"""),
+        ("air_connection_point", """CREATE TABLE IF NOT EXISTS air_connection_point (
+            id INTEGER PRIMARY KEY,
+            number INTEGER NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            location VARCHAR(300),
+            section_id INTEGER REFERENCES factory_section(id),
+            status VARCHAR(20) DEFAULT 'ok',
+            notes TEXT,
+            map_x FLOAT,
+            map_y FLOAT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("air_connection_photo", """CREATE TABLE IF NOT EXISTS air_connection_photo (
+            id INTEGER PRIMARY KEY,
+            point_id INTEGER NOT NULL REFERENCES air_connection_point(id),
+            filename VARCHAR(300) NOT NULL,
+            description VARCHAR(300),
+            uploaded_at DATETIME
+        )"""),
+        ("air_line", """CREATE TABLE IF NOT EXISTS air_line (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            section_id INTEGER REFERENCES factory_section(id),
+            from_point_id INTEGER REFERENCES air_connection_point(id),
+            to_point_id INTEGER REFERENCES air_connection_point(id),
+            length_m FLOAT,
+            diameter_mm FLOAT,
+            material VARCHAR(50) DEFAULT 'steel',
+            status VARCHAR(20) DEFAULT 'ok',
+            color VARCHAR(20),
+            notes TEXT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("air_line_vertex", """CREATE TABLE IF NOT EXISTS air_line_vertex (
+            id INTEGER PRIMARY KEY,
+            line_id INTEGER NOT NULL REFERENCES air_line(id),
+            seq INTEGER NOT NULL DEFAULT 0,
+            map_x FLOAT NOT NULL,
+            map_y FLOAT NOT NULL
+        )"""),
+        ("water_connection_point", """CREATE TABLE IF NOT EXISTS water_connection_point (
+            id INTEGER PRIMARY KEY,
+            number INTEGER NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            location VARCHAR(300),
+            section_id INTEGER REFERENCES factory_section(id),
+            status VARCHAR(20) DEFAULT 'ok',
+            notes TEXT,
+            map_x FLOAT,
+            map_y FLOAT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("water_connection_photo", """CREATE TABLE IF NOT EXISTS water_connection_photo (
+            id INTEGER PRIMARY KEY,
+            point_id INTEGER NOT NULL REFERENCES water_connection_point(id),
+            filename VARCHAR(300) NOT NULL,
+            description VARCHAR(300),
+            uploaded_at DATETIME
+        )"""),
+        ("water_line", """CREATE TABLE IF NOT EXISTS water_line (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            section_id INTEGER REFERENCES factory_section(id),
+            from_point_id INTEGER REFERENCES water_connection_point(id),
+            to_point_id INTEGER REFERENCES water_connection_point(id),
+            length_m FLOAT,
+            diameter_mm FLOAT,
+            material VARCHAR(50) DEFAULT 'steel',
+            status VARCHAR(20) DEFAULT 'ok',
+            color VARCHAR(20),
+            notes TEXT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("water_line_vertex", """CREATE TABLE IF NOT EXISTS water_line_vertex (
+            id INTEGER PRIMARY KEY,
+            line_id INTEGER NOT NULL REFERENCES water_line(id),
+            seq INTEGER NOT NULL DEFAULT 0,
+            map_x FLOAT NOT NULL,
+            map_y FLOAT NOT NULL
+        )"""),
         ("offline_mutation", """CREATE TABLE IF NOT EXISTS offline_mutation (
             id INTEGER PRIMARY KEY,
             client_id VARCHAR(64) NOT NULL UNIQUE,
@@ -827,7 +911,13 @@ def run_data_migrations():
         safe_commit()
 
         # Move Pablo and Paulina to Logistiek group + set login credentials
-        logistiek_creds = {'Pablo': ('pablo', 'pablo123'), 'Paulina': ('paulina', 'paulina123')}
+        # Passwords come from env (LOGISTIEK_PABLO_PW / LOGISTIEK_PAULINA_PW).
+        # Never hardcode credentials in source.
+        import os as _os
+        logistiek_creds = {
+            'Pablo':   ('pablo',   _os.environ.get('LOGISTIEK_PABLO_PW', '')),
+            'Paulina': ('paulina', _os.environ.get('LOGISTIEK_PAULINA_PW', '')),
+        }
         for pname, (uname, pw) in logistiek_creds.items():
             p = Verantwoordelijke.query.filter_by(naam=pname).first()
             if p:
@@ -842,9 +932,12 @@ def run_data_migrations():
                     p.username = uname
                     changed = True
                 if changed:
-                    p.set_password(pw)
+                    if pw:
+                        p.set_password(pw)
+                    p.force_change_password = True
                     safe_commit()
-                    print(f"Data migration: configured {pname} login as '{uname}' in Logistiek group")
+                    print(f"Data migration: configured {pname} login as '{uname}' in Logistiek group"
+                          + (" (password set from env)" if pw else " (password must be set by admin)"))
 
         # Create WarehouseGroup for Oktopus
         oktopus_wh = WarehouseGroup.query.filter_by(name='Logistiek - Oktopus').first()
@@ -916,7 +1009,7 @@ def run_data_migrations():
         # ── 2. Base group permissions (view on all modules) ─────────────
         all_sections = [
             'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
-            'assets', 'electricity', 'gas', 'maintenance', 'maintenance_plans',
+            'assets', 'electricity', 'gas', 'air', 'water', 'maintenance', 'maintenance_plans',
             'repairs', 'faults', 'two', 'messages', 'notifications',
             'schedule', 'vacations', 'time_tracking', 'orders', 'clients',
             'workers', 'invoices', 'contractors', 'warehouse', 'consumables',
@@ -958,6 +1051,8 @@ def run_data_migrations():
                 'equipment': (True, False, False, False),
                 'tool_wear': (True, False, False, False),
                 'floor': (True, True, True, False),
+                'air': (True, True, True, False),
+                'water': (True, True, True, False),
                 'staff': (True, True, True, True),
                 'workers': (True, True, True, True),
                 'clients': (True, True, True, True),
@@ -991,6 +1086,8 @@ def run_data_migrations():
                 'faults': (True, True, True, False),
                 'machines': (True, False, True, False),
                 'floor': (True, True, True, False),
+                'air': (True, True, True, False),
+                'water': (True, True, True, False),
                 'schedule': (True, True, True, False),
                 'two': (True, True, True, False),
                 'messages': (True, True, True, False),
@@ -1024,6 +1121,8 @@ def run_data_migrations():
                 'equipment': (True, False, False, False),
                 'tool_wear': (True, False, False, False),
                 'floor': (True, False, False, False),
+                'air': (True, False, False, False),
+                'water': (True, False, False, False),
             }
             for section, (v, c, e, d) in user_crud.items():
                 p = GroupPermission.query.filter_by(group_id=user_group.id, section_key=section).first()
@@ -1066,6 +1165,14 @@ def run_data_migrations():
             db.session.execute(text("UPDATE client SET password_plain=NULL, position=NULL, notities=NULL"))
             safe_commit()
             print("Data migration: cleared password_plain and stale fields from client table")
+        except Exception:
+            db.session.rollback()
+
+        # ── 6c. SECURITY: wipe plaintext passwords from user table ──────
+        try:
+            db.session.execute(text("UPDATE user SET password_plain=NULL"))
+            safe_commit()
+            print("Data migration: SECURITY — wiped password_plain from user table")
         except Exception:
             db.session.rollback()
 
@@ -1267,7 +1374,7 @@ def run_data_migrations():
         if director_user:
             extra_sections = [
                 'dashboard', 'floor', 'machines', 'equipment', 'tool_wear',
-                'assets', 'electricity', 'gas', 'maintenance_plans', 'repairs',
+                'assets', 'electricity', 'gas', 'air', 'water', 'maintenance_plans', 'repairs',
                 'schedule', 'vacations', 'time_tracking', 'clients', 'workers',
                 'invoices', 'consumables', 'work_report', 'archive', 'statistics', 'sections',
             ]

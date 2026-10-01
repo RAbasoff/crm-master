@@ -29,7 +29,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    password_plain = db.Column(db.String(200))  # plaintext for admin view only
+    # password_plain kept as nullable column for schema compat; NEVER store secrets here
+    password_plain = db.Column(db.String(200), nullable=True)
     login_count = db.Column(db.Integer, default=0)
     force_change_password = db.Column(db.Boolean, default=False)
     first_name = db.Column(db.String(100))
@@ -66,11 +67,10 @@ class User(UserMixin, db.Model):
             full = ((self.first_name or '') + ' ' + (self.last_name or '')).strip()
             self.display_name = full or self.username
 
-    def set_password(self, password, save_plain=True):
-        """Set password hash. Also store plaintext copy for admin visibility
-        (password_plain is shown only to admins in the admin panel)."""
+    def set_password(self, password, save_plain=False):
+        """Set password hash only. Plaintext is never stored (save_plain is ignored)."""
         self.password_hash = generate_password_hash(password)
-        self.password_plain = password
+        self.password_plain = None
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -1235,6 +1235,164 @@ class PowerOutletPhoto(db.Model):
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ============================================================
+# COMPRESSED AIR (СЖАТЫЙ ВОЗДУХ)
+# ============================================================
+
+class AirConnectionPoint(db.Model):
+    """Точка подключения сжатого воздуха"""
+    __tablename__ = 'air_connection_point'
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.Integer, nullable=False)  # порядковый номер
+    name = db.Column(db.String(200), nullable=False)
+    location = db.Column(db.String(300))
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
+    status = db.Column(db.String(20), default='ok')  # ok | leak | broken
+    notes = db.Column(db.Text)
+    map_x = db.Column(db.Float)  # положение на карте (%)
+    map_y = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    section = db.relationship('FactorySection', backref='air_points')
+    photos = db.relationship('AirConnectionPhoto', backref='point', lazy=True, cascade='all, delete-orphan')
+    lines_from = db.relationship('AirLine', foreign_keys='AirLine.from_point_id', backref='from_point', lazy=True)
+    lines_to = db.relationship('AirLine', foreign_keys='AirLine.to_point_id', backref='to_point', lazy=True)
+
+    @property
+    def status_label(self):
+        return {'ok': '✅', 'leak': '💨', 'broken': '⛔'}.get(self.status, '❓')
+
+
+class AirConnectionPhoto(db.Model):
+    __tablename__ = 'air_connection_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    point_id = db.Column(db.Integer, db.ForeignKey('air_connection_point.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class AirLine(db.Model):
+    """Линия сжатого воздуха (характеристики + геометрия на карте)"""
+    __tablename__ = 'air_line'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
+    from_point_id = db.Column(db.Integer, db.ForeignKey('air_connection_point.id'))
+    to_point_id = db.Column(db.Integer, db.ForeignKey('air_connection_point.id'))
+    length_m = db.Column(db.Float)       # длина, м
+    diameter_mm = db.Column(db.Float)    # диаметр, мм
+    material = db.Column(db.String(50), default='steel')  # steel | copper | plastic | aluminum | other
+    status = db.Column(db.String(20), default='ok')  # ok | repair | broken
+    color = db.Column(db.String(20))     # цвет линии на карте (иначе цвет цеха)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    section = db.relationship('FactorySection', backref='air_lines')
+    vertices = db.relationship('AirLineVertex', backref='line', lazy=True,
+                               cascade='all, delete-orphan',
+                               order_by='AirLineVertex.seq')
+
+    MATERIALS = {
+        'steel': 'Сталь',
+        'copper': 'Медь',
+        'plastic': 'Пластик',
+        'aluminum': 'Алюминий',
+        'other': 'Другое',
+    }
+
+
+class AirLineVertex(db.Model):
+    """Вершина ломаной линии на карте (canvas %)"""
+    __tablename__ = 'air_line_vertex'
+    id = db.Column(db.Integer, primary_key=True)
+    line_id = db.Column(db.Integer, db.ForeignKey('air_line.id'), nullable=False, index=True)
+    seq = db.Column(db.Integer, nullable=False, default=0)
+    map_x = db.Column(db.Float, nullable=False)
+    map_y = db.Column(db.Float, nullable=False)
+
+
+# ============================================================
+# WATER SUPPLY (ВОДОСНАБЖЕНИЕ)
+# ============================================================
+
+class WaterConnectionPoint(db.Model):
+    """Точка подключения водоснабжения"""
+    __tablename__ = 'water_connection_point'
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    location = db.Column(db.String(300))
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
+    status = db.Column(db.String(20), default='ok')  # ok | leak | broken
+    notes = db.Column(db.Text)
+    map_x = db.Column(db.Float)
+    map_y = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    section = db.relationship('FactorySection', backref='water_points')
+    photos = db.relationship('WaterConnectionPhoto', backref='point', lazy=True, cascade='all, delete-orphan')
+    lines_from = db.relationship('WaterLine', foreign_keys='WaterLine.from_point_id', backref='from_point', lazy=True)
+    lines_to = db.relationship('WaterLine', foreign_keys='WaterLine.to_point_id', backref='to_point', lazy=True)
+
+    @property
+    def status_label(self):
+        return {'ok': '✅', 'leak': '💧', 'broken': '⛔'}.get(self.status, '❓')
+
+
+class WaterConnectionPhoto(db.Model):
+    __tablename__ = 'water_connection_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    point_id = db.Column(db.Integer, db.ForeignKey('water_connection_point.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class WaterLine(db.Model):
+    """Линия водоснабжения (характеристики + геометрия на карте)"""
+    __tablename__ = 'water_line'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
+    from_point_id = db.Column(db.Integer, db.ForeignKey('water_connection_point.id'))
+    to_point_id = db.Column(db.Integer, db.ForeignKey('water_connection_point.id'))
+    length_m = db.Column(db.Float)
+    diameter_mm = db.Column(db.Float)
+    material = db.Column(db.String(50), default='steel')  # steel | copper | plastic | cast_iron | pex | other
+    status = db.Column(db.String(20), default='ok')  # ok | repair | broken
+    color = db.Column(db.String(20))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    section = db.relationship('FactorySection', backref='water_lines')
+    vertices = db.relationship('WaterLineVertex', backref='line', lazy=True,
+                               cascade='all, delete-orphan',
+                               order_by='WaterLineVertex.seq')
+
+    MATERIALS = {
+        'steel': 'Сталь',
+        'copper': 'Медь',
+        'plastic': 'Пластик',
+        'cast_iron': 'Чугун',
+        'pex': 'PEX',
+        'other': 'Другое',
+    }
+
+
+class WaterLineVertex(db.Model):
+    __tablename__ = 'water_line_vertex'
+    id = db.Column(db.Integer, primary_key=True)
+    line_id = db.Column(db.Integer, db.ForeignKey('water_line.id'), nullable=False, index=True)
+    seq = db.Column(db.Integer, nullable=False, default=0)
+    map_x = db.Column(db.Float, nullable=False)
+    map_y = db.Column(db.Float, nullable=False)
 
 class MonthlyArchive(db.Model):
     __tablename__ = 'monthly_archive'

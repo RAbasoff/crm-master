@@ -254,6 +254,33 @@ eaf61c6 — 28.09.2026 — fix: gas arithmetic + user names
   - список: метка автомата (Q1) + название шкафа
 
 ============================================================
+2026-10-01 (СЕССИЯ 014) — AIR MODULE + VERSION 2.11 (НЕ ЗАКОММИЧЕНО)
+============================================================
+- feat: модуль Сжатый воздух (точки+фото, линии, отдельная карта /air/map)
+- feat: Версия 2.11 (i18n Version) в sidebar/login/title
+- wip: модуль Водоснабжение (только модели)
+- fix: local server 127.0.0.1:5000, admin password Aba103sov
+См. история_сессий/014_2026-10-01.txt
+
+============================================================
+2026-10-01 (СЕССИЯ 013) — SECURITY FIXES (НЕ ЗАКОММИЧЕНО)
+============================================================
+Закрытие дыр безопасности перед выкладкой на сервер компании (15+):
+  - config.py: убран хардкод SECRET_KEY (env → instance/.secret_key)
+  - models.py: set_password() не пишет password_plain (всегда None)
+  - schema.py: SCHEMA_VERSION 20261003, UPDATE user SET password_plain=NULL
+  - schema.py: logistiek_creds из env (не pablo123/paulina123)
+  - templates/users, worker_form, monteurs: без показа паролей
+  - .gitignore: EMAIL_CONFIG.txt, ПАРОЛИ*, *.pem, *.key, secrets/
+  - EMAIL_CONFIG.txt: git rm --cached (остался на диске)
+  - i18n ru/en/nl/pl: +4 строки, .mo скомпилированы
+Проверка: app OK, /login 200, миграция 20261003 отработала.
+Файлы: 15 modified/deleted. Коммит — после решения пользователя.
+Риски git history: старый SECRET_KEY, pablo123/paulina123 —
+  на сервере: новый SECRET_KEY env + смена паролей.
+См. также: история_сессий/013_2026-10-01.txt
+
+============================================================
 SSH-ДЕПЛОЙ (настроено 30.09.2026)
 ============================================================
 Ключ: C:\Users\abaso\.ssh\id_ed25519

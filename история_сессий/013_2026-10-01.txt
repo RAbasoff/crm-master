@@ -1,0 +1,139 @@
+Сессия 013 — 01.10.2026
+Проект: CRM Мастерская
+Ветка: master (изменения НЕ закоммичены)
+
+============================================================
+ОБНОВЛЕНИЯ СЕССИИ
+============================================================
+
+1) SECURITY: закрытие дыр безопасности (перед выкладкой)
+   Дата: 01.10.2026
+   Статус: код изменён, КОММИТ НЕ СДЕЛАН
+   Описание:
+     Подготовка к выкладке на сервер компании (15+ пользователей).
+     Найдены и закрыты критичные дыры.
+
+   ДЫРА 1 — SECRET_KEY в репозитории
+     config.py: fallback 'werkplaats-crm-prod-2026-abasoff-stable-key'
+     Фикс: env SECRET_KEY → иначе instance/.secret_key (генерируется,
+     gitignore). Хардкод удалён.
+
+   ДЫРА 2 — password_plain (пароли открытым текстом)
+     models.User.set_password() писал пароль в password_plain.
+     Шаблоны users.html / worker_form.html / monteurs.html показывали
+     его админу (фича f7dbeaf).
+     Фикс: set_password() всегда password_plain=None.
+     Шаблоны: показ пароля убран (только сброс).
+     Миграция SCHEMA_VERSION 20261003: UPDATE user SET password_plain=NULL.
+
+   ДЫРА 3 — хардкод паролей в schema.py
+     logistiek_creds: 'pablo123', 'paulina123' в исходниках.
+     Фикс: env LOGISTIEK_PABLO_PW / LOGISTIEK_PAULINA_PW,
+     иначе force_change_password=True (без set_password).
+
+   ДЫРА 4 — секреты в git
+     EMAIL_CONFIG.txt — git rm --cached (остался на диске).
+     .gitignore: + EMAIL_CONFIG.txt, ПАРОЛИ*, *.pem, *.key,
+     secrets/, credentials*.json, .env.*
+
+   ПРОВЕРКА:
+     - py_compile config/models/schema OK
+     - app import OK, blueprints=35, /login → 200
+     - миграция 20261003 отработала (password_plain wiped)
+     - SECRET_KEY не содержит старый fallback
+     - i18n ru/en/nl/pl: +4 строки, .mo скомпилированы
+
+   ФАЙЛЫ:
+     config.py                      SECRET_KEY
+     models.py                      set_password / password_plain
+     schema.py                      SCHEMA 20261003, logistiek_creds
+     templates/users.html           без показа пароля
+     templates/worker_form.html     без показа пароля
+     templates/monteurs.html        без показа пароля
+     .gitignore                     секреты
+     translations/*/{messages.po,mo}
+     EMAIL_CONFIG.txt               untracked
+
+   НЕ ЗАКОММИЧЕНО (15 файлов modified/deleted).
+   Перед коммитом: пользователь решает.
+
+   ОСТАТОЧНЫЕ РИСКИ (история git):
+     - старый SECRET_KEY остаётся в истории git
+     - pablo123 / paulina123 в истории git
+     Действие на сервере: новый SECRET_KEY env + смена паролей
+     Pablo/Paulina. Если репозиторий видели третьи — ротация обязательна.
+
+============================================================
+
+2) CONSULT: защита ядра при выкладке на сервер компании
+   Дата: 01.10.2026
+   Тип: консультация (без кода)
+   Контекст: пользователь готов выкладывать на сервер компании (15+).
+   Приоритет: воровство ядра страшнее воровства данных.
+
+   ПРИНЦИП: код не покидает сервер, которым управляете только вы.
+   Клиенты (браузеры) получают HTML/JS/JSON, НЕ .py.
+
+   УРОВНИ ЗАЩИТЫ:
+     1. Не раздавать код (90%) — .pyc на сервере, без git на проде,
+        SSH только по ключу, права /opt/crm 750 root
+     2. Затруднить кражу (+8%) — Cython/pyarmor на критичном,
+        привязка к machine-id
+     3. Узнать утечку (+2%) — водяные знаки, лицензия, heartbeat,
+        договор/NDA
+
+   АРХИТЕКТУРА:
+     /opt/crm/          ядро (.pyc, chmod 750)
+     /var/lib/crm/      БД + uploads (данные компании)
+     nginx → gunicorn → ядро, HTTPS
+     Деплой rsync архивом, не git clone
+
+   НЕ ДЕЛАТЬ: класть .py на общий сервер, отдавать git-репо,
+   полагаться на «никто не полезет», убивать оффлайн-режим.
+
+============================================================
+
+3) CONSULT: разделение папок — сервер компании vs РА
+   Дата: 01.10.2026
+   Тип: консультация (без разделения)
+
+   НА СЕРВЕР КОМПАНИИ (рантайм):
+     app.py, models.py, schema.py, config.py (без секретов),
+     security.py, logs.py, pdf_utils.py, utils.py, wsgi.py,
+     requirements.txt, runtime.txt, blueprints/ (35),
+     templates/ (132), static/ (+ uploads/ пустой),
+     translations/, vendor_fpdf/, .env
+
+   НА РА (разработка):
+     .git/, история_сессий/, test_*.py,
+     migrate_to_*.py, repair_db.py, restore_backup.py,
+     launcher.py, auto_update.py, crm.spec, DEPLOY.md,
+     EMAIL_CONFIG.txt, babel.cfg, migrations/,
+     backups/, instance/, резервная_копия/
+
+   НЕ УЕЗЖАЕТ ВООБЩЕ (архив):
+     foto/, Video/, screenshots/, PDF files/,
+     Машины из эксель/, ПланФабрики/,
+     фото газовой установки/, El-kasten/, logo/ (кроме static),
+     ПАРОЛИ_МЕХАНИКАМ.txt, backups/*.db, instance/*.db
+
+   ПРАВИЛО: на сервере только то, без чего программа не работает
+   для 15+ пользователей. uploads/ и БД = живые данные, при апдейте
+   НЕ перезатирать.
+
+   РАЗВЁРТЫВАНИЕ:
+     РА → rsync (без .git, backups, media, tests) → /opt/crm
+     Данные: /var/lib/crm/{werkplaats.db, uploads/}
+     Бэкапы: ежедневно → облако/диск РА
+
+============================================================
+ИТОГ / СЛЕДУЮЩИЕ ШАГИ
+============================================================
+   [ ] Закоммитить security-фиксы (после решения пользователя)
+   [ ] На сервере: SECRET_KEY env + смена Pablo/Paulina
+   [ ] Бэкапы БД+uploads на отдельный диск/облако
+   [ ] Deploy-скрипт (rsync + systemd + nginx)
+   [ ] Build .py → .pyc для защиты ядра
+   [ ] Тесты оффлайн-синка и ролей
+
+Сессия 013 — 01.10.2026 — КОНЕЦ

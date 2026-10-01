@@ -1,0 +1,81 @@
+Сессия 014 — 01.10.2026
+Проект: CRM Мастерская (ProMaster Версия 2.11)
+Ветка: master (изменения НЕ закоммичены)
+
+============================================================
+ОБНОВЛЕНИЯ СЕССИИ
+============================================================
+
+1) FEATURE: модуль «СЖАТЫЙ ВОЗДУХ» (air)
+   Дата: 01.10.2026
+   Статус: ГОТОВ, проверен (роуты 200)
+   Описание:
+     Модуль по образцу электрики/газа, в меню после них.
+   Состав:
+     - Точки подключения: №, название, расположение, цех,
+       статус (✅ ok / 💨 leak / ⛔ broken), фото (несколько), заметки
+     - Линии: характеристика (длина м, диаметр мм, материал
+       сталь/медь/пластик/алюминий/другое), от/к точке, цвет, статус
+     - КАРТА ОТДЕЛЬНАЯ /air/map: рисование ломаных линий по цехам
+       (клик — вершина, dblclick — конец), фильтр по цехам,
+       сохранение геометрии (AirLineVertex), drag точек (API)
+   Файлы:
+     models.py: AirConnectionPoint, AirConnectionPhoto,
+                AirLine, AirLineVertex
+     blueprints/air.py NEW
+     templates/air.html, air_point_form.html, air_line_form.html, air_map.html
+     schema.py: 4 таблицы, SCHEMA_VERSION 20261004
+     config.py: SECTION_KEYS + SECTIONS_TREE += 'air'
+     base.html: меню Сжатый воздух + Карта воздуха
+     app.py: register blueprint
+   Права: air в all_sections; director/technician CRUD; user view
+   Проверка: /air/, /air/points/new, /air/lines/new, /air/map,
+             /air/api/map/data → 200; геометрия линии сохраняется
+   Фон карты: static/uploads/air_map_bg.png (fallback floor_plan.jpeg)
+
+2) FEATURE: Версия 2.11 в названии программы (i18n)
+   Дата: 01.10.2026
+   - config.py: APP_VERSION = '2.11'
+   - base.html / login.html: {{ _('Version') }} 2.11
+   - sidebar, login, title вкладки
+   - msgid "Version": ru Версия / en Version / nl Versie / pl Wersja
+
+3) В ПРОЦЕССЕ: модуль «ВОДОСНАБЖЕНИЕ» (water) — аналог air
+   Дата: 01.10.2026
+   Статус: модели ДОБАВЛЕНЫ, остальное (blueprint/schema/templates) не готово
+   Сделано:
+     models.py: WaterConnectionPoint, WaterConnectionPhoto,
+                WaterLine, WaterLineVertex
+   Осталось:
+     schema.py таблицы water_*; blueprints/water.py;
+     templates water*.html; config/base/app; menu ПОСЛЕ air;
+     i18n; SCHEMA_VERSION 20261005
+   Материалы воды: steel, copper, plastic, cast_iron, pex, other
+   Статус точки: ok / leak (💧) / broken
+
+4) ЛОКАЛЬНЫЙ СЕРВЕР + ПАРОЛЬ
+   - Flask на http://127.0.0.1:5000 (PID 40132, _run_local.py)
+   - Проблема запуска: multiline -c в Start-Process ломался → скрипт _run_local.py
+   - Пароль admin СБРОШЕН на Aba103sov (проверено check_password True)
+   - Логи: server_out.txt / server_err.txt
+   - Комп перезагружать НЕ нужно
+
+============================================================
+ФАЙЛЫ СЕССИИ (изменены, НЕ закоммичены)
+============================================================
+  models.py, schema.py, config.py, app.py
+  blueprints/air.py (NEW), templates/air*.html (NEW)
+  templates/base.html, login.html
+  translations/*/messages.{po,mo}
+  _run_local.py (служебный для локального запуска)
+
+============================================================
+СЛЕДУЮЩИЕ ШАГИ
+============================================================
+  [ ] Доделать модуль ВОДОСНАБЖЕНИЕ (water) — как air
+  [ ] Перевод «Version» проверить в .mo
+  [ ] Закоммитить air + version + water (после проверки)
+  [ ] Убрать _run_local.py из репо или в .gitignore
+  [ ] Security-фиксы (сессия 013) тоже не закоммичены
+
+Сессия 014 — 01.10.2026 — КОНЕЦ

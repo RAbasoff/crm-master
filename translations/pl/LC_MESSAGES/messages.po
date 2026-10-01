@@ -393,8 +393,11 @@ msgstr "Powiązana osoba odpowiedzialna"
 msgid "None"
 msgstr "Brak"
 
-msgid "Link user to a responsible person to show their sections on the floor plan"
-msgstr "Powiąż użytkownika z osobą odpowiedzialną, aby wyświetlić jej sekcje na mapie"
+msgid ""
+"Link user to a responsible person to show their sections on the floor plan"
+msgstr ""
+"Powiąż użytkownika z osobą odpowiedzialną, aby wyświetlić jej sekcje na "
+"mapie"
 
 msgid "Login Access"
 msgstr "Dostęp do logowania"
@@ -1372,8 +1375,12 @@ msgstr "Clear All"
 msgid "Click \"Archive Previous Month\" to create first archive"
 msgstr "Click \"Archive Previous Month\" to create first archive"
 
-msgid "Click \"Auto-create from machines\" to generate groups from machine manufacturers"
-msgstr "Click \"Auto-create from machines\" to generate groups from machine manufacturers"
+msgid ""
+"Click \"Auto-create from machines\" to generate groups from machine "
+"manufacturers"
+msgstr ""
+"Click \"Auto-create from machines\" to generate groups from machine "
+"manufacturers"
 
 msgid "Click breaker to toggle"
 msgstr "Click breaker to toggle"
@@ -1529,7 +1536,8 @@ msgid "Cost"
 msgstr "Cost"
 
 msgid "Count actual quantities and compare with system. Click Save to update."
-msgstr "Count actual quantities and compare with system. Click Save to update."
+msgstr ""
+"Count actual quantities and compare with system. Click Save to update."
 
 msgid "Country"
 msgstr "Country"
@@ -2455,8 +2463,12 @@ msgstr "IBAN"
 msgid "IP Rating"
 msgstr "IP Rating"
 
-msgid "If checked, a Technical Work Order will be created and assigned to the selected technician"
-msgstr "If checked, a Technical Work Order will be created and assigned to the selected technician"
+msgid ""
+"If checked, a Technical Work Order will be created and assigned to the "
+"selected technician"
+msgstr ""
+"If checked, a Technical Work Order will be created and assigned to the "
+"selected technician"
 
 msgid "If nobody selected — message will be sent to ALL users"
 msgstr "If nobody selected — message will be sent to ALL users"
@@ -2659,11 +2671,19 @@ msgstr "Items"
 msgid "Items found"
 msgstr "Items found"
 
-msgid "Items with identical names (case-insensitive). Consider merging or deleting duplicates."
-msgstr "Items with identical names (case-insensitive). Consider merging or deleting duplicates."
+msgid ""
+"Items with identical names (case-insensitive). Consider merging or deleting "
+"duplicates."
+msgstr ""
+"Items with identical names (case-insensitive). Consider merging or deleting "
+"duplicates."
 
-msgid "Items with identical supplier part numbers. These are likely true duplicates."
-msgstr "Items with identical supplier part numbers. These are likely true duplicates."
+msgid ""
+"Items with identical supplier part numbers. These are likely true "
+"duplicates."
+msgstr ""
+"Items with identical supplier part numbers. These are likely true "
+"duplicates."
 
 msgid "KVK"
 msgstr "KVK"
@@ -4216,8 +4236,12 @@ msgstr "Scan warehouse barcode or type name/code..."
 msgid "Scan warehouse items, parts, materials"
 msgstr "Scan warehouse items, parts, materials"
 
-msgid "Scanned cylinder will be set as IN USE on the selected side. Current cylinder on that side will become EMPTY."
-msgstr "Scanned cylinder will be set as IN USE on the selected side. Current cylinder on that side will become EMPTY."
+msgid ""
+"Scanned cylinder will be set as IN USE on the selected side. Current "
+"cylinder on that side will become EMPTY."
+msgstr ""
+"Scanned cylinder will be set as IN USE on the selected side. Current "
+"cylinder on that side will become EMPTY."
 
 msgid "Scanned cylinder → FULL. Other cylinder of same gas → IN USE."
 msgstr "Scanned cylinder → FULL. Other cylinder of same gas → IN USE."
@@ -4261,8 +4285,12 @@ msgstr "Search & Reports"
 msgid "Search Results"
 msgstr "Search Results"
 
-msgid "Search across all modules: machines, faults, orders, warehouse, clients, workers"
-msgstr "Search across all modules: machines, faults, orders, warehouse, clients, workers"
+msgid ""
+"Search across all modules: machines, faults, orders, warehouse, clients, "
+"workers"
+msgstr ""
+"Search across all modules: machines, faults, orders, warehouse, clients, "
+"workers"
 
 msgid "Search by barcode or name"
 msgstr "Search by barcode or name"
@@ -4363,8 +4391,12 @@ msgstr "Select at least one technician or contractor"
 msgid "Select cabinet"
 msgstr "Select cabinet"
 
-msgid "Select departments where work will be performed. Each department has its own work list."
-msgstr "Select departments where work will be performed. Each department has its own work list."
+msgid ""
+"Select departments where work will be performed. Each department has its own"
+" work list."
+msgstr ""
+"Select departments where work will be performed. Each department has its own"
+" work list."
 
 msgid "Select from warehouse..."
 msgstr "Select from warehouse..."
@@ -4675,8 +4707,12 @@ msgstr "Temperature Range"
 msgid "Temperature Sensor"
 msgstr "Temperature Sensor"
 
-msgid "The Electricity module is currently under maintenance. Please try again later."
-msgstr "The Electricity module is currently under maintenance. Please try again later."
+msgid ""
+"The Electricity module is currently under maintenance. Please try again "
+"later."
+msgstr ""
+"The Electricity module is currently under maintenance. Please try again "
+"later."
 
 msgid "This Month"
 msgstr "This Month"
@@ -4687,8 +4723,12 @@ msgstr "This material is already linked"
 msgid "This month is already archived"
 msgstr "This month is already archived"
 
-msgid "This will create a User account with role \"technician\" so the worker can log in and receive notifications."
-msgstr "This will create a User account with role \"technician\" so the worker can log in and receive notifications."
+msgid ""
+"This will create a User account with role \"technician\" so the worker can "
+"log in and receive notifications."
+msgstr ""
+"This will create a User account with role \"technician\" so the worker can "
+"log in and receive notifications."
 
 msgid "Thu"
 msgstr "Thu"
@@ -5164,8 +5204,12 @@ msgstr "Work report filled?"
 msgid "Work report is required to close this fault"
 msgstr "Work report is required to close this fault"
 
-msgid "Work report must be filled before closing. Please create a work report first."
-msgstr "Work report must be filled before closing. Please create a work report first."
+msgid ""
+"Work report must be filled before closing. Please create a work report "
+"first."
+msgstr ""
+"Work report must be filled before closing. Please create a work report "
+"first."
 
 msgid "Work report saved but photo upload failed"
 msgstr "Work report saved but photo upload failed"
@@ -5467,8 +5511,12 @@ msgstr "— Select —"
 msgid "⏹ Stop Camera"
 msgstr "⏹ Stop Camera"
 
-msgid "⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now."
-msgstr "⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now."
+msgid ""
+"⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit"
+" it now."
+msgstr ""
+"⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit"
+" it now."
 
 msgid "📷 Start Camera"
 msgstr "📷 Start Camera"
@@ -5557,8 +5605,16 @@ msgstr "Uwagi / Stan"
 msgid "Condition, completeness, remarks..."
 msgstr "Stan, kompletność, uwagi..."
 
-msgid "The undersigned confirm that the material assets listed above have been transferred from the Giver to the Receiver in the quantity and condition indicated in this Act. The Receiver assumes responsibility for the safety and proper use of the transferred property."
-msgstr "Niżej podpisani potwierdzają, że wymienione powyżej materiały zostały przekazane przez Wydającego Przyjmującemu w ilości i stanie wskazanym w niniejszym protokole. Przyjmujący przejmuje odpowiedzialność za bezpieczeństwo i właściwe użytkowanie przekazanego mienia."
+msgid ""
+"The undersigned confirm that the material assets listed above have been "
+"transferred from the Giver to the Receiver in the quantity and condition "
+"indicated in this Act. The Receiver assumes responsibility for the safety "
+"and proper use of the transferred property."
+msgstr ""
+"Niżej podpisani potwierdzają, że wymienione powyżej materiały zostały "
+"przekazane przez Wydającego Przyjmującemu w ilości i stanie wskazanym w "
+"niniejszym protokole. Przyjmujący przejmuje odpowiedzialność za "
+"bezpieczeństwo i właściwe użytkowanie przekazanego mienia."
 
 msgid "signature / full name"
 msgstr "podpis / imię i nazwisko"
@@ -5670,3 +5726,201 @@ msgstr "np. Q3, F5, 12..."
 
 msgid "Select the circuit breaker from the electrical cabinet"
 msgstr "Wybierz wyłącznik z rozdzielni"
+
+msgid "Passwords are not stored in plain text"
+msgstr "Hasła nie są przechowywane w postaci jawnej"
+
+msgid "use New Password to reset"
+msgstr "użyj Nowe hasło aby zresetować"
+
+msgid "not stored in plain text"
+msgstr "nie przechowywane w postaci jawnej"
+
+msgid "Passwords are not stored in plain text — use reset."
+msgstr "Hasła nie są przechowywane w postaci jawnej — użyj resetu."
+
+msgid "Compressed Air"
+msgstr "Sprężone powietrze"
+
+msgid "Air Map"
+msgstr "Mapa powietrza"
+
+msgid "Compressed Air Map"
+msgstr "Mapa sprężonego powietrza"
+
+msgid "Connection points"
+msgstr "Punkty przyłączeniowe"
+
+msgid "Add point"
+msgstr "Dodaj punkt"
+
+msgid "Add connection point"
+msgstr "Dodaj punkt przyłączeniowy"
+
+msgid "Edit point"
+msgstr "Edytuj punkt"
+
+msgid "Add line"
+msgstr "Dodaj linię"
+
+msgid "Add air line"
+msgstr "Dodaj linię powietrzną"
+
+msgid "Edit line"
+msgstr "Edytuj linię"
+
+msgid "Delete point?"
+msgstr "Usunąć punkt?"
+
+msgid "Delete line?"
+msgstr "Usunąć linię?"
+
+msgid "Air lines"
+msgstr "Linie powietrzne"
+
+msgid "Lines"
+msgstr "Linie"
+
+msgid "No connection points yet"
+msgstr "Brak punktów przyłączeniowych"
+
+msgid "No lines yet"
+msgstr "Brak linii"
+
+msgid "Total length"
+msgstr "Długość całkowita"
+
+msgid "Line characteristics"
+msgstr "Charakterystyka linii"
+
+msgid "Diameter"
+msgstr "Średnica"
+
+msgid "Map color"
+msgstr "Kolor na mapie"
+
+msgid "From point"
+msgstr "Od punktu"
+
+msgid "To point"
+msgstr "Do punktu"
+
+msgid "Draw on map"
+msgstr "Rysuj na mapie"
+
+msgid "Map"
+msgstr "Mapa"
+
+msgid "Leak"
+msgstr "Wyciek"
+
+msgid "Draw line"
+msgstr "Rysuj linię"
+
+msgid "Cancel draw"
+msgstr "Anuluj rysowanie"
+
+msgid "Save geometry"
+msgstr "Zapisz geometrię"
+
+msgid "Geometry saved"
+msgstr "Geometria zapisana"
+
+msgid "Select a line first"
+msgstr "Najpierw wybierz linię"
+
+msgid "Line name"
+msgstr "Nazwa linii"
+
+msgid "Color (hex)"
+msgstr "Kolor (hex)"
+
+msgid "— edit existing line —"
+msgstr "— edytuj istniejącą linię —"
+
+msgid "Draw: click to add vertex, double-click to finish"
+msgstr "Rysowanie: kliknij aby dodać punkt, podwójne kliknięcie aby zakończyć"
+
+msgid "Save geometry stores the polyline"
+msgstr "Zapisz geometrię zapisuje linię łamaną"
+
+msgid "Select line to edit path"
+msgstr "Wybierz linię aby edytować ścieżkę"
+
+msgid "Click to change status"
+msgstr "Kliknij aby zmienić status"
+
+msgid "Name is required"
+msgstr "Nazwa jest wymagana"
+
+msgid "Connection point added"
+msgstr "Dodano punkt przyłączeniowy"
+
+msgid "Air line added"
+msgstr "Dodano linię powietrzną"
+
+msgid "e.g. Compressor outlet A"
+msgstr "np. Wyjście sprężarki A"
+
+msgid "e.g. Main line — Workshop 1"
+msgstr "np. Linia główna — Warsztat 1"
+
+msgid "e.g. wall near press, column 2, ceiling..."
+msgstr "np. ściana przy prasie, kolumna 2, sufit..."
+
+msgid "Сталь"
+msgstr "Stal"
+
+msgid "Медь"
+msgstr "Miedź"
+
+msgid "Пластик"
+msgstr "Tworzywo"
+
+msgid "Алюминий"
+msgstr "Aluminium"
+
+msgid "Другое"
+msgstr "Inne"
+
+msgid "Version"
+msgstr "Wersja"
+
+msgid "Water Supply"
+msgstr "Wodociągi"
+
+msgid "Water Map"
+msgstr "Mapa wody"
+
+msgid "Water Supply Map"
+msgstr "Mapa wodociągów"
+
+msgid "Water points"
+msgstr "Punkty wodne"
+
+msgid "Water lines"
+msgstr "Linie wodne"
+
+msgid "Add water point"
+msgstr "Dodaj punkt wodny"
+
+msgid "Add water line"
+msgstr "Dodaj linię wodną"
+
+msgid "Water point added"
+msgstr "Dodano punkt wodny"
+
+msgid "Water line added"
+msgstr "Dodano linię wodną"
+
+msgid "Water tap / valve A"
+msgstr "Kurek / zawór A"
+
+msgid "Main water line — Workshop 1"
+msgstr "Główna linia wodna — Warsztat 1"
+
+msgid "Чугун"
+msgstr "Żeliwo"
+
+msgid "PEX"
+msgstr "PEX"

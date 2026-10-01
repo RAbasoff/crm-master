@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Compressed Air') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>💨 {{ _('Compressed Air') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/air/map" class="btn btn-sm" style="background:#8e44ad;color:white">🗺️ {{ _('Map') }}</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/air/points/new" class="btn btn-sm btn-primary">➕ {{ _('Add point') }}</a>
+        <a href="/air/lines/new" class="btn btn-sm" style="background:#e67e22;color:white">➕ {{ _('Add line') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- STATS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#2c3e50">{{ stats.points }}</div>
+        <div style="font-size:11px;color:#888">{{ _('Connection points') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#27ae60">{{ stats.points_ok }}</div>
+        <div style="font-size:11px;color:#888">✅ {{ _('Working') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#f39c12">{{ stats.points_leak }}</div>
+        <div style="font-size:11px;color:#888">💨 {{ _('Leak') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#e74c3c">{{ stats.points_broken }}</div>
+        <div style="font-size:11px;color:#888">⛔ {{ _('Defective') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#2980b9">{{ stats.lines }}</div>
+        <div style="font-size:11px;color:#888">{{ _('Lines') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#16a085">{{ stats.lines_len }} м</div>
+        <div style="font-size:11px;color:#888">{{ _('Total length') }}</div>
+    </div>
+</div>
+
+<!-- POINTS -->
+<div class="card" style="margin-bottom:20px">
+    <h2 style="margin-top:0;font-size:16px">🔌 {{ _('Connection points') }}</h2>
+    {% if not points %}
+    <p style="color:#888;font-size:13px">{{ _('No connection points yet') }}</p>
+    {% else %}
+    <div style="overflow-x:auto">
+    <table class="table" style="width:100%">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ _('Name') }}</th>
+                <th>{{ _('Section') }}</th>
+                <th>{{ _('Location') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Photos') }}</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in points %}
+            <tr>
+                <td><strong>{{ p.number }}</strong></td>
+                <td>{{ p.name }}</td>
+                <td>
+                    {% if p.section %}
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ p.section.color }};margin-right:4px"></span>{{ p.section.name }}
+                    {% else %}—{% endif %}
+                </td>
+                <td style="font-size:12px;color:#666">{{ p.location or '—' }}</td>
+                <td>
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
+                    <form method="POST" action="/air/points/{{ p.id }}/toggle-status" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" style="background:none;border:1px solid #ddd;padding:2px 8px"
+                                title="{{ _('Click to change status') }}">{{ p.status_label }}</button>
+                    </form>
+                    {% else %}{{ p.status_label }}{% endif %}
+                </td>
+                <td>{{ p.photos|length }}</td>
+                <td style="white-space:nowrap">
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
+                    <a href="/air/points/{{ p.id }}/edit" class="btn btn-sm" style="background:#eee">✏️</a>
+                    {% endif %}
+                    {% if current_user.has_role('admin', 'director') %}
+                    <form method="POST" action="/air/points/{{ p.id }}/delete" style="display:inline"
+                          onsubmit="return confirm('{{ _('Delete point?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" style="background:#fee;color:#c00;border:1px solid #fcc">🗑</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if p.photos %}
+            <tr>
+                <td></td>
+                <td colspan="6" style="padding:4px 8px">
+                    {% for ph in p.photos %}
+                    <img src="/static/uploads/{{ ph.filename }}" style="height:48px;border-radius:4px;margin:2px;object-fit:cover"
+                         alt="photo">
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- LINES -->
+<div class="card">
+    <h2 style="margin-top:0;font-size:16px">〰️ {{ _('Air lines') }}</h2>
+    {% if not lines %}
+    <p style="color:#888;font-size:13px">{{ _('No lines yet') }}</p>
+    {% else %}
+    <div style="overflow-x:auto">
+    <table class="table" style="width:100%">
+        <thead>
+            <tr>
+                <th>{{ _('Name') }}</th>
+                <th>{{ _('Section') }}</th>
+                <th>{{ _('From point') }}</th>
+                <th>{{ _('To point') }}</th>
+                <th>{{ _('Length') }}</th>
+                <th>{{ _('Diameter') }}</th>
+                <th>{{ _('Material') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lines %}
+            <tr>
+                <td>
+                    <span style="display:inline-block;width:24px;height:4px;border-radius:2px;background:{{ l.color or (l.section.color if l.section else '#e67e22') }};vertical-align:middle;margin-right:6px"></span>
+                    {{ l.name }}
+                </td>
+                <td>{{ l.section.name if l.section else '—' }}</td>
+                <td style="font-size:12px">{{ l.from_point.name if l.from_point else '—' }}</td>
+                <td style="font-size:12px">{{ l.to_point.name if l.to_point else '—' }}</td>
+                <td>{{ l.length_m or '—' }} м</td>
+                <td>{{ l.diameter_mm or '—' }} мм</td>
+                <td>{{ _(l.MATERIALS.get(l.material, l.material)) }}</td>
+                <td>
+                    {% if l.status == 'ok' %}✅{% elif l.status == 'repair' %}🔧{% else %}⛔{% endif %}
+                </td>
+                <td style="white-space:nowrap">
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
+                    <a href="/air/lines/{{ l.id }}/edit" class="btn btn-sm" style="background:#eee">✏️</a>
+                    {% endif %}
+                    {% if current_user.has_role('admin', 'director') %}
+                    <form method="POST" action="/air/lines/{{ l.id }}/delete" style="display:inline"
+                          onsubmit="return confirm('{{ _('Delete line?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" style="background:#fee;color:#c00;border:1px solid #fcc">🗑</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

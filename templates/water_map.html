@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Water Supply Map') }} — CRM{% endblock %}
+{% block content %}
+<style>
+#mapWrap{position:relative;width:100%;height:72vh;min-height:480px;background:#e8eef3;border-radius:10px;overflow:hidden;cursor:crosshair;border:1px solid #b0bec5}
+#mapGrid{position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:1}
+#mapSvg{position:absolute;inset:0;width:100%;height:100%}
+.pt-marker{position:absolute;transform:translate(-50%,-50%);z-index:5;cursor:pointer;user-select:none}
+.pt-dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+.pt-label{position:absolute;top:20px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.65);padding:1px 6px;border-radius:3px;pointer-events:none}
+.line-label{font-size:10px;fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,0.7);stroke-width:3px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.tool-btn{padding:6px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:12px}
+.tool-btn.active{background:#8e44ad;color:#fff;border-color:#8e44ad}
+.sect-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11px;background:#eee;cursor:pointer}
+.sect-chip input{margin:0}
+</style>
+
+<div class="page-header">
+    <h1>🗺️ {{ _('Water Supply Map') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/air" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/water/lines/new" class="btn btn-sm" style="background:#e67e22;color:white">➕ {{ _('Add line') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="toolbar">
+    {% if current_user.has_role('admin', 'director', 'technician') %}
+    <button type="button" class="tool-btn active" id="btnSelect" onclick="setMode('select')">🖱️ {{ _('Select') }}</button>
+    <button type="button" class="tool-btn" id="btnDraw" onclick="setMode('draw')">✏️ {{ _('Draw line') }}</button>
+    <button type="button" class="tool-btn" id="btnClear" onclick="clearDraft()" style="color:#c00">✖ {{ _('Cancel draw') }}</button>
+    <span style="width:1px;height:22px;background:#ddd"></span>
+    <select id="linePicker" class="tool-btn" style="max-width:220px" onchange="pickLine(this.value)">
+        <option value="">{{ _('— edit existing line —') }}</option>
+        {% for l in lines %}
+        <option value="{{ l.id }}">{{ l.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="button" class="tool-btn" onclick="saveVertices()" style="background:#27ae60;color:#fff;border-color:#27ae60">💾 {{ _('Save geometry') }}</button>
+    {% endif %}
+    <span style="flex:1"></span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+        {% for s in sections %}
+        <label class="sect-chip" title="{{ s.name }}">
+            <input type="checkbox" class="sect-filter" value="{{ s.name }}" checked
+                   onchange="filterSections()">
+            <span style="width:10px;height:10px;border-radius:50%;background:{{ s.color }};display:inline-block"></span>
+            {{ s.name }}
+        </label>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="mapWrap">
+    <div id="mapGrid"></div>
+    <!-- отдельный фон карты сжатого воздуха; fallback — общий план фабрики -->
+    <img id="mapBg" src="/static/uploads/water_map_bg.jpeg" alt=""
+         style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.95;pointer-events:none;z-index:2"
+         onerror="this.onerror=null;this.src='/static/floor_plan.jpeg'">
+    <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg" style="z-index:3"></svg>
+    <div id="markers" style="z-index:4"></div>
+</div>
+
+<div style="margin-top:10px;font-size:11px;color:#888;display:flex;gap:16px;flex-wrap:wrap">
+    <span>✏️ {{ _('Draw: click to add vertex, double-click to finish') }}</span>
+    <span>💾 {{ _('Save geometry stores the polyline') }}</span>
+    <span>🖱️ {{ _('Select line to edit path') }}</span>
+</div>
+
+<script>
+var MODE = 'select';
+var DRAFT = [];
+var SELECTED_LINE = null;
+var MAP = {points: [], lines: []};
+var API = {
+    data: '/water/api/map/data',
+    saveLine: '/water/api/map/line-vertices',
+    savePoint: '/water/api/map/point-position'
+};
+
+function setMode(m) {
+    MODE = m;
+    document.getElementById('btnSelect').classList.toggle('active', m === 'select');
+    document.getElementById('btnDraw').classList.toggle('active', m === 'draw');
+    document.getElementById('mapWrap').style.cursor = m === 'draw' ? 'crosshair' : 'default';
+    if (m !== 'draw') clearDraft();
+}
+
+function clearDraft() {
+    DRAFT = [];
+    renderMap();
+}
+
+function mapPos(e) {
+    var r = document.getElementById('mapWrap').getBoundingClientRect();
+    return {
+        x: ((e.clientX - r.left) / r.width) * 100,
+        y: ((e.clientY - r.top) / r.height) * 100
+    };
+}
+
+document.getElementById('mapWrap').addEventListener('click', function (e) {
+    if (e.target.closest('.pt-marker')) return;
+    if (MODE !== 'draw') return;
+    var p = mapPos(e);
+    DRAFT.push(p);
+    renderMap();
+});
+document.getElementById('mapWrap').addEventListener('dblclick', function (e) {
+    if (MODE !== 'draw' || DRAFT.length < 2) return;
+    e.preventDefault();
+    finishDraft();
+});
+
+function finishDraft() {
+    if (DRAFT.length < 2) return;
+    var name = prompt({{ _('Line name') | tojson }} + ':', 'L' + (MAP.lines.length + 1));
+    if (!name) return;
+    var color = prompt({{ _('Color (hex)') | tojson }} + ':', '#e67e22') || '#e67e22';
+    // create via API-less: store as draft and ask user to save via picker
+    // For simplicity: POST vertices for a newly created line through the form endpoint is not available;
+    // instead save geometry only if a line is selected; for new lines open form prefilled.
+    var verts = DRAFT.slice();
+    var q = 'name=' + encodeURIComponent(name) + '&color=' + encodeURIComponent(color);
+    // stash draft in sessionStorage and open new-line form
+    sessionStorage.setItem('air_line_draft', JSON.stringify({name: name, color: color, vertices: verts}));
+    window.location.href = '/water/lines/new?' + q;
+}
+
+function pickLine(id) {
+    SELECTED_LINE = id ? parseInt(id) : null;
+    DRAFT = [];
+    if (SELECTED_LINE) {
+        var ln = MAP.lines.find(function (l) { return l.id === SELECTED_LINE; });
+        if (ln && ln.vertices) DRAFT = ln.vertices.map(function (v) { return {x: v.x, y: v.y}; });
+    }
+    renderMap();
+}
+
+function saveVertices() {
+    if (!SELECTED_LINE) {
+        alert({{ _('Select a line first') | tojson }});
+        return;
+    }
+    fetch(API.saveLine, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({id: SELECTED_LINE, vertices: DRAFT})
+    }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j.ok) {
+            alert({{ _('Geometry saved') | tojson }});
+            loadData();
+        } else {
+            alert({{ _('Save failed') | tojson }});
+        }
+    });
+}
+
+function getCsrf() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+function filterSections() {
+    renderMap();
+}
+
+function sectionVisible(name) {
+    var boxes = document.querySelectorAll('.sect-filter:checked');
+    if (!boxes.length) return true;
+    for (var i = 0; i < boxes.length; i++) {
+        if (boxes[i].value === name) return true;
+    }
+    return false;
+}
+
+function renderMap() {
+    var svg = document.getElementById('mapSvg');
+    var wrap = document.getElementById('mapWrap');
+    var W = wrap.clientWidth, H = wrap.clientHeight;
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    var parts = [];
+
+    // existing lines
+    MAP.lines.forEach(function (ln) {
+        if (ln.section && !sectionVisible(ln.section)) return;
+        var verts = (ln.id === SELECTED_LINE) ? DRAFT : (ln.vertices || []);
+        if (verts.length < 2) return;
+        var pts = verts.map(function (v) { return v.x + ',' + v.y; }).join(' ');
+        parts.push('<polyline points="' + pts + '" fill="none" stroke="' + ln.color +
+            '" stroke-width="' + (ln.id === SELECTED_LINE ? 1.2 : 0.7) +
+            '" stroke-linejoin="round" stroke-linecap="round" opacity="0.9" vector-effect="non-scaling-stroke" style="stroke-width:' + (ln.id === SELECTED_LINE ? 4 : 2.5) + 'px"/>');
+        var mid = verts[Math.floor(verts.length / 2)];
+        parts.push('<text class="line-label" x="' + mid.x + '" y="' + (mid.y - 1) + '" text-anchor="middle" font-size="1.6">' +
+            escapeHtml(ln.name) + '</text>');
+    });
+
+    // draft (draw mode or selected line edit)
+    if (DRAFT.length) {
+        if (DRAFT.length > 1) {
+            var dpts = DRAFT.map(function (v) { return v.x + ',' + v.y; }).join(' ');
+            parts.push('<polyline points="' + dpts + '" fill="none" stroke="#f1c40f" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke" style="stroke-width:3px"/>');
+        }
+        DRAFT.forEach(function (v, i) {
+            parts.push('<circle cx="' + v.x + '" cy="' + v.y + '" r="1.2" fill="#f1c40f" vector-effect="non-scaling-stroke" style="r:5px"/>');
+        });
+    }
+
+    svg.innerHTML = parts.join('');
+
+    // points
+    var box = document.getElementById('markers');
+    var html = '';
+    MAP.points.forEach(function (p) {
+        if (p.section && !sectionVisible(p.section)) return;
+        var color = p.status === 'ok' ? '#27ae60' : (p.status === 'leak' ? '#f39c12' : '#e74c3c');
+        if (p.x == null || p.y == null) return;
+        html += '<div class="pt-marker" style="left:' + p.x + '%;top:' + p.y + '%" title="' + escapeHtml(p.name) + '">' +
+            '<div class="pt-dot" style="background:' + color + ';background:' + (p.section_color || color) + '"></div>' +
+            '<div class="pt-label">#' + p.number + ' ' + escapeHtml(p.name) + '</div></div>';
+    });
+    box.innerHTML = html;
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+function loadData() {
+    fetch(API.data).then(function (r) { return r.json(); }).then(function (j) {
+        MAP = j;
+        renderMap();
+    });
+}
+
+window.addEventListener('resize', renderMap);
+loadData();
+
+// if arriving from "Draw line" with sessionStorage draft, prefill new-line form fields
+document.addEventListener('DOMContentLoaded', function () {
+    var d = sessionStorage.getItem('air_line_draft');
+    if (d && location.pathname.indexOf('/lines/new') !== -1) {
+        try {
+            var o = JSON.parse(d);
+            var nameEl = document.querySelector('input[name=name]');
+            var colorEl = document.querySelector('input[name=color]');
+            var vertsEl = document.getElementById('verticesJson');
+            if (nameEl && o.name) nameEl.value = o.name;
+            if (colorEl && o.color) colorEl.value = o.color;
+            if (vertsEl && o.vertices) vertsEl.value = JSON.stringify(o.vertices);
+            sessionStorage.removeItem('air_line_draft');
+        } catch (e) {}
+    }
+});
+</script>
+{% endblock %}

@@ -48,3 +48,11 @@ static/uploads/*
 /babel.cfg
 
 .vendor/
+
+# Secrets / credentials — never commit
+EMAIL_CONFIG.txt
+ПАРОЛИ*
+*.pem
+*.key
+secrets/
+credentials*.json

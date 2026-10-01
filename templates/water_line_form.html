@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{% if line %}{{ _('Edit line') }}{% else %}{{ _('Add line') }}{% endif %} — {{ _('Water Supply') }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>〰️ {% if line %}{{ _('Edit line') }}: {{ line.name }}{% else %}{{ _('Add water line') }}{% endif %}</h1>
+    <a href="/air" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+{% set materials = {'steel': 'Сталь', 'copper': 'Медь', 'plastic': 'Пластик', 'cast_iron': 'Чугун', 'pex': 'PEX', 'other': 'Другое'} %}
+
+<div class="card">
+    <form method="POST" id="lineForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="vertices_json" id="verticesJson" value="[]">
+
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">
+            <div class="form-group">
+                <label>{{ _('Name') }} *</label>
+                <input type="text" name="name" value="{{ line.name if line else '' }}" required
+                       placeholder="{{ _('e.g. Main water line — Workshop 1') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Section') }}</label>
+                <select name="section_id">
+                    <option value="">{{ _('No section') }}</option>
+                    {% for s in sections %}
+                    <option value="{{ s.id }}" {% if line and line.section_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Status') }}</label>
+                <select name="status">
+                    <option value="ok" {% if not line or line.status == 'ok' %}selected{% endif %}>✅ {{ _('Working') }}</option>
+                    <option value="repair" {% if line and line.status == 'repair' %}selected{% endif %}>🔧 {{ _('Repair') }}</option>
+                    <option value="broken" {% if line and line.status == 'broken' %}selected{% endif %}>⛔ {{ _('Defective') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <fieldset style="border:1px solid #ddd;border-radius:8px;padding:12px;margin:12px 0">
+            <legend style="font-size:12px;font-weight:700;color:#555;padding:0 6px">{{ _('Line characteristics') }}</legend>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Length') }}, м</label>
+                    <input type="number" name="length_m" step="0.1" min="0"
+                           value="{{ line.length_m if line and line.length_m is not none else '' }}" placeholder="12.5">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Diameter') }}, мм</label>
+                    <input type="number" name="diameter_mm" step="0.1" min="0"
+                           value="{{ line.diameter_mm if line and line.diameter_mm is not none else '' }}" placeholder="25">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Material') }}</label>
+                    <select name="material">
+                        {% for key, label in materials.items() %}
+                        <option value="{{ key }}" {% if line and line.material == key %}selected{% elif not line and key == 'steel' %}selected{% endif %}>{{ _(label) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>{{ _('Map color') }}</label>
+                    <input type="color" name="color" value="{{ line.color if line and line.color else '#e67e22' }}"
+                           style="width:100%;height:36px;padding:2px">
+                </div>
+            </div>
+        </fieldset>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+                <label>{{ _('From point') }}</label>
+                <select name="from_point_id">
+                    <option value="">—</option>
+                    {% for p in points %}
+                    <option value="{{ p.id }}" {% if line and line.from_point_id == p.id %}selected{% endif %}>
+                        #{{ p.number }} {{ p.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('To point') }}</label>
+                <select name="to_point_id">
+                    <option value="">—</option>
+                    {% for p in points %}
+                    <option value="{{ p.id }}" {% if line and line.to_point_id == p.id %}selected{% endif %}>
+                        #{{ p.number }} {{ p.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2">{{ line.notes if line else '' }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:16px">
+            <button type="submit" class="btn btn-primary">💾 {{ _('Save') }}</button>
+            <a href="/water/map" class="btn btn-sm" style="background:#8e44ad;color:white">🗺️ {{ _('Draw on map') }}</a>
+            <a href="/air" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    var verts = {{ vertices_json | safe }};
+    document.getElementById('verticesJson').value = JSON.stringify(verts);
+})();
+</script>
+{% endblock %}

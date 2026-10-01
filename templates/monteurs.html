@@ -65,13 +65,10 @@
             <!-- PASSWORD -->
             <div style="min-width:140px">
                 <label style="font-size:11px;color:#888;font-weight:600;display:block;margin-bottom:4px">{{ _('New password') }}</label>
-<div style="margin-bottom:8px;padding:6px 10px;background:#fff8f0;border-radius:6px;font-size:12px">
-                <strong>{{ _('Current password') }}:</strong>
-                <code id="mpw-{{ m.id }}">{{ m.password_plain or '—' }}</code>
-                <button type="button" class="btn btn-sm" style="background:#eee;height:24px;padding:1px 6px;font-size:11px"
-                        onclick="(function(b){var e=document.getElementById('mpw-'+{{ m.id }});e.style.visibility=e.style.visibility==='hidden'?'visible':'hidden';b.textContent=e.style.visibility==='hidden'?'👁':'🙈'})(this)">👁</button>
-            </div>
-                            <input type="password" name="password" placeholder="{{ _('Keep current') }}" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+                <div style="margin-bottom:8px;padding:6px 10px;background:#f8f9fa;border-radius:6px;font-size:11px;color:#888">
+                    {{ _('Passwords are not stored in plain text') }}
+                </div>
+                <input type="password" name="password" placeholder="{{ _('Keep current') }}" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
             </div>
 
             <!-- SAVE -->
