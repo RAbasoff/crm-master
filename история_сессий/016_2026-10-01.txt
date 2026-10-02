@@ -1,0 +1,80 @@
+Сессия 016 — 01.10.2026 (поздняя)
+Проект: CRM Мастерская (ProMaster Version 2.11)
+Ветка: master → 866db1a + aba08de (задеплоено на PA)
+
+============================================================
+ГОТОВО И ЗАДЕПЛОЕНО НА PA
+============================================================
+
+1) FIX: карта фабрики видна (air/water map)
+   - air_map_bg.jpeg / water_map_bg.jpeg (копии floor_plan.jpeg)
+   - opacity 0.95, светлый фон, z-index
+   - пользователь: «карту вижу, спасибо»
+
+2) FIX: рисование линий на карте
+   Было: жёлтые «кляксы» (SVG viewBox 100 + огромные circle r:5px)
+   Стало:
+     - пиксельный viewBox, тонкие polyline
+     - воздух: светло-синий #5dade2
+     - вода: голубой #2980b9
+     - инструменты: Select/Draw, Undo, Clear, Width (thin/normal/thick),
+       Color, Select line, Save, Delete line
+     - air_map.html + water_map.html переписаны
+   Коммит: aba08de
+
+3) FEATURE: характеристики станков
+   - габариты Д×Ш×В мм
+   - питание 220/380/400/other
+   - мощность кВт
+   - сжатый воздух м³/ч, вода л/мин
+   - ЧЕКБОКСЫ газов: природный / азот N₂ / CO₂ + расход каждого
+   - machine_form.html + machine_detail.html
+   - schema 20261007 (machine.dim_*, power_*, gas_*)
+   Коммит: aba08de
+
+4) DEPLOY PA (дважды):
+   866db1a — air+water modules, version 2.11, security
+   aba08de — machine specs + gas checkboxes + map drawing fix
+   smoke: /login 200, air_map_bg 200
+
+============================================================
+В РАБОТЕ: ПЕРЕВОДЫ (НЕ ЗАКОНЧЕНО)
+============================================================
+Пользователь: «в нидерландском и английском проскакивают русские буквы»
+
+НАЙДЕНО (_scan_i18n.py):
+  en.po: 'ДОСТУП ЗАКРЫТ...' и 'Цеха' — без перевода
+  pl.po: 'ДОСТУП ЗАКРЫТ...' — без перевода
+  materials: msgid 'Сталь','Медь'... (в en есть, но в шаблонах dict
+    с русскими значениями — надо English msgid)
+  units в шаблонах: мм, кВт, л/мин, м³/ч, м — ХАРДКОД
+  base.html: «Оффлайн-очередь», «Синхронизировать», описание
+  responsible_form.html: _('Цеха')
+  tool_wear.html: value="Ножи / Фреза"
+  stats.py: русские label в экспорте ('Всего','За период'...)
+
+ПЛАН ФИКСА (не выполнен — сон):
+  [ ] units → mm, kW, L/min, m³/h, m (латиница)
+  [ ] materials dict → English msgid (Steel, Copper, Cast iron...)
+  [ ] base.html offline → _() с переводами
+  [ ] _('Цеха') → _('Workshops')
+  [ ] tool_wear default → 'Knives / Cutter'
+  [ ] flash 'ДОСТУП ЗАКРЫТ' → msgid ACCESS DENIED...
+  [ ] stats.py labels
+  [ ] компилировать .mo, проверить en/nl/pl
+  [ ] коммит + деплой PA
+
+Скрипт скана: _scan_i18n.py (можно удалить после)
+
+============================================================
+ПРОЧЕЕ
+============================================================
+- Локальный сервер: http://127.0.0.1:5000 (_run_local.py)
+  admin / Aba103sov
+- Сессии 013–015 в история_сессий/
+- Служебные НЕ в git: _run_local.py, _gen_*.py, _scan_i18n.py, server_*.txt
+- Security (сессия 013) влито в 866db1a
+- Водоснабжение: models+blueprint+templates+menu — есть
+- Version 2.11 i18n (Version/Версия/Versie/Wersja)
+
+Сессия 016 — 01.10.2026 — КОНЕЦ (сон)

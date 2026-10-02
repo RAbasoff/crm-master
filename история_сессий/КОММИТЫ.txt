@@ -254,6 +254,33 @@ eaf61c6 — 28.09.2026 — fix: gas arithmetic + user names
   - список: метка автомата (Q1) + название шкафа
 
 ============================================================
+2026-10-01 aba08de feat: machine specs + gas checkboxes, fix map line drawing
+============================================================
+- machine: dimensions, voltage 220/380/400, power kW, air/water usage
+- machine: gas checkboxes natural / N2 / CO2 + usage
+- map: thin light-blue (air) / blue (water) lines, drawing tools
+- schema 20261007
+- DEPLOY PA: aba08de smoke OK
+
+2026-10-01 866db1a feat: compressed air + water modules, version 2.11, security
+============================================================
+============================================================
+2026-10-01 866db1a feat: compressed air + water modules, version 2.11, security fixes
+============================================================
+- air: точки+фото, линии (длина/диаметр/материал), отдельная карта /air/map
+- water: аналог air, меню после воздуха, /water/map
+- version 2.11 (i18n Version) sidebar/login/title
+- security: SECRET_KEY env, password_plain убран, .gitignore
+- maps: air_map_bg.jpeg / water_map_bg.jpeg (копии floor_plan)
+- schema 20261005: air_* + water_* таблицы
+Деплой PA:
+  git push OK → PA git pull 866db1a
+  scp map_bg.jpeg на PA
+  touch wsgi.py
+  smoke: /login 200, air_map_bg 200, water_map_bg 200
+  (uploads/* не в git — карты копируются scp)
+
+============================================================
 2026-10-01 (СЕССИЯ 014) — AIR MODULE + VERSION 2.11 (НЕ ЗАКОММИЧЕНО)
 ============================================================
 - feat: модуль Сжатый воздух (точки+фото, линии, отдельная карта /air/map)
@@ -279,6 +306,22 @@ eaf61c6 — 28.09.2026 — fix: gas arithmetic + user names
 Риски git history: старый SECRET_KEY, pablo123/paulina123 —
   на сервере: новый SECRET_KEY env + смена паролей.
 См. также: история_сессий/013_2026-10-01.txt
+
+============================================================
+3671a98 — 02.10.2026 — feat: Moeskroen factory module
+============================================================
+МОДУЛЬ MOESKROEN (новая фабрика):
+- Доступ: только Admin + Director (before_request has_role)
+- Подразделы: План (/moeskroen/plan) + Карта фабрики (/moeskroen/map)
+- Сущности: MoeskroenZone (зоны на плане), MoeskroenMarker+Photo,
+  MoeskroenLine+Vertex (линии на карте)
+- План: drag zones, upload bg (static/uploads/moeskroen_map_bg.jpeg,
+  fallback floor_plan.jpeg)
+- Карта: маркеры (drag), рисование линий (как air_map)
+- schema SCHEMA_VERSION 20261008, director_crud += moeskroen
+- Меню: Admin/Director, План + Карта под Moeskroen
+Коммит: 3671a98
+Smoke: login 302, /moeskroen/* 200, zone/marker create OK
 
 ============================================================
 SSH-ДЕПЛОЙ (настроено 30.09.2026)
