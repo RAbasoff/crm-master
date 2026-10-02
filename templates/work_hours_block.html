@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Work hours') }} — CRM{% endblock %}
+{% block content %}
+<div style="max-width:480px;margin:60px auto">
+    <div class="card" style="padding:32px;text-align:center">
+        <div style="font-size:48px;margin-bottom:12px">⏰</div>
+        <h1 style="font-size:18px;color:#c0392b;margin-bottom:16px">
+            {{ _('ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА') }}
+        </h1>
+        {% if schedule %}
+        <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#555">
+            📅 {{ _('Your schedule') }}: <strong>{{ schedule.name }}</strong><br>
+            🕐 {{ schedule.shift_start }} — {{ schedule.shift_end }}<br>
+            📆 {{ _('Work days') }}: {{ schedule.work_days }}
+        </div>
+        {% endif %}
+        <p style="font-size:13px;color:#888;margin-bottom:16px">
+            {{ _('Access will be restored automatically during your scheduled working hours.') }}
+        </p>
+        <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#eee">{{ _('Logout') }}</a>
+    </div>
+</div>
+{% endblock %}

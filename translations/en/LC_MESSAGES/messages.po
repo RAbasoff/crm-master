@@ -164,6 +164,18 @@ msgstr "Search"
 msgid "Filter"
 msgstr "Filter"
 
+msgid "Connection"
+msgstr "Connection"
+
+msgid "Pressure regulator"
+msgstr "Pressure regulator"
+
+msgid "Valve"
+msgstr "Valve"
+
+msgid "Meter"
+msgstr "Meter"
+
 msgid "All"
 msgstr "All"
 
@@ -2734,6 +2746,21 @@ msgstr "Logistiek-Oktopus group not found"
 
 msgid "Logout"
 msgstr "Logout"
+
+msgid "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+msgstr "THE PROGRAM IS AVAILABLE ONLY DURING WORKING HOURS ACCORDING TO YOUR SCHEDULE"
+
+msgid "Work hours"
+msgstr "Work hours"
+
+msgid "Your schedule"
+msgstr "Your schedule"
+
+msgid "Work days"
+msgstr "Work days"
+
+msgid "Access will be restored automatically during your scheduled working hours."
+msgstr "Access will be restored automatically during your scheduled working hours."
 
 msgid "Low Stock Alert"
 msgstr "Low Stock Alert"

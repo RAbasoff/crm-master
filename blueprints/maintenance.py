@@ -856,13 +856,13 @@ def maintenance_plan_new():
             created_by=current_user.id
         )
         if 'offer_file' in request.files and request.files['offer_file'].filename:
-            fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
-            request.files['offer_file'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-            p.offer_file = fn
+            fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
+            if fn:
+                p.offer_file = fn
         if 'work_act_file' in request.files and request.files['work_act_file'].filename:
-            fn = secure_filename(f"act_{request.files['work_act_file'].filename}")
-            request.files['work_act_file'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-            p.work_act_file = fn
+            fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
+            if fn:
+                p.work_act_file = fn
         db.session.add(p)
         if not safe_commit():
             flash(_('Save failed'), 'error')
@@ -939,13 +939,13 @@ def maintenance_plan_edit(plan_id):
         p.recurrence = request.form.get('recurrence', '') or None
         p.notes = request.form.get('notes', '')
         if 'offer_file' in request.files and request.files['offer_file'].filename:
-            fn = secure_filename(f"offer_{request.files['offer_file'].filename}")
-            request.files['offer_file'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-            p.offer_file = fn
+            fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
+            if fn:
+                p.offer_file = fn
         if 'work_act_file' in request.files and request.files['work_act_file'].filename:
-            fn = secure_filename(f"act_{request.files['work_act_file'].filename}")
-            request.files['work_act_file'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-            p.work_act_file = fn
+            fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
+            if fn:
+                p.work_act_file = fn
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_edit', plan_id=p.id))

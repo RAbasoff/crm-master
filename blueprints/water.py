@@ -83,6 +83,7 @@ def point_new():
         p = WaterConnectionPoint(
             number=_opt_int(request.form.get('number')) or _next_point_number(),
             name=name,
+            point_type=request.form.get('point_type', 'connection') if request.form.get('point_type') in ('connection', 'regulator', 'valve', 'filter', 'meter') else 'connection',
             location=request.form.get('location', '').strip(),
             section_id=_opt_int(request.form.get('section_id')),
             status=request.form.get('status', 'ok') if request.form.get('status') in ('ok', 'leak', 'broken') else 'ok',
@@ -115,6 +116,8 @@ def point_edit(point_id):
     if request.method == 'POST':
         p.number = _opt_int(request.form.get('number')) or p.number
         p.name = request.form.get('name', '').strip() or p.name
+        pt = request.form.get('point_type', 'connection')
+        p.point_type = pt if pt in ('connection', 'regulator', 'valve', 'filter', 'meter') else 'connection'
         p.location = request.form.get('location', '').strip()
         p.section_id = _opt_int(request.form.get('section_id'))
         st = request.form.get('status', 'ok')

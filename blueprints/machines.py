@@ -409,8 +409,10 @@ def machine_upload_document(machine_id):
         flash(_('No file selected'), 'error')
         return redirect(url_for('machines.machine_detail', machine_id=m.id))
     file = request.files['document']
-    filename = secure_filename(f"doc_{m.id}_{file.filename}")
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    filename = save_uploaded_file(file, prefix=f"doc_{m.id}_")
+    if not filename:
+        flash(_('File type not allowed'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=m.id))
     doc = MachineDocument(
         machine_id=m.id,
         doc_type=request.form.get('doc_type', 'other'),
@@ -455,10 +457,10 @@ def machine_add_maintenance(machine_id):
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
                 if photo.filename:
-                    fn = secure_filename(f"maint_{mr.id}_{photo.filename}")
-                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-                    mp = MaintenancePhoto(maintenance_id=mr.id, filename=fn)
-                    db.session.add(mp)
+                    fn = save_uploaded_file(photo, prefix=f"maint_{mr.id}_")
+                    if fn:
+                        mp = MaintenancePhoto(maintenance_id=mr.id, filename=fn)
+                        db.session.add(mp)
             safe_commit()
         flash(_('Maintenance record added'), 'success')
         return redirect(url_for('machines.machine_detail', machine_id=m.id))

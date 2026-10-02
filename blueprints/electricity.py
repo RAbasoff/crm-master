@@ -76,9 +76,9 @@ def cabinet_new():
             schematic_y=safe_int(request.form.get('schematic_y'), 0)
         )
         if 'photo' in request.files and request.files['photo'].filename:
-            filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            c.photo = filename
+            filename = save_uploaded_file(request.files['photo'], prefix='cabinet_')
+            if filename:
+                c.photo = filename
         db.session.add(c)
         if not safe_commit():
             flash(_('Save failed. Please try again.'), 'error')
@@ -112,9 +112,9 @@ def cabinet_edit(cabinet_id):
         c.schematic_x = safe_int(request.form.get('schematic_x'), 0)
         c.schematic_y = safe_int(request.form.get('schematic_y'), 0)
         if 'photo' in request.files and request.files['photo'].filename:
-            filename = secure_filename(f"cabinet_{request.files['photo'].filename}")
-            request.files['photo'].save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            c.photo = filename
+            filename = save_uploaded_file(request.files['photo'], prefix='cabinet_')
+            if filename:
+                c.photo = filename
         if not safe_commit():
             flash(_('Save failed. Please try again.'), 'error')
             return redirect(url_for('electricity.cabinet_edit', cabinet_id=c.id))
@@ -312,8 +312,10 @@ def document_upload(cabinet_id):
         flash(_('No file selected'), 'error')
         return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     file = request.files['document']
-    filename = secure_filename(f"elec_{c.id}_{file.filename}")
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    filename = save_uploaded_file(file, prefix=f"elec_{c.id}_")
+    if not filename:
+        flash(_('File type not allowed'), 'error')
+        return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     doc = ElectricalDocument(
         cabinet_id=c.id,
         doc_type=request.form.get('doc_type', 'schematic'),
@@ -360,8 +362,10 @@ def document_upload_global():
         flash(_('No file selected'), 'error')
         return redirect(url_for('electricity.electricity_list'))
     file = request.files['document']
-    filename = secure_filename(f"elec_{c.id}_{file.filename}")
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    filename = save_uploaded_file(file, prefix=f"elec_{c.id}_")
+    if not filename:
+        flash(_('File type not allowed'), 'error')
+        return redirect(url_for('electricity.cabinet_detail', cabinet_id=c.id))
     doc = ElectricalDocument(
         cabinet_id=c.id,
         doc_type=request.form.get('doc_type', 'schematic'),

@@ -332,8 +332,10 @@ class MachineConsumable(db.Model):
     last_issued_at = db.Column(db.DateTime)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    machine = db.relationship('Machine', backref=db.backref('consumables', lazy=True, cascade='all, delete-orphan'))
-    warehouse_item = db.relationship('VoorraadItem', backref=db.backref('linked_machines', lazy=True, cascade='all, delete-orphan'))
+    # cascade='all' (без delete-orphan): удаление Machine/VoorraadItem чистит связи,
+    # но переассигнация/отвязка не удаляет строку автоматически.
+    machine = db.relationship('Machine', backref=db.backref('consumables', lazy=True, cascade='all'))
+    warehouse_item = db.relationship('VoorraadItem', backref=db.backref('linked_machines', lazy=True, cascade='all'))
 
     __table_args__ = (db.UniqueConstraint('machine_id', 'warehouse_item_id', name='uq_machine_consumable'),)
 
@@ -361,7 +363,7 @@ class ResponsibleGroup(db.Model):
     description = db.Column(db.Text)
     access_level = db.Column(db.String(20), default='user')  # admin, director, technician, user, quality
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    members = db.relationship('Verantwoordelijke', backref='resp_group', lazy=True, cascade='all, delete-orphan')
+    members = db.relationship('Verantwoordelijke', backref='resp_group', lazy=True)
     permissions = db.relationship('GroupPermission', backref='group', lazy=True, cascade='all, delete-orphan')
 
 class GroupPermission(db.Model):
@@ -412,7 +414,7 @@ class Verantwoordelijke(db.Model):
     login_count = db.Column(db.Integer, default=0)
     force_change_password = db.Column(db.Boolean, default=False)
 
-    opdrachten = db.relationship('Opdracht', backref='verantwoordelijke', lazy=True, cascade='all, delete-orphan')
+    opdrachten = db.relationship('Opdracht', backref='verantwoordelijke', lazy=True)
     monteur = db.relationship('Monteur', foreign_keys=[monteur_id], backref='linked_persons')
 
     def set_password(self, password):
@@ -502,7 +504,7 @@ class Monteur(db.Model):
     actief = db.Column(db.Boolean, default=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     group_id = db.Column(db.Integer, db.ForeignKey('responsible_group.id'))
-    opdrachten = db.relationship('Opdracht', backref='monteur', lazy=True, cascade='all, delete-orphan')
+    opdrachten = db.relationship('Opdracht', backref='monteur', lazy=True)
     user = db.relationship('User', foreign_keys=[user_id], backref='worker_profile')
     resp_group = db.relationship('ResponsibleGroup', foreign_keys=[group_id], backref='workers')
 
@@ -554,7 +556,7 @@ class WarehouseGroup(db.Model):
     manufacturer = db.Column(db.String(200))
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    items = db.relationship('VoorraadItem', backref='group', lazy=True, cascade='all, delete-orphan')
+    items = db.relationship('VoorraadItem', backref='group', lazy=True)
 
 class VoorraadItem(db.Model):
     __tablename__ = 'warehouse_item'
@@ -1085,7 +1087,9 @@ class Opdracht(db.Model):
     gestart = db.Column(db.DateTime)
     gereed = db.Column(db.DateTime)
     afgeleverd = db.Column(db.DateTime)
-    mutaties = db.relationship('VoorraadMutatie', backref='opdracht', lazy=True, cascade='all, delete-orphan')
+    # Без delete-orphan: при удалении наряда история движений склада сохраняется
+    # (opdracht_id обнуляется, т.к. колонка nullable).
+    mutaties = db.relationship('VoorraadMutatie', backref='opdracht', lazy=True)
 
 class AuditLog(db.Model):
     __tablename__ = 'audit_log'
@@ -1255,12 +1259,22 @@ class PowerOutletPhoto(db.Model):
 # COMPRESSED AIR (СЖАТЫЙ ВОЗДУХ)
 # ============================================================
 
+# Типы точек air/water (общие для обоих модулей)
+POINT_TYPES = {
+    'connection': 'Connection',
+    'regulator': 'Pressure regulator',
+    'valve': 'Valve',
+    'filter': 'Filter',
+    'meter': 'Meter',
+}
+
 class AirConnectionPoint(db.Model):
     """Точка подключения сжатого воздуха"""
     __tablename__ = 'air_connection_point'
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.Integer, nullable=False)  # порядковый номер
     name = db.Column(db.String(200), nullable=False)
+    point_type = db.Column(db.String(30), default='connection')  # connection | regulator | valve | filter | meter
     location = db.Column(db.String(300))
     section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
     status = db.Column(db.String(20), default='ok')  # ok | leak | broken
@@ -1278,6 +1292,10 @@ class AirConnectionPoint(db.Model):
     @property
     def status_label(self):
         return {'ok': '✅', 'leak': '💨', 'broken': '⛔'}.get(self.status, '❓')
+
+    @property
+    def point_type_label(self):
+        return POINT_TYPES.get(self.point_type, self.point_type or 'Connection')
 
 
 class AirConnectionPhoto(db.Model):
@@ -1340,6 +1358,7 @@ class WaterConnectionPoint(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String(200), nullable=False)
+    point_type = db.Column(db.String(30), default='connection')  # connection | regulator | valve | filter | meter
     location = db.Column(db.String(300))
     section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), index=True)
     status = db.Column(db.String(20), default='ok')  # ok | leak | broken
@@ -1357,6 +1376,10 @@ class WaterConnectionPoint(db.Model):
     @property
     def status_label(self):
         return {'ok': '✅', 'leak': '💧', 'broken': '⛔'}.get(self.status, '❓')
+
+    @property
+    def point_type_label(self):
+        return POINT_TYPES.get(self.point_type, self.point_type or 'Connection')
 
 
 class WaterConnectionPhoto(db.Model):

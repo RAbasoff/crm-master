@@ -49,7 +49,9 @@ def order_new():
         db.session.add(o)
         if not safe_commit():
             flash(_('Save failed'), 'error')
-            return redirect(url_for('orders.order_detail', order_id=o.id))
+            if o.id:
+                return redirect(url_for('orders.order_detail', order_id=o.id))
+            return redirect(url_for('orders.orders_list'))
         flash(_('Work Order created') + f' {o.nummer}', 'success')
         return redirect(url_for('orders.order_detail', order_id=o.id))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()

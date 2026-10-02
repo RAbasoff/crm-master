@@ -1,11 +1,17 @@
-import requests, re
+import requests, re, os
+
+BASE = os.environ.get('CRM_TEST_BASE', 'https://rabasoff.pythonanywhere.com')
+TEST_USER = os.environ.get('CRM_TEST_USER', 'admin')
+TEST_PW = os.environ.get('CRM_TEST_PASSWORD')
+if not TEST_PW:
+    raise SystemExit('Set CRM_TEST_PASSWORD env var (do not hardcode credentials; rotate any previously committed passwords).')
 
 s = requests.Session()
-r = s.get('https://rabasoff.pythonanywhere.com/login')
+r = s.get(f'{BASE}/login')
 csrf = re.search(r'name="csrf_token" value="([^"]+)"', r.text).group(1)
-s.post('https://rabasoff.pythonanywhere.com/login', 
-    data={'username':'admin','password':'admin123','csrf_token':csrf},
-    headers={'Referer': 'https://rabasoff.pythonanywhere.com/login'})
+s.post(f'{BASE}/login',
+    data={'username': TEST_USER, 'password': TEST_PW, 'csrf_token': csrf},
+    headers={'Referer': f'{BASE}/login'})
 
 # Check Mule page content in detail
 r = s.get('https://rabasoff.pythonanywhere.com/mule')

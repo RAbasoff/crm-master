@@ -315,12 +315,13 @@ def responsible_delete(resp_id):
     User.query.filter_by(person_id=cid).update({'person_id': None})
     # Orders referencing this person — reassign to first active responsible before delete
     from models import Opdracht
+    open_orders = Opdracht.query.filter_by(responsible_id=cid).count()
     fallback_resp = Verantwoordelijke.query.filter(Verantwoordelijke.id != cid, Verantwoordelijke.is_active == True).first()
+    if open_orders and not fallback_resp:
+        flash(_('Cannot delete: this person still has work orders and no other active responsible exists. Reassign orders first.'), 'error')
+        return redirect(url_for('responsible.responsible_list'))
     if fallback_resp:
-        Opdracht.query.filter_by(responsible_id=cid).update({'responsible_id': fallback_resp.id})
-    else:
-        # No fallback — cannot null out a NOT NULL column, so just leave as-is (orphaned)
-        pass
+        Opdracht.query.filter_by(responsible_id=cid).update({'responsible_id': fallback_resp.id}, synchronize_session=False)
     db.session.flush()
     db.session.delete(c)
     if not safe_commit():

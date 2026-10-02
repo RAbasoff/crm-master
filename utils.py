@@ -7,6 +7,7 @@
 """
 from datetime import datetime, timedelta
 from flask_login import current_user
+from flask_babel import gettext as _
 from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry, WarehouseGroup
 import os
 from werkzeug.utils import secure_filename
@@ -36,28 +37,107 @@ from logs import (
 )
 from pdf_utils import find_pdf_font, ensure_fpdf
 
+def next_number_suffix(model_cls, field_name, day_prefix):
+    """Max numeric suffix for DAY_PREFIX-NNNN document numbers. Race-safe enough for SQLite; callers retry on IntegrityError."""
+    field = getattr(model_cls, field_name)
+    like = f'{day_prefix}-%'
+    max_n = 0
+    for (val,) in db.session.query(field).filter(field.like(like)).all():
+        if not val:
+            continue
+        try:
+            max_n = max(max_n, int(str(val).rsplit('-', 1)[-1]))
+        except (ValueError, TypeError):
+            continue
+    return max_n + 1
+
+
 def genereer_nummer():
     from models import Opdracht
-    vandaag = datetime.utcnow()
-    prefix = vandaag.strftime('%Y%m%d')
-    laatste = Opdracht.query.filter(Opdracht.nummer.like(f'WO-{prefix}-%')).order_by(Opdracht.id.desc()).first()
-    if laatste:
-        num = int(laatste.nummer.split('-')[2]) + 1
-    else:
-        num = 1
-    return f'WO-{prefix}-{num:04d}'
+    day = datetime.utcnow().strftime('%Y%m%d')
+    num = next_number_suffix(Opdracht, 'nummer', f'WO-{day}')
+    return f'WO-{day}-{num:04d}'
 
 def date_plus_days(d, days):
     if d and days:
         return d + timedelta(days=days)
     return None
 
+
+def is_user_at_work(user):
+    """True, если сейчас рабочее время по графику пользователя (WorkSchedule).
+
+    Учитывает: work_days, shift_start/shift_end, WeekendShift (off/sick),
+    утверждённый отпуск. Без активного графика — стандартный Пн-Пт 08:00-17:00.
+    """
+    from models import WorkSchedule, WeekendShift, Vacation
+    now = datetime.now()
+    today = now.date()
+    weekday = today.isoweekday()  # 1=Mon .. 7=Sun
+
+    # Отпуск
+    vac = Vacation.query.filter(
+        Vacation.user_id == user.id,
+        Vacation.status == 'approved',
+        Vacation.date_from <= today,
+        Vacation.date_to >= today,
+    ).first()
+    if vac:
+        return False
+
+    # Выходной / больничный на сегодня
+    shift = WeekendShift.query.filter_by(user_id=user.id, date=today).first()
+    if shift and shift.shift_type in ('off', 'sick'):
+        return False
+
+    schedule = WorkSchedule.query.filter_by(user_id=user.id, is_active=True).first()
+    if schedule:
+        try:
+            work_days = [int(d.strip()) for d in (schedule.work_days or '').split(',') if d.strip()]
+        except ValueError:
+            work_days = [1, 2, 3, 4, 5]
+        if weekday not in work_days:
+            return False
+        try:
+            start = datetime.strptime(schedule.shift_start, '%H:%M').time()
+            end = datetime.strptime(schedule.shift_end, '%H:%M').time()
+        except (ValueError, TypeError):
+            return True
+        return start <= now.time() <= end
+
+    # Без графика: стандартный будний день 08:00–17:00
+    return weekday <= 5 and 8 <= now.hour < 17
+
+
+def user_schedule_restricted(user):
+    """Ограничение по графику действует для механиков (technician / связанный Monteur).
+    admin и director не ограничиваются."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    role = getattr(user, 'role', '') or ''
+    if role in ('admin', 'director'):
+        return False
+    if role == 'technician':
+        return True
+    # Пользователь, привязанный к профилю механика (Monteur)
+    if getattr(user, 'worker_profile', None):
+        return True
+    return False
+
 ALLOWED_UPLOAD_EXT = {
-    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg',
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp',
     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt',
     '.mp4', '.webm', '.mov', '.mp3', '.wav',
     '.zip',
 }
+
+
+def upload_ext_allowed(filename):
+    """True if filename extension is on the upload whitelist (.svg/.html excluded — XSS)."""
+    if not filename:
+        return False
+    ext = os.path.splitext(secure_filename(filename))[1].lower()
+    return ext in ALLOWED_UPLOAD_EXT
 
 def save_uploaded_file(file, prefix=''):
     """Save upload with a unique filename to avoid collisions and stale browser cache."""

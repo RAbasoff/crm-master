@@ -494,6 +494,7 @@ def ensure_schema():
             id INTEGER PRIMARY KEY,
             number INTEGER NOT NULL,
             name VARCHAR(200) NOT NULL,
+            point_type VARCHAR(30) DEFAULT 'connection',
             location VARCHAR(300),
             section_id INTEGER REFERENCES factory_section(id),
             status VARCHAR(20) DEFAULT 'ok',
@@ -536,6 +537,7 @@ def ensure_schema():
             id INTEGER PRIMARY KEY,
             number INTEGER NOT NULL,
             name VARCHAR(200) NOT NULL,
+            point_type VARCHAR(30) DEFAULT 'connection',
             location VARCHAR(300),
             section_id INTEGER REFERENCES factory_section(id),
             status VARCHAR(20) DEFAULT 'ok',
@@ -673,6 +675,8 @@ def ensure_schema():
         ("warehouse_item.expiry_date", "ALTER TABLE warehouse_item ADD COLUMN expiry_date DATE"),
         ("warehouse_item.barcode", "ALTER TABLE warehouse_item ADD COLUMN barcode VARCHAR(100)"),
         ("warehouse_item.serial_number", "ALTER TABLE warehouse_item ADD COLUMN serial_number VARCHAR(100)"),
+        ("air_connection_point.point_type", "ALTER TABLE air_connection_point ADD COLUMN point_type VARCHAR(30) DEFAULT 'connection'"),
+        ("water_connection_point.point_type", "ALTER TABLE water_connection_point ADD COLUMN point_type VARCHAR(30) DEFAULT 'connection'"),
         ("warehouse_reservation", """CREATE TABLE IF NOT EXISTS warehouse_reservation (
             id INTEGER PRIMARY KEY,
             item_id INTEGER NOT NULL REFERENCES warehouse_item(id),
@@ -1057,7 +1061,10 @@ def run_data_migrations():
                     counter += 1
                 mu = User(username=uname, display_name=m.naam, role='technician',
                           is_active_user=True)
-                mu.set_password(os.environ.get('DEFAULT_USER_PW', 'ChangeMe!123'))
+                _dpw = os.environ.get('DEFAULT_USER_PW') or __import__('secrets').token_urlsafe(12)
+                mu.set_password(_dpw)
+                if not os.environ.get('DEFAULT_USER_PW'):
+                    mu.force_change_password = True
                 db.session.add(mu)
                 db.session.flush()
                 m.user_id = mu.id

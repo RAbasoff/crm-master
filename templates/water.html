@@ -52,6 +52,7 @@
             <tr>
                 <th>#</th>
                 <th>{{ _('Name') }}</th>
+                <th>{{ _('Type') }}</th>
                 <th>{{ _('Section') }}</th>
                 <th>{{ _('Location') }}</th>
                 <th>{{ _('Status') }}</th>
@@ -64,6 +65,10 @@
             <tr>
                 <td><strong>{{ p.number }}</strong></td>
                 <td>{{ p.name }}</td>
+                <td>
+                    {% if p.point_type == 'regulator' %}⚙️{% elif p.point_type == 'valve' %}🔩{% elif p.point_type == 'filter' %}🧪{% elif p.point_type == 'meter' %}📊{% else %}🔌{% endif %}
+                    {{ p.point_type_label }}
+                </td>
                 <td>
                     {% if p.section %}
                     <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ p.section.color }};margin-right:4px"></span>{{ p.section.name }}
@@ -96,7 +101,7 @@
             {% if p.photos %}
             <tr>
                 <td></td>
-                <td colspan="6" style="padding:4px 8px">
+                <td colspan="7" style="padding:4px 8px">
                     {% for ph in p.photos %}
                     <img src="/static/uploads/{{ ph.filename }}" style="height:48px;border-radius:4px;margin:2px;object-fit:cover"
                          alt="photo">

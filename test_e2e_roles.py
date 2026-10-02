@@ -88,10 +88,16 @@ print("=" * 60)
 print("TEST 1: Login and page health check")
 print("=" * 60)
 
+import os
+# Credentials must come from env — never hardcode (rotate any past leaked passwords on the server).
+_TEST_PW = os.environ.get('CRM_TEST_PASSWORD')
+if not _TEST_PW:
+    raise SystemExit('Set CRM_TEST_PASSWORD env var (and rotate any previously committed passwords on the server).')
+
 USERS = {
-    'user': ('user', 'user123'),
-    'director': ('director', 'director123'),
-    'technician': ('tech', 'tech123'),
+    'user': (os.environ.get('CRM_TEST_USER', 'user'), _TEST_PW),
+    'director': (os.environ.get('CRM_TEST_DIRECTOR', 'director'), os.environ.get('CRM_TEST_DIRECTOR_PW', _TEST_PW)),
+    'technician': (os.environ.get('CRM_TEST_TECH', 'tech'), os.environ.get('CRM_TEST_TECH_PW', _TEST_PW)),
 }
 
 sessions = {}

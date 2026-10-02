@@ -170,6 +170,18 @@ msgstr "Zoeken"
 msgid "Filter"
 msgstr "Filter"
 
+msgid "Connection"
+msgstr "Aansluiting"
+
+msgid "Pressure regulator"
+msgstr "Drukregelaar"
+
+msgid "Valve"
+msgstr "Klep"
+
+msgid "Meter"
+msgstr "Meter"
+
 msgid "All"
 msgstr "Alle"
 
@@ -5300,6 +5312,21 @@ msgstr "Logboek"
 
 msgid "Logout"
 msgstr "Uitloggen"
+
+msgid "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+msgstr "HET PROGRAMMA IS ALLEEN BESCHIKBAAR TIJDENS WERKUREN VOLGENS UW SCHEMA"
+
+msgid "Work hours"
+msgstr "Werkuren"
+
+msgid "Your schedule"
+msgstr "Uw schema"
+
+msgid "Work days"
+msgstr "Werkdagen"
+
+msgid "Access will be restored automatically during your scheduled working hours."
+msgstr "De toegang wordt automatisch hersteld tijdens uw geplande werktijden."
 
 msgid "Machines in Section"
 msgstr "Machines in sectie"

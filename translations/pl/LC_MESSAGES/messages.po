@@ -164,6 +164,18 @@ msgstr "Szukaj"
 msgid "Filter"
 msgstr "Filtr"
 
+msgid "Connection"
+msgstr "Przyłącze"
+
+msgid "Pressure regulator"
+msgstr "Reduktor ciśnienia"
+
+msgid "Valve"
+msgstr "Zawór"
+
+msgid "Meter"
+msgstr "Licznik"
+
 msgid "All"
 msgstr "Wszystko"
 
@@ -2807,6 +2819,21 @@ msgstr "Logistiek-Oktopus group not found"
 
 msgid "Logout"
 msgstr "Logout"
+
+msgid "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+msgstr "PROGRAM JEST DOSTĘPNY TYLKO W GODZINACH PRACY ZGODNIE Z TWOIM GRAFIKIEM"
+
+msgid "Work hours"
+msgstr "Godziny pracy"
+
+msgid "Your schedule"
+msgstr "Twój grafik"
+
+msgid "Work days"
+msgstr "Dni robocze"
+
+msgid "Access will be restored automatically during your scheduled working hours."
+msgstr "Dostęp zostanie automatycznie przywrócony w godzinach pracy zgodnie z grafikiem."
 
 msgid "Low Stock Alert"
 msgstr "Low Stock Alert"

@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload, subqueryload
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie)
-from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date
+from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
 
@@ -91,18 +91,16 @@ def fault_new():
             if 'photos' in request.files:
                 for photo in request.files.getlist('photos'):
                     if photo.filename:
-                        filename = secure_filename(f"fault_{f.id}_{photo.filename}")
-                        photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                        fp = FaultPhoto(fault_id=f.id, filename=filename)
-                        db.session.add(fp)
+                        filename = save_uploaded_file(photo, prefix=f"fault_{f.id}_")
+                        if filename:
+                            db.session.add(FaultPhoto(fault_id=f.id, filename=filename))
 
             if 'videos' in request.files:
                 for video in request.files.getlist('videos'):
                     if video.filename:
-                        filename = secure_filename(f"fault_{f.id}_video_{video.filename}")
-                        video.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                        fv = FaultVideo(fault_id=f.id, filename=filename)
-                        db.session.add(fv)
+                        filename = save_uploaded_file(video, prefix=f"fault_{f.id}_video_")
+                        if filename:
+                            db.session.add(FaultVideo(fault_id=f.id, filename=filename))
                 if not safe_commit():
                     flash(_('Fault created but video upload failed'), 'warning')
 
@@ -376,10 +374,10 @@ def work_report_new(fault_id):
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
                 if photo.filename:
-                    filename = secure_filename(f"work_{wr.id}_{photo.filename}")
-                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                    wp = WorkReportPhoto(report_id=wr.id, filename=filename, description=request.form.get('photo_desc', ''))
-                    db.session.add(wp)
+                    filename = save_uploaded_file(photo, prefix=f"work_{wr.id}_")
+                    if filename:
+                        wp = WorkReportPhoto(report_id=wr.id, filename=filename, description=request.form.get('photo_desc', ''))
+                        db.session.add(wp)
             if not safe_commit():
                 flash(_('Work report saved but photo upload failed'), 'warning')
 
@@ -446,10 +444,10 @@ def work_report_edit(fault_id, report_id):
         if 'photos' in request.files:
             for photo in request.files.getlist('photos'):
                 if photo.filename:
-                    filename = secure_filename(f"work_{wr.id}_{photo.filename}")
-                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                    wp = WorkReportPhoto(report_id=wr.id, filename=filename, description=request.form.get('photo_desc', ''))
-                    db.session.add(wp)
+                    filename = save_uploaded_file(photo, prefix=f"work_{wr.id}_")
+                    if filename:
+                        wp = WorkReportPhoto(report_id=wr.id, filename=filename, description=request.form.get('photo_desc', ''))
+                        db.session.add(wp)
 
         try:
             new_parts = json.loads(wr.parts_used)

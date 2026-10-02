@@ -88,6 +88,9 @@ def worker_delete(worker_id):
         # Keep the login account but detach; admin can delete user separately
         w.user_id = None
         db.session.flush()
+    # Keep work orders: unassign instead of cascading delete
+    from models import Opdracht
+    Opdracht.query.filter_by(monteur_id=w.id).update({'monteur_id': None}, synchronize_session=False)
     db.session.delete(w)
     if not safe_commit():
         flash(_('Save failed — worker may be linked to orders. Unlink first.'), 'error')

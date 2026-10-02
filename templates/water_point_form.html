@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-header">
     <h1>🔌 {% if point %}{{ _('Edit point') }} #{{ point.number }}{% else %}{{ _('Add water point') }}{% endif %}</h1>
-    <a href="/air" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+    <a href="/water" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
 </div>
 
 <div class="card">
@@ -32,6 +32,14 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group">
+                <label>{{ _('Type') }}</label>
+                <select name="point_type">
+                    {% for val, label in [('connection', _('Connection')), ('regulator', _('Pressure regulator')), ('valve', _('Valve')), ('filter', _('Filter')), ('meter', _('Meter'))] %}
+                    <option value="{{ val }}" {% if point and point.point_type == val %}selected{% elif not point and val == 'connection' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
                 <label>{{ _('Section') }}</label>
                 <select name="section_id">
                     <option value="">{{ _('No section') }}</option>
@@ -40,11 +48,12 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group">
-                <label>{{ _('Location') }}</label>
-                <input type="text" name="location" value="{{ point.location if point else '' }}"
-                       placeholder="{{ _('e.g. wall near press, column 2, ceiling...') }}">
-            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ _('Location') }}</label>
+            <input type="text" name="location" value="{{ point.location if point else '' }}"
+                   placeholder="{{ _('e.g. wall near press, column 2, ceiling...') }}">
         </div>
 
         <div class="form-group">

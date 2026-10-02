@@ -173,6 +173,18 @@ msgstr "Поиск"
 msgid "Filter"
 msgstr "Фильтр"
 
+msgid "Connection"
+msgstr "Подключение"
+
+msgid "Pressure regulator"
+msgstr "Регулятор давления"
+
+msgid "Valve"
+msgstr "Вентиль"
+
+msgid "Meter"
+msgstr "Счётчик"
+
 msgid "All"
 msgstr "Все"
 
@@ -5057,6 +5069,21 @@ msgstr "Журнал"
 
 msgid "Logout"
 msgstr "Выйти"
+
+msgid "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+msgstr "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+
+msgid "Work hours"
+msgstr "Рабочие часы"
+
+msgid "Your schedule"
+msgstr "Ваш график"
+
+msgid "Work days"
+msgstr "Рабочие дни"
+
+msgid "Access will be restored automatically during your scheduled working hours."
+msgstr "Доступ восстановится автоматически в рабочие часы по вашему графику."
 
 msgid "Machine"
 msgstr "Станок"

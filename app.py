@@ -36,7 +36,8 @@ from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    save_uploaded_file, translate_text, run_migrations,
                    log_user_activity, log_system, run_data_migrations, sanitize_like,
                    check_tool_wear_notifications, safe_commit, add_work_report,
-                   safe_int, safe_float, safe_date, find_pdf_font, ensure_fpdf)
+                   safe_int, safe_float, safe_date, find_pdf_font, ensure_fpdf,
+                   is_user_at_work, user_schedule_restricted)
 
 # ============================================================
 # APP CONFIG
@@ -310,7 +311,10 @@ with app.app_context():
     if _admin_user:
         _needs_update = False
         if not _admin_user.password_hash:
-            _admin_user.set_password(os.environ.get('BOOTSTRAP_ADMIN_PW', 'ChangeMe!123'), save_plain=False)
+            _pw, _force = _bootstrap_password('BOOTSTRAP_ADMIN_PW')
+            _admin_user.set_password(_pw, save_plain=False)
+            if _force:
+                _admin_user.force_change_password = True
             _needs_update = True
             print("STARTUP: admin password set (was empty)")
         if not _admin_user.is_active_user:
@@ -332,16 +336,25 @@ with app.app_context():
                 print('WARNING: safe_commit failed in startup')
     if User.query.count() == 0:
         admin = User(username='admin', display_name='Administrator', role='admin')
-        admin.set_password(os.environ.get('BOOTSTRAP_ADMIN_PW', 'ChangeMe!123'), save_plain=False)
+        _apw, _aforce = _bootstrap_password('BOOTSTRAP_ADMIN_PW')
+        admin.set_password(_apw, save_plain=False)
+        if _aforce:
+            admin.force_change_password = True
         director = User(username='director', display_name='Director', role='director')
-        director.set_password(os.environ.get('BOOTSTRAP_DIRECTOR_PW', 'ChangeMe!123'))
+        _dpw, _dforce = _bootstrap_password('BOOTSTRAP_DIRECTOR_PW')
+        director.set_password(_dpw, save_plain=False)
+        if _dforce:
+            director.force_change_password = True
         db.session.add_all([admin, director])
         if not safe_commit():
             print('WARNING: safe_commit failed in startup')
     # Ensure director exists (create if missing)
     if not User.query.filter_by(username='director').first():
         d = User(username='director', display_name='Director', role='director')
-        d.set_password(os.environ.get('BOOTSTRAP_DIRECTOR_PW', 'ChangeMe!123'), save_plain=False)
+        _dpw, _dforce = _bootstrap_password('BOOTSTRAP_DIRECTOR_PW')
+        d.set_password(_dpw, save_plain=False)
+        if _dforce:
+            d.force_change_password = True
         d.is_active_user = True
         db.session.add(d)
         if not safe_commit():
@@ -355,6 +368,17 @@ with app.app_context():
             if not safe_commit():
                 print('WARNING: safe_commit failed in startup')
             print(f"STARTUP: removed fake test user '{_fake}'")
+
+def _bootstrap_password(env_key):
+    """Password for freshly seeded accounts. Never a fixed literal — env or random + force change."""
+    import secrets
+    pw = os.environ.get(env_key)
+    if pw:
+        return pw, False
+    pw = secrets.token_urlsafe(16)
+    print(f"WARNING: {env_key} not set — generated one-time password; set {env_key} to control it")
+    return pw, True
+
 
 def get_current_locale():
     return session.get('lang', 'ru')
@@ -383,6 +407,28 @@ def before_request():
         allowed = ('change_password', 'logout', 'static', 'set_language')
         if request.endpoint and request.endpoint not in allowed:
             return redirect(url_for('change_password'))
+
+    # Доступ механиков только в рабочие часы по графику
+    if current_user.is_authenticated and user_schedule_restricted(current_user):
+        allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block')
+        endpoint = request.endpoint or ''
+        if endpoint not in allowed and not endpoint.startswith('static'):
+            if not is_user_at_work(current_user):
+                return redirect(url_for('work_hours_block'))
+
+    # Авто-выход после 10 минут бездействия (механики)
+    if current_user.is_authenticated and user_schedule_restricted(current_user):
+        allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block')
+        endpoint = request.endpoint or ''
+        if endpoint not in allowed and not endpoint.startswith('static'):
+            import time as _time
+            now_ts = _time.time()
+            last = session.get('last_activity')
+            if last is not None and (now_ts - last) > 600:
+                session.clear()
+                flash(_('Сессия завершена из-за бездействия. Войдите снова.'), 'error')
+                return redirect(url_for('login'))
+            session['last_activity'] = now_ts
 
     # Offline queue idempotency: a replayed mutation with a known client_id
     # must not create a second document.
@@ -697,6 +743,18 @@ def login():
                 if user.force_change_password:
                     flash(_('You must change your password'), 'warning')
                     return redirect(url_for('change_password'))
+                # Блокировка вне рабочих часов (механики)
+                if user_schedule_restricted(user) and not is_user_at_work(user):
+                    flash(_('ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА'), 'error')
+                    return redirect(url_for('work_hours_block'))
+                import time as _time
+                session['last_activity'] = _time.time()
+                # Механик с назначенными ордерами — уведомление с кнопкой ОК
+                if user_schedule_restricted(user):
+                    open_order = _get_open_two_for_user(user)
+                    if open_order:
+                        session['me_order_id'] = open_order.id
+                        return redirect(url_for('me_order_notice'))
                 next_url = request.args.get('next')
                 if next_url:
                     parsed = urlparse(next_url)
@@ -761,6 +819,44 @@ def logout():
     log_system('INFO', 'auth', f'User {username} logged out', source='logout')
     logout_user()
     return redirect(url_for('login'))
+
+def _get_open_two_for_user(user):
+    """Открытый наряд (TWO), назначенный пользователю-механику. None если нет."""
+    if not user or not getattr(user, 'id', None):
+        return None
+    from models import Monteur, TechnicalWorkOrder, two_workers
+    monteur = Monteur.query.filter_by(user_id=user.id).first()
+    if not monteur:
+        return None
+    return (TechnicalWorkOrder.query
+            .join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id)
+            .filter(two_workers.c.worker_id == monteur.id)
+            .filter(TechnicalWorkOrder.status.notin_(['completed', 'cancelled']))
+            .order_by(TechnicalWorkOrder.planned_date.asc().nulls_last(),
+                      TechnicalWorkOrder.created_at.asc())
+            .first())
+
+
+@app.route('/work-hours-block')
+@login_required
+def work_hours_block():
+    """Блокировка доступа вне рабочих часов по графику."""
+    from models import WorkSchedule
+    sched = WorkSchedule.query.filter_by(user_id=current_user.id, is_active=True).first()
+    return render_template('work_hours_block.html', schedule=sched)
+
+
+@app.route('/me-order-notice')
+@login_required
+def me_order_notice():
+    """Уведомление механику о назначенном наряде. Кнопка ОК → переход к наряду."""
+    from models import TechnicalWorkOrder
+    order_id = session.pop('me_order_id', None)
+    order = db.session.get(TechnicalWorkOrder, order_id) if order_id else None
+    if not order:
+        return redirect(url_for('index'))
+    return render_template('me_order_notice.html', order=order)
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required

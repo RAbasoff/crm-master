@@ -12,24 +12,22 @@ import os, io, json
 from models import (db, EquipmentMaintenance, EquipmentPart, EquipmentComponent,
                     EquipmentPartOrder, EquipmentMROPhoto, Machine, VoorraadItem,
                     VoorraadMutatie)
-from utils import ensure_fpdf, find_pdf_font, log_audit, log_system, role_required, safe_commit, safe_date, safe_float, safe_int, sanitize_like
+from utils import ensure_fpdf, find_pdf_font, log_audit, log_system, role_required, safe_commit, safe_date, safe_float, safe_int, sanitize_like, save_uploaded_file
 
 bp = Blueprint('equipment', __name__)
 
 def gen_eq_number():
-    today = datetime.utcnow()
-    prefix = today.strftime('%Y%m%d')
-    last = EquipmentMaintenance.query.filter(EquipmentMaintenance.number.like(f'EQ-{prefix}-%')).order_by(EquipmentMaintenance.id.desc()).first()
-    num = int(last.number.split('-')[2]) + 1 if last else 1
-    return f'EQ-{prefix}-{num:04d}'
+    from utils import next_number_suffix
+    day = datetime.utcnow().strftime('%Y%m%d')
+    num = next_number_suffix(EquipmentMaintenance, 'number', f'EQ-{day}')
+    return f'EQ-{day}-{num:04d}'
 
 
 def gen_eq_order_number():
-    today = datetime.utcnow()
-    prefix = today.strftime('%Y%m%d')
-    last = EquipmentPartOrder.query.filter(EquipmentPartOrder.order_number.like(f'EPO-{prefix}-%')).order_by(EquipmentPartOrder.id.desc()).first()
-    num = int(last.order_number.split('-')[2]) + 1 if last else 1
-    return f'EPO-{prefix}-{num:04d}'
+    from utils import next_number_suffix
+    day = datetime.utcnow().strftime('%Y%m%d')
+    num = next_number_suffix(EquipmentPartOrder, 'order_number', f'EPO-{day}')
+    return f'EPO-{day}-{num:04d}'
 
 
 @bp.route('/equipment')
@@ -499,9 +497,9 @@ def equipment_new():
         # Add photos
         for photo in request.files.getlist('photos'):
             if photo and photo.filename:
-                fn = secure_filename(f"mro_{eq.id}_{photo.filename}")
-                photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-                db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
+                fn = save_uploaded_file(photo, prefix=f"mro_{eq.id}_")
+                if fn:
+                    db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('equipment.equipment_list'))
@@ -573,9 +571,9 @@ def equipment_edit(eq_id):
         # Add new photos (existing ones are kept)
         for photo in request.files.getlist('photos'):
             if photo and photo.filename:
-                fn = secure_filename(f"mro_{eq.id}_{photo.filename}")
-                photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-                db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
+                fn = save_uploaded_file(photo, prefix=f"mro_{eq.id}_")
+                if fn:
+                    db.session.add(EquipmentMROPhoto(equipment_id=eq.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('equipment.equipment_list'))
