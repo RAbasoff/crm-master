@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Moeskroen — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🏭 Moeskroen</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/moeskroen/plan" class="btn btn-sm" style="background:#2980b9;color:white">📐 {{ _('Plan') }}</a>
+        <a href="/moeskroen/map" class="btn btn-sm" style="background:#8e44ad;color:white">🗺️ {{ _('Factory Map') }}</a>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#2c3e50">{{ stats.zones }}</div>
+        <div style="font-size:11px;color:#888">{{ _('Zones') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#e67e22">{{ stats.markers }}</div>
+        <div style="font-size:11px;color:#888">{{ _('Markers') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#27ae60">{{ stats.markers_ok }}</div>
+        <div style="font-size:11px;color:#888">✅ {{ _('OK') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#f39c12">{{ stats.markers_issue }}</div>
+        <div style="font-size:11px;color:#888">⚠️ {{ _('Issue') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#9b59b6">{{ stats.markers_planned }}</div>
+        <div style="font-size:11px;color:#888">📋 {{ _('Planned') }}</div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:22px;font-weight:700;color:#2980b9">{{ stats.lines }}</div>
+        <div style="font-size:11px;color:#888">{{ _('Lines') }}</div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:20px">
+    <h2 style="margin-top:0;font-size:16px">📐 {{ _('Zones') }} ({{ _('Plan') }})</h2>
+    {% if not zones %}
+    <p style="color:#888;font-size:13px">{{ _('No zones yet') }}</p>
+    {% else %}
+    <div style="overflow-x:auto">
+    <table class="table" style="width:100%">
+        <thead><tr>
+            <th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Color') }}</th><th></th>
+        </tr></thead>
+        <tbody>
+            {% for z in zones %}
+            <tr>
+                <td><strong>{{ z.name }}</strong></td>
+                <td>{{ _(z.ZONE_TYPES.get(z.zone_type, 'Other')) }}</td>
+                <td><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ z.color }};vertical-align:middle"></span> {{ z.color }}</td>
+                <td>
+                    <a href="/moeskroen/zones/{{ z.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
+                    <form method="POST" action="/moeskroen/zones/{{ z.id }}/delete" style="display:inline"
+                          onsubmit="return confirm('{{ _('Delete?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">{{ _('Delete') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;font-size:16px">🗺️ {{ _('Markers') }} ({{ _('Factory Map') }})</h2>
+    {% if not markers %}
+    <p style="color:#888;font-size:13px">{{ _('No markers yet') }}</p>
+    {% else %}
+    <div style="overflow-x:auto">
+    <table class="table" style="width:100%">
+        <thead><tr>
+            <th>#</th><th>{{ _('Name') }}</th><th>{{ _('Kind') }}</th>
+            <th>{{ _('Location') }}</th><th>{{ _('Status') }}</th><th></th>
+        </tr></thead>
+        <tbody>
+            {% for m in markers %}
+            <tr>
+                <td><strong>{{ m.number }}</strong></td>
+                <td>{{ m.name }}</td>
+                <td>{{ _(m.KINDS.get(m.kind, 'Other')) }}</td>
+                <td style="font-size:12px;color:#666">{{ m.location or '—' }}</td>
+                <td>{{ m.status_label }} {{ _(m.status|capitalize) }}</td>
+                <td>
+                    <a href="/moeskroen/markers/{{ m.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
+                    <form method="POST" action="/moeskroen/markers/{{ m.id }}/delete" style="display:inline"
+                          onsubmit="return confirm('{{ _('Delete?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">{{ _('Delete') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

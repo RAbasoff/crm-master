@@ -1627,3 +1627,108 @@ class OfflineMutation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     user = db.relationship('User', foreign_keys=[user_id])
+
+
+# ============================================================
+# MOESKROEN — NEW FACTORY (НОВАЯ ФАБРИКА)
+# ============================================================
+
+class MoeskroenZone(db.Model):
+    """Зона на плане фабрики Moeskroen (rectangle overlay %)."""
+    __tablename__ = 'moeskroen_zone'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    zone_type = db.Column(db.String(50), default='production')  # production|warehouse|office|utility|other
+    color = db.Column(db.String(20), default='#3498db')
+    floor_x = db.Column(db.Float, default=10)
+    floor_y = db.Column(db.Float, default=10)
+    width = db.Column(db.Float, default=20)
+    height = db.Column(db.Float, default=15)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    ZONE_TYPES = {
+        'production': 'Production',
+        'warehouse': 'Warehouse',
+        'office': 'Office',
+        'utility': 'Utility',
+        'other': 'Other',
+    }
+
+
+class MoeskroenMarker(db.Model):
+    """Маркер (точка интереса) на карте фабрики Moeskroen."""
+    __tablename__ = 'moeskroen_marker'
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    kind = db.Column(db.String(50), default='other')  # entrance|utility|machine|storage|safety|other
+    location = db.Column(db.String(300))
+    status = db.Column(db.String(20), default='ok')  # ok | issue | planned
+    color = db.Column(db.String(20), default='#e67e22')
+    notes = db.Column(db.Text)
+    map_x = db.Column(db.Float)
+    map_y = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    photos = db.relationship('MoeskroenMarkerPhoto', backref='marker', lazy=True,
+                             cascade='all, delete-orphan')
+
+    KINDS = {
+        'entrance': 'Entrance',
+        'utility': 'Utility',
+        'machine': 'Machine',
+        'storage': 'Storage',
+        'safety': 'Safety',
+        'other': 'Other',
+    }
+
+    @property
+    def status_label(self):
+        return {'ok': '✅', 'issue': '⚠️', 'planned': '📋'}.get(self.status, '❓')
+
+
+class MoeskroenMarkerPhoto(db.Model):
+    __tablename__ = 'moeskroen_marker_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    marker_id = db.Column(db.Integer, db.ForeignKey('moeskroen_marker.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class MoeskroenLine(db.Model):
+    """Линия на карте Moeskroen (маршрут, труба, кабель)."""
+    __tablename__ = 'moeskroen_line'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    kind = db.Column(db.String(50), default='route')  # route|pipe|cable|road|other
+    color = db.Column(db.String(20), default='#8e44ad')
+    width_px = db.Column(db.Float, default=2.5)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    vertices = db.relationship('MoeskroenLineVertex', backref='line', lazy=True,
+                               cascade='all, delete-orphan',
+                               order_by='MoeskroenLineVertex.seq')
+
+    KINDS = {
+        'route': 'Route',
+        'pipe': 'Pipe',
+        'cable': 'Cable',
+        'road': 'Road',
+        'other': 'Other',
+    }
+
+
+class MoeskroenLineVertex(db.Model):
+    __tablename__ = 'moeskroen_line_vertex'
+    id = db.Column(db.Integer, primary_key=True)
+    line_id = db.Column(db.Integer, db.ForeignKey('moeskroen_line.id'), nullable=False, index=True)
+    seq = db.Column(db.Integer, nullable=False, default=0)
+    map_x = db.Column(db.Float, nullable=False)
+    map_y = db.Column(db.Float, nullable=False)

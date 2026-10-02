@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Factory Map') }} Moeskroen — CRM{% endblock %}
+{% block content %}
+<style>
+#mapWrap{position:relative;width:100%;height:72vh;min-height:480px;background:#e8eef3;border-radius:10px;overflow:hidden;cursor:crosshair;border:1px solid #b0bec5;touch-action:none}
+#mapGrid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:1}
+#mapBg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.92;pointer-events:none;z-index:2}
+#mapSvg{position:absolute;inset:0;width:100%;height:100%;z-index:3}
+.pt-marker{position:absolute;transform:translate(-50%,-50%);z-index:5;cursor:pointer;user-select:none}
+.pt-dot{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.45)}
+.pt-label{position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#fff;background:rgba(20,30,40,0.7);padding:1px 5px;border-radius:3px;pointer-events:none}
+.line-label{font-size:11px;fill:#1a252f;paint-order:stroke;stroke:#fff;stroke-width:3px;font-weight:600}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px;background:#f7fafc;border:1px solid #dde4ea;border-radius:8px}
+.tool-btn{padding:6px 12px;border-radius:6px;border:1px solid #c5d0d8;background:#fff;cursor:pointer;font-size:12px;white-space:nowrap}
+.tool-btn:hover{background:#eef3f7}
+.tool-btn.active{background:#8e44ad;color:#fff;border-color:#8e44ad}
+.tool-btn.danger{color:#c0392b;border-color:#e6b0aa}
+.tool-btn.ok{background:#27ae60;color:#fff;border-color:#27ae60}
+.tool-sep{width:1px;height:22px;background:#d0d7de}
+.swatch{width:14px;height:14px;border-radius:3px;border:1px solid #aaa;display:inline-block;vertical-align:middle;margin-right:4px}
+</style>
+
+<div class="page-header">
+    <h1>🗺️ {{ _('Factory Map') }} — Moeskroen</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/moeskroen" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="/moeskroen/plan" class="btn btn-sm" style="background:#2980b9;color:white">📐 {{ _('Plan') }}</a>
+        <a href="/moeskroen/markers/new" class="btn btn-sm btn-primary">➕ {{ _('Add Marker') }}</a>
+        <a href="/moeskroen/lines/new" class="btn btn-sm" style="background:#e67e22;color:white">➕ {{ _('Add line') }}</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <button type="button" class="tool-btn active" id="btnSelect" onclick="setMode('select')">🖱️ {{ _('Select') }}</button>
+    <button type="button" class="tool-btn" id="btnDraw" onclick="setMode('draw')">✏️ {{ _('Draw line') }}</button>
+    <span class="tool-sep"></span>
+    <button type="button" class="tool-btn" onclick="undoVertex()" title="{{ _('Undo last point') }}">↩️ {{ _('Undo') }}</button>
+    <button type="button" class="tool-btn danger" onclick="clearDraft()">✖ {{ _('Clear') }}</button>
+    <span class="tool-sep"></span>
+    <label style="font-size:11px;color:#666">{{ _('Width') }}:
+        <select id="lineWidth" class="tool-btn" style="padding:4px 6px">
+            <option value="1.5">{{ _('Thin') }} (1.5)</option>
+            <option value="2.5" selected>{{ _('Normal') }} (2.5)</option>
+            <option value="4">{{ _('Thick') }} (4)</option>
+        </select>
+    </label>
+    <label style="font-size:11px;color:#666"><span class="swatch" style="background:#8e44ad"></span>{{ _('Color') }}:
+        <input type="color" id="drawColor" value="#8e44ad" style="width:36px;height:28px;padding:1px;vertical-align:middle">
+    </label>
+    <span class="tool-sep"></span>
+    <select id="linePicker" class="tool-btn" style="max-width:200px" onchange="pickLine(this.value)">
+        <option value="">{{ _('— select line —') }}</option>
+        {% for l in lines %}
+        <option value="{{ l.id }}">{{ l.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="button" class="tool-btn ok" onclick="saveVertices()">💾 {{ _('Save') }}</button>
+    <button type="button" class="tool-btn danger" onclick="deleteSelected()">🗑 {{ _('Delete line') }}</button>
+</div>
+
+<div id="mapWrap">
+    <div id="mapGrid"></div>
+    <img id="mapBg" src="/static/uploads/{{ map_bg }}" alt=""
+         onerror="this.onerror=null;this.src='/static/floor_plan.jpeg'">
+    <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="markers"></div>
+</div>
+
+<div style="margin-top:10px;font-size:11px;color:#777;display:flex;gap:16px;flex-wrap:wrap">
+    <span>✏️ <b>{{ _('Draw') }}</b>: {{ _('click = add point, double-click = finish') }}</span>
+    <span>🖱️ {{ _('Drag markers to reposition · click line to edit') }}</span>
+    <span id="draftInfo" style="color:#8e44ad"></span>
+</div>
+
+<script>
+var MODE = 'select';
+var DRAFT = [];
+var SELECTED_LINE = null;
+var MAP = {markers: [], lines: []};
+var DEFAULT_COLOR = '#8e44ad';
+
+var API = {
+    data: '/moeskroen/api/map/data',
+    saveLine: '/moeskroen/api/map/line-vertices',
+    savePoint: '/moeskroen/api/map/marker-position',
+    deleteLine: '/moeskroen/lines/'
+};
+
+function csrfToken() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.content : '';
+}
+
+function setMode(m) {
+    MODE = m;
+    document.getElementById('btnSelect').classList.toggle('active', m === 'select');
+    document.getElementById('btnDraw').classList.toggle('active', m === 'draw');
+    document.getElementById('mapWrap').style.cursor = m === 'draw' ? 'crosshair' : 'default';
+    if (m === 'draw') { SELECTED_LINE = null; document.getElementById('linePicker').value = ''; }
+    updateInfo();
+}
+
+function clearDraft() { DRAFT = []; renderMap(); updateInfo(); }
+function undoVertex() { DRAFT.pop(); renderMap(); updateInfo(); }
+
+function updateInfo() {
+    var el = document.getElementById('draftInfo');
+    if (!el) return;
+    el.textContent = DRAFT.length ? ({{ _('Points') | tojson }} + ': ' + DRAFT.length) : '';
+}
+
+function mapPos(e) {
+    var r = document.getElementById('mapWrap').getBoundingClientRect();
+    return {
+        x: ((e.clientX - r.left) / r.width) * 100,
+        y: ((e.clientY - r.top) / r.height) * 100
+    };
+}
+
+document.getElementById('mapWrap').addEventListener('click', function (e) {
+    if (e.target.closest('.pt-marker')) return;
+    if (MODE !== 'draw') return;
+    DRAFT.push(mapPos(e));
+    renderMap();
+    updateInfo();
+});
+
+document.getElementById('mapWrap').addEventListener('dblclick', function (e) {
+    if (MODE !== 'draw') return;
+    e.preventDefault();
+    if (DRAFT.length >= 2) finishDraft();
+});
+
+function finishDraft() {
+    var picker = document.getElementById('linePicker');
+    var lineId = picker.value ? parseInt(picker.value, 10) : null;
+    var color = document.getElementById('drawColor').value || DEFAULT_COLOR;
+    var width = parseFloat(document.getElementById('lineWidth').value) || 2.5;
+    var payload = {vertices: DRAFT, color: color, width: width};
+    if (lineId) {
+        payload.id = lineId;
+        postJSON(API.saveLine, payload).then(function (r) {
+            if (r && r.ok) {
+                DRAFT = [];
+                return loadData();
+            }
+            alert({{ _('Save failed') | tojson }});
+        });
+    } else {
+        // Create a new line via form-like JSON: store draft as temp named line
+        var name = prompt({{ _('Line name') | tojson }});
+        if (!name) return;
+        fetch('/moeskroen/lines/new', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken()
+            },
+            body: new URLSearchParams({
+                csrf_token: csrfToken(),
+                name: name,
+                kind: 'route',
+                color: color,
+                width_px: String(width)
+            })
+        }).then(function (resp) {
+            if (!resp.ok) throw new Error('create failed');
+            return loadData();
+        }).then(function () {
+            // pick newest matching line by name and save vertices
+            var ln = null;
+            for (var i = 0; i < MAP.lines.length; i++) {
+                if (MAP.lines[i].name === name) ln = MAP.lines[i];
+            }
+            if (!ln) return;
+            return postJSON(API.saveLine, {id: ln.id, vertices: DRAFT, color: color, width: width});
+        }).then(function () {
+            DRAFT = [];
+            return loadData();
+        }).catch(function () {
+            alert({{ _('Save failed') | tojson }});
+        });
+    }
+}
+
+function pickLine(id) {
+    SELECTED_LINE = id ? parseInt(id, 10) : null;
+    renderMap();
+}
+
+function saveVertices() {
+    if (!SELECTED_LINE || !DRAFT.length) {
+        alert({{ _('Select a line and draw points first') | tojson }});
+        return;
+    }
+    postJSON(API.saveLine, {
+        id: SELECTED_LINE,
+        vertices: DRAFT,
+        color: document.getElementById('drawColor').value,
+        width: parseFloat(document.getElementById('lineWidth').value)
+    }).then(function (r) {
+        if (r && r.ok) { DRAFT = []; loadData(); }
+        else alert({{ _('Save failed') | tojson }});
+    });
+}
+
+function deleteSelected() {
+    if (!SELECTED_LINE) { alert({{ _('Select a line first') | tojson }}); return; }
+    if (!confirm({{ _('Delete line?') | tojson }})) return;
+    fetch(API.deleteLine + SELECTED_LINE + '/delete', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'csrf_token=' + encodeURIComponent(csrfToken())
+    }).then(function () { SELECTED_LINE = null; loadData(); });
+}
+
+function postJSON(url, data) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()},
+        body: JSON.stringify(data)
+    }).then(function (r) { return r.json(); });
+}
+
+function loadData() {
+    return fetch(API.data).then(function (r) { return r.json(); }).then(function (data) {
+        MAP.markers = data.markers || [];
+        MAP.lines = data.lines || [];
+        renderMap();
+    });
+}
+
+function renderMap() {
+    var svg = document.getElementById('mapSvg');
+    var wrap = document.getElementById('markers');
+    var W = document.getElementById('mapWrap').clientWidth;
+    var H = document.getElementById('mapWrap').clientHeight;
+    var parts = [];
+    (MAP.lines || []).forEach(function (ln) {
+        var verts = ln.vertices || [];
+        if (verts.length < 2) return;
+        var pts = verts.map(function (v) {
+            return (v.x / 100 * W) + ',' + (v.y / 100 * H);
+        }).join(' ');
+        var isSel = (SELECTED_LINE === ln.id);
+        parts.push('<polyline points="' + pts + '" fill="none" stroke="' + (ln.color || DEFAULT_COLOR) +
+            '" stroke-width="' + (isSel ? (ln.width || 2.5) + 1.5 : (ln.width || 2.5)) +
+            '" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer" data-line="' + ln.id + '"/>');
+        var mid = verts[Math.floor(verts.length / 2)];
+        if (mid) {
+            parts.push('<text class="line-label" x="' + (mid.x / 100 * W) + '" y="' + (mid.y / 100 * H - 6) + '" text-anchor="middle">' + ln.name + '</text>');
+        }
+    });
+    if (DRAFT.length) {
+        var dp = DRAFT.map(function (v) { return (v.x / 100 * W) + ',' + (v.y / 100 * H); }).join(' ');
+        parts.push('<polyline points="' + dp + '" fill="none" stroke="' + (document.getElementById('drawColor').value || DEFAULT_COLOR) +
+            '" stroke-width="' + (document.getElementById('lineWidth').value || 2.5) +
+            '" stroke-dasharray="6 4" stroke-linecap="round"/>');
+    }
+    svg.innerHTML = parts.join('');
+    svg.querySelectorAll('[data-line]').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var id = parseInt(el.getAttribute('data-line'), 10);
+            SELECTED_LINE = id;
+            var picker = document.getElementById('linePicker');
+            if (picker) picker.value = String(id);
+            renderMap();
+        });
+    });
+
+    wrap.innerHTML = (MAP.markers || []).map(function (m) {
+        var x = (m.x == null ? 50 : m.x);
+        var y = (m.y == null ? 50 : m.y);
+        return '<div class="pt-marker" data-id="' + m.id + '" style="left:' + x + '%;top:' + y + '%" title="' + (m.name || '') + '">' +
+            '<div class="pt-dot" style="background:' + (m.color || '#e67e22') + '"></div>' +
+            '<div class="pt-label">' + (m.number || '') + ' ' + (m.name || '') + '</div>' +
+            '</div>';
+    }).join('');
+
+    wrap.querySelectorAll('.pt-marker').forEach(function (el) {
+        var dragging = false, moved = false;
+        el.addEventListener('pointerdown', function (e) {
+            dragging = true; moved = false;
+            el.setPointerCapture(e.pointerId);
+            e.stopPropagation();
+        });
+        el.addEventListener('pointermove', function (e) {
+            if (!dragging) return;
+            moved = true;
+            var p = mapPos(e);
+            el.style.left = p.x + '%';
+            el.style.top = p.y + '%';
+        });
+        el.addEventListener('pointerup', function (e) {
+            if (!dragging) return;
+            dragging = false;
+            if (!moved) {
+                var id = el.getAttribute('data-id');
+                window.location.href = '/moeskroen/markers/' + id + '/edit';
+                return;
+            }
+            var p = mapPos(e);
+            var id = parseInt(el.getAttribute('data-id'), 10);
+            postJSON(API.savePoint, {id: id, x: p.x, y: p.y}).then(function () {
+                for (var i = 0; i < MAP.markers.length; i++) {
+                    if (MAP.markers[i].id === id) {
+                        MAP.markers[i].x = p.x;
+                        MAP.markers[i].y = p.y;
+                    }
+                }
+            });
+        });
+    });
+}
+
+window.addEventListener('resize', function () { renderMap(); });
+loadData();
+updateInfo();
+</script>
+{% endblock %}

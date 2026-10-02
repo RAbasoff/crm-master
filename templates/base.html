@@ -456,6 +456,11 @@
             <a href="/water" class="sb-item {% if request.endpoint and request.endpoint.startswith('water.') and request.endpoint != 'water.water_map' %}active{% endif %}" data-section="water"><span class="sb-icon">💧</span>{{ _('Water Supply') }}</a>
             <a href="/water/map" class="sb-item {% if request.endpoint == 'water.water_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Water Map') }}</a>
             {% endif %}
+            {% if current_user.has_role('admin', 'director') %}
+            <a href="/moeskroen" class="sb-item {% if request.endpoint and request.endpoint.startswith('moeskroen.') and request.endpoint not in ('moeskroen.plan', 'moeskroen.factory_map') %}active{% endif %}"><span class="sb-icon">🏭</span>Moeskroen</a>
+            <a href="/moeskroen/plan" class="sb-item {% if request.endpoint == 'moeskroen.plan' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📐</span>{{ _('Plan') }}</a>
+            <a href="/moeskroen/map" class="sb-item {% if request.endpoint == 'moeskroen.factory_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Factory Map') }}</a>
+            {% endif %}
             {% if has_access('maintenance') %}
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
             <a href="/maintenance-schedule" class="sb-item {% if 'maintenance_schedule' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Maint. Schedule') }}</a>

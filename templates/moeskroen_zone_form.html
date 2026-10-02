@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Zone') }} — Moeskroen{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{% if zone %}✏️ {{ _('Edit') }}: {{ zone.name }}{% else %}➕ {{ _('Add Zone') }}{% endif %}</h1>
+    <a href="/moeskroen/plan" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<div class="card" style="max-width:640px">
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600">{{ _('Name') }} *</label>
+            <input type="text" name="name" required class="form-control" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"
+                   value="{{ zone.name if zone else '' }}">
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600">{{ _('Description') }}</label>
+            <textarea name="description" rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">{{ zone.description if zone and zone.description else '' }}</textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Type') }}</label>
+                <select name="zone_type" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+                    {% for key, label in [('production','Production'),('warehouse','Warehouse'),('office','Office'),('utility','Utility'),('other','Other')] %}
+                    <option value="{{ key }}" {% if zone and zone.zone_type == key %}selected{% endif %}>{{ _(label) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Color') }}</label>
+                <input type="color" name="color" value="{{ zone.color if zone else '#3498db' }}"
+                       style="width:100%;height:38px;padding:2px;border:1px solid #ddd;border-radius:6px">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:600">X %</label>
+                <input type="number" step="0.1" name="floor_x" value="{{ zone.floor_x if zone else 10 }}"
+                       style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600">Y %</label>
+                <input type="number" step="0.1" name="floor_y" value="{{ zone.floor_y if zone else 10 }}"
+                       style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Width') }} %</label>
+                <input type="number" step="0.1" name="width" value="{{ zone.width if zone else 20 }}"
+                       style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Height') }} %</label>
+                <input type="number" step="0.1" name="height" value="{{ zone.height if zone else 15 }}"
+                       style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+        </div>
+        <div style="margin-bottom:16px">
+            <label style="font-size:12px;font-weight:600">{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">{{ zone.notes if zone and zone.notes else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="padding:10px 20px">{{ _('Save') }}</button>
+    </form>
+</div>
+{% endblock %}

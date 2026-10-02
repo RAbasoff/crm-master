@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261007
+SCHEMA_VERSION = 20261008
 
 
 def _schema_log(msg):
@@ -574,6 +574,58 @@ def ensure_schema():
             map_x FLOAT NOT NULL,
             map_y FLOAT NOT NULL
         )"""),
+        ("moeskroen_zone", """CREATE TABLE IF NOT EXISTS moeskroen_zone (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            description TEXT,
+            zone_type VARCHAR(50) DEFAULT 'production',
+            color VARCHAR(20) DEFAULT '#3498db',
+            floor_x FLOAT DEFAULT 10,
+            floor_y FLOAT DEFAULT 10,
+            width FLOAT DEFAULT 20,
+            height FLOAT DEFAULT 15,
+            notes TEXT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("moeskroen_marker", """CREATE TABLE IF NOT EXISTS moeskroen_marker (
+            id INTEGER PRIMARY KEY,
+            number INTEGER NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            kind VARCHAR(50) DEFAULT 'other',
+            location VARCHAR(300),
+            status VARCHAR(20) DEFAULT 'ok',
+            color VARCHAR(20) DEFAULT '#e67e22',
+            notes TEXT,
+            map_x FLOAT,
+            map_y FLOAT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("moeskroen_marker_photo", """CREATE TABLE IF NOT EXISTS moeskroen_marker_photo (
+            id INTEGER PRIMARY KEY,
+            marker_id INTEGER NOT NULL REFERENCES moeskroen_marker(id),
+            filename VARCHAR(300) NOT NULL,
+            description VARCHAR(300),
+            uploaded_at DATETIME
+        )"""),
+        ("moeskroen_line", """CREATE TABLE IF NOT EXISTS moeskroen_line (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            kind VARCHAR(50) DEFAULT 'route',
+            color VARCHAR(20) DEFAULT '#8e44ad',
+            width_px FLOAT DEFAULT 2.5,
+            notes TEXT,
+            created_at DATETIME,
+            updated_at DATETIME
+        )"""),
+        ("moeskroen_line_vertex", """CREATE TABLE IF NOT EXISTS moeskroen_line_vertex (
+            id INTEGER PRIMARY KEY,
+            line_id INTEGER NOT NULL REFERENCES moeskroen_line(id),
+            seq INTEGER NOT NULL DEFAULT 0,
+            map_x FLOAT NOT NULL,
+            map_y FLOAT NOT NULL
+        )"""),
         ("machine.dim_length_mm", "ALTER TABLE machine ADD COLUMN dim_length_mm FLOAT"),
         ("machine.dim_width_mm", "ALTER TABLE machine ADD COLUMN dim_width_mm FLOAT"),
         ("machine.dim_height_mm", "ALTER TABLE machine ADD COLUMN dim_height_mm FLOAT"),
@@ -1066,6 +1118,7 @@ def run_data_migrations():
                 'floor': (True, True, True, False),
                 'air': (True, True, True, False),
                 'water': (True, True, True, False),
+                'moeskroen': (True, True, True, True),
                 'staff': (True, True, True, True),
                 'workers': (True, True, True, True),
                 'clients': (True, True, True, True),

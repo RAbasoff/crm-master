@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Line') }} — Moeskroen{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{% if line %}✏️ {{ _('Edit') }}: {{ line.name }}{% else %}➕ {{ _('Add line') }}{% endif %}</h1>
+    <a href="/moeskroen/map" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+</div>
+
+<div class="card" style="max-width:640px">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600">{{ _('Name') }} *</label>
+            <input type="text" name="name" required value="{{ line.name if line else '' }}"
+                   style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Kind') }}</label>
+                <select name="kind" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+                    {% for key, label in [('route','Route'),('pipe','Pipe'),('cable','Cable'),('road','Road'),('other','Other')] %}
+                    <option value="{{ key }}" {% if line and line.kind == key %}selected{% endif %}>{{ _(label) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Color') }}</label>
+                <input type="color" name="color" value="{{ line.color if line else '#8e44ad' }}"
+                       style="width:100%;height:38px;padding:2px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600">{{ _('Width') }}</label>
+                <input type="number" step="0.5" name="width_px" value="{{ line.width_px if line else 2.5 }}"
+                       style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+        </div>
+        <div style="margin-bottom:16px">
+            <label style="font-size:12px;font-weight:600">{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">{{ line.notes if line and line.notes else '' }}</textarea>
+        </div>
+        <p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Draw the geometry on the Factory Map after saving') }}</p>
+        <button type="submit" class="btn btn-primary" style="padding:10px 20px">{{ _('Save') }}</button>
+    </form>
+</div>
+{% endblock %}

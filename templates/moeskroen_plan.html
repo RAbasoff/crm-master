@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Plan') }} Moeskroen — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📐 {{ _('Plan') }} — Moeskroen</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/moeskroen" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="/moeskroen/zones/new" class="btn btn-sm btn-primary">➕ {{ _('Add Zone') }}</a>
+        <a href="/moeskroen/map" class="btn btn-sm" style="background:#8e44ad;color:white">🗺️ {{ _('Factory Map') }}</a>
+    </div>
+</div>
+
+<div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px;background:#f7fafc;border:1px solid #dde4ea;border-radius:8px">
+    <form method="POST" action="/moeskroen/plan/bg" enctype="multipart/form-data" style="display:flex;gap:6px;align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label style="font-size:12px;color:#555">{{ _('Background image') }}:</label>
+        <input type="file" name="bg" accept="image/*" style="font-size:12px">
+        <button type="submit" class="btn btn-sm" style="background:#2980b9;color:white">{{ _('Upload') }}</button>
+    </form>
+    <span style="flex:1"></span>
+    <span style="font-size:11px;color:#888">{{ _('Drag zones to reposition') }}</span>
+</div>
+
+<div id="planWrap" style="position:relative;width:100%;height:72vh;min-height:480px;background:#e8eef3;border-radius:10px;overflow:hidden;border:1px solid #b0bec5">
+    <div id="planGrid" style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:1"></div>
+    <img id="planBg" src="/static/uploads/{{ map_bg }}" alt=""
+         style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.92;pointer-events:none;z-index:2"
+         onerror="this.onerror=null;this.src='/static/floor_plan.jpeg'">
+    <div id="zones" style="position:absolute;inset:0;z-index:3">
+        {% for z in zones %}
+        <div class="zone-box" data-id="{{ z.id }}"
+             style="position:absolute;left:{{ z.floor_x }}%;top:{{ z.floor_y }}%;width:{{ z.width }}%;height:{{ z.height }}%;
+                    border:2px solid {{ z.color }};background:{{ z.color }}33;border-radius:4px;cursor:move;user-select:none">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+                <span style="font-size:11px;font-weight:700;color:#1a252f;text-align:center;padding:0 4px">{{ z.name }}</span>
+                <span style="font-size:9px;color:#445">{{ _(z.ZONE_TYPES.get(z.zone_type, 'Other')) }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div style="margin-top:12px;overflow-x:auto">
+    <table class="table" style="width:100%">
+        <thead><tr>
+            <th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Size') }}</th>
+            <th>{{ _('Position') }}</th><th></th>
+        </tr></thead>
+        <tbody>
+            {% for z in zones %}
+            <tr>
+                <td>
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:{{ z.color }};vertical-align:middle;margin-right:6px"></span>
+                    <strong>{{ z.name }}</strong>
+                </td>
+                <td>{{ _(z.ZONE_TYPES.get(z.zone_type, 'Other')) }}</td>
+                <td style="font-size:12px">{{ z.width }}% × {{ z.height }}%</td>
+                <td style="font-size:12px;color:#666">{{ z.floor_x|round(1) }}, {{ z.floor_y|round(1) }}</td>
+                <td>
+                    <a href="/moeskroen/zones/{{ z.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
+                    <form method="POST" action="/moeskroen/zones/{{ z.id }}/delete" style="display:inline"
+                          onsubmit="return confirm('{{ _('Delete?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">{{ _('Delete') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+(function () {
+    var wrap = document.getElementById('planWrap');
+    if (!wrap) return;
+    var dragging = null, startX = 0, startY = 0, origX = 0, origY = 0;
+
+    function pct(e) {
+        var r = wrap.getBoundingClientRect();
+        return {
+            x: ((e.clientX - r.left) / r.width) * 100,
+            y: ((e.clientY - r.top) / r.height) * 100
+        };
+    }
+
+    wrap.querySelectorAll('.zone-box').forEach(function (box) {
+        box.addEventListener('pointerdown', function (e) {
+            e.preventDefault();
+            dragging = box;
+            box.setPointerCapture(e.pointerId);
+            var p = pct(e);
+            startX = p.x; startY = p.y;
+            origX = parseFloat(box.style.left);
+            origY = parseFloat(box.style.top);
+        });
+        box.addEventListener('pointermove', function (e) {
+            if (dragging !== box) return;
+            var p = pct(e);
+            var nx = Math.max(0, Math.min(95, origX + (p.x - startX)));
+            var ny = Math.max(0, Math.min(95, origY + (p.y - startY)));
+            box.style.left = nx + '%';
+            box.style.top = ny + '%';
+        });
+        box.addEventListener('pointerup', function (e) {
+            if (dragging !== box) return;
+            dragging = null;
+            var id = parseInt(box.getAttribute('data-id'), 10);
+            var x = parseFloat(box.style.left);
+            var y = parseFloat(box.style.top);
+            fetch('/moeskroen/api/zone-position', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+                },
+                body: JSON.stringify({id: id, x: x, y: y})
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

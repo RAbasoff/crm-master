@@ -59,7 +59,7 @@ LANGUAGES = {'nl': 'Nederlands', 'en': 'English', 'ru': 'Русский', 'pl': 
 SECTION_KEYS = [
     # Production
     'dashboard', 'floor', 'machines', 'equipment', 'tool_wear', 'assets',
-    'electricity', 'gas', 'air', 'water', 'maintenance', 'maintenance_plans', 'repairs',
+    'electricity', 'gas', 'air', 'water', 'moeskroen', 'maintenance', 'maintenance_plans', 'repairs',
     'faults', 'two',
     # Communication
     'messages', 'notifications',
@@ -87,6 +87,7 @@ SECTIONS_TREE = [
         ('gas', 'Gas System', '🔴'),
         ('air', 'Compressed Air', '💨'),
         ('water', 'Water Supply', '💧'),
+        ('moeskroen', 'Moeskroen', '🏭'),
         ('maintenance', 'Maintenance Calendar', '📅'),
         ('maintenance_plans', 'Maintenance Plans', '📋'),
         ('repairs', 'Equipment Repairs', '🔧'),
