@@ -17,10 +17,34 @@
 </div>
 
 <form id="merge-form" method="POST" action="/two/merge">
-<div class="card" style="padding:0">
-    <div class="table-wrap"><table>
+
+{% set year_list = groups.keys()|list %}
+{% set multi_year = year_list|select('ne', none)|list|length > 1 or (none in year_list and year_list|length > 1) %}
+
+{% for year, months in groups.items() %}
+{# ── ГОД (если лет больше одного) ── #}
+{% if multi_year %}
+<div class="card two-year-group" data-year="{{ year or 'none' }}" style="padding:0;margin-bottom:8px">
+    <div class="two-year-header" onclick="toggleYear(this)" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#2c3e50;color:#fff;border-radius:8px 8px 0 0;user-select:none">
+        <span class="two-toggle-icon" style="font-size:14px;transition:transform .2s">▼</span>
+        <strong style="font-size:15px">{{ year if year else _('No date') }}</strong>
+        <span style="opacity:.8;font-size:12px">{{ months.values()|map(attribute='orders')|map('length')|sum }} {{ _('orders') }}</span>
+    </div>
+    <div class="two-year-body" style="border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">
+{% endif %}
+
+{% for month, data in months.items() %}
+{# ── МЕСЯЦ ── #}
+<div class="card two-month-group" data-month="{{ month or 'none' }}" style="padding:0;margin-bottom:8px;{% if multi_year %}border:none;box-shadow:none{% endif %}">
+    <div class="two-month-header" onclick="toggleMonth(this)" style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;background:{% if multi_year %}#f0f4f8{% else %}#2c3e50;color:#fff{% endif %};border-radius:{% if multi_year %}0{% else %}8px 8px 0 0{% endif %};user-select:none">
+        <span class="two-toggle-icon" style="font-size:12px;transition:transform .2s">▼</span>
+        <strong style="font-size:14px">{{ data.label }}</strong>
+        <span style="opacity:.7;font-size:12px">{{ data.orders|length }} {{ _('orders') }}</span>
+    </div>
+    <div class="two-month-body" style="border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">
+        <div class="table-wrap"><table>
         <tr>
-            <th style="width:30px"><input type="checkbox" id="check-all" title="{{ _('Select all') }}"></th>
+            <th style="width:30px"><input type="checkbox" class="check-all-month" title="{{ _('Select all') }}"></th>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Status') }}</th>
             <th>{{ _('Sections') }} / {{ _('Machines') }}</th>
@@ -29,7 +53,7 @@
             <th>{{ _('Fault') }}</th>
             <th></th>
         </tr>
-        {% for o in orders %}
+        {% for o in data.orders %}
         <tr>
             <td><input type="checkbox" name="two_ids" value="{{ o.id }}" class="two-check" onchange="toggleMergeBtn()"></td>
             <td><a href="/two/{{ o.id }}" style="color:#3498db;font-weight:bold">{{ o.number }}</a></td>
@@ -55,18 +79,44 @@
             </td>
         </tr>
         {% endfor %}
-    </table></div>
+        </table></div>
+    </div>
 </div>
+{% endfor %}
+
+{% if multi_year %}
+    </div>
+</div>
+{% endif %}
+
+{% endfor %}
 </form>
 
 <script>
+function toggleYear(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.two-toggle-icon');
+    const collapsed = body.style.display === 'none';
+    body.style.display = collapsed ? '' : 'none';
+    icon.textContent = collapsed ? '▼' : '▶';
+}
+function toggleMonth(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.two-toggle-icon');
+    const collapsed = body.style.display === 'none';
+    body.style.display = collapsed ? '' : 'none';
+    icon.textContent = collapsed ? '▼' : '▶';
+}
 function toggleMergeBtn() {
     const checked = document.querySelectorAll('.two-check:checked').length;
     document.getElementById('merge-btn').style.display = checked >= 2 ? 'inline-block' : 'none';
 }
-document.getElementById('check-all').addEventListener('change', function() {
-    document.querySelectorAll('.two-check').forEach(cb => cb.checked = this.checked);
-    toggleMergeBtn();
+document.querySelectorAll('.check-all-month').forEach(cb => {
+    cb.addEventListener('change', function() {
+        const table = this.closest('table');
+        table.querySelectorAll('.two-check').forEach(x => x.checked = cb.checked);
+        toggleMergeBtn();
+    });
 });
 </script>
 {% endblock %}

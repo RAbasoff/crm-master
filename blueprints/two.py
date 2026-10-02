@@ -19,14 +19,10 @@ bp = Blueprint('two', __name__)
 
 
 def gen_two_number():
-    vandaag = datetime.utcnow()
-    prefix = vandaag.strftime('%Y%m%d')
-    laatste = TechnicalWorkOrder.query.filter(TechnicalWorkOrder.number.like(f'TWO-{prefix}-%')).order_by(TechnicalWorkOrder.id.desc()).first()
-    if laatste:
-        num = int(laatste.number.split('-')[2]) + 1
-    else:
-        num = 1
-    return f'TWO-{prefix}-{num:04d}'
+    from utils import next_number_suffix
+    day = datetime.utcnow().strftime('%Y%m%d')
+    num = next_number_suffix(TechnicalWorkOrder, 'number', f'TWO-{day}')
+    return f'TWO-{day}-{num:04d}'
 
 @bp.route('/two')
 @login_required
@@ -38,7 +34,27 @@ def two_list():
         orders = TechnicalWorkOrder.query.order_by(TechnicalWorkOrder.created_at.desc()).all()
     else:
         orders = TechnicalWorkOrder.query.filter_by(created_by=current_user.id).order_by(TechnicalWorkOrder.created_at.desc()).all()
-    return render_template('two_list.html', orders=orders)
+
+    # Группировка по году → месяцу (planned_date, иначе created_at).
+    # Пустые месяцы не попадают в список.
+    from collections import OrderedDict
+    MONTHS_RU = {1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель', 5: 'Май', 6: 'Июнь',
+                 7: 'Июль', 8: 'Август', 9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'}
+    groups = OrderedDict()  # year -> OrderedDict(month_num -> {'label':..., 'orders':[...]})
+    for o in orders:
+        dt = o.planned_date or (o.created_at.date() if o.created_at else None)
+        if not dt:
+            key = (None, None)
+            year, month = None, None
+        else:
+            year, month = dt.year, dt.month
+        if year not in groups:
+            groups[year] = OrderedDict()
+        if month not in groups[year]:
+            groups[year][month] = {'label': MONTHS_RU.get(month, '—') if month else _('No date'), 'orders': []}
+        groups[year][month]['orders'].append(o)
+
+    return render_template('two_list.html', orders=orders, groups=groups)
 
 @bp.route('/two/new', methods=['GET', 'POST'])
 @login_required
@@ -71,7 +87,15 @@ def two_new():
         section_ids = request.form.getlist('section_ids')
         section_descs = request.form.getlist('section_descriptions')
         for i, sid in enumerate(section_ids):
+            work_items = request.form.getlist(f'section_work_{i}')
             if not sid:
+                # Отдел не выбран — сохраняем работы в общий чек-лист, не теряем
+                for j, text in enumerate(work_items):
+                    if text.strip():
+                        db.session.add(TWOChecklistItem(
+                            two_id=two.id, assignment_id=None,
+                            text=text.strip(), sort_order=j
+                        ))
                 continue
             assignment = TWOAssignment(
                 two_id=two.id,
@@ -82,7 +106,6 @@ def two_new():
             db.session.add(assignment)
             db.session.flush()
             # Add checklist items for this section
-            work_items = request.form.getlist(f'section_work_{i}')
             for j, text in enumerate(work_items):
                 if text.strip():
                     db.session.add(TWOChecklistItem(
@@ -94,7 +117,14 @@ def two_new():
         machine_ids = request.form.getlist('machine_ids')
         machine_descs = request.form.getlist('machine_descriptions')
         for i, mid in enumerate(machine_ids):
+            work_items = request.form.getlist(f'machine_work_{i}')
             if not mid:
+                for j, text in enumerate(work_items):
+                    if text.strip():
+                        db.session.add(TWOChecklistItem(
+                            two_id=two.id, assignment_id=None,
+                            text=text.strip(), sort_order=j
+                        ))
                 continue
             assignment = TWOAssignment(
                 two_id=two.id,
@@ -105,7 +135,6 @@ def two_new():
             db.session.add(assignment)
             db.session.flush()
             # Add checklist items for this machine
-            work_items = request.form.getlist(f'machine_work_{i}')
             for j, text in enumerate(work_items):
                 if text.strip():
                     db.session.add(TWOChecklistItem(
@@ -118,12 +147,16 @@ def two_new():
             return redirect(request.referrer or '/')
         # Handle photos
         if 'photos' in request.files:
+            saved = 0
             for photo in request.files.getlist('photos'):
                 if photo.filename:
-                    fn = secure_filename(f"two_{two.id}_{photo.filename}")
-                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-                    db.session.add(TWOPhoto(two_id=two.id, filename=fn))
-            if not safe_commit():
+                    fn = save_uploaded_file(photo, prefix=f"two_{two.id}_")
+                    if fn:
+                        db.session.add(TWOPhoto(two_id=two.id, filename=fn))
+                        saved += 1
+                    else:
+                        flash(_('File type not allowed') + f': {photo.filename}', 'error')
+            if saved and not safe_commit():
                 flash(_('Save failed'), 'error')
                 return redirect(url_for('two.two_detail', two_id=two.id))
         log_audit('create', 'two', two.id, two.number)
@@ -334,7 +367,7 @@ def two_detail(two_id):
 
 @bp.route('/two/<int:two_id>/checklist/add', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_checklist_add(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     text = request.form.get('text', '').strip()
@@ -349,7 +382,7 @@ def two_checklist_add(two_id):
 
 @bp.route('/two/checklist/<int:item_id>/toggle', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_checklist_toggle(item_id):
     item = TWOChecklistItem.query.get_or_404(item_id)
     item.is_done = not item.is_done
@@ -361,7 +394,7 @@ def two_checklist_toggle(item_id):
 
 @bp.route('/two/checklist/<int:item_id>/delete', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_checklist_delete(item_id):
     item = TWOChecklistItem.query.get_or_404(item_id)
     two_id = item.two_id
@@ -373,7 +406,7 @@ def two_checklist_delete(item_id):
 
 @bp.route('/two/<int:two_id>/signature', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_add_signature(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     signer_name = request.form.get('signer_name', '').strip()
@@ -391,7 +424,7 @@ def two_add_signature(two_id):
 
 @bp.route('/two/<int:two_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_edit(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     from utils import acquire_lock, release_lock
@@ -435,7 +468,14 @@ def two_edit(two_id):
         section_ids = request.form.getlist('section_ids')
         section_descs = request.form.getlist('section_descriptions')
         for i, sid in enumerate(section_ids):
+            work_items = request.form.getlist(f'section_work_{i}')
             if not sid:
+                for j, text in enumerate(work_items):
+                    if text.strip():
+                        db.session.add(TWOChecklistItem(
+                            two_id=two.id, assignment_id=None,
+                            text=text.strip(), sort_order=j
+                        ))
                 continue
             assignment = TWOAssignment(
                 two_id=two.id,
@@ -445,7 +485,6 @@ def two_edit(two_id):
             )
             db.session.add(assignment)
             db.session.flush()
-            work_items = request.form.getlist(f'section_work_{i}')
             for j, text in enumerate(work_items):
                 if text.strip():
                     db.session.add(TWOChecklistItem(
@@ -456,7 +495,14 @@ def two_edit(two_id):
         machine_ids = request.form.getlist('machine_ids')
         machine_descs = request.form.getlist('machine_descriptions')
         for i, mid in enumerate(machine_ids):
+            work_items = request.form.getlist(f'machine_work_{i}')
             if not mid:
+                for j, text in enumerate(work_items):
+                    if text.strip():
+                        db.session.add(TWOChecklistItem(
+                            two_id=two.id, assignment_id=None,
+                            text=text.strip(), sort_order=j
+                        ))
                 continue
             assignment = TWOAssignment(
                 two_id=two.id,
@@ -466,7 +512,6 @@ def two_edit(two_id):
             )
             db.session.add(assignment)
             db.session.flush()
-            work_items = request.form.getlist(f'machine_work_{i}')
             for j, text in enumerate(work_items):
                 if text.strip():
                     db.session.add(TWOChecklistItem(
@@ -475,11 +520,18 @@ def two_edit(two_id):
                     ))
         # Handle photos
         if 'photos' in request.files:
+            saved = 0
             for photo in request.files.getlist('photos'):
                 if photo.filename:
-                    fn = secure_filename(f"two_{two.id}_{photo.filename}")
-                    photo.save(os.path.join(current_app.config['UPLOAD_FOLDER'], fn))
-                    db.session.add(TWOPhoto(two_id=two.id, filename=fn))
+                    fn = save_uploaded_file(photo, prefix=f"two_{two.id}_")
+                    if fn:
+                        db.session.add(TWOPhoto(two_id=two.id, filename=fn))
+                        saved += 1
+                    else:
+                        flash(_('File type not allowed') + f': {photo.filename}', 'error')
+            if saved and not safe_commit():
+                flash(_('Save failed'), 'error')
+                return redirect(url_for('two.two_detail', two_id=two.id))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('two.two_detail', two_id=two.id))
@@ -506,7 +558,7 @@ def two_edit(two_id):
 
 @bp.route('/two/<int:two_id>/complete', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_complete(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     two.status = 'completed'
@@ -534,7 +586,7 @@ def two_delete(two_id):
 
 @bp.route('/two/merge', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def two_merge():
     """Merge multiple TWOs with the same planned_date into one combined work order."""
     two_ids = request.form.getlist('two_ids')

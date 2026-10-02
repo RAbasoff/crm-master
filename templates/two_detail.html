@@ -111,7 +111,7 @@
 {% endif %}
 
 <!-- ASSIGNMENTS: SECTIONS & MACHINES -->
-{% set section_assignments = two.assignments|selectattr('section_id')|rejectattr('machine_id')|list %}
+{% set section_assignments = two.assignments|rejectattr('machine_id')|list %}
 {% set machine_assignments = two.assignments|selectattr('machine_id')|list %}
 
 {% if section_assignments %}

@@ -28,7 +28,8 @@
             <p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Select departments where work will be performed. Each department has its own work list.') }}</p>
             <div id="sectionsList">
                 {% if two and two.assignments %}
-                    {% for a in two.assignments if a.section_id and not a.machine_id %}
+                    {% for a in two.assignments if not a.machine_id %}
+                    {% set aidx = loop.index0 %}
                     <div class="assignment-block" data-type="section" data-id="{{ a.id }}" style="background:white;border:1px solid #dce6f0;border-radius:10px;padding:14px;margin-bottom:10px">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                             <select name="section_ids" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
@@ -45,7 +46,7 @@
                             <div class="checklist-items">
                                 {% for item in a.checklist_items %}
                                 <div class="checklist-item" style="display:flex;gap:6px;align-items:center;margin-top:4px">
-                                    <input type="text" name="section_work_{{ loop.parent.loop.index0 }}" value="{{ item.text }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                                    <input type="text" name="section_work_{{ aidx }}" value="{{ item.text }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
                                     <button type="button" onclick="this.closest('.checklist-item').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer">✕</button>
                                 </div>
                                 {% endfor %}
@@ -68,6 +69,7 @@
             <div id="machinesList">
                 {% if two and two.assignments %}
                     {% for a in two.assignments if a.machine_id %}
+                    {% set midx = loop.index0 %}
                     <div class="assignment-block" data-type="machine" data-id="{{ a.id }}" style="background:white;border:1px solid #d5e8d4;border-radius:10px;padding:14px;margin-bottom:10px">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                             <select name="machine_ids" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
@@ -84,7 +86,7 @@
                             <div class="checklist-items">
                                 {% for item in a.checklist_items %}
                                 <div class="checklist-item" style="display:flex;gap:6px;align-items:center;margin-top:4px">
-                                    <input type="text" name="machine_work_{{ loop.parent.loop.index0 }}" value="{{ item.text }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                                    <input type="text" name="machine_work_{{ midx }}" value="{{ item.text }}" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
                                     <button type="button" onclick="this.closest('.checklist-item').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer">✕</button>
                                 </div>
                                 {% endfor %}
