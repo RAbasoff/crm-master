@@ -722,8 +722,9 @@ def login():
                 login_user(user, remember=True)
                 # Track login count
                 user.login_count = (user.login_count or 0) + 1
-                if user.login_count >= 2 and user.role != 'admin':
-                    user.force_change_password = True
+                # Смена пароля — только по флагу force_change_password
+                # (выставляется при создании учётки с временным паролем).
+                # Автосброс по счётчику входов убран — блокировал техников.
                 if not safe_commit():
                     flash(_('Save failed'), 'error')
                     return redirect(url_for('index'))
@@ -769,9 +770,7 @@ def login():
                 auth = ResponsibleAuth(person)
                 person.last_login = datetime.utcnow()
                 person.login_count = (person.login_count or 0) + 1
-                if person.login_count >= 2:
-                    person.force_change_password = True
-                    auth.force_change_password = True
+                # Без автосброса по счётчику входов — только по флагу bootstrap
                 if not safe_commit():
                     flash(_('Save failed'), 'error')
                     return redirect(url_for('index'))
