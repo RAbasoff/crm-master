@@ -1003,7 +1003,7 @@ def run_data_migrations():
                 if changed:
                     if pw:
                         p.set_password(pw)
-                    p.force_change_password = True
+                    # Не ставим force_change_password — смена пароля только по желанию
                     safe_commit()
                     print(f"Data migration: configured {pname} login as '{uname}' in Logistiek group"
                           + (" (password set from env)" if pw else " (password must be set by admin)"))
@@ -1063,8 +1063,7 @@ def run_data_migrations():
                           is_active_user=True)
                 _dpw = os.environ.get('DEFAULT_USER_PW') or __import__('secrets').token_urlsafe(12)
                 mu.set_password(_dpw)
-                if not os.environ.get('DEFAULT_USER_PW'):
-                    mu.force_change_password = True
+                # Без force_change_password — принудительная смена не требуется
                 db.session.add(mu)
                 db.session.flush()
                 m.user_id = mu.id

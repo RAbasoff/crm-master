@@ -161,7 +161,8 @@ def worker_reset_password(worker_id):
 
     new_pass = (request.form.get('new_password') or '').strip()
     gen = request.form.get('generate') == '1'
-    force = request.form.get('force_change') != '0'
+    # Смена пароля при входе — только если явно отмечено (opt-in)
+    force = request.form.get('force_change') == '1'
 
     if gen or not new_pass:
         import secrets, string

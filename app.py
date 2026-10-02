@@ -334,6 +334,21 @@ with app.app_context():
         if _needs_update:
             if not safe_commit():
                 print('WARNING: safe_commit failed in startup')
+    # Снимаем флаг принудительной смены пароля у всех —
+    # смена только по желанию пользователя (или при выдаче временного пароля).
+    try:
+        _cleared = User.query.filter(User.force_change_password == True).update(
+            {'force_change_password': False}, synchronize_session=False)
+        _cleared += Verantwoordelijke.query.filter(
+            Verantwoordelijke.force_change_password == True).update(
+            {'force_change_password': False}, synchronize_session=False)
+        if _cleared:
+            if not safe_commit():
+                print('WARNING: safe_commit failed clearing force_change_password')
+            print(f"STARTUP: cleared force_change_password for {_cleared} account(s)")
+    except Exception as _e:
+        db.session.rollback()
+        print(f"STARTUP: force_change clear skipped: {_e}")
     if User.query.count() == 0:
         admin = User(username='admin', display_name='Administrator', role='admin')
         _apw, _aforce = _bootstrap_password('BOOTSTRAP_ADMIN_PW')
