@@ -13,6 +13,7 @@ from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOA
                     WorkSchedule, WeekendShift, Vacation, MaintenancePlan, PartMaintenanceLog,
                     ResponsibleGroup, TWOPhoto)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
+                   is_work_date, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift,
                    get_belgian_holidays, save_uploaded_file, log_audit)
 
 bp = Blueprint('two', __name__)
@@ -185,9 +186,9 @@ def check_worker_availability():
         return jsonify({'available': True})
     date = datetime.strptime(date_str, '%Y-%m-%d').date()
     
-    # Check weekend shifts (off, sick)
-    shift = WeekendShift.query.filter_by(user_id=worker_id, date=date).first()
-    if shift and shift.shift_type in ('off', 'sick'):
+    # Check weekend shifts (off, sick) / working Saturday
+    shift = get_day_shift(worker_id, date)
+    if shift and shift.shift_type in OFF_SHIFT_TYPES:
         worker = User.query.get(worker_id)
         # Find alternative workers
         alternatives = suggest_available_workers(date, [worker_id])
@@ -200,6 +201,9 @@ def check_worker_availability():
             'alternatives': alternatives,
             'next_dates': next_dates
         })
+    # Working weekend (Sat chosen by mechanic / set by head of tech service)
+    if shift and shift.shift_type in WORK_SHIFT_TYPES:
+        return jsonify({'available': True, 'weekend_work': True, 'shift_type': shift.shift_type})
     
     # Check Belgian holidays
     holidays = get_belgian_holidays(date.year)
@@ -276,7 +280,8 @@ def suggest_available_workers(date, exclude_ids=None):
         WeekendShift.user_id.in_(worker_user_ids),
         WeekendShift.date == date
     ).all()
-    off_user_ids = {s.user_id for s in shifts if s.shift_type in ('off', 'sick')}
+    off_user_ids = {s.user_id for s in shifts if s.shift_type in OFF_SHIFT_TYPES}
+    work_shift_user_ids = {s.user_id for s in shifts if s.shift_type in WORK_SHIFT_TYPES}
     
     # Batch-fetch schedules (1 query instead of N)
     schedules = WorkSchedule.query.filter(
@@ -290,6 +295,10 @@ def suggest_available_workers(date, exclude_ids=None):
         if not w.user_id or w.user_id in exclude_ids:
             continue
         if w.user_id in off_user_ids:
+            continue
+        # Explicit working Saturday/Sunday (set by head of tech service / admin)
+        if w.user_id in work_shift_user_ids:
+            available.append({'id': w.user_id, 'name': w.naam, 'specialty': w.specialisatie or ''})
             continue
         
         schedule = schedule_map.get(w.user_id)
@@ -339,7 +348,12 @@ def suggest_available_dates(worker_id, from_date, count=5):
             continue
         
         shift = shift_map.get(current)
-        if shift and shift.shift_type in ('off', 'sick'):
+        if shift and shift.shift_type in OFF_SHIFT_TYPES:
+            current += timedelta(days=1)
+            continue
+        # Working Saturday/Sunday (WeekendShift work type) overrides calendar weekend
+        if shift and shift.shift_type in WORK_SHIFT_TYPES:
+            dates.append(current.strftime('%Y-%m-%d'))
             current += timedelta(days=1)
             continue
         

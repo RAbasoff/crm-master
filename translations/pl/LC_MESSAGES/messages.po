@@ -6002,3 +6002,44 @@ msgstr "Gaz ziemny"
 
 msgid "Gases used"
 msgstr "Używane gazy"
+
+#: schedule_saturdays
+msgid "Working Saturdays"
+msgstr "Soboty robocze"
+
+#: schedule_saturdays
+msgid "Saturday"
+msgstr "Sobota"
+
+#: schedule_saturdays
+msgid "Day off"
+msgstr "Dzień wolny"
+
+
+
+
+#: schedule_saturdays
+msgid "Morning"
+msgstr "Rano"
+
+#: schedule_saturdays
+msgid "Afternoon"
+msgstr "Popołudnie"
+
+#: schedule_saturdays
+msgid "Weekday"
+msgstr "Dzień tygodnia"
+
+#: schedule_saturdays
+msgid "Shift"
+msgstr "Zmiana"
+
+
+
+#: schedule_saturdays
+msgid "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
+msgstr "Soboty robocze ustawia kierownik działu technicznego lub administrator. Wybierz pracownika i oznacz soboty."
+
+#: schedule_saturdays
+msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
+msgstr "Soboty robocze ustawia kierownik działu technicznego lub administrator. Twoje przydzielone soboty są pokazane poniżej."

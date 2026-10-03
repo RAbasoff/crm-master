@@ -6019,3 +6019,44 @@ msgstr "Aardgas"
 
 msgid "Gases used"
 msgstr "Gebruikte gassen"
+
+#: schedule_saturdays
+msgid "Working Saturdays"
+msgstr "Werkzaterdagen"
+
+#: schedule_saturdays
+msgid "Saturday"
+msgstr "Zaterdag"
+
+#: schedule_saturdays
+msgid "Day off"
+msgstr "Vrije dag"
+
+
+
+
+#: schedule_saturdays
+msgid "Morning"
+msgstr "Ochtend"
+
+#: schedule_saturdays
+msgid "Afternoon"
+msgstr "Middag"
+
+#: schedule_saturdays
+msgid "Weekday"
+msgstr "Weekdag"
+
+#: schedule_saturdays
+msgid "Shift"
+msgstr "Dienst"
+
+
+
+#: schedule_saturdays
+msgid "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
+msgstr "Werkzaterdagen worden ingesteld door het hoofd technische dienst of beheerder. Kies een medewerker en markeer de zaterdagen."
+
+#: schedule_saturdays
+msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
+msgstr "Werkzaterdagen worden ingesteld door het hoofd technische dienst of beheerder. Je toegewezen zaterdagen staan hieronder."

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Working Saturdays') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🗓 {{ _('Working Saturdays') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/schedule" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+        {% if is_head %}
+        <a href="/schedule/monthly" class="btn btn-sm" style="background:#e67e22;color:white">{{ _('Monthly Schedule') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <p style="font-size:13px;margin:0">
+        {% if is_head %}
+        {{ _('Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays.') }}
+        {% else %}
+        {{ _('Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below.') }}
+        {% endif %}
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#666">
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#27ae60;vertical-align:middle"></span> {{ _('Working') }}</span>
+        <span>— {{ _('Day off') }}</span>
+    </div>
+</div>
+
+{% if is_head %}
+<div class="card" style="margin-bottom:12px">
+    <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;font-weight:600">{{ _('Worker') }}:</label>
+        <select name="user" onchange="this.form.submit()" style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;min-width:200px">
+            <option value="">{{ _('All monteurs') }}</option>
+            {% for u in all_users %}
+            <option value="{{ u.id }}" {% if filter_user == u.id|string %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+{% endif %}
+
+{% for uid, rows in rows_by_user.items() %}
+{% set u = all_users | selectattr('id', 'equalto', uid) | first %}
+<div class="card" style="margin-bottom:12px;padding:0">
+    <div style="padding:10px 14px;border-bottom:1px solid #eee;font-weight:700;font-size:13px;background:#f8f9fa">
+        {{ u.display_name or u.username if u else current_user.display_name or current_user.username }}
+    </div>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Date') }}</th>
+                <th>{{ _('Weekday') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Shift') }}</th>
+                {% if is_head %}
+                <th style="width:180px">{{ _('Actions') }}</th>
+                {% endif %}
+            </tr>
+            {% for r in rows %}
+            <tr>
+                <td><strong>{{ r.date.strftime('%d-%m-%Y') }}</strong></td>
+                <td>{{ _('Saturday') }}</td>
+                <td>
+                    {% if r.shift and r.shift.shift_type in ('off', 'sick') %}
+                    <span class="badge badge-offline">{{ _('Off') if r.shift.shift_type == 'off' else _('Sick') }}</span>
+                    {% elif r.is_working %}
+                    <span class="badge badge-active">{{ _('Working') }}</span>
+                    {% else %}
+                    <span style="color:#aaa">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.shift and r.shift.shift_type in ('full', 'morning', 'afternoon') %}
+                        {% if r.shift.shift_type == 'full' %}{{ _('Full') }}
+                        {% elif r.shift.shift_type == 'morning' %}{{ _('Morning') }}
+                        {% else %}{{ _('Afternoon') }}{% endif %}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                {% if is_head %}
+                <td>
+                    {% if r.is_working %}
+                    <button class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px;font-size:11px"
+                            onclick="setSat({{ uid }},'{{ r.date.strftime('%Y-%m-%d') }}','remove')">{{ _('Cancel') }}</button>
+                    {% else %}
+                    <button class="btn btn-sm" style="background:#27ae60;color:white;padding:4px 8px;font-size:11px"
+                            onclick="setSat({{ uid }},'{{ r.date.strftime('%Y-%m-%d') }}','add','full')">{{ _('Work') }}</button>
+                    <select class="shift-pick" data-user="{{ uid }}" data-date="{{ r.date.strftime('%Y-%m-%d') }}"
+                            style="padding:3px 4px;font-size:11px;border:1px solid #ddd;border-radius:4px;margin-left:4px">
+                        <option value="full">{{ _('Full') }}</option>
+                        <option value="morning">{{ _('Morning') }}</option>
+                        <option value="afternoon">{{ _('Afternoon') }}</option>
+                    </select>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+{% if not rows_by_user %}
+<div class="card" style="text-align:center;padding:30px;color:#888">
+    {{ _('No workers found in Technical Service') }}
+</div>
+{% endif %}
+
+{% if is_head %}
+<script>
+function setSat(userId, date, action, shiftType) {
+    const sel = document.querySelector(`.shift-pick[data-user="${userId}"][data-date="${date}"]`);
+    const type = shiftType || (sel ? sel.value : 'full');
+    csrfFetch('/schedule/saturdays/set', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userId, date: date, action: action, shift_type: type})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -5,6 +5,7 @@
     <h1 style="font-size:16px">📅 {{ _('Monthly Schedule') }}</h1>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <a href="/schedule" class="btn btn-sm" style="background:#eee;padding:4px 8px;font-size:11px">← {{ _('Schedules') }}</a>
+        <a href="/schedule/saturdays" class="btn btn-sm" style="background:#27ae60;color:white;padding:4px 8px;font-size:11px">🗓 {{ _('Working Saturdays') }}</a>
         <a href="/schedule/monthly?year={{ year }}&month={{ month-1 }}{% if filter_user %}&user={{ filter_user }}{% endif %}" class="btn btn-sm" style="background:#eee;padding:4px 8px;font-size:11px">◀</a>
         <span style="padding:4px 8px;font-weight:700;font-size:13px">{{ ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'][month] }} {{ year }}</span>
         <a href="/schedule/monthly?year={{ year }}&month={{ month+1 }}{% if filter_user %}&user={{ filter_user }}{% endif %}" class="btn btn-sm" style="background:#eee;padding:4px 8px;font-size:11px">▶</a>

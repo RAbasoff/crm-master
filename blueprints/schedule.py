@@ -10,9 +10,21 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, Monteur, User, WeekendShift, WorkSchedule)
-from utils import get_belgian_holidays, role_required, safe_commit, safe_int
+from utils import (get_belgian_holidays, role_required, safe_commit, safe_int,
+                   log_audit, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift)
 
 bp = Blueprint('schedule', __name__)
+
+
+def _is_schedule_head(user):
+    """Начальник технической службы / руководство: admin и director."""
+    return user.has_role('admin', 'director')
+
+
+def _tech_monteurs():
+    """Активные механики с привязанным User (техслужба)."""
+    monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    return [m for m in monteurs if m.user_id]
 
 @bp.route('/schedule')
 @login_required
@@ -178,3 +190,116 @@ def schedule_monthly_delete():
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True, 'deleted': deleted})
+
+
+# ── Рабочие субботы: ставит начальник ТС / админ; механик только смотрит ──
+
+@bp.route('/schedule/saturdays')
+@login_required
+@role_required('admin', 'director', 'technician')
+def saturdays():
+    """Страница рабочих суббот.
+
+    Начальник ТС / админ (admin, director) — назначает и снимает субботы.
+    Механик — только просмотр своих назначенных суббот.
+    """
+    is_head = _is_schedule_head(current_user)
+    filter_user = request.args.get('user', '')
+    monteurs = _tech_monteurs()
+
+    # Target user: head can pick anyone; mechanic sees only self (read-only)
+    if is_head:
+        all_users = [m.user for m in monteurs if m.user]
+        if filter_user:
+            target = next((u for u in all_users if str(u.id) == filter_user), None)
+        else:
+            target = None
+    else:
+        target = current_user
+        all_users = [current_user]
+
+    # Next 12 Saturdays from today
+    today = datetime.utcnow().date()
+    days_ahead = (5 - today.weekday()) % 7  # 5=Sat
+    first_sat = today + timedelta(days=days_ahead)
+    saturdays_list = []
+    for i in range(12):
+        d = first_sat + timedelta(days=7 * i)
+        saturdays_list.append(d)
+
+    def _build_rows(u):
+        rows = []
+        for d in saturdays_list:
+            shift = get_day_shift(u.id, d)
+            rows.append({
+                'date': d,
+                'shift': shift,
+                'is_working': bool(shift and shift.shift_type in WORK_SHIFT_TYPES),
+            })
+        return rows
+
+    rows_by_user = {}
+    if is_head and target:
+        rows_by_user[target.id] = _build_rows(target)
+    elif is_head:
+        for u in all_users:
+            rows_by_user[u.id] = _build_rows(u)
+    else:
+        rows_by_user[current_user.id] = _build_rows(current_user)
+
+    return render_template('schedule_saturdays.html',
+                           is_head=is_head,
+                           target=target,
+                           all_users=all_users,
+                           filter_user=filter_user,
+                           saturdays_list=saturdays_list,
+                           rows_by_user=rows_by_user)
+
+
+@bp.route('/schedule/saturdays/set', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def saturdays_set():
+    """Установить/снять рабочую субботу. Только начальник ТС / админ.
+
+    JSON: {user_id, date, action: 'add'|'remove', shift_type?}
+    """
+    data = request.get_json() or {}
+    user_id = safe_int(data.get('user_id'))
+    date_str = (data.get('date') or '').strip()
+    action = data.get('action')
+    shift_type = data.get('shift_type') or 'full'
+    if not user_id or not date_str or action not in ('add', 'remove'):
+        return jsonify({'error': 'Bad request'}), 400
+    if shift_type not in WORK_SHIFT_TYPES and action == 'add':
+        return jsonify({'error': 'Bad shift type'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Bad date'}), 400
+    if date.weekday() != 5:  # only Saturdays
+        return jsonify({'error': 'Not a Saturday'}), 400
+
+    existing = get_day_shift(user_id, date)
+    if action == 'add':
+        if existing:
+            existing.shift_type = shift_type
+            existing.created_by = current_user.id
+        else:
+            db.session.add(WeekendShift(
+                user_id=user_id, date=date, shift_type=shift_type,
+                notes=_('Working Saturday'), created_by=current_user.id))
+    else:  # remove
+        if existing:
+            db.session.delete(existing)
+
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    log_audit('saturday_shift', 'weekend_shift', user_id,
+              f"{action} {date_str} {shift_type if action == 'add' else ''}")
+    return jsonify({'ok': True, 'action': action, 'date': date_str})

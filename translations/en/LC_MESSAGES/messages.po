@@ -5962,3 +5962,44 @@ msgstr "Natural gas"
 
 msgid "Gases used"
 msgstr "Gases used"
+
+#: schedule_saturdays
+msgid "Working Saturdays"
+msgstr "Working Saturdays"
+
+#: schedule_saturdays
+msgid "Saturday"
+msgstr "Saturday"
+
+#: schedule_saturdays
+msgid "Day off"
+msgstr "Day off"
+
+
+
+
+#: schedule_saturdays
+msgid "Morning"
+msgstr "Morning"
+
+#: schedule_saturdays
+msgid "Afternoon"
+msgstr "Afternoon"
+
+#: schedule_saturdays
+msgid "Weekday"
+msgstr "Weekday"
+
+#: schedule_saturdays
+msgid "Shift"
+msgstr "Shift"
+
+
+
+#: schedule_saturdays
+msgid "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
+msgstr "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
+
+#: schedule_saturdays
+msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
+msgstr "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."

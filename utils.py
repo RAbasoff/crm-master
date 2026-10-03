@@ -64,16 +64,83 @@ def date_plus_days(d, days):
     return None
 
 
-def is_user_at_work(user):
-    """True, если сейчас рабочее время по графику пользователя (WorkSchedule).
+WORK_SHIFT_TYPES = ('full', 'morning', 'afternoon')
+OFF_SHIFT_TYPES = ('off', 'sick')
 
-    Учитывает: work_days, shift_start/shift_end, WeekendShift (off/sick),
+
+def _parse_hhmm(value, fallback):
+    try:
+        return datetime.strptime(value, '%H:%M').time()
+    except (ValueError, TypeError):
+        return fallback
+
+
+def get_day_shift(user_id, date):
+    """WeekendShift на дату (или None)."""
+    from models import WeekendShift
+    return WeekendShift.query.filter_by(user_id=user_id, date=date).first()
+
+
+def get_active_schedule(user_id):
+    from models import WorkSchedule
+    return WorkSchedule.query.filter_by(user_id=user_id, is_active=True).first()
+
+
+def is_work_date(user_id, date):
+    """True, если дата — рабочая для пользователя.
+
+    Суббота/воскресенье могут быть рабочими по WeekendShift
+    (full/morning/afternoon) — назначает начальник ТС / админ.
+    """
+    shift = get_day_shift(user_id, date)
+    if shift and shift.shift_type in OFF_SHIFT_TYPES:
+        return False
+    if shift and shift.shift_type in WORK_SHIFT_TYPES:
+        return True
+
+    weekday = date.isoweekday()  # 1=Mon .. 7=Sun
+    schedule = get_active_schedule(user_id)
+    if schedule:
+        try:
+            work_days = [int(d.strip()) for d in (schedule.work_days or '').split(',') if d.strip()]
+        except ValueError:
+            work_days = [1, 2, 3, 4, 5]
+        return weekday in work_days
+    return weekday <= 5
+
+
+def get_work_hours(user_id, date=None):
+    """(start, end) времени работы на дату; None, если день не рабочий."""
+    if date is None:
+        date = datetime.now().date()
+    if not is_work_date(user_id, date):
+        return None
+    shift = get_day_shift(user_id, date)
+    schedule = get_active_schedule(user_id)
+    default_start = _parse_hhmm('08:00', datetime.now().replace(hour=8, minute=0).time())
+    default_end = _parse_hhmm('17:00', datetime.now().replace(hour=17, minute=0).time())
+    start = _parse_hhmm(schedule.shift_start, default_start) if schedule else default_start
+    end = _parse_hhmm(schedule.shift_end, default_end) if schedule else default_end
+    if shift and shift.shift_type == 'morning':
+        midday = _parse_hhmm('13:00', default_end)
+        end = min(end, midday)
+    elif shift and shift.shift_type == 'afternoon':
+        midday = _parse_hhmm('13:00', default_start)
+        start = max(start, midday)
+    return start, end
+
+
+def is_user_at_work(user):
+    """True, если сейчас рабочее время по графику пользователя.
+
+    Учитывает: work_days, shift_start/shift_end, WeekendShift
+    (off/sick — нерабочий; full/morning/afternoon — рабочая смена,
+    в т.ч. суббота, назначенная начальником ТС / админом),
     утверждённый отпуск. Без активного графика — стандартный Пн-Пт 08:00-17:00.
     """
-    from models import WorkSchedule, WeekendShift, Vacation
+    from models import Vacation
     now = datetime.now()
     today = now.date()
-    weekday = today.isoweekday()  # 1=Mon .. 7=Sun
 
     # Отпуск
     vac = Vacation.query.filter(
@@ -85,28 +152,11 @@ def is_user_at_work(user):
     if vac:
         return False
 
-    # Выходной / больничный на сегодня
-    shift = WeekendShift.query.filter_by(user_id=user.id, date=today).first()
-    if shift and shift.shift_type in ('off', 'sick'):
+    hours = get_work_hours(user.id, today)
+    if not hours:
         return False
-
-    schedule = WorkSchedule.query.filter_by(user_id=user.id, is_active=True).first()
-    if schedule:
-        try:
-            work_days = [int(d.strip()) for d in (schedule.work_days or '').split(',') if d.strip()]
-        except ValueError:
-            work_days = [1, 2, 3, 4, 5]
-        if weekday not in work_days:
-            return False
-        try:
-            start = datetime.strptime(schedule.shift_start, '%H:%M').time()
-            end = datetime.strptime(schedule.shift_end, '%H:%M').time()
-        except (ValueError, TypeError):
-            return True
-        return start <= now.time() <= end
-
-    # Без графика: стандартный будний день 08:00–17:00
-    return weekday <= 5 and 8 <= now.hour < 17
+    start, end = hours
+    return start <= now.time() <= end
 
 
 def user_schedule_restricted(user):
