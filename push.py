@@ -32,16 +32,9 @@ def get_public_key():
     return pub or ''
 
 
-def _private_pem_from_b64(priv_b64):
-    """py_vapid принимает PEM; приватный ключ храним как base64 DER (PKCS8)."""
-    from cryptography.hazmat.primitives import serialization
-    der = base64.urlsafe_b64decode(priv_b64 + '=' * (-len(priv_b64) % 4))
-    key = serialization.load_der_private_key(der, password=None)
-    return key.private_bytes(
-        serialization.Encoding.PEM,
-        serialization.PrivateFormat.PKCS8,
-        serialization.NoEncryption(),
-    )
+def _private_key_for_webpush(priv_b64):
+    """pywebpush/py_vapid from_string ожидает base64url DER (не PEM)."""
+    return priv_b64
 
 
 def send_web_push(subscription_info, title, body, url=None, tag=None):
@@ -60,14 +53,24 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
         resp = webpush(
             subscription_info=subscription_info,
             data=json.dumps(payload, ensure_ascii=False),
-            vapid_private_key=_private_pem_from_b64(priv),
+            vapid_private_key=_private_key_for_webpush(priv),
             vapid_claims={'sub': 'mailto:admin@promaster.local'},
             ttl=60 * 60 * 6,
         )
         return bool(resp and resp.status_code < 300)
-    except WebPushException:
+    except WebPushException as e:
+        try:
+            import logging
+            logging.getLogger('push').warning('webpush failed: %s', e)
+        except Exception:
+            pass
         return False
-    except Exception:
+    except Exception as e:
+        try:
+            import logging
+            logging.getLogger('push').warning('webpush error: %s', e)
+        except Exception:
+            pass
         return False
 
 
