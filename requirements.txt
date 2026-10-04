@@ -15,3 +15,5 @@ fpdf2>=2.7.0
 gunicorn==21.2.0
 pymysql>=1.1.0
 deep-translator>=1.11.0
+pywebpush>=2.0.0
+py_vapid>=1.8.0

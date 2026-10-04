@@ -6145,3 +6145,143 @@ msgstr "Рабочие субботы устанавливает начальн�
 #: schedule_saturdays
 msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
 msgstr "Рабочие субботы устанавливает начальник технической службы или администратор. Ваши назначенные субботы показаны ниже."
+
+#: faults work-timer
+msgid "Start work"
+msgstr "Начать работы"
+
+#: faults work-timer
+msgid "End work"
+msgstr "Окончить работы"
+
+#: faults work-timer
+msgid "Work in progress"
+msgstr "Работы выполняются"
+
+#: faults work-timer
+msgid "Ended"
+msgstr "Окончание"
+
+#: faults work-timer
+msgid "Duration"
+msgstr "Длительность"
+
+#: faults work-timer
+msgid "running"
+msgstr "идёт"
+
+#: faults work-timer
+msgid "Work sessions"
+msgstr "Сессии работ"
+
+#: faults work-timer
+msgid "Work finished"
+msgstr "Работы окончены"
+
+#: faults work-timer
+msgid "Work already started on this fault"
+msgstr "Работы по этой заявке уже начаты"
+
+#: faults work-timer
+msgid "Finish work on fault #{} before starting another"
+msgstr "Завершите работы по заявке №{}, прежде чем начинать другую"
+
+#: faults work-timer
+msgid "No active work session on this fault"
+msgstr "Нет активной сессии работ по этой заявке"
+
+#: faults work-timer
+msgid "Fault is closed"
+msgstr "Заявка закрыта"
+
+#: faults work-timer
+msgid "Finish work on another fault first"
+msgstr "Сначала завершите работы по другой заявке"
+
+#: faults work-timer
+msgid "You have an open work session on fault"
+msgstr "У вас открытая сессия работ по заявке"
+
+#: faults work-timer
+msgid "finish it before starting work here"
+msgstr "завершите её, прежде чем начинать здесь"
+
+#: faults work-timer
+msgid "Finish work on this fault?"
+msgstr "Завершить работы по этой заявке?"
+
+#: faults work-timer
+msgid "Finish work on fault"
+msgstr "Завершить работы по заявке"
+
+#: faults status
+msgid "Status history"
+msgstr "История статусов"
+
+#: faults status
+msgid "full chronology"
+msgstr "полная хронология"
+
+#: faults status
+msgid "Pause reason"
+msgstr "Причина паузы"
+
+#: faults status
+msgid "Planned resume date"
+msgstr "Планируемая дата возобновления"
+
+#: faults status
+msgid "Planned resume"
+msgstr "Возобновление"
+
+#: faults status
+msgid "Resume work"
+msgstr "Продолжить работу"
+
+#: faults status
+msgid "Pause"
+msgstr "Пауза"
+
+#: faults status
+msgid "Fault created"
+msgstr "Заявка создана"
+
+#: faults status
+msgid "Select a pause reason"
+msgstr "Выберите причину паузы"
+
+#: faults status
+msgid "Comment is required for «Other» pause reason"
+msgstr "Для причины «Другая» обязателен комментарий"
+
+#: faults status
+msgid "Only head of technical service or admin can close a fault"
+msgstr "Закрыть заявку может только начальник ТС или администратор"
+
+#: faults status
+msgid "Reason is required to reopen a fault"
+msgstr "Для переоткрытия обязательна причина"
+
+#: faults status
+msgid "Fault resolved — awaiting close"
+msgstr "Заявка устранена — ожидает закрытия"
+
+#: faults status
+msgid "Please verify and close"
+msgstr "Проверьте и закройте"
+
+#: faults status
+msgid "Awaiting close by head"
+msgstr "Ожидает закрытия начальством"
+
+#: faults status
+msgid "Resolved by"
+msgstr "Устранил"
+
+#: faults status
+msgid "by mechanic"
+msgstr "механиком"
+
+#: faults status
+msgid "24/7 access (no work-hours limit)"
+msgstr "Доступ 24/7 (без ограничения по графику)"

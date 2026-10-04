@@ -6060,3 +6060,71 @@ msgstr "Werkzaterdagen worden ingesteld door het hoofd technische dienst of behe
 #: schedule_saturdays
 msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
 msgstr "Werkzaterdagen worden ingesteld door het hoofd technische dienst of beheerder. Je toegewezen zaterdagen staan hieronder."
+
+#: faults work-timer
+msgid "Start work"
+msgstr "Werk starten"
+
+#: faults work-timer
+msgid "End work"
+msgstr "Werk beëindigen"
+
+#: faults work-timer
+msgid "Work in progress"
+msgstr "Werk bezig"
+
+#: faults work-timer
+msgid "Ended"
+msgstr "Beëindigd"
+
+#: faults work-timer
+msgid "Duration"
+msgstr "Duur"
+
+#: faults work-timer
+msgid "running"
+msgstr "loopt"
+
+#: faults work-timer
+msgid "Work sessions"
+msgstr "werksessies"
+
+#: faults work-timer
+msgid "Work finished"
+msgstr "Werk beëindigd"
+
+#: faults work-timer
+msgid "Work already started on this fault"
+msgstr "Werk is al gestart voor deze melding"
+
+#: faults work-timer
+msgid "Finish work on fault #{} before starting another"
+msgstr "Beëindig werk op melding #{} voordat je een andere start"
+
+#: faults work-timer
+msgid "No active work session on this fault"
+msgstr "Geen actieve werksessie op deze melding"
+
+#: faults work-timer
+msgid "Fault is closed"
+msgstr "Melding is gesloten"
+
+#: faults work-timer
+msgid "Finish work on another fault first"
+msgstr "Beëindig eerst werk op een andere melding"
+
+#: faults work-timer
+msgid "You have an open work session on fault"
+msgstr "Je hebt een open werksessie op melding"
+
+#: faults work-timer
+msgid "finish it before starting work here"
+msgstr "beëindig die voordat je hier start"
+
+#: faults work-timer
+msgid "Finish work on this fault?"
+msgstr "Werk op deze melding beëindigen?"
+
+#: faults work-timer
+msgid "Finish work on fault"
+msgstr "Werk beëindigen op melding"

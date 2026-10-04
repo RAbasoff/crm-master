@@ -4,15 +4,18 @@
  *  - HTML pages: network-first, fallback to cache, fallback to offline.html
  *  - API / POST: always network (never cache mutations)
  */
-const CACHE = 'promaster-v2';
+const CACHE = 'promaster-v3';
 const OFFLINE_URL = '/static/offline.html';
 
 const PRECACHE = [
   OFFLINE_URL,
   '/static/manifest.json',
+  '/static/icon-152.png',
   '/static/icon-192.png',
   '/static/icon-512.png',
+  '/static/apple-touch-icon.png',
   '/static/js/scanner-common.js',
+  '/static/js/offline-queue.js',
   '/static/fonts/DejaVuSans.ttf',
 ];
 
@@ -118,4 +121,42 @@ self.addEventListener('message', (event) => {
   if (event.data === 'clearCache') {
     caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))));
   }
+});
+
+// Web Push: системное уведомление + вибрация (Android / iOS 16.4+ PWA)
+self.addEventListener('push', (event) => {
+  let data = { title: 'ProMaster', body: '', url: '/' };
+  try {
+    if (event.data) data = Object.assign(data, event.data.json());
+  } catch (e) {
+    try { data.body = event.data ? event.data.text() : ''; } catch (e2) {}
+  }
+  const tag = data.tag || 'promaster';
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'ProMaster', {
+      body: data.body || '',
+      tag: tag,
+      requireInteraction: true,
+      vibrate: [300, 100, 300, 100, 400],
+      icon: '/static/icon-192.png',
+      badge: '/static/icon-192.png',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ('focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });

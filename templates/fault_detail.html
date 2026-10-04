@@ -15,25 +15,45 @@
         {% if fault.status in ['accepted', 'in_progress', 'parts_ordered', 'waiting_parts'] and current_user.has_role('technician', 'admin') %}
         <a href="/faults/{{ fault.id }}/work-report" class="btn btn-sm btn-primary">{{ _('Create Work Report') }}</a>
         {% endif %}
-        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin') %}
+        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin', 'director') %}
         <div style="position:relative;display:inline-block">
             <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
-                {% if fault.status == 'open' %}<option value="accepted" style="background:white;color:#333">{{ _('Accept') }}</option>{% endif %}
-                {% if fault.status in ['accepted', 'open'] %}<option value="in_progress" style="background:white;color:#333">{{ _('In progress') }}</option>{% endif %}
-                <option value="parts_ordered" style="background:white;color:#333">{{ _('Parts ordered') }}</option>
-                <option value="waiting_parts" style="background:white;color:#333">{{ _('Waiting for parts') }}</option>
-                {% if fault.status in ['accepted', 'in_progress'] %}<option value="resolved" style="background:white;color:#333">{{ _('Resolved') }}</option>{% endif %}
+                {% for st in allowed_next %}
+                {% if st == 'closed' and not current_user.has_role('admin', 'director') %}
+                {% else %}
+                <option value="{{ st }}" style="background:white;color:#333">{{ status_labels.get(st, st) }}</option>
+                {% endif %}
+                {% endfor %}
             </select>
         </div>
         {% endif %}
-        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin') %}
-        <button type="button" class="btn btn-sm" style="background:#e67e22;color:white" onclick="openCloseModal()">{{ _('Close Fault') }}</button>
+        {% if fault.status in ['accepted', 'in_progress', 'diagnosis', 'testing'] and current_user.has_role('technician', 'admin', 'director') %}
+        <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="setStatus('resolved')">✅ {{ _('Resolved') }}</button>
         {% endif %}
-        {% if fault.status in ['closed', 'resolved'] and current_user.has_role('technician', 'admin') %}
+        {% if fault.status in ['paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') %}
+        <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="setStatus('in_progress')">▶ {{ _('Resume work') }}</button>
+        {% endif %}
+        {% if fault.status in ['accepted', 'diagnosis', 'in_progress'] and current_user.has_role('technician', 'admin', 'director') %}
+        <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="openPauseModal()">⏸ {{ _('Pause') }}</button>
+        {% endif %}
+        {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
+        <button type="button" class="btn btn-sm" style="background:#e67e22;color:white" onclick="openCloseModal()">🔒 {{ _('Close Fault') }}</button>
+        {% endif %}
+        {% if fault.status in ['closed', 'resolved'] and current_user.has_role('admin', 'director') %}
         <button type="button" class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReopenModal()">🔄 {{ _('Reopen') }}</button>
         {% endif %}
         <a href="/messages/new?fault_id={{ fault.id }}" class="btn btn-sm btn-primary">💬 {{ _('Send Message') }}</a>
+        {% if current_user.has_role('technician', 'admin') and fault.status != 'closed' %}
+        {% if my_session %}
+        <button type="button" class="btn btn-sm" id="workEndBtn" style="background:#e74c3c;color:white;font-weight:700" onclick="endWork()">⏹ {{ _('End work') }}</button>
+        {% elif open_session and open_session.fault_id != fault.id %}
+        <button type="button" class="btn btn-sm" style="background:#bdc3c7;color:#555;cursor:not-allowed"
+                title="{{ _('Finish work on another fault first') }}" disabled>▶ {{ _('Start work') }}</button>
+        {% else %}
+        <button type="button" class="btn btn-sm" id="workStartBtn" style="background:#27ae60;color:white;font-weight:700" onclick="startWork()">▶ {{ _('Start work') }}</button>
+        {% endif %}
+        {% endif %}
         {% if current_user.has_role('admin') %}
         <form method="POST" action="/faults/{{ fault.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this fault report permanently?') }}')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -43,6 +63,159 @@
         <a href="/faults" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
     </div>
 </div>
+
+{% if current_user.has_role('technician', 'admin') %}
+{% if my_session %}
+<div class="card" id="workTimerCard" style="border-left:4px solid #27ae60;background:linear-gradient(135deg,#eafaf1,#ffffff);margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="width:12px;height:12px;border-radius:50%;background:#27ae60;box-shadow:0 0 0 4px rgba(39,174,96,0.2);animation:pulse 1.5s infinite"></div>
+        <div>
+            <div style="font-size:12px;font-weight:700;color:#27ae60;text-transform:uppercase;letter-spacing:1px">{{ _('Work in progress') }}</div>
+            <div style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#1e8449" id="workTimer">
+                {{ '%02d:%02d:%02d'|format((my_session.elapsed_seconds // 3600), ((my_session.elapsed_seconds % 3600) // 60), (my_session.elapsed_seconds % 60)) }}
+            </div>
+            <div style="font-size:11px;color:#7f8c8d">{{ _('Started') }}: {{ my_session.started_at.strftime('%d-%m-%Y %H:%M') }}</div>
+        </div>
+        <div style="margin-left:auto">
+            <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;font-weight:700;padding:8px 16px" onclick="endWork()">⏹ {{ _('End work') }}</button>
+        </div>
+    </div>
+</div>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}</style>
+<script>
+(function() {
+    let elapsed = {{ my_session.elapsed_seconds }};
+    const el = document.getElementById('workTimer');
+    if (!el) return;
+    setInterval(function() {
+        elapsed++;
+        const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+        const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+        const s = String(elapsed % 60).padStart(2, '0');
+        el.textContent = h + ':' + m + ':' + s;
+    }, 1000);
+})();
+</script>
+{% elif open_session and open_session.fault_id != fault.id %}
+<div class="card" style="border-left:4px solid #e67e22;background:#fff8f0;margin-bottom:12px">
+    <p style="margin:0;font-size:13px">
+        ⚠️ {{ _('You have an open work session on fault') }}
+        <a href="/faults/{{ open_session.fault_id }}" style="color:#e67e22;font-weight:700">#{{ open_session.fault_id }}</a>
+        — {{ _('finish it before starting work here') }}.
+        <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;margin-left:8px"
+                onclick="endWorkById({{ open_session.fault_id }})">⏹ {{ _('End work') }} #{{ open_session.fault_id }}</button>
+    </p>
+</div>
+{% endif %}
+{% endif %}
+
+{% if work_sessions %}
+<div class="card" style="margin-bottom:12px">
+    <h2 style="margin:0 0 10px">⏱ {{ _('Work sessions') }}
+        <small style="font-weight:400;color:#888">({{ _('total') }}: {{ '%.0f'|format(total_work_minutes) }} {{ _('min') }})</small>
+    </h2>
+    <div class="table-wrap">
+        <table>
+            <tr><th>{{ _('Mechanic') }}</th><th>{{ _('Started') }}</th><th>{{ _('Ended') }}</th><th>{{ _('Duration') }}</th></tr>
+            {% for s in work_sessions %}
+            <tr>
+                <td>{{ s.user.display_name or s.user.username }}</td>
+                <td>{{ s.started_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                <td>{{ s.ended_at.strftime('%d-%m-%Y %H:%M') if s.ended_at else '…' }}</td>
+                <td>
+                    {% if s.ended_at %}
+                        {{ '%.0f'|format(s.duration_minutes) }} {{ _('min') }}
+                    {% else %}
+                        <span style="color:#27ae60;font-weight:700">▶ {{ _('running') }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if timeline is defined and timeline %}
+<div class="card" style="margin-bottom:12px">
+    <h2 style="margin:0 0 14px">📜 {{ _('Status history') }}
+        <small style="font-weight:400;color:#888">({{ _('full chronology') }})</small>
+    </h2>
+    <div style="position:relative;padding-left:22px">
+        <div style="position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:#e8ecf1"></div>
+        {% for t in timeline %}
+        <div style="position:relative;margin-bottom:14px">
+            <div style="position:absolute;left:-18px;top:4px;width:12px;height:12px;border-radius:50%;
+                        background:{% if t.kind == 'created' %}#5b9cf6
+                                   {% elif t.kind == 'accepted' %}#3498db
+                                   {% elif t.kind == 'work_start' %}#27ae60
+                                   {% elif t.kind == 'work_end' %}#16a085
+                                   {% elif t.kind == 'paused' %}#f39c12
+                                   {% elif t.kind == 'resolved' %}#27ae60
+                                   {% elif t.kind == 'closed' %}#7f8c8d
+                                   {% elif t.kind == 'reopened' %}#9b59b6
+                                   {% else %}#bdc3c7{% endif %};
+                        border:2px solid #fff;box-shadow:0 0 0 2px #e8ecf1"></div>
+            <div style="font-size:11px;color:#888;font-variant-numeric:tabular-nums">
+                {{ t.at.strftime('%d-%m-%Y %H:%M') if t.at else '—' }}
+                {% if t.user %} · {{ t.user.display_name or t.user.username }}{% endif %}
+            </div>
+            <div style="font-size:13px;font-weight:600;margin-top:2px">
+                {% if t.kind == 'created' %}🆕{% elif t.kind == 'accepted' %}📥
+                {% elif t.kind == 'work_start' %}▶{% elif t.kind == 'work_end' %}⏹
+                {% elif t.kind == 'paused' %}⏸{% elif t.kind == 'resolved' %}✅
+                {% elif t.kind == 'closed' %}🔒{% elif t.kind == 'reopened' %}🔄
+                {% else %}•{% endif %}
+                {{ t.title }}
+            </div>
+            {% if t.detail %}
+            <div style="font-size:12px;color:#666;margin-top:2px">{{ t.detail }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function startWork() {
+    csrfFetch('/faults/{{ fault.id }}/work-start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { location.reload(); return; }
+        if (d.open_fault_id) {
+            alert(d.error);
+            location.href = '/faults/' + d.open_fault_id;
+        } else {
+            alert(d.error || 'Error');
+        }
+    });
+}
+function endWork() {
+    if (!confirm('{{ _("Finish work on this fault?") }}')) return;
+    csrfFetch('/faults/{{ fault.id }}/work-end', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    });
+}
+function endWorkById(faultId) {
+    if (!confirm('{{ _("Finish work on fault") }} #' + faultId + '?')) return;
+    csrfFetch('/faults/' + faultId + '/work-end', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    });
+}
+</script>
 
 {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
 <div class="card" id="assignForm" style="display:none;border-left:4px solid #f39c12">
@@ -97,7 +270,19 @@
             <p><strong>{{ _('Title') }}:</strong> {{ fault.title }}</p>
             <p><strong>{{ _('Machine / Equipment') }}:</strong> {% if fault.machine %}🏭 <a href="/floor?highlight={{ fault.machine_id }}">{{ fault.machine.name }}</a>{% elif fault.equipment %}⚙️ {{ fault.equipment.name }}{% else %}—{% endif %}</p>
             <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span></p>
-            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ fault.status }}</span></p>
+            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ status_labels.get(fault.status, fault.status) if status_labels is defined else fault.status }}</span>
+            {% if fault.status == 'paused' and fault.pause_reason %}
+                <span style="margin-left:8px;font-size:12px;color:#f39c12">
+                    ⏸ {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if pause_reasons is defined else fault.pause_reason }}
+                    {% if fault.pause_until %} · {{ _('Planned resume') }}: {{ fault.pause_until.strftime('%d-%m-%Y') }}{% endif %}
+                </span>
+            {% endif %}
+            {% if fault.status in ['waiting_parts', 'parts_ordered'] and fault.pause_reason %}
+                <span style="margin-left:8px;font-size:12px;color:#e67e22">
+                    📦 {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if pause_reasons is defined else fault.pause_reason }}
+                </span>
+            {% endif %}
+            </p>
             <p><strong>{{ _('Reporter') }}:</strong> {{ fault.reporter_label }}</p>
             <p><strong>{{ _('Created') }}:</strong> {{ fault.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
             {% if fault.assigned_technicians %}
@@ -294,6 +479,42 @@ function changeFaultStatus(newStatus) {
     document.getElementById('statusSelect').value = '';
 }
 
+function setStatus(st) {
+    csrfFetch('/faults/{{ fault.id }}/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: st})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    });
+}
+
+function openPauseModal() {
+    document.getElementById('pauseModal').style.display = 'flex';
+}
+function closePauseModal() {
+    document.getElementById('pauseModal').style.display = 'none';
+}
+function submitPause() {
+    const reason = document.getElementById('pauseReason').value;
+    const comment = document.getElementById('pauseComment').value;
+    const until = document.getElementById('pauseUntil').value;
+    if (!reason) { alert('{{ _("Select a pause reason") }}'); return; }
+    if (reason === 'other' && !comment.trim()) {
+        alert('{{ _("Comment is required for «Other» pause reason") }}');
+        return;
+    }
+    csrfFetch('/faults/{{ fault.id }}/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'paused', pause_reason: reason, pause_comment: comment, pause_until: until})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { closePauseModal(); location.reload(); }
+        else alert(d.error || 'Error');
+    });
+}
+
 function openCloseModal() {
     document.getElementById('closeModal').style.display = 'flex';
 }
@@ -349,6 +570,37 @@ document.getElementById('reopenModal').addEventListener('click', function(e) {
     if (e.target === this) closeReopenModal();
 });
 </script>
+
+<!-- PAUSE MODAL -->
+<div id="pauseModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:450px;width:92%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:18px">⏸ {{ _('Pause') }} #{{ fault.id }}</h2>
+            <button onclick="closePauseModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Pause reason') }} *</label>
+            <select id="pauseReason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+                <option value="">—</option>
+                {% for key, label in pause_reasons.items() %}
+                <option value="{{ key }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Planned resume date') }}</label>
+            <input type="date" id="pauseUntil" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px">
+        </div>
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Comment') }}</label>
+            <textarea id="pauseComment" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Required for «Other» reason') }}"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+            <button class="btn" style="background:#eee" onclick="closePauseModal()">{{ _('Cancel') }}</button>
+            <button class="btn" style="background:#f39c12;color:white" onclick="submitPause()">⏸ {{ _('Pause') }}</button>
+        </div>
+    </div>
+</div>
 
 <!-- REOPEN MODAL -->
 <div id="reopenModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center">

@@ -6003,3 +6003,147 @@ msgstr "Working Saturdays are set by the head of technical service or admin. Cho
 #: schedule_saturdays
 msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
 msgstr "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
+
+#: faults work-timer
+msgid "Start work"
+msgstr "Start work"
+
+#: faults work-timer
+msgid "End work"
+msgstr "End work"
+
+#: faults work-timer
+msgid "Work in progress"
+msgstr "Work in progress"
+
+#: faults work-timer
+msgid "Ended"
+msgstr "Ended"
+
+#: faults work-timer
+msgid "Duration"
+msgstr "Duration"
+
+#: faults work-timer
+msgid "running"
+msgstr "running"
+
+#: faults work-timer
+msgid "total"
+msgstr "total"
+
+#: faults work-timer
+msgid "Work sessions"
+msgstr "Work sessions"
+
+#: faults work-timer
+msgid "Work finished"
+msgstr "Work finished"
+
+#: faults work-timer
+msgid "Work already started on this fault"
+msgstr "Work already started on this fault"
+
+#: faults work-timer
+msgid "Finish work on fault #{} before starting another"
+msgstr "Finish work on fault #{} before starting another"
+
+#: faults work-timer
+msgid "No active work session on this fault"
+msgstr "No active work session on this fault"
+
+#: faults work-timer
+msgid "Fault is closed"
+msgstr "Fault is closed"
+
+#: faults work-timer
+msgid "Finish work on another fault first"
+msgstr "Finish work on another fault first"
+
+#: faults work-timer
+msgid "You have an open work session on fault"
+msgstr "You have an open work session on fault"
+
+#: faults work-timer
+msgid "finish it before starting work here"
+msgstr "finish it before starting work here"
+
+#: faults work-timer
+msgid "Finish work on this fault?"
+msgstr "Finish work on this fault?"
+
+#: faults work-timer
+msgid "Finish work on fault"
+msgstr "Finish work on fault"
+
+#: faults status
+msgid "Status history"
+msgstr "Status history"
+
+#: faults status
+msgid "full chronology"
+msgstr "full chronology"
+
+#: faults status
+msgid "Pause reason"
+msgstr "Pause reason"
+
+#: faults status
+msgid "Planned resume date"
+msgstr "Planned resume date"
+
+#: faults status
+msgid "Planned resume"
+msgstr "Planned resume"
+
+#: faults status
+msgid "Resume work"
+msgstr "Resume work"
+
+#: faults status
+msgid "Pause"
+msgstr "Pause"
+
+#: faults status
+msgid "Fault created"
+msgstr "Fault created"
+
+#: faults status
+msgid "Select a pause reason"
+msgstr "Select a pause reason"
+
+#: faults status
+msgid "Comment is required for «Other» pause reason"
+msgstr "Comment is required for «Other» pause reason"
+
+#: faults status
+msgid "Only head of technical service or admin can close a fault"
+msgstr "Only head of technical service or admin can close a fault"
+
+#: faults status
+msgid "Reason is required to reopen a fault"
+msgstr "Reason is required to reopen a fault"
+
+#: faults status
+msgid "Fault resolved — awaiting close"
+msgstr "Fault resolved — awaiting close"
+
+#: faults status
+msgid "Please verify and close"
+msgstr "Please verify and close"
+
+#: faults status
+msgid "Awaiting close by head"
+msgstr "Awaiting close by head"
+
+#: faults status
+msgid "Resolved by"
+msgstr "Resolved by"
+
+#: faults status
+msgid "by mechanic"
+msgstr "by mechanic"
+
+#: faults status
+msgid "24/7 access (no work-hours limit)"
+msgstr "24/7 access (no work-hours limit)"

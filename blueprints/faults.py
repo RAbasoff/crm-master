@@ -2,7 +2,7 @@
 Faults blueprint — fault reports, work reports, status management
 """
 import os, json
-from datetime import datetime
+from datetime import datetime, date
 from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, current_app
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
@@ -11,10 +11,176 @@ from sqlalchemy.orm import joinedload, subqueryload
 
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
-                    VoorraadItem, VoorraadMutatie)
+                    VoorraadItem, VoorraadMutatie, FaultWorkSession)
 from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
+
+# ── Статусы заявки (CMMS-модель ProMaster) ──────────────────────────
+# open=open/NEW, diagnosis, in_progress, paused, waiting_parts,
+# parts_ordered, testing, resolved, closed.
+# reopened — только как переход из resolved/closed → diagnosis.
+FAULT_STATUSES = (
+    'open', 'accepted', 'diagnosis', 'in_progress', 'paused',
+    'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'closed', 'reopened',
+)
+
+STATUS_LABELS = {
+    'open': 'Новая',
+    'accepted': 'Принята',
+    'diagnosis': 'Диагностика',
+    'in_progress': 'В работе',
+    'paused': 'Приостановлена',
+    'waiting_parts': 'Ожидание запчасти',
+    'parts_ordered': 'Запчасть заказана',
+    'testing': 'Тестирование',
+    'resolved': 'Устранена',
+    'closed': 'Закрыта',
+    'reopened': 'Переоткрыта',
+}
+
+# Разрешённые переходы. Техник не может прыгнуть в любой статус.
+ALLOWED_TRANSITIONS = {
+    'open':          ('accepted', 'diagnosis', 'in_progress', 'paused'),
+    'accepted':      ('diagnosis', 'in_progress', 'paused', 'waiting_parts'),
+    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'resolved'),
+    'in_progress':   ('diagnosis', 'paused', 'testing', 'resolved', 'waiting_parts', 'parts_ordered'),
+    'paused':        ('diagnosis', 'in_progress', 'waiting_parts', 'parts_ordered', 'accepted'),
+    'waiting_parts': ('parts_ordered', 'in_progress', 'diagnosis', 'paused'),
+    'parts_ordered': ('waiting_parts', 'in_progress', 'paused'),
+    'testing':       ('in_progress', 'diagnosis', 'resolved', 'paused'),
+    'resolved':      ('closed', 'reopened', 'testing'),
+    'closed':        ('reopened',),
+    'reopened':      ('diagnosis', 'in_progress', 'accepted'),
+}
+
+# Пауза: статус один, причины — отдельно (для аналитики)
+PAUSE_REASONS = {
+    'waiting_production': 'Машину нельзя остановить / ожидание производства',
+    'waiting_approval': 'Ожидание согласования',
+    'waiting_specialist': 'Ожидание другого специалиста',
+    'no_access': 'Нет доступа к оборудованию',
+    'no_tools': 'Нет необходимых инструментов',
+    'need_info': 'Требуется дополнительная информация',
+    'scheduled_other': 'Работа запланирована на другую дату',
+    'other': 'Другая причина',
+}
+
+# Статусы «работа идёт» — таймер имеет смысл
+ACTIVE_WORK_STATUSES = ('in_progress', 'diagnosis', 'testing')
+# Статусы «ожидание» — таймер активной работы должен быть закрыт
+WAIT_STATUSES = ('paused', 'waiting_parts', 'parts_ordered')
+# Статусы «не трогать таймер»
+TERMINAL_STATUSES = ('closed', 'resolved', 'open')
+
+
+def _end_open_work_sessions(user_id, fault_id, note=''):
+    """Закрыть открытую сессию работ (при паузе/ожидании/закрытии)."""
+    sessions = FaultWorkSession.query.filter_by(user_id=user_id, ended_at=None).all()
+    closed = 0
+    for s in sessions:
+        if fault_id is not None and s.fault_id != fault_id:
+            continue
+        s.ended_at = datetime.utcnow()
+        s.duration_minutes = round(s.elapsed_seconds / 60.0, 2)
+        if note and not s.notes:
+            s.notes = note[:500]
+        closed += 1
+    return closed
+
+
+def _role_can_set_status(user, new_status):
+    """Кто может выставить статус.
+
+    RESOLVED — механик после ремонта.
+    CLOSED — только админ / главный механик / начальник ТС (admin, director).
+    """
+    if new_status == 'closed':
+        return user.has_role('admin', 'director')
+    if new_status == 'reopened':
+        return user.has_role('admin', 'director', 'technician')
+    # остальные рабочие переходы — механик / админ
+    return user.has_role('admin', 'director', 'technician')
+
+
+def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_comment='',
+                      pause_until=None, allow_illegal=False):
+    """Смена статуса с проверкой переходов, ролей и обслуживанием паузы/таймера.
+
+    Возвращает (ok, error_message).
+    """
+    old_status = f.status or 'open'
+    if new_status not in FAULT_STATUSES:
+        return False, _('Invalid status')
+
+    if not _role_can_set_status(user, new_status):
+        if new_status == 'closed':
+            return False, _('Only head of technical service or admin can close a fault')
+        return False, _('Access denied')
+
+    if not allow_illegal and new_status != old_status:
+        allowed = ALLOWED_TRANSITIONS.get(old_status, ())
+        if new_status not in allowed:
+            return False, _('Transition not allowed: {} → {}').format(
+                STATUS_LABELS.get(old_status, old_status),
+                STATUS_LABELS.get(new_status, new_status))
+
+    if new_status == 'paused':
+        if pause_reason not in PAUSE_REASONS:
+            return False, _('Select a pause reason')
+        if pause_reason == 'other' and not (pause_comment or '').strip():
+            return False, _('Comment is required for «Other» pause reason')
+        f.pause_reason = pause_reason
+        f.pause_comment = (pause_comment or '').strip()
+        f.pause_started_at = datetime.utcnow()
+        f.pause_until = pause_until
+        _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: fault paused'))
+    elif new_status in WAIT_STATUSES:
+        if pause_reason:
+            f.pause_reason = pause_reason
+        elif not f.pause_reason:
+            f.pause_reason = 'need_info' if new_status != 'waiting_parts' else 'waiting_production'
+        if pause_comment:
+            f.pause_comment = pause_comment.strip()
+        if pause_until:
+            f.pause_until = pause_until
+        if not f.pause_started_at:
+            f.pause_started_at = datetime.utcnow()
+        _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: waiting'))
+    else:
+        # выход из паузы / рабочий статус
+        if old_status in WAIT_STATUSES or f.pause_reason:
+            # фиксируем причину в истории
+            if f.pause_reason and not reason:
+                reason = f"{_('Pause reason')}: {PAUSE_REASONS.get(f.pause_reason, f.pause_reason)}"
+        f.pause_reason = None
+        f.pause_comment = None
+        f.pause_started_at = None
+        f.pause_until = None
+
+    if new_status == 'testing' and f.resolved_at:
+        f.resolved_at = None
+    if new_status == 'resolved':
+        f.resolved_at = datetime.utcnow()
+        _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: resolved'))
+    if new_status == 'closed':
+        f.resolved_at = f.resolved_at or datetime.utcnow()
+        _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: closed'))
+    if new_status == 'reopened':
+        f.resolved_at = None
+        # reopened — транзитом дальше в diagnosis/in_progress
+    if new_status == 'accepted' and not f.accepted_at:
+        f.accepted_at = datetime.utcnow()
+        if not f.technician_id:
+            f.technician_id = user.id
+
+    f.status = new_status
+    history = FaultStatusHistory(
+        fault_id=f.id, old_status=old_status, new_status=new_status,
+        reason=reason, changed_by=user.id,
+    )
+    db.session.add(history)
+    return True, ''
 
 _FAULTS_EAGER = (
     joinedload(FaultReport.machine),
@@ -160,17 +326,193 @@ def fault_detail(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     contractors = Contractor.query.filter_by(is_active=True).order_by(Contractor.company_name).all()
-    return render_template('fault_detail.html', fault=f, technicians=technicians, contractors=contractors)
+    my_session = FaultWorkSession.query.filter_by(
+        fault_id=f.id, user_id=current_user.id, ended_at=None
+    ).first()
+    open_session = FaultWorkSession.query.filter_by(
+        user_id=current_user.id, ended_at=None
+    ).first()
+    sessions = FaultWorkSession.query.filter_by(fault_id=f.id).order_by(
+        FaultWorkSession.started_at.desc()
+    ).all()
+    total_minutes = sum((s.duration_minutes or 0) for s in sessions if s.ended_at)
+    # Сколько заявка «ждёт» (сумма пауз)
+    wait_minutes = 0
+    if f.pause_started_at:
+        end = datetime.utcnow()
+        wait_minutes = round((end - f.pause_started_at).total_seconds() / 60.0, 1)
+    allowed_next = ALLOWED_TRANSITIONS.get(f.status or 'open', ())
+    # ── Полная хронология: создание → приёмка → работы → статусы → решение → закрытие ──
+    timeline = []
+    timeline.append({
+        'at': f.created_at, 'kind': 'created',
+        'title': _('Fault created'),
+        'detail': f.reporter_label, 'user': f.reporter,
+    })
+    if f.accepted_at:
+        timeline.append({
+            'at': f.accepted_at, 'kind': 'accepted',
+            'title': _('Accepted'),
+            'detail': f.technician.display_name if f.technician else '',
+            'user': f.technician,
+        })
+    for s in sessions:
+        who = s.user.display_name if s.user else ''
+        timeline.append({
+            'at': s.started_at, 'kind': 'work_start',
+            'title': _('Work started'),
+            'detail': who, 'user': s.user,
+        })
+        if s.ended_at:
+            mins = s.duration_minutes or 0
+            timeline.append({
+                'at': s.ended_at, 'kind': 'work_end',
+                'title': _('Work finished'),
+                'detail': f"{who} · {mins:.0f} {_('min')}",
+                'user': s.user,
+            })
+    for h in f.status_history:
+        label = STATUS_LABELS.get(h.new_status, h.new_status)
+        kind = h.new_status
+        if h.new_status == 'resolved':
+            kind = 'resolved'
+            label = _('Resolved') + f' — {_("by mechanic")}'
+        elif h.new_status == 'closed':
+            kind = 'closed'
+            label = _('Closed')
+        elif h.new_status == 'reopened':
+            kind = 'reopened'
+            label = _('Reopened')
+        elif h.new_status == 'paused':
+            kind = 'paused'
+            label = _('Paused')
+        timeline.append({
+            'at': h.changed_at, 'kind': kind,
+            'title': label,
+            'detail': h.reason or '',
+            'user': h.changer,
+        })
+    if f.resolved_at and not any(t['kind'] == 'resolved' for t in timeline):
+        timeline.append({
+            'at': f.resolved_at, 'kind': 'resolved',
+            'title': _('Resolved'), 'detail': '', 'user': None,
+        })
+    timeline.sort(key=lambda t: (t['at'] or datetime.min))
+
+    return render_template(
+        'fault_detail.html', fault=f, technicians=technicians, contractors=contractors,
+        my_session=my_session, open_session=open_session,
+        work_sessions=sessions, total_work_minutes=total_minutes,
+        pause_reasons=PAUSE_REASONS, allowed_next=allowed_next,
+        status_labels=STATUS_LABELS, wait_minutes=wait_minutes,
+        active_work_statuses=ACTIVE_WORK_STATUSES, wait_statuses=WAIT_STATUSES,
+        timeline=timeline,
+    )
+
+
+def _find_open_work_session(user_id):
+    """Открытая (не завершённая) сессия работ пользователя — любая заявка."""
+    return FaultWorkSession.query.filter_by(user_id=user_id, ended_at=None).first()
+
+
+@bp.route('/<int:fault_id>/work-start', methods=['POST'])
+@login_required
+@role_required('technician', 'admin')
+def fault_work_start(fault_id):
+    """Начать работы по заявке. У механика может быть только одна открытая сессия."""
+    f = FaultReport.query.get_or_404(fault_id)
+    if f.status == 'closed':
+        if request.is_json:
+            return jsonify({'error': _('Fault is closed')}), 400
+        flash(_('Fault is closed'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+    existing = _find_open_work_session(current_user.id)
+    if existing:
+        if existing.fault_id == f.id:
+            msg = _('Work already started on this fault')
+        else:
+            msg = _('Finish work on fault #{} before starting another').format(existing.fault_id)
+        if request.is_json:
+            return jsonify({
+                'error': msg,
+                'open_fault_id': existing.fault_id,
+                'started_at': existing.started_at.isoformat() if existing.started_at else None,
+            }), 409
+        flash(msg, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+    sess = FaultWorkSession(fault_id=f.id, user_id=current_user.id, started_at=datetime.utcnow())
+    db.session.add(sess)
+    if f.status in ('open', 'accepted'):
+        f.status = 'in_progress'
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+    log_audit('work_start', 'fault', f.id,
+              f'{f.title} — {current_user.display_name or current_user.username}')
+    add_work_report(f'▶️ Начаты работы по поломке #{f.id}: {f.title} ({current_user.display_name or current_user.username})')
+    if request.is_json:
+        return jsonify({
+            'ok': True, 'session_id': sess.id,
+            'started_at': sess.started_at.isoformat(),
+        })
+    flash(_('Work started'), 'success')
+    return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+
+@bp.route('/<int:fault_id>/work-end', methods=['POST'])
+@login_required
+@role_required('technician', 'admin')
+def fault_work_end(fault_id):
+    """Окончить работы по заявке (снять таймер)."""
+    f = FaultReport.query.get_or_404(fault_id)
+    sess = FaultWorkSession.query.filter_by(
+        fault_id=f.id, user_id=current_user.id, ended_at=None
+    ).first()
+    if not sess:
+        msg = _('No active work session on this fault')
+        if request.is_json:
+            return jsonify({'error': msg}), 404
+        flash(msg, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+    data = request.get_json() if request.is_json else request.form
+    notes = (data.get('notes') or '').strip() if data else ''
+    sess.ended_at = datetime.utcnow()
+    minutes = round(sess.elapsed_seconds / 60.0, 2)
+    sess.duration_minutes = minutes
+    if notes:
+        sess.notes = notes[:2000]
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+    log_audit('work_end', 'fault', f.id,
+              f'{f.title} — {minutes} мин ({current_user.display_name or current_user.username})')
+    add_work_report(f'⏹ Окончены работы по поломке #{f.id}: {f.title} ({minutes} мин)')
+    flash(_('Work finished') + f' — {minutes} ' + _('min'), 'success')
+    if request.is_json:
+        return jsonify({'ok': True, 'duration_minutes': minutes, 'session_id': sess.id})
+    return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
 
 @bp.route('/<int:fault_id>/accept', methods=['POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('technician', 'admin', 'director')
 def fault_accept(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
-    f.status = 'accepted'
+    ok, err = _set_fault_status(f, 'accepted', current_user, reason='accepted')
+    if not ok:
+        flash(err, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     f.technician_id = current_user.id
-    f.accepted_at = datetime.utcnow()
+    f.accepted_at = f.accepted_at or datetime.utcnow()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -238,11 +580,14 @@ def fault_assign(fault_id):
 
 @bp.route('/<int:fault_id>/resolve', methods=['POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('technician', 'admin', 'director')
 def fault_resolve(fault_id):
+    """RESOLVED — механик после ремонта (закрыть может только начальство)."""
     f = FaultReport.query.get_or_404(fault_id)
-    f.status = 'resolved'
-    f.resolved_at = datetime.utcnow()
+    ok, err = _set_fault_status(f, 'resolved', current_user, reason='resolved by mechanic')
+    if not ok:
+        flash(err, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -254,30 +599,45 @@ def fault_resolve(fault_id):
         'info',
         url_for('faults.fault_detail', fault_id=f.id)
     )
-    flash(_('Fault report resolved'), 'success')
+    # Уведомить начальство: заявка ждёт закрытия
+    for head in User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all():
+        if head.id != current_user.id:
+            create_notification(
+                head.id,
+                _('Fault resolved — awaiting close'),
+                f"#{f.id} {f.title} — {_('Resolved by')} {current_user.display_name or current_user.username}. {_('Please verify and close')}.",
+                'info',
+                url_for('faults.fault_detail', fault_id=f.id)
+            )
+    flash(_('Fault report resolved') + '. ' + _('Awaiting close by head'), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
 
 @bp.route('/<int:fault_id>/status', methods=['POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('technician', 'admin', 'director')
 def fault_status_change(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
-    data = request.get_json()
+    data = request.get_json() or {}
     new_status = data.get('status')
     reason = data.get('reason', '')
-    allowed = ['open', 'accepted', 'in_progress', 'parts_ordered', 'waiting_parts', 'resolved', 'reopened']
-    if new_status not in allowed:
-        return jsonify({'error': 'Invalid status'}), 400
+    pause_reason = data.get('pause_reason', '')
+    pause_comment = data.get('pause_comment', '')
+    pause_until = data.get('pause_until') or None
+    if pause_until:
+        try:
+            pause_until = datetime.strptime(pause_until, '%Y-%m-%d').date()
+        except ValueError:
+            pause_until = None
+
     old_status = f.status
-    f.status = new_status
-    if new_status == 'reopened':
-        f.resolved_at = None
-    history = FaultStatusHistory(
-        fault_id=f.id, old_status=old_status, new_status=new_status,
-        reason=reason, changed_by=current_user.id
+    ok, err = _set_fault_status(
+        f, new_status, current_user, reason=reason,
+        pause_reason=pause_reason, pause_comment=pause_comment,
+        pause_until=pause_until,
     )
-    db.session.add(history)
+    if not ok:
+        return jsonify({'error': err}), 400
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     log_audit('status_change', 'fault', f.id, f'{old_status} → {new_status}')
@@ -287,8 +647,9 @@ def fault_status_change(fault_id):
 
 @bp.route('/<int:fault_id>/close', methods=['POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('admin', 'director')
 def fault_close(fault_id):
+    """Закрыть заявку — только админ / начальник ТС / главный механик."""
     f = FaultReport.query.get_or_404(fault_id)
     data = request.get_json() if request.is_json else request.form
     has_report = data.get('has_report', '')
@@ -296,8 +657,13 @@ def fault_close(fault_id):
     close_notes = data.get('close_notes', '')
     if has_report == 'no':
         return jsonify({'error': _('Work report is required to close this fault')}), 400
-    f.status = 'closed'
-    f.resolved_at = datetime.utcnow()
+    ok, err = _set_fault_status(f, 'closed', current_user,
+                                reason=close_notes or 'closed by head')
+    if not ok:
+        if request.is_json:
+            return jsonify({'error': err}), 400
+        flash(err, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     if not safe_commit():
         if request.is_json:
             return jsonify({'error': 'Save failed'}), 500
@@ -320,20 +686,29 @@ def fault_close(fault_id):
 
 @bp.route('/<int:fault_id>/reopen', methods=['POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('admin', 'director')
 def fault_reopen(fault_id):
+    """Переоткрыть заявку — только админ / главный механик / начальник ТС. Причина обязательна."""
     f = FaultReport.query.get_or_404(fault_id)
     data = request.get_json() if request.is_json else request.form
-    reason = data.get('reason', '')
+    reason = (data.get('reason') or '').strip()
     reopen_date = data.get('reopen_date', datetime.utcnow().strftime('%Y-%m-%d'))
+    if not reason:
+        msg = _('Reason is required to reopen a fault')
+        if request.is_json:
+            return jsonify({'error': msg}), 400
+        flash(msg, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     old_status = f.status
-    f.status = 'reopened'
-    f.resolved_at = None
-    history = FaultStatusHistory(
-        fault_id=f.id, old_status=old_status, new_status='reopened',
-        reason=f'{reopen_date}: {reason}', changed_by=current_user.id
+    ok, err = _set_fault_status(
+        f, 'reopened', current_user,
+        reason=f'{reopen_date}: {reason}',
     )
-    db.session.add(history)
+    if not ok:
+        if request.is_json:
+            return jsonify({'error': err}), 400
+        flash(err, 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     if not safe_commit():
         if request.is_json:
             return jsonify({'error': 'Save failed'}), 500
@@ -350,6 +725,7 @@ def fault_reopen(fault_id):
     add_work_report(f'🔓 Поломка #{f.id} "{f.title}" переоткрыта. Причина: {reason}')
     if request.is_json:
         return jsonify({'ok': True})
+    flash(_('Fault reopened'), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
 

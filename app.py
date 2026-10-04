@@ -127,6 +127,8 @@ from blueprints.users import bp as users_bp
 app.register_blueprint(users_bp)
 from blueprints.offline import bp as offline_bp, remember_mutation, find_mutation
 app.register_blueprint(offline_bp)
+from blueprints.push import bp as push_api_bp
+app.register_blueprint(push_api_bp)
 
 csrf = CSRFProtect(app)
 db.init_app(app)

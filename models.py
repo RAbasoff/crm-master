@@ -43,6 +43,8 @@ class User(UserMixin, db.Model):
     is_active_user = db.Column(db.Boolean, default=True, index=True)
     hire_date = db.Column(db.Date)
     fire_date = db.Column(db.Date)
+    # Постоянный доступ без привязки к графику (вне work-hours / idle logout)
+    work_hours_exempt = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     assigned_machines = db.relationship('Machine', secondary='user_machine', backref='assigned_users')
@@ -759,6 +761,11 @@ class FaultReport(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     accepted_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
+    # Пауза: причина + планируемое возобновление (статус ≠ причина)
+    pause_reason = db.Column(db.String(40))
+    pause_comment = db.Column(db.Text)
+    pause_started_at = db.Column(db.DateTime)
+    pause_until = db.Column(db.Date)
     reporter = db.relationship('User', foreign_keys=[reporter_id], back_populates='fault_reports')
     technician = db.relationship('User', foreign_keys=[technician_id])
     machine = db.relationship('Machine', foreign_keys=[machine_id], back_populates='fault_reports')
@@ -797,6 +804,28 @@ class FaultStatusHistory(db.Model):
     changed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     changed_at = db.Column(db.DateTime, default=datetime.utcnow)
     changer = db.relationship('User', foreign_keys=[changed_by])
+
+class FaultWorkSession(db.Model):
+    """Сессия работ по заявке: начало / окончание механиком."""
+    __tablename__ = 'fault_work_session'
+    id = db.Column(db.Integer, primary_key=True)
+    fault_id = db.Column(db.Integer, db.ForeignKey('fault_report.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    ended_at = db.Column(db.DateTime)
+    duration_minutes = db.Column(db.Float, default=0)
+    notes = db.Column(db.Text)
+    fault = db.relationship('FaultReport', backref='work_sessions')
+    user = db.relationship('User', backref='fault_work_sessions')
+
+    @property
+    def is_open(self):
+        return self.ended_at is None
+
+    @property
+    def elapsed_seconds(self):
+        end = self.ended_at or datetime.utcnow()
+        return max(0, int((end - self.started_at).total_seconds()))
 
 class FaultPhoto(db.Model):
     __tablename__ = 'fault_photo'
@@ -1003,6 +1032,19 @@ class Vacation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship('User', foreign_keys=[user_id], backref='vacations')
     approver = db.relationship('User', foreign_keys=[approved_by])
+
+class PushSubscription(db.Model):
+    """Web Push подписка (PWA Android / iOS 16.4+)."""
+    __tablename__ = 'push_subscription'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    endpoint = db.Column(db.Text, nullable=False, unique=True)
+    p256dh = db.Column(db.Text, nullable=False)
+    auth = db.Column(db.Text, nullable=False)
+    user_agent = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used_at = db.Column(db.DateTime)
+    user = db.relationship('User', backref='push_subscriptions')
 
 class Message(db.Model):
     __tablename__ = 'message'

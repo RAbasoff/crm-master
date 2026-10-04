@@ -83,6 +83,7 @@ def user_cabinet_update(user_id):
     u.role = request.form.get('role', u.role)
     u.access_level = request.form.get('access_level', u.access_level)
     u.is_active_user = 'is_active' in request.form
+    u.work_hours_exempt = 'work_hours_exempt' in request.form
     u.hire_date = (d := safe_date(request.form.get('hire_date'))) and d.date() or u.hire_date
     u.fire_date = (d := safe_date(request.form.get('fire_date'))) and d.date() or None
     # Password change (optional)
@@ -226,6 +227,7 @@ def user_edit(user_id):
         u.access_level = request.form.get('access_level', u.access_level)
         u.person_id = safe_int(request.form.get('person_id')) or None
         u.is_active_user = 'is_active' in request.form
+        u.work_hours_exempt = 'work_hours_exempt' in request.form
         u.hire_date = (d := safe_date(request.form.get('hire_date'))) and d.date() or u.hire_date
         u.fire_date = (d := safe_date(request.form.get('fire_date'))) and d.date() or None
         new_pass = request.form.get('password')

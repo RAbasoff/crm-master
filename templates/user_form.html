@@ -96,6 +96,7 @@
         {% if user %}
         <div class="form-group">
             <label><input type="checkbox" name="is_active" {% if user.is_active_user %}checked{% endif %}> {{ _('Active') }}</label>
+            <label style="margin-left:12px"><input type="checkbox" name="work_hours_exempt" {% if user and user.work_hours_exempt %}checked{% endif %}> {{ _('24/7 access (no work-hours limit)') }}</label>
         </div>
         {% endif %}
         <div class="form-group">

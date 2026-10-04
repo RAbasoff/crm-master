@@ -161,8 +161,10 @@ def is_user_at_work(user):
 
 def user_schedule_restricted(user):
     """Ограничение по графику действует для механиков (technician / связанный Monteur).
-    admin и director не ограничиваются."""
+    admin и director не ограничиваются. work_hours_exempt — постоянный доступ."""
     if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if getattr(user, 'work_hours_exempt', False):
         return False
     role = getattr(user, 'role', '') or ''
     if role in ('admin', 'director'):

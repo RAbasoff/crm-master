@@ -8,6 +8,12 @@ def create_notification(user_id, title, message, ntype='info', link=None):
     n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
     db.session.add(n)
     safe_commit()
+    # Web Push: вибрация + звук на телефоне (PWA), даже если приложение закрыто
+    try:
+        from push import push_to_user
+        push_to_user(user_id, title, message, url=link, tag=ntype or 'info')
+    except Exception:
+        pass
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:

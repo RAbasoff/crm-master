@@ -237,6 +237,30 @@ def ensure_schema():
         ("fault_report.contractor_id", "ALTER TABLE fault_report ADD COLUMN contractor_id INTEGER REFERENCES contractor(id)"),
         ("weekend_shift", "CREATE TABLE IF NOT EXISTS weekend_shift (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES user(id) NOT NULL, date DATE NOT NULL, shift_type VARCHAR(20) DEFAULT 'full', notes TEXT, created_by INTEGER REFERENCES user(id), created_at DATETIME)"),
         ("fault_status_history", "CREATE TABLE IF NOT EXISTS fault_status_history (id INTEGER PRIMARY KEY, fault_id INTEGER REFERENCES fault_report(id) NOT NULL, old_status VARCHAR(20), new_status VARCHAR(20) NOT NULL, reason TEXT, changed_by INTEGER REFERENCES user(id), changed_at DATETIME)"),
+        ("fault_report.pause_reason", "ALTER TABLE fault_report ADD COLUMN pause_reason VARCHAR(40)"),
+        ("fault_report.pause_comment", "ALTER TABLE fault_report ADD COLUMN pause_comment TEXT"),
+        ("fault_report.pause_started_at", "ALTER TABLE fault_report ADD COLUMN pause_started_at DATETIME"),
+        ("fault_report.pause_until", "ALTER TABLE fault_report ADD COLUMN pause_until DATE"),
+        ("user.work_hours_exempt", "ALTER TABLE user ADD COLUMN work_hours_exempt BOOLEAN DEFAULT 0"),
+        ("push_subscription", """CREATE TABLE IF NOT EXISTS push_subscription (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            user_agent VARCHAR(300),
+            created_at DATETIME,
+            last_used_at DATETIME
+        )"""),
+        ("fault_work_session", """CREATE TABLE IF NOT EXISTS fault_work_session (
+            id INTEGER PRIMARY KEY,
+            fault_id INTEGER NOT NULL REFERENCES fault_report(id),
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            started_at DATETIME NOT NULL,
+            ended_at DATETIME,
+            duration_minutes REAL DEFAULT 0,
+            notes TEXT
+        )"""),
         ("tool_wear.cycle_days", "ALTER TABLE tool_wear ADD COLUMN cycle_days INTEGER DEFAULT 14"),
         ("monthly_archive", """CREATE TABLE IF NOT EXISTS monthly_archive (
             id INTEGER PRIMARY KEY,

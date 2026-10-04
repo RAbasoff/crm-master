@@ -6043,3 +6043,71 @@ msgstr "Soboty robocze ustawia kierownik działu technicznego lub administrator.
 #: schedule_saturdays
 msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
 msgstr "Soboty robocze ustawia kierownik działu technicznego lub administrator. Twoje przydzielone soboty są pokazane poniżej."
+
+#: faults work-timer
+msgid "Start work"
+msgstr "Rozpocznij pracę"
+
+#: faults work-timer
+msgid "End work"
+msgstr "Zakończ pracę"
+
+#: faults work-timer
+msgid "Work in progress"
+msgstr "Praca w toku"
+
+#: faults work-timer
+msgid "Ended"
+msgstr "Zakończono"
+
+#: faults work-timer
+msgid "Duration"
+msgstr "Czas trwania"
+
+#: faults work-timer
+msgid "running"
+msgstr "trwa"
+
+#: faults work-timer
+msgid "Work sessions"
+msgstr "Sesje pracy"
+
+#: faults work-timer
+msgid "Work finished"
+msgstr "Praca zakończona"
+
+#: faults work-timer
+msgid "Work already started on this fault"
+msgstr "Praca przy tym zgłoszeniu już się rozpoczęła"
+
+#: faults work-timer
+msgid "Finish work on fault #{} before starting another"
+msgstr "Zakończ pracę przy zgłoszeniu #{} zanim zaczniesz kolejne"
+
+#: faults work-timer
+msgid "No active work session on this fault"
+msgstr "Brak aktywnej sesji pracy przy tym zgłoszeniu"
+
+#: faults work-timer
+msgid "Fault is closed"
+msgstr "Zgłoszenie jest zamknięte"
+
+#: faults work-timer
+msgid "Finish work on another fault first"
+msgstr "Najpierw zakończ pracę przy innym zgłoszeniu"
+
+#: faults work-timer
+msgid "You have an open work session on fault"
+msgstr "Masz otwartą sesję pracy przy zgłoszeniu"
+
+#: faults work-timer
+msgid "finish it before starting work here"
+msgstr "zakończ ją zanim zaczniesz tutaj"
+
+#: faults work-timer
+msgid "Finish work on this fault?"
+msgstr "Zakończyć pracę przy tym zgłoszeniu?"
+
+#: faults work-timer
+msgid "Finish work on fault"
+msgstr "Zakończ pracę przy zgłoszeniu"
