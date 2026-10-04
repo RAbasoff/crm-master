@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, Monteur, User, WeekendShift, WorkSchedule)
+from models import (db, Monteur, User, WeekendShift, WorkSchedule, now_local)
 from utils import (get_belgian_holidays, role_required, safe_commit, safe_int,
                    log_audit, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift)
 
@@ -124,8 +124,8 @@ def schedule_delete(user_id):
 @login_required
 @role_required('admin', 'director')
 def schedule_monthly():
-    year = safe_int(request.args.get('year'), datetime.utcnow().year)
-    month = safe_int(request.args.get('month'), datetime.utcnow().month)
+    year = safe_int(request.args.get('year'), now_local().year)
+    month = safe_int(request.args.get('month'), now_local().month)
     filter_user = request.args.get('user', '')
     if month < 1: month = 12; year -= 1
     if month > 12: month = 1; year += 1
@@ -263,7 +263,7 @@ def saturdays():
         all_users = [current_user]
 
     # Next 12 Saturdays from today
-    today = datetime.utcnow().date()
+    today = now_local().date()
     days_ahead = (5 - today.weekday()) % 7  # 5=Sat
     first_sat = today + timedelta(days=days_ahead)
     saturdays_list = []

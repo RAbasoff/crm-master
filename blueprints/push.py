@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
-from models import db, PushSubscription
+from models import db, PushSubscription, now_local
 from utils import safe_commit
 from push import get_public_key
 
@@ -35,7 +35,7 @@ def push_subscribe():
         existing.p256dh = p256dh
         existing.auth = auth
         existing.user_agent = str(request.user_agent)[:300]
-        existing.last_used_at = datetime.utcnow()
+        existing.last_used_at = now_local()
     else:
         db.session.add(PushSubscription(
             user_id=current_user.id, endpoint=endpoint,

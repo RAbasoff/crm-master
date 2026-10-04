@@ -8,7 +8,7 @@
 from datetime import datetime, timedelta
 from flask_login import current_user
 from flask_babel import gettext as _
-from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry, WarehouseGroup
+from models import db, Notification, AuditLog, GroupPermission, ResponsibleGroup, Verantwoordelijke, UserActivityLog, SystemLog, WorkReportEntry, WarehouseGroup, now_local
 import os
 from werkzeug.utils import secure_filename
 import time as _time
@@ -54,7 +54,7 @@ def next_number_suffix(model_cls, field_name, day_prefix):
 
 def genereer_nummer():
     from models import Opdracht
-    day = datetime.utcnow().strftime('%Y%m%d')
+    day = now_local().strftime('%Y%m%d')
     num = next_number_suffix(Opdracht, 'nummer', f'WO-{day}')
     return f'WO-{day}-{num:04d}'
 
@@ -112,13 +112,13 @@ def is_work_date(user_id, date):
 def get_work_hours(user_id, date=None):
     """(start, end) времени работы на дату; None, если день не рабочий."""
     if date is None:
-        date = datetime.now().date()
+        date = now_local().date()
     if not is_work_date(user_id, date):
         return None
     shift = get_day_shift(user_id, date)
     schedule = get_active_schedule(user_id)
-    default_start = _parse_hhmm('08:00', datetime.now().replace(hour=8, minute=0).time())
-    default_end = _parse_hhmm('17:00', datetime.now().replace(hour=17, minute=0).time())
+    default_start = _parse_hhmm('08:00', now_local().replace(hour=8, minute=0).time())
+    default_end = _parse_hhmm('17:00', now_local().replace(hour=17, minute=0).time())
     start = _parse_hhmm(schedule.shift_start, default_start) if schedule else default_start
     end = _parse_hhmm(schedule.shift_end, default_end) if schedule else default_end
     if shift and shift.shift_type == 'morning':
@@ -139,7 +139,7 @@ def is_user_at_work(user):
     утверждённый отпуск. Без активного графика — стандартный Пн-Пт 08:00-17:00.
     """
     from models import Vacation
-    now = datetime.now()
+    now = now_local()
     today = now.date()
 
     # Отпуск
@@ -266,7 +266,7 @@ def acquire_lock(record_type, record_id, user_id, user_name):
     Admin always wins: breaks any existing lock."""
     from models import RecordLock
     from flask_login import current_user
-    now = datetime.utcnow()
+    now = now_local()
     expires = now + timedelta(minutes=LOCK_TTL_MINUTES)
 
     # Clean expired locks for this record
@@ -339,7 +339,7 @@ def release_lock(record_type, record_id, user_id):
 def refresh_lock(record_type, record_id, user_id):
     """Extend lock TTL (called periodically from edit forms)."""
     from models import RecordLock
-    now = datetime.utcnow()
+    now = now_local()
     lock = RecordLock.query.filter(
         RecordLock.record_type == record_type,
         RecordLock.record_id == record_id,
@@ -366,7 +366,7 @@ def add_work_report(entry_text):
 def check_tool_wear_notifications():
     """Notify users with tool_wear access when knife wear reaches 80%."""
     from models import ToolWear, User, Machine, Notification, GroupPermission, Verantwoordelijke, UserSectionAccess
-    today = datetime.utcnow().date()
+    today = now_local().date()
     tools = ToolWear.query.all()
     if not tools:
         return

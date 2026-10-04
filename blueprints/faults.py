@@ -11,7 +11,7 @@ from sqlalchemy.orm import joinedload, subqueryload
 
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
-                    VoorraadItem, VoorraadMutatie, FaultWorkSession)
+                    VoorraadItem, VoorraadMutatie, FaultWorkSession, now_local)
 from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
@@ -82,7 +82,7 @@ def _end_open_work_sessions(user_id, fault_id, note=''):
     for s in sessions:
         if fault_id is not None and s.fault_id != fault_id:
             continue
-        s.ended_at = datetime.utcnow()
+        s.ended_at = now_local()
         s.duration_minutes = round(s.elapsed_seconds / 60.0, 2)
         if note and not s.notes:
             s.notes = note[:500]
@@ -135,7 +135,7 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
             return False, _('Describe the reason for pause')
         f.pause_reason = pause_reason
         f.pause_comment = comment
-        f.pause_started_at = datetime.utcnow()
+        f.pause_started_at = now_local()
         f.pause_until = pause_until
         _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: fault paused'))
     elif new_status in WAIT_STATUSES:
@@ -151,7 +151,7 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
         if pause_until:
             f.pause_until = pause_until
         if not f.pause_started_at:
-            f.pause_started_at = datetime.utcnow()
+            f.pause_started_at = now_local()
         _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: waiting'))
     else:
         # выход из паузы / рабочий статус
@@ -167,16 +167,16 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
     if new_status == 'testing' and f.resolved_at:
         f.resolved_at = None
     if new_status == 'resolved':
-        f.resolved_at = datetime.utcnow()
+        f.resolved_at = now_local()
         _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: resolved'))
     if new_status == 'closed':
-        f.resolved_at = f.resolved_at or datetime.utcnow()
+        f.resolved_at = f.resolved_at or now_local()
         _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: closed'))
     if new_status == 'reopened':
         f.resolved_at = None
         # reopened — транзитом дальше в diagnosis/in_progress
     if new_status == 'accepted' and not f.accepted_at:
-        f.accepted_at = datetime.utcnow()
+        f.accepted_at = now_local()
         if not f.technician_id:
             f.technician_id = user.id
 
@@ -250,7 +250,7 @@ def fault_new():
             if tech_ids:
                 f.technician_id = int(tech_ids[0])
                 f.status = 'accepted'
-                f.accepted_at = datetime.utcnow()
+                f.accepted_at = now_local()
 
             if not safe_commit():
                 db.session.rollback()
@@ -345,7 +345,7 @@ def fault_detail(fault_id):
     # Сколько заявка «ждёт» (сумма пауз)
     wait_minutes = 0
     if f.pause_started_at:
-        end = datetime.utcnow()
+        end = now_local()
         wait_minutes = round((end - f.pause_started_at).total_seconds() / 60.0, 1)
     allowed_next = ALLOWED_TRANSITIONS.get(f.status or 'open', ())
     # ── Полная хронология: создание → приёмка → работы → статусы → решение → закрытие ──
@@ -448,7 +448,7 @@ def fault_work_start(fault_id):
         flash(msg, 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
-    sess = FaultWorkSession(fault_id=f.id, user_id=current_user.id, started_at=datetime.utcnow())
+    sess = FaultWorkSession(fault_id=f.id, user_id=current_user.id, started_at=now_local())
     db.session.add(sess)
     if f.status in ('open', 'accepted'):
         f.status = 'in_progress'
@@ -488,7 +488,7 @@ def fault_work_end(fault_id):
 
     data = request.get_json() if request.is_json else request.form
     notes = (data.get('notes') or '').strip() if data else ''
-    sess.ended_at = datetime.utcnow()
+    sess.ended_at = now_local()
     minutes = round(sess.elapsed_seconds / 60.0, 2)
     sess.duration_minutes = minutes
     if notes:
@@ -518,7 +518,7 @@ def fault_accept(fault_id):
         flash(err, 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     f.technician_id = current_user.id
-    f.accepted_at = f.accepted_at or datetime.utcnow()
+    f.accepted_at = f.accepted_at or now_local()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -559,7 +559,7 @@ def fault_assign(fault_id):
         if c:
             names.append(f"🏢 {c.company_name}")
     f.status = 'accepted'
-    f.accepted_at = datetime.utcnow()
+    f.accepted_at = now_local()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -698,7 +698,7 @@ def fault_reopen(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     data = request.get_json() if request.is_json else request.form
     reason = (data.get('reason') or '').strip()
-    reopen_date = data.get('reopen_date', datetime.utcnow().strftime('%Y-%m-%d'))
+    reopen_date = data.get('reopen_date', now_local().strftime('%Y-%m-%d'))
     if not reason:
         msg = _('Reason is required to reopen a fault')
         if request.is_json:
@@ -782,7 +782,7 @@ def work_report_new(fault_id):
             db.session.rollback()
 
         f.status = 'resolved'
-        f.resolved_at = datetime.utcnow()
+        f.resolved_at = now_local()
         if not safe_commit():
             flash(_('Work report saved but status update failed'), 'warning')
             return redirect(url_for('faults.fault_detail', fault_id=f.id))

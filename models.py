@@ -3,8 +3,22 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from sqlalchemy import Numeric
+import os as _os
 
 db = SQLAlchemy()
+
+
+def now_local():
+    """Текущее местное время (Europe/Brussels) — совпадает с системными часами.
+
+    Раньше везде был now_local() — в Бельгии время отставало на 2 часа.
+    """
+    tz_name = _os.environ.get('APP_TIMEZONE', 'Europe/Brussels')
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(tz_name)).replace(tzinfo=None)
+    except Exception:
+        return datetime.now()
 
 # ============================================================
 # ASSOCIATION TABLES
@@ -45,7 +59,7 @@ class User(UserMixin, db.Model):
     fire_date = db.Column(db.Date)
     # Постоянный доступ без привязки к графику (вне work-hours / idle logout)
     work_hours_exempt = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
     assigned_machines = db.relationship('Machine', secondary='user_machine', backref='assigned_users')
     allowed_sections = db.relationship('UserSectionAccess', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -143,7 +157,7 @@ class FactorySection(db.Model):
     width = db.Column(db.Float, default=25)
     height = db.Column(db.Float, default=25)
     responsible_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
     responsible_user = db.relationship('User', foreign_keys=[responsible_user_id], backref='administered_sections')
     responsible_persons = db.relationship('Verantwoordelijke', secondary=section_responsible, backref='resp_sections')
@@ -183,7 +197,7 @@ class Machine(db.Model):
     gas_co2 = db.Column(db.Boolean, default=False)       # углекислый газ
     nitrogen_usage_m3h = db.Column(db.Float)  # азот, м³/ч
     co2_usage_m3h = db.Column(db.Float)       # CO₂, м³/ч
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
     responsible_user = db.relationship('User', foreign_keys=[responsible_user_id], backref='responsible_machines')
     responsible_person = db.relationship('Verantwoordelijke', foreign_keys=[responsible_person_id])
@@ -213,7 +227,7 @@ class MachinePart(db.Model):
     status = db.Column(db.String(20), default='ok')
     responsible_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
     responsible_user = db.relationship('User', foreign_keys=[responsible_user_id])
     logs = db.relationship('PartMaintenanceLog', backref='part', lazy=True, order_by='PartMaintenanceLog.date.desc()', cascade='all, delete-orphan')
@@ -225,7 +239,7 @@ class PartMaintenanceLog(db.Model):
     action = db.Column(db.String(30), nullable=False)
     description = db.Column(db.Text)
     performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date = db.Column(db.DateTime, nullable=False, default=now_local)
     cost = db.Column(Numeric(10, 2), default=0)
     notes = db.Column(db.Text)
     performer = db.relationship('User', foreign_keys=[performed_by])
@@ -238,7 +252,7 @@ class MachineDocument(db.Model):
     title = db.Column(db.String(200), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
 
 class MaintenanceRecord(db.Model):
@@ -253,7 +267,7 @@ class MaintenanceRecord(db.Model):
     cost = db.Column(Numeric(10, 2), default=0)
     parts_used = db.Column(db.Text)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     performer = db.relationship('User', foreign_keys=[performed_by])
     photos = db.relationship('MaintenancePhoto', backref='maintenance', lazy=True, cascade='all, delete-orphan')
 
@@ -263,7 +277,7 @@ class MaintenancePhoto(db.Model):
     maintenance_id = db.Column(db.Integer, db.ForeignKey('maintenance_record.id'), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class MaintenancePlan(db.Model):
     __tablename__ = 'maintenance_plan'
@@ -291,7 +305,7 @@ class MaintenancePlan(db.Model):
     recurrence = db.Column(db.String(20))  # none/weekly/biweekly/monthly/quarterly/yearly
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     machine = db.relationship('Machine', backref='maintenance_plans')
     worker = db.relationship('Monteur', backref='maintenance_plans')
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -312,7 +326,7 @@ class MaintenanceSchedule(db.Model):
     preferred_day = db.Column(db.Integer)  # 1-28 for monthly, NULL=auto
     months_ahead = db.Column(db.Integer, default=3)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     machine = db.relationship('Machine', backref='maintenance_schedules')
 
 class MachineSparePart(db.Model):
@@ -332,7 +346,7 @@ class MachineConsumable(db.Model):
     quantity_per_use = db.Column(db.Float, default=1)
     notes = db.Column(db.Text)
     last_issued_at = db.Column(db.DateTime)
-    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+    added_at = db.Column(db.DateTime, default=now_local)
 
     # cascade='all' (без delete-orphan): удаление Machine/VoorraadItem чистит связи,
     # но переассигнация/отвязка не удаляет строку автоматически.
@@ -351,7 +365,7 @@ class ToolWear(db.Model):
     critical_percent = db.Column(db.Float, default=80)
     last_replaced = db.Column(db.Date)
     notes = db.Column(db.Text)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 # ============================================================
@@ -364,7 +378,7 @@ class ResponsibleGroup(db.Model):
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     access_level = db.Column(db.String(20), default='user')  # admin, director, technician, user, quality
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     members = db.relationship('Verantwoordelijke', backref='resp_group', lazy=True)
     permissions = db.relationship('GroupPermission', backref='group', lazy=True, cascade='all, delete-orphan')
 
@@ -406,7 +420,7 @@ class Verantwoordelijke(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey('responsible_group.id'))
     monteur_id = db.Column(db.Integer, db.ForeignKey('worker.id'))
     notities = db.Column(db.Text)
-    aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
+    aangemaakt = db.Column(db.DateTime, default=now_local)
     # Auth fields for responsible person login
     username = db.Column(db.String(80), unique=True, nullable=True)
     password_hash = db.Column(db.String(200))
@@ -533,7 +547,7 @@ class Contractor(db.Model):
     contract_end = db.Column(db.Date)
     notes = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     employees = db.relationship('ContractorEmployee', backref='contractor', lazy=True, cascade='all, delete-orphan')
     machines = db.relationship('Machine', back_populates='contractor_rel', lazy=True)
 
@@ -557,7 +571,7 @@ class WarehouseGroup(db.Model):
     name = db.Column(db.String(200), nullable=False)
     manufacturer = db.Column(db.String(200))
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     items = db.relationship('VoorraadItem', backref='group', lazy=True)
 
 class VoorraadItem(db.Model):
@@ -586,7 +600,7 @@ class VoorraadItem(db.Model):
     replacement_interval = db.Column(db.String(50))
     last_replacement = db.Column(db.Date)
     next_replacement = db.Column(db.Date)
-    aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
+    aangemaakt = db.Column(db.DateTime, default=now_local)
     contractor = db.relationship('Contractor', backref='warehouse_items')
     mutaties = db.relationship('VoorraadMutatie', backref='item', lazy=True, cascade='all, delete-orphan')
     reservations = db.relationship('WarehouseReservation', backref='item', lazy=True, cascade='all, delete-orphan')
@@ -600,7 +614,7 @@ class VoorraadMutatie(db.Model):
     opdracht_id = db.Column(db.Integer, db.ForeignKey('opdracht.id'))
     opmerking = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # кто совершил
-    aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
+    aangemaakt = db.Column(db.DateTime, default=now_local)
     user = db.relationship('User', foreign_keys=[user_id])
 
 class WarehouseReservation(db.Model):
@@ -611,7 +625,7 @@ class WarehouseReservation(db.Model):
     quantity = db.Column(db.Float, nullable=False)
     reserved_for = db.Column(db.String(200))  # для чего (заказ, станок, проект)
     reserved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    reserved_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reserved_at = db.Column(db.DateTime, default=now_local)
     expires_at = db.Column(db.DateTime)  # когда истекает резерв
     notes = db.Column(db.Text)
     user = db.relationship('User', foreign_keys=[reserved_by])
@@ -626,7 +640,7 @@ class SupplierPrice(db.Model):
     delivery_days = db.Column(db.Integer)  # срок доставки
     min_order = db.Column(db.Float)  # минимальный заказ
     notes = db.Column(db.Text)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=now_local)
     item = db.relationship('VoorraadItem', backref='supplier_prices')
 
 class Invoice(db.Model):
@@ -643,7 +657,7 @@ class Invoice(db.Model):
     signed_at = db.Column(db.DateTime)
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     signer = db.relationship('User', foreign_keys=[signed_by])
     creator = db.relationship('User', foreign_keys=[created_by])
     items = db.relationship('InvoiceItem', backref='invoice', lazy=True, cascade='all, delete-orphan')
@@ -673,7 +687,7 @@ class GasCylinder(db.Model):
     received_at = db.Column(db.DateTime)
     installed_at = db.Column(db.DateTime)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     logs = db.relationship('CylinderLog', backref='cylinder', lazy=True, order_by='CylinderLog.date.desc()', cascade='all, delete-orphan')
 
 class GasSystemComponent(db.Model):
@@ -687,7 +701,7 @@ class GasSystemComponent(db.Model):
     next_check = db.Column(db.Date)
     installed_at = db.Column(db.DateTime)  # when current unit was installed
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     repairs = db.relationship('EquipmentRepair', backref='component', lazy=True, order_by='EquipmentRepair.date_broken.desc()')
 
 
@@ -711,7 +725,7 @@ class EquipmentRepair(db.Model):
     status = db.Column(db.String(20), default='broken')  # broken, in_repair, repaired, installed
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     creator = db.relationship('User', foreign_keys=[created_by])
 
 class CylinderLog(db.Model):
@@ -722,7 +736,7 @@ class CylinderLog(db.Model):
     old_cylinder_number = db.Column(db.String(50))
     new_cylinder_number = db.Column(db.String(50))
     performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=now_local)
     notes = db.Column(db.Text)
     performer = db.relationship('User', foreign_keys=[performed_by])
 
@@ -735,7 +749,7 @@ class CylinderOrder(db.Model):
     supplier = db.Column(db.String(200))
     reason = db.Column(db.Text)
     ordered_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    ordered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ordered_at = db.Column(db.DateTime, default=now_local)
     delivered_at = db.Column(db.DateTime)
     notes = db.Column(db.Text)
     orderer = db.relationship('User', foreign_keys=[ordered_by])
@@ -758,7 +772,7 @@ class FaultReport(db.Model):
     reporter_name = db.Column(db.String(200))  # actual person when not the logged-in filer
     technician_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # primary technician (legacy)
     contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'), index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=now_local, index=True)
     accepted_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
     # Пауза: причина + планируемое возобновление (статус ≠ причина)
@@ -802,7 +816,7 @@ class FaultStatusHistory(db.Model):
     new_status = db.Column(db.String(20), nullable=False)
     reason = db.Column(db.Text)
     changed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    changed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    changed_at = db.Column(db.DateTime, default=now_local)
     changer = db.relationship('User', foreign_keys=[changed_by])
 
 class FaultWorkSession(db.Model):
@@ -811,7 +825,7 @@ class FaultWorkSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fault_id = db.Column(db.Integer, db.ForeignKey('fault_report.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    started_at = db.Column(db.DateTime, default=now_local, nullable=False)
     ended_at = db.Column(db.DateTime)
     duration_minutes = db.Column(db.Float, default=0)
     notes = db.Column(db.Text)
@@ -824,7 +838,7 @@ class FaultWorkSession(db.Model):
 
     @property
     def elapsed_seconds(self):
-        end = self.ended_at or datetime.utcnow()
+        end = self.ended_at or now_local()
         return max(0, int((end - self.started_at).total_seconds()))
 
 class FaultPhoto(db.Model):
@@ -833,7 +847,7 @@ class FaultPhoto(db.Model):
     fault_id = db.Column(db.Integer, db.ForeignKey('fault_report.id'), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class FaultVideo(db.Model):
     __tablename__ = 'fault_video'
@@ -841,7 +855,7 @@ class FaultVideo(db.Model):
     fault_id = db.Column(db.Integer, db.ForeignKey('fault_report.id'), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class WorkReport(db.Model):
     __tablename__ = 'work_report'
@@ -851,7 +865,7 @@ class WorkReport(db.Model):
     work_description = db.Column(db.Text, nullable=False)
     parts_used = db.Column(db.Text)
     time_spent_hours = db.Column(db.Float, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     photos = db.relationship('WorkReportPhoto', backref='work_report', lazy=True, cascade='all, delete-orphan')
 
 class WorkReportPhoto(db.Model):
@@ -860,7 +874,7 @@ class WorkReportPhoto(db.Model):
     report_id = db.Column(db.Integer, db.ForeignKey('work_report.id'), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 # ============================================================
 # TWO — Technical Work Order
@@ -897,7 +911,7 @@ class TechnicalWorkOrder(db.Model):
 
     # Meta
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     notes = db.Column(db.Text)
 
     # Relationships
@@ -917,7 +931,7 @@ class TWOPhoto(db.Model):
     two_id = db.Column(db.Integer, db.ForeignKey('technical_work_order.id'), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class TWOChecklistItem(db.Model):
     __tablename__ = 'two_checklist_item'
@@ -952,7 +966,7 @@ class TWOSignature(db.Model):
     two_id = db.Column(db.Integer, db.ForeignKey('technical_work_order.id'), nullable=False)
     signer_name = db.Column(db.String(200), nullable=False)
     signature_data = db.Column(db.Text, nullable=False)  # base64 PNG
-    signed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    signed_at = db.Column(db.DateTime, default=now_local)
 
 class PurchaseRequest(db.Model):
     __tablename__ = 'purchase_request'
@@ -970,7 +984,7 @@ class PurchaseRequest(db.Model):
     urgency = db.Column(db.String(20), default='normal')
     reason = db.Column(db.Text)
     status = db.Column(db.String(20), default='pending', index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     reviewed_at = db.Column(db.DateTime)
     reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     machine = db.relationship('Machine', backref='purchase_requests')
@@ -1002,7 +1016,7 @@ class TimeEntry(db.Model):
     status = db.Column(db.String(20), default='present')
     notes = db.Column(db.Text)
     approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     user = db.relationship('User', foreign_keys=[user_id], backref='time_entries')
     approver = db.relationship('User', foreign_keys=[approved_by])
 
@@ -1014,7 +1028,7 @@ class WeekendShift(db.Model):
     shift_type = db.Column(db.String(20), default='full')  # full, morning, afternoon
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     user = db.relationship('User', foreign_keys=[user_id], backref='weekend_shifts')
     creator = db.relationship('User', foreign_keys=[created_by])
 
@@ -1029,7 +1043,7 @@ class Vacation(db.Model):
     reason = db.Column(db.Text)
     status = db.Column(db.String(20), default='pending', index=True)
     approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     user = db.relationship('User', foreign_keys=[user_id], backref='vacations')
     approver = db.relationship('User', foreign_keys=[approved_by])
 
@@ -1042,7 +1056,7 @@ class PushSubscription(db.Model):
     p256dh = db.Column(db.Text, nullable=False)
     auth = db.Column(db.Text, nullable=False)
     user_agent = db.Column(db.String(300))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     last_used_at = db.Column(db.DateTime)
     user = db.relationship('User', backref='push_subscriptions')
 
@@ -1054,7 +1068,7 @@ class Message(db.Model):
     subject = db.Column(db.String(200))
     body = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     fault_id = db.Column(db.Integer, db.ForeignKey('fault_report.id'))
 
 class Notification(db.Model):
@@ -1066,7 +1080,7 @@ class Notification(db.Model):
     type = db.Column(db.String(20), default='info')
     is_read = db.Column(db.Boolean, default=False, index=True)
     link = db.Column(db.String(300))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
 
 # ============================================================
@@ -1079,8 +1093,8 @@ class ChatRoom(db.Model):
     name = db.Column(db.String(200))
     is_group = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
     creator = db.relationship('User', foreign_keys=[created_by])
     participants = db.relationship('ChatParticipant', backref='room', lazy=True, cascade='all, delete-orphan')
     messages = db.relationship('ChatMessage', backref='room', lazy=True, cascade='all, delete-orphan')
@@ -1091,8 +1105,8 @@ class ChatParticipant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     room_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_read_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=now_local)
+    last_read_at = db.Column(db.DateTime, default=now_local)
     user = db.relationship('User', foreign_keys=[user_id])
     __table_args__ = (db.UniqueConstraint('room_id', 'user_id'),)
 
@@ -1103,7 +1117,7 @@ class ChatMessage(db.Model):
     room_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=False, index=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     body = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=now_local, index=True)
     # delivery/read tracking per recipient (JSON: {"user_id": "delivered"|"read"})
     status_json = db.Column(db.Text, default='{}')
     sender = db.relationship('User', foreign_keys=[sender_id])
@@ -1125,7 +1139,7 @@ class Opdracht(db.Model):
     arbeidskosten = db.Column(Numeric(10, 2), default=0)
     onderdelenkosten = db.Column(Numeric(10, 2), default=0)
     totaal = db.Column(Numeric(10, 2), default=0)
-    aangemaakt = db.Column(db.DateTime, default=datetime.utcnow)
+    aangemaakt = db.Column(db.DateTime, default=now_local)
     gestart = db.Column(db.DateTime)
     gereed = db.Column(db.DateTime)
     afgeleverd = db.Column(db.DateTime)
@@ -1142,7 +1156,7 @@ class AuditLog(db.Model):
     entity_id = db.Column(db.Integer, index=True)
     details = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=now_local, index=True)
     user = db.relationship('User', foreign_keys=[user_id])
 
 class UserActivityLog(db.Model):
@@ -1161,7 +1175,7 @@ class UserActivityLog(db.Model):
     session_id = db.Column(db.String(100))
     duration_ms = db.Column(db.Integer)  # request duration in ms
     status_code = db.Column(db.Integer)  # HTTP status code
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=now_local, index=True)
     user = db.relationship('User', foreign_keys=[user_id])
 
 class SystemLog(db.Model):
@@ -1174,7 +1188,7 @@ class SystemLog(db.Model):
     source = db.Column(db.String(100))  # function name or module
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     ip_address = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=now_local, index=True)
     user = db.relationship('User', foreign_keys=[user_id])
 
 class WorkReportEntry(db.Model):
@@ -1182,7 +1196,7 @@ class WorkReportEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     entry = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     user = db.relationship('User', foreign_keys=[user_id])
 
 # ============================================================
@@ -1204,7 +1218,7 @@ class ElectricalCabinet(db.Model):
     schematic_x = db.Column(db.Integer, default=0)
     schematic_y = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
     breakers = db.relationship('CircuitBreaker', backref='cabinet', lazy=True, cascade='all, delete-orphan',
                                order_by='CircuitBreaker.row, CircuitBreaker.position')
@@ -1230,7 +1244,7 @@ class CircuitBreaker(db.Model):
     schematic_label = db.Column(db.String(20))  # номер на схеме (e.g. "Q1", "F5")
     schematic_x = db.Column(db.Float)  # X position on schematic image (%)
     schematic_y = db.Column(db.Float)  # Y position on schematic image (%)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
 class ElectricalSwitchLog(db.Model):
     """Журнал переключений в электрощитах"""
@@ -1242,7 +1256,7 @@ class ElectricalSwitchLog(db.Model):
     reason = db.Column(db.Text, nullable=False)
     notes = db.Column(db.Text)
     performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
     cabinet = db.relationship('ElectricalCabinet', backref=db.backref('switch_logs', lazy=True, cascade='all, delete-orphan'))
     from_breaker = db.relationship('CircuitBreaker', foreign_keys=[from_breaker_id])
@@ -1258,7 +1272,7 @@ class ElectricalDocument(db.Model):
     title = db.Column(db.String(200), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
     cabinet = db.relationship('ElectricalCabinet', backref=db.backref('documents', lazy=True, cascade='all, delete-orphan'))
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
@@ -1274,8 +1288,8 @@ class PowerOutlet(db.Model):
     quantity = db.Column(db.Integer, default=1)
     status = db.Column(db.String(20), default='ok')  # ok | broken
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     section = db.relationship('FactorySection', backref='power_outlets')
     breaker = db.relationship('CircuitBreaker', foreign_keys=[breaker_id], backref='power_outlets')
@@ -1294,7 +1308,7 @@ class PowerOutletPhoto(db.Model):
     outlet_id = db.Column(db.Integer, db.ForeignKey('power_outlet.id'), nullable=False, index=True)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 
 # ============================================================
@@ -1323,8 +1337,8 @@ class AirConnectionPoint(db.Model):
     notes = db.Column(db.Text)
     map_x = db.Column(db.Float)  # положение на карте (%)
     map_y = db.Column(db.Float)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     section = db.relationship('FactorySection', backref='air_points')
     photos = db.relationship('AirConnectionPhoto', backref='point', lazy=True, cascade='all, delete-orphan')
@@ -1346,7 +1360,7 @@ class AirConnectionPhoto(db.Model):
     point_id = db.Column(db.Integer, db.ForeignKey('air_connection_point.id'), nullable=False, index=True)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 
 class AirLine(db.Model):
@@ -1363,8 +1377,8 @@ class AirLine(db.Model):
     status = db.Column(db.String(20), default='ok')  # ok | repair | broken
     color = db.Column(db.String(20))     # цвет линии на карте (иначе цвет цеха)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     section = db.relationship('FactorySection', backref='air_lines')
     vertices = db.relationship('AirLineVertex', backref='line', lazy=True,
@@ -1407,8 +1421,8 @@ class WaterConnectionPoint(db.Model):
     notes = db.Column(db.Text)
     map_x = db.Column(db.Float)
     map_y = db.Column(db.Float)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     section = db.relationship('FactorySection', backref='water_points')
     photos = db.relationship('WaterConnectionPhoto', backref='point', lazy=True, cascade='all, delete-orphan')
@@ -1430,7 +1444,7 @@ class WaterConnectionPhoto(db.Model):
     point_id = db.Column(db.Integer, db.ForeignKey('water_connection_point.id'), nullable=False, index=True)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 
 class WaterLine(db.Model):
@@ -1447,8 +1461,8 @@ class WaterLine(db.Model):
     status = db.Column(db.String(20), default='ok')  # ok | repair | broken
     color = db.Column(db.String(20))
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     section = db.relationship('FactorySection', backref='water_lines')
     vertices = db.relationship('WaterLineVertex', backref='line', lazy=True,
@@ -1479,7 +1493,7 @@ class MonthlyArchive(db.Model):
     archive_month = db.Column(db.String(7), nullable=False)  # YYYY-MM
     section = db.Column(db.String(50), nullable=False)  # faults, orders, reports, etc.
     data_json = db.Column(db.Text, nullable=False)  # JSON snapshot
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
 
 # ============================================================
 # ============================================================
@@ -1500,7 +1514,7 @@ class EquipmentMaintenance(db.Model):
     status = db.Column(db.String(20), default='completed')
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     machine = db.relationship('Machine', backref='equipment_maintenance')
     creator = db.relationship('User', foreign_keys=[created_by])
     parts = db.relationship('EquipmentPart', backref='equipment', lazy=True, cascade='all, delete-orphan')
@@ -1513,7 +1527,7 @@ class EquipmentMROPhoto(db.Model):
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class EquipmentPart(db.Model):
     __tablename__ = 'equipment_part'
@@ -1551,7 +1565,7 @@ class EquipmentPartOrder(db.Model):
     status = db.Column(db.String(20), default='pending')
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     delivered_at = db.Column(db.DateTime)
     creator = db.relationship('User', foreign_keys=[created_by])
 
@@ -1629,8 +1643,8 @@ class Equipment(db.Model):
     notes = db.Column(db.Text)
     tags = db.Column(db.String(500))  # теги через запятую
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     # Связи
     section = db.relationship('FactorySection', backref='equipment_items')
@@ -1647,7 +1661,7 @@ class EquipmentDocument(db.Model):
     filename = db.Column(db.String(300), nullable=False)
     original_name = db.Column(db.String(300))
     doc_type = db.Column(db.String(50))  # manual, certificate, warranty, photo, other
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class EquipmentServiceLog(db.Model):
     __tablename__ = 'equipment_service_log'
@@ -1657,7 +1671,7 @@ class EquipmentServiceLog(db.Model):
     description = db.Column(db.Text)
     performed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     cost = db.Column(Numeric(10, 2), default=0)
-    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date = db.Column(db.DateTime, nullable=False, default=now_local)
     next_date = db.Column(db.Date)
     notes = db.Column(db.Text)
     performer = db.relationship('User', foreign_keys=[performed_by])
@@ -1671,7 +1685,7 @@ class RecordLock(db.Model):
     record_id = db.Column(db.Integer, nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user_name = db.Column(db.String(100))  # denormalized for display
-    locked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    locked_at = db.Column(db.DateTime, default=now_local)
     expires_at = db.Column(db.DateTime, nullable=False)
     user = db.relationship('User', foreign_keys=[user_id])
 
@@ -1689,7 +1703,7 @@ class OfflineMutation(db.Model):
     title = db.Column(db.String(200))
     status = db.Column(db.String(20), default='done')  # done, failed
     result_json = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
     completed_at = db.Column(db.DateTime)
     user = db.relationship('User', foreign_keys=[user_id])
 
@@ -1711,8 +1725,8 @@ class MoeskroenZone(db.Model):
     width = db.Column(db.Float, default=20)
     height = db.Column(db.Float, default=15)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     ZONE_TYPES = {
         'production': 'Production',
@@ -1736,8 +1750,8 @@ class MoeskroenMarker(db.Model):
     notes = db.Column(db.Text)
     map_x = db.Column(db.Float)
     map_y = db.Column(db.Float)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     photos = db.relationship('MoeskroenMarkerPhoto', backref='marker', lazy=True,
                              cascade='all, delete-orphan')
@@ -1762,7 +1776,7 @@ class MoeskroenMarkerPhoto(db.Model):
     marker_id = db.Column(db.Integer, db.ForeignKey('moeskroen_marker.id'), nullable=False, index=True)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 
 class MoeskroenLine(db.Model):
@@ -1774,8 +1788,8 @@ class MoeskroenLine(db.Model):
     color = db.Column(db.String(20), default='#8e44ad')
     width_px = db.Column(db.Float, default=2.5)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
 
     vertices = db.relationship('MoeskroenLineVertex', backref='line', lazy=True,
                                cascade='all, delete-orphan',

@@ -30,7 +30,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     Equipment, EquipmentDocument, EquipmentServiceLog,
                     WarehouseReservation, SupplierPrice,
                     GasCylinder, CylinderLog, CylinderOrder,
-                    ChatRoom, ChatParticipant, ChatMessage, OfflineMutation)
+                    ChatRoom, ChatParticipant, ChatMessage, OfflineMutation, now_local)
 from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -474,7 +474,7 @@ def inject_section_access():
     chat_unread = 0
     if current_user.is_authenticated and request.endpoint not in ('static',):
         try:
-            today = datetime.utcnow().date()
+            today = now_local().date()
             soon = today + timedelta(days=7)
             reminder_count = MachinePart.query.filter(
                 db.or_(
@@ -785,7 +785,7 @@ def login():
             ).first()
             if person and person.check_password(password) and person.is_active:
                 auth = ResponsibleAuth(person)
-                person.last_login = datetime.utcnow()
+                person.last_login = now_local()
                 person.login_count = (person.login_count or 0) + 1
                 # Без автосброса по счётчику входов — только по флагу bootstrap
                 if not safe_commit():
@@ -820,7 +820,7 @@ def login():
         # Write to a file so we can read it from the server
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'login_error.log'), 'a') as _f:
-                _f.write(f"\n{'='*60}\n{datetime.utcnow().isoformat()}\n{_trace}\n")
+                _f.write(f"\n{'='*60}\n{now_local().isoformat()}\n{_trace}\n")
         except Exception:
             pass
         flash(f'Login error: {_login_err}', 'error')
@@ -1110,7 +1110,7 @@ def index():
         return redirect(url_for('floor_plan'))
 
     # Aggregate stats in one query (C2)
-    today_start = datetime.utcnow().date()
+    today_start = now_local().date()
     open_states = ['open', 'accepted', 'in_progress']
     row = db.session.query(
         func.count(Opdracht.id),
@@ -1178,7 +1178,7 @@ def index():
         dashboard_stats['top_machines'] = top_machines
         
         # TWO warnings - active TWOs that need attention
-        today = datetime.utcnow().date()
+        today = now_local().date()
         active_twos = TechnicalWorkOrder.query.filter(
             TechnicalWorkOrder.status.in_(['draft', 'assigned', 'in_progress'])
         ).all()
@@ -1188,7 +1188,7 @@ def index():
         dashboard_stats['overdue_two_list'] = overdue_twos[:5]
 
         # ── Charts data (last 6 months) ─────────────────────
-        today = datetime.utcnow().date()
+        today = now_local().date()
         months = []
         for i in range(5, -1, -1):
             m0 = today.replace(day=1)
@@ -1230,7 +1230,7 @@ def index():
             {'status': s or 'unknown', 'count': int(c or 0)} for s, c in status_rows
         ]
 
-    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=datetime.utcnow(), dashboard_stats=dashboard_stats)
+    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats)
 
 # ============================================================
 # ROUTES — OPDRACHTEN (existing)
@@ -1293,7 +1293,7 @@ def universal_scanner():
 @role_required('admin')
 def automation_check():
     """Run all automated checks and send notifications"""
-    today = datetime.utcnow().date()
+    today = now_local().date()
     soon = today + timedelta(days=14)
     results = {'maintenance': 0, 'low_stock': 0, 'contracts': 0, 'cylinders': 0}
 
@@ -1570,12 +1570,12 @@ if __name__ == '__main__':
                 Opdracht(nummer='WO-20260809-0001', responsible_id=1, monteur_id=1, apparaat='Smartphone', model='iPhone 12',
                          probleem='Gebroken scherm, touchscreen werkt niet', status='afgeleverd',
                          arbeidskosten=250, onderdelenkosten=150, totaal=400,
-                         gestart=datetime.utcnow()-timedelta(days=5), gereed=datetime.utcnow()-timedelta(days=3),
-                         afgeleverd=datetime.utcnow()-timedelta(days=2)),
+                         gestart=now_local()-timedelta(days=5), gereed=now_local()-timedelta(days=3),
+                         afgeleverd=now_local()-timedelta(days=2)),
                 Opdracht(nummer='WO-20260809-0002', responsible_id=2, monteur_id=2, apparaat='Laptop', model='ASUS X515',
                          probleem='Start niet op, laadt niet', status='in behandeling',
                          arbeidskosten=150, onderdelenkosten=0, totaal=150,
-                         gestart=datetime.utcnow()-timedelta(days=1)),
+                         gestart=now_local()-timedelta(days=1)),
                 Opdracht(nummer='WO-20260809-0003', responsible_id=3, monteur_id=1, apparaat='Tablet', model='Samsung Tab A',
                          probleem='WiFi werkt niet, traag', status='aangenomen', arbeidskosten=0, onderdelenkosten=0, totaal=0),
             ]

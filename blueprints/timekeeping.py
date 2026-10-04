@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, TimeEntry, User, Vacation)
+from models import (db, TimeEntry, User, Vacation, now_local)
 from utils import create_notification, role_required, safe_commit, safe_int
 
 bp = Blueprint('timekeeping', __name__)
@@ -22,7 +22,7 @@ def time_tracking():
     else:
         users = [current_user]
     
-    today = datetime.utcnow().date()
+    today = now_local().date()
     month_start = today.replace(day=1)
     
     entries = TimeEntry.query.filter(
@@ -37,34 +37,34 @@ def time_tracking():
 @bp.route('/time-tracking/clock-in', methods=['POST'])
 @login_required
 def clock_in():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     existing = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
     if existing and existing.clock_in:
         flash(_('Already clocked in today'), 'error')
         return redirect(url_for('timekeeping.time_tracking'))
     
     if existing:
-        existing.clock_in = datetime.utcnow()
+        existing.clock_in = now_local()
         existing.status = 'present'
     else:
         entry = TimeEntry(
             user_id=current_user.id,
             date=today,
-            clock_in=datetime.utcnow(),
+            clock_in=now_local(),
             status='present'
         )
         db.session.add(entry)
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('timekeeping.time_tracking'))
-    flash(_('Clocked in at') + ' ' + datetime.utcnow().strftime('%H:%M'), 'success')
+    flash(_('Clocked in at') + ' ' + now_local().strftime('%H:%M'), 'success')
     return redirect(url_for('timekeeping.time_tracking'))
 
 
 @bp.route('/time-tracking/clock-out', methods=['POST'])
 @login_required
 def clock_out():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     entry = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
     if not entry or not entry.clock_in:
         flash(_('Not clocked in today'), 'error')
@@ -73,7 +73,7 @@ def clock_out():
         flash(_('Already clocked out today'), 'error')
         return redirect(url_for('timekeeping.time_tracking'))
     
-    entry.clock_out = datetime.utcnow()
+    entry.clock_out = now_local()
     delta = entry.clock_out - entry.clock_in
     hours = delta.total_seconds() / 3600
     entry.hours_worked = round(hours - (entry.break_minutes / 60), 2)
@@ -219,7 +219,7 @@ def time_report(user_id):
         return redirect(url_for('timekeeping.time_tracking'))
     
     user = User.query.get_or_404(user_id)
-    month = request.args.get('month', datetime.utcnow().strftime('%Y-%m'))
+    month = request.args.get('month', now_local().strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
     start = datetime(year, mon, 1).date()
     if mon == 12:

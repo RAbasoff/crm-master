@@ -11,7 +11,7 @@ from flask_babel import gettext as _
 from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOAssignment,
                     two_workers, Monteur, Machine, FactorySection, User, FaultReport,
                     WorkSchedule, WeekendShift, Vacation, MaintenancePlan, PartMaintenanceLog,
-                    ResponsibleGroup, TWOPhoto)
+                    ResponsibleGroup, TWOPhoto, now_local)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    is_work_date, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift,
                    get_belgian_holidays, save_uploaded_file, log_audit)
@@ -21,7 +21,7 @@ bp = Blueprint('two', __name__)
 
 def gen_two_number():
     from utils import next_number_suffix
-    day = datetime.utcnow().strftime('%Y%m%d')
+    day = now_local().strftime('%Y%m%d')
     num = next_number_suffix(TechnicalWorkOrder, 'number', f'TWO-{day}')
     return f'TWO-{day}-{num:04d}'
 
@@ -400,7 +400,7 @@ def two_checklist_add(two_id):
 def two_checklist_toggle(item_id):
     item = TWOChecklistItem.query.get_or_404(item_id)
     item.is_done = not item.is_done
-    item.done_at = datetime.utcnow() if item.is_done else None
+    item.done_at = now_local() if item.is_done else None
     item.done_by = current_user.id if item.is_done else None
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
@@ -429,7 +429,7 @@ def two_add_signature(two_id):
         sig = TWOSignature(two_id=two_id, signer_name=signer_name, signature_data=signature_data)
         db.session.add(sig)
         two.status = 'completed'
-        two.completed_at = datetime.utcnow()
+        two.completed_at = now_local()
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('two.two_detail', two_id=two_id))
@@ -576,7 +576,7 @@ def two_edit(two_id):
 def two_complete(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     two.status = 'completed'
-    two.completed_at = datetime.utcnow()
+    two.completed_at = now_local()
     two.result = request.form.get('result', two.result)
     # Do NOT auto-resolve linked fault — close manually
     if not safe_commit():

@@ -7,7 +7,7 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, Notification, MachinePart, VoorraadItem
+from models import db, Notification, MachinePart, VoorraadItem, now_local
 from utils import role_required, safe_commit
 
 bp = Blueprint('notifications', __name__)
@@ -48,7 +48,7 @@ def notifications_read_all():
 def reminders():
     """Unified reminders page — maintenance + consumables + overdue."""
     from sqlalchemy.orm import joinedload
-    today = datetime.utcnow().date()
+    today = now_local().date()
     soon_7 = today + timedelta(days=7)
     soon_30 = today + timedelta(days=30)
 
@@ -105,7 +105,7 @@ def reminders():
 @role_required('admin', 'director', 'technician')
 def consumable_reminders():
     """Show upcoming consumable replacements"""
-    today = datetime.utcnow().date()
+    today = now_local().date()
     soon = today + timedelta(days=30)
     
     # Get all consumables with replacement dates

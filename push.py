@@ -76,8 +76,7 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
 
 def push_to_user(user_id, title, body, url=None, tag=None):
     """Отправить всем подпискам пользователя. Возвращает число успешных."""
-    from models import PushSubscription, db
-    from datetime import datetime as _dt
+    from models import PushSubscription, db, now_local
     subs = PushSubscription.query.filter_by(user_id=user_id).all()
     ok = 0
     dead = []
@@ -88,7 +87,7 @@ def push_to_user(user_id, title, body, url=None, tag=None):
         }
         if send_web_push(info, title, body, url=url, tag=tag):
             ok += 1
-            s.last_used_at = _dt.utcnow()
+            s.last_used_at = now_local()
         else:
             # 404/410 → мёртвая подписка
             dead.append(s)
