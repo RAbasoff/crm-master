@@ -426,16 +426,17 @@ def before_request():
             return redirect(url_for('change_password'))
 
     # Доступ механиков только в рабочие часы по графику
-    if current_user.is_authenticated and user_schedule_restricted(current_user):
-        allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block')
+    # (не действует, если администратор смотрит от имени пользователя)
+    if current_user.is_authenticated and not session.get('impersonate_admin_id') and user_schedule_restricted(current_user):
+        allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block', 'switch_back', 'switch_user')
         endpoint = request.endpoint or ''
         if endpoint not in allowed and not endpoint.startswith('static'):
             if not is_user_at_work(current_user):
                 return redirect(url_for('work_hours_block'))
 
     # Авто-выход после 10 минут бездействия (механики)
-    if current_user.is_authenticated and user_schedule_restricted(current_user):
-        allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block')
+    if current_user.is_authenticated and not session.get('impersonate_admin_id') and user_schedule_restricted(current_user):
+        allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block', 'switch_back', 'switch_user')
         endpoint = request.endpoint or ''
         if endpoint not in allowed and not endpoint.startswith('static'):
             import time as _time
@@ -496,7 +497,11 @@ def inject_section_access():
         except Exception:
             pass
 
-    return dict(has_access=has_access, reminder_count=reminder_count, chat_unread=chat_unread)
+    return dict(has_access=has_access, reminder_count=reminder_count, chat_unread=chat_unread,
+                impersonate_admin_id=session.get('impersonate_admin_id'),
+                impersonate_admin=db.session.get(User, session['impersonate_admin_id']) if session.get('impersonate_admin_id') else None,
+                is_admin=(current_user.is_authenticated and current_user.has_role('admin') and not session.get('impersonate_admin_id')),
+                all_users_list=User.query.filter(User.is_active_user == True).order_by(User.username).all() if (current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id'))) else [])
 
 
 @app.after_request
@@ -833,8 +838,65 @@ def logout():
     username = current_user.username if current_user.is_authenticated else 'unknown'
     log_user_activity('logout', page='/logout', details=f'User {username} logged out')
     log_system('INFO', 'auth', f'User {username} logged out', source='logout')
+    session.pop('impersonate_admin_id', None)
     logout_user()
     return redirect(url_for('login'))
+
+
+# ── Admin: switch user (view as) without re-login ──────────────────
+
+@app.route('/switch-user/<int:user_id>')
+@login_required
+def switch_user(user_id):
+    """Администратор: войти под другим пользователем. Возврат — /switch-back."""
+    # Уже «под кем-то» — вернуться к админу, не цепочкой
+    if session.get('impersonate_admin_id'):
+        flash(_('Finish current switch first'), 'error')
+        return redirect(url_for('switch_back'))
+
+    if not current_user.has_role('admin'):
+        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        return redirect(url_for('index'))
+
+    target = db.session.get(User, user_id)
+    if not target or not target.is_active_user:
+        flash(_('User not found'), 'error')
+        return redirect(url_for('index'))
+    if target.id == current_user.id:
+        flash(_('Already this user'), 'info')
+        return redirect(url_for('index'))
+
+    session['impersonate_admin_id'] = current_user.id
+    session['impersonate_started'] = now_local().isoformat()
+    login_user(target, remember=False)
+    log_audit('switch_user', 'user', target.id,
+              f'admin {current_user.username} → {target.username}')
+    log_user_activity('switch_user', page=f'/switch-user/{target.id}',
+                      details=f'Admin viewed as {target.username}')
+    flash(_('Viewing as') + ' ' + (target.display_name or target.username), 'warning')
+    return redirect(url_for('index'))
+
+
+@app.route('/switch-back')
+@login_required
+def switch_back():
+    """Вернуться в профиль администратора после просмотра от чужого лица."""
+    admin_id = session.get('impersonate_admin_id')
+    if not admin_id:
+        return redirect(url_for('index'))
+    admin = db.session.get(User, admin_id)
+    if not admin:
+        session.pop('impersonate_admin_id', None)
+        logout_user()
+        return redirect(url_for('login'))
+    was = current_user.username if current_user.is_authenticated else '?'
+    session.pop('impersonate_admin_id', None)
+    session.pop('impersonate_started', None)
+    login_user(admin, remember=False)
+    log_audit('switch_back', 'user', admin.id,
+              f'returned to admin {admin.username} (was {was})')
+    flash(_('Returned to admin account') + ': ' + (admin.display_name or admin.username), 'success')
+    return redirect(url_for('index'))
 
 def _get_open_two_for_user(user):
     """Открытый наряд (TWO), назначенный пользователю-механику. None если нет."""

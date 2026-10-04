@@ -6321,3 +6321,35 @@ msgstr "Тестовое оповещение отправлено"
 #: pause test-push
 msgid "Select a mechanic"
 msgstr "Выберите механика"
+
+#: switch-user
+msgid "Switch user"
+msgstr "Сменить пользователя"
+
+#: switch-user
+msgid "Viewing as"
+msgstr "Вы как"
+
+#: switch-user
+msgid "Back to admin"
+msgstr "Назад к админу"
+
+#: switch-user
+msgid "Returned to admin account"
+msgstr "Возврат в профиль администратора"
+
+#: switch-user
+msgid "View as this user?"
+msgstr "Войти под этим пользователем?"
+
+#: switch-user
+msgid "Finish current switch first"
+msgstr "Сначала завершите текущий просмотр"
+
+#: switch-user
+msgid "Already this user"
+msgstr "Вы уже этот пользователь"
+
+#: switch-user
+msgid "User not found"
+msgstr "Пользователь не найден"

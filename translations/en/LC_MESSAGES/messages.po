@@ -6183,3 +6183,35 @@ msgstr "Test notification sent"
 #: pause test-push
 msgid "Select a mechanic"
 msgstr "Select a mechanic"
+
+#: switch-user
+msgid "Switch user"
+msgstr "Switch user"
+
+#: switch-user
+msgid "Viewing as"
+msgstr "Viewing as"
+
+#: switch-user
+msgid "Back to admin"
+msgstr "Back to admin"
+
+#: switch-user
+msgid "Returned to admin account"
+msgstr "Returned to admin account"
+
+#: switch-user
+msgid "View as this user?"
+msgstr "View as this user?"
+
+#: switch-user
+msgid "Finish current switch first"
+msgstr "Finish current switch first"
+
+#: switch-user
+msgid "Already this user"
+msgstr "Already this user"
+
+#: switch-user
+msgid "User not found"
+msgstr "User not found"

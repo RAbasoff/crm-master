@@ -572,9 +572,12 @@
                 <div class="sb-avatar">{{ (current_user.display_name or current_user.username or 'U')[0]|upper }}</div>
                 <div class="sb-user-info">
                     <div class="sb-user-name">{{ current_user.display_name or current_user.username }}</div>
-                    <div class="sb-user-role">{{ current_user.role }}</div>
+                    <div class="sb-user-role">{{ current_user.role }}{% if impersonate_admin_id %} · 👁 {{ _('Viewing as') }}{% endif %}</div>
                 </div>
             </a>
+            {% if impersonate_admin_id %}
+            <a href="/switch-back" class="btn btn-sm" style="margin-top:8px;width:100%;background:#e65100;color:#fff;text-align:center;font-size:11px;text-decoration:none;display:block;padding:6px;border-radius:8px">↩ {{ _('Back to admin') }}</a>
+            {% endif %}
         </div>
     </aside>
     
@@ -591,6 +594,28 @@
         </div>
         
         <div class="topbar-right">
+            <!-- Admin: switch user (left of language) -->
+            {% if is_admin or impersonate_admin_id %}
+            <div style="position:relative;display:flex;align-items:center;gap:6px">
+                {% if impersonate_admin_id %}
+                <div style="display:flex;align-items:center;gap:6px;background:#fff3e0;border:1px solid #ffb74d;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;color:#e65100;white-space:nowrap">
+                    👁 {{ _('Viewing as') }}: {{ current_user.display_name or current_user.username }}
+                    <a href="/switch-back" style="background:#e65100;color:#fff;padding:3px 8px;border-radius:6px;text-decoration:none;font-size:11px;margin-left:4px">↩ {{ _('Back to admin') }}</a>
+                </div>
+                {% else %}
+                <select id="switchUserSelect" onchange="switchUser(this.value)"
+                        style="padding:5px 8px;border:1px solid #ddd;border-radius:8px;font-size:11px;max-width:150px;background:#fff;cursor:pointer"
+                        title="{{ _('Switch user') }}">
+                    <option value="">👤 {{ _('Switch user') }}…</option>
+                    {% for u in all_users_list %}
+                    {% if u.id != current_user.id %}
+                    <option value="{{ u.id }}">{{ u.display_name or u.username }} ({{ u.role }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            {% endif %}
             <div class="lang-pills">
                 {% for code, name in g.LANGUAGES.items() %}
                     <a href="/set_language/{{ code }}" class="lang-pill {% if g.lang == code %}active{% endif %}">{{ code|upper }}</a>
@@ -841,6 +866,16 @@
         
         updateNotifCount();
         setInterval(updateNotifCount, 30000);
+
+        // Admin: switch user
+        function switchUser(userId) {
+            if (!userId) return;
+            if (!confirm('{{ _("View as this user?") }}')) {
+                document.getElementById('switchUserSelect').value = '';
+                return;
+            }
+            location.href = '/switch-user/' + userId;
+        }
         
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
