@@ -298,7 +298,7 @@ def suggest_available_workers(date, exclude_ids=None):
             continue
         # Explicit working Saturday/Sunday (set by head of tech service / admin)
         if w.user_id in work_shift_user_ids:
-            available.append({'id': w.user_id, 'name': w.naam, 'specialty': w.specialisatie or ''})
+            available.append({'id': w.id, 'user_id': w.user_id, 'name': w.naam, 'specialty': w.specialisatie or ''})
             continue
         
         schedule = schedule_map.get(w.user_id)
@@ -310,7 +310,7 @@ def suggest_available_workers(date, exclude_ids=None):
             if weekday >= 6:
                 continue
         
-        available.append({'id': w.user_id, 'name': w.naam, 'specialty': w.specialisatie or ''})
+        available.append({'id': w.id, 'user_id': w.user_id, 'name': w.naam, 'specialty': w.specialisatie or ''})
     
     return available[:5]
 

@@ -90,6 +90,8 @@ def schedule_user(user_id):
     user = User.query.get_or_404(user_id)
     if request.method == 'POST':
         work_days = ','.join(request.form.getlist('work_days'))
+        # Один активный график: старые деактивируем
+        WorkSchedule.query.filter_by(user_id=user.id, is_active=True).update({'is_active': False})
         s = WorkSchedule(
             user_id=user.id,
             name=request.form['name'],

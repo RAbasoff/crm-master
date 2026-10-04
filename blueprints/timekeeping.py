@@ -84,11 +84,10 @@ def clock_out():
     entry.clock_out = now_local()
     delta = entry.clock_out - entry.clock_in
     hours = delta.total_seconds() / 3600
-    entry.hours_worked = round(hours - (entry.break_minutes / 60), 2)
+    entry.hours_worked = max(0, round(hours - (entry.break_minutes or 0) / 60, 2))
 
-    # Calculate overtime (standard 8h)
-    if entry.hours_worked > 8:
-        entry.overtime_hours = round(entry.hours_worked - 8, 2)
+    # Overtime (standard 8h) — always recalculate
+    entry.overtime_hours = round(max(0, entry.hours_worked - 8), 2) or 0
 
     if not safe_commit():
         flash(_('Save failed'), 'error')

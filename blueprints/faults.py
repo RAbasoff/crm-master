@@ -752,7 +752,7 @@ def fault_reopen(fault_id):
 
 @bp.route('/<int:fault_id>/work-report', methods=['GET', 'POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('technician', 'admin', 'director')
 def work_report_new(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     if request.method == 'POST':
@@ -796,8 +796,12 @@ def work_report_new(fault_id):
         except (ValueError, KeyError, TypeError):
             db.session.rollback()
 
-        f.status = 'resolved'
-        f.resolved_at = now_local()
+        # Статус — через общую машину переходов (история + проверка прав)
+        ok_st, err_st = _set_fault_status(f, 'resolved', current_user,
+                                          reason=f'work report #{wr.id}')
+        if not ok_st:
+            flash(_('Work report saved but status update failed') + f': {err_st}', 'warning')
+            return redirect(url_for('faults.fault_detail', fault_id=f.id))
         if not safe_commit():
             flash(_('Work report saved but status update failed'), 'warning')
             return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -812,7 +816,7 @@ def work_report_new(fault_id):
 
 @bp.route('/<int:fault_id>/work-report/<int:report_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('technician', 'admin')
+@role_required('technician', 'admin', 'director')
 def work_report_edit(fault_id, report_id):
     f = FaultReport.query.get_or_404(fault_id)
     wr = WorkReport.query.get_or_404(report_id)
