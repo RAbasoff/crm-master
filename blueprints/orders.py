@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, Monteur, Opdracht, Verantwoordelijke, VoorraadMutatie)
+from models import (db, Monteur, Opdracht, Verantwoordelijke, VoorraadMutatie, VoorraadItem, now_local)
 from utils import genereer_nummer, log_audit, role_required, safe_commit, safe_float
 
 bp = Blueprint('orders', __name__)
@@ -85,9 +85,20 @@ def order_edit(order_id):
         order.totaal = order.arbeidskosten + order.onderdelenkosten
         ns = request.form.get('status', order.status)
         if ns != order.status:
-            if ns == 'in behandeling' and not order.gestart: order.gestart = datetime.utcnow()
-            elif ns == 'gereed' and not order.gereed: order.gereed = datetime.utcnow()
-            elif ns == 'afgeleverd' and not order.afgeleverd: order.afgeleverd = datetime.utcnow()
+            if ns == 'in behandeling' and not order.gestart: order.gestart = now_local()
+            elif ns == 'gereed' and not order.gereed: order.gereed = now_local()
+            elif ns == 'afgeleverd' and not order.afgeleverd: order.afgeleverd = now_local()
+            # Отмена заказа — возврат списанных запчастей на склад
+            if ns == 'geannuleerd' and order.status != 'geannuleerd':
+                for m in VoorraadMutatie.query.filter_by(opdracht_id=order.id, type='uitgaand').all():
+                    item = VoorraadItem.query.get(m.item_id) if m.item_id else None
+                    if item:
+                        item.hoeveelheid = (item.hoeveelheid or 0) + (m.hoeveelheid or 0)
+                    db.session.add(VoorraadMutatie(
+                        item_id=m.item_id, type='inkomend', hoeveelheid=m.hoeveelheid,
+                        opmerking=f'Возврат: отмена заказа {order.nummer}',
+                        user_id=current_user.id
+                    ))
             order.status = ns
         if not safe_commit():
             flash(_('Save failed'), 'error')

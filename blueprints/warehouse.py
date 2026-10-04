@@ -330,8 +330,8 @@ def warehouse_move(item_id):
     if qty <= 0:
         flash(_('Quantity must be positive'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
-    if mt == 'uitgaand' and qty > item.hoeveelheid:
-        flash(_('Insufficient stock!'), 'error')
+    if mt == 'uitgaand' and qty > item_available_qty(item):
+        flash(_('Insufficient stock!') + f' ({_("Available")}: {item_available_qty(item)})', 'error')
         return redirect(url_for('warehouse.warehouse_list'))
     m = VoorraadMutatie(item_id=item_id, type=mt, hoeveelheid=qty,
                         opdracht_id=request.form.get('opdracht_id') or None,
@@ -374,14 +374,29 @@ def warehouse_movements():
 
 # ── RESERVATIONS ────────────────────────────────────────────
 
+def item_reserved_qty(item_id):
+    """Сумма активных резервов по позиции."""
+    from sqlalchemy import func
+    return float(db.session.query(func.coalesce(func.sum(WarehouseReservation.quantity), 0))
+                 .filter(WarehouseReservation.item_id == item_id).scalar() or 0)
+
+
+def item_available_qty(item):
+    """Свободный остаток = склад − резервы (не может быть меньше 0)."""
+    if not item:
+        return 0
+    return max(0, float(item.hoeveelheid or 0) - item_reserved_qty(item.id))
+
+
 @bp.route('/reserve/<int:item_id>', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
 def warehouse_reserve(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     qty = safe_float(request.form.get('quantity'), 1)
-    if qty > item.hoeveelheid:
-        flash(_('Insufficient stock for reservation!'), 'error')
+    available = item_available_qty(item)
+    if qty > available:
+        flash(_('Insufficient stock for reservation!') + f' ({_("Available")}: {available})', 'error')
         return redirect(url_for('warehouse.warehouse_list'))
     r = WarehouseReservation(
         item_id=item_id, quantity=qty,
@@ -695,7 +710,7 @@ def warehouse_transfer(item_id):
             flash(_('Quantity must be positive'), 'error')
             return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
         if qty > item.hoeveelheid:
-            flash(_('Insufficient stock! Available: {} {}').format(item.hoeveelheid, item.eenheid), 'error')
+            flash(_('Insufficient stock! Available: {} {}').format(item_available_qty(item), item.eenheid), 'error')
             return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
 
         person = Verantwoordelijke.query.get(person_id)
