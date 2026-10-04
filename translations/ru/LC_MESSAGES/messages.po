@@ -6353,3 +6353,11 @@ msgstr "Вы уже этот пользователь"
 #: switch-user
 msgid "User not found"
 msgstr "Пользователь не найден"
+
+#: rejected
+msgid "Reason is required for rejection"
+msgstr "Для отказа обязательна причина"
+
+#: rejected
+msgid "Why is this request rejected?"
+msgstr "Почему заявка отклонена?"

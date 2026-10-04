@@ -19,7 +19,7 @@
         <div style="position:relative;display:inline-block">
             <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
-                {% for st in ['accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'reopened'] %}
+                {% for st in ['accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected', 'reopened'] %}
                 {% if not (st == 'closed' and not current_user.has_role('admin', 'director')) %}
                 {% if st != fault.status %}
                 <option value="{{ st }}" style="background:white;color:#333">{{ status_labels.get(st, st) }}</option>
@@ -155,6 +155,7 @@
                                    {% elif t.kind == 'work_start' %}#27ae60
                                    {% elif t.kind == 'work_end' %}#16a085
                                    {% elif t.kind == 'paused' %}#f39c12
+                                   {% elif t.kind == 'rejected' %}#c0392b
                                    {% elif t.kind == 'resolved' %}#27ae60
                                    {% elif t.kind == 'closed' %}#7f8c8d
                                    {% elif t.kind == 'reopened' %}#9b59b6
@@ -167,7 +168,7 @@
             <div style="font-size:13px;font-weight:600;margin-top:2px">
                 {% if t.kind == 'created' %}🆕{% elif t.kind == 'accepted' %}📥
                 {% elif t.kind == 'work_start' %}▶{% elif t.kind == 'work_end' %}⏹
-                {% elif t.kind == 'paused' %}⏸{% elif t.kind == 'resolved' %}✅
+                {% elif t.kind == 'paused' %}⏸{% elif t.kind == 'rejected' %}⛔{% elif t.kind == 'resolved' %}✅
                 {% elif t.kind == 'closed' %}🔒{% elif t.kind == 'reopened' %}🔄
                 {% else %}•{% endif %}
                 {{ t.title }}
@@ -275,6 +276,11 @@ function endWorkById(faultId) {
             <p><strong>{{ _('Machine / Equipment') }}:</strong> {% if fault.machine %}🏭 <a href="/floor?highlight={{ fault.machine_id }}">{{ fault.machine.name }}</a>{% elif fault.equipment %}⚙️ {{ fault.equipment.name }}{% else %}—{% endif %}</p>
             <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span></p>
             <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ status_labels.get(fault.status, fault.status) if status_labels is defined else fault.status }}</span>
+            {% if fault.status == 'rejected' %}
+                <div style="margin-top:4px;font-size:12px;color:#c0392b;background:#fdecea;padding:6px 10px;border-radius:8px">
+                    ⛔ {{ _('Rejection reason') }}: {{ fault.pause_comment or '—' }}
+                </div>
+            {% endif %}
             {% if fault.status == 'paused' and fault.pause_reason %}
                 <span style="margin-left:8px;font-size:12px;color:#f39c12">
                     ⏸ {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if pause_reasons is defined else fault.pause_reason }}
@@ -488,6 +494,12 @@ function changeFaultStatus(newStatus) {
         openPauseModal(newStatus);
         return;
     }
+    // Отказано — обязательная причина
+    if (newStatus === 'rejected') {
+        document.getElementById('statusSelect').value = '';
+        openRejectModal();
+        return;
+    }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -504,12 +516,39 @@ function setStatus(st) {
         openPauseModal(st);
         return;
     }
+    if (st === 'rejected') {
+        openRejectModal();
+        return;
+    }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: st})
     }).then(r => r.json()).then(d => {
         if (d.ok) location.reload();
+        else alert(d.error || 'Error');
+    });
+}
+
+function openRejectModal() {
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+function submitReject() {
+    const reason = document.getElementById('rejectReason').value;
+    if (!reason.trim()) {
+        alert('{{ _("Reason is required for rejection") }}');
+        document.getElementById('rejectReason').focus();
+        return;
+    }
+    csrfFetch('/faults/{{ fault.id }}/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'rejected', reason: reason})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { closeRejectModal(); location.reload(); }
         else alert(d.error || 'Error');
     });
 }
@@ -641,6 +680,26 @@ document.getElementById('reopenModal').addEventListener('click', function(e) {
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
             <button class="btn" style="background:#eee" onclick="closePauseModal()">{{ _('Cancel') }}</button>
             <button class="btn" style="background:#f39c12;color:white" onclick="submitPause()">⏸ {{ _('Pause') }}</button>
+        </div>
+    </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div id="rejectModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:450px;width:92%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin:0;font-size:18px">⛔ {{ _('Rejected') }} #{{ fault.id }}</h2>
+            <button onclick="closeRejectModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Rejection reason') }} *</label>
+            <textarea id="rejectReason" rows="4" required
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px"
+                placeholder="{{ _('Why is this request rejected?') }}"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+            <button class="btn" style="background:#eee" onclick="closeRejectModal()">{{ _('Cancel') }}</button>
+            <button class="btn" style="background:#c0392b;color:white" onclick="submitReject()">⛔ {{ _('Rejected') }}</button>
         </div>
     </div>
 </div>

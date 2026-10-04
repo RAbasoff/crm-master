@@ -6215,3 +6215,11 @@ msgstr "Already this user"
 #: switch-user
 msgid "User not found"
 msgstr "User not found"
+
+#: rejected
+msgid "Reason is required for rejection"
+msgstr "Reason is required for rejection"
+
+#: rejected
+msgid "Why is this request rejected?"
+msgstr "Why is this request rejected?"

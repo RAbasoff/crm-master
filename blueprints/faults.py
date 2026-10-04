@@ -18,11 +18,12 @@ bp = Blueprint('faults', __name__, url_prefix='/faults')
 
 # ── Статусы заявки (CMMS-модель ProMaster) ──────────────────────────
 # open=open/NEW, diagnosis, in_progress, paused, waiting_parts,
-# parts_ordered, testing, resolved, closed.
-# reopened — только как переход из resolved/closed → diagnosis.
+# parts_ordered, testing, resolved, rejected, closed.
+# reopened — только как переход из resolved/closed/rejected.
 FAULT_STATUSES = (
     'open', 'accepted', 'diagnosis', 'in_progress', 'paused',
-    'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'closed', 'reopened',
+    'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected',
+    'closed', 'reopened',
 )
 
 STATUS_LABELS = {
@@ -35,6 +36,7 @@ STATUS_LABELS = {
     'parts_ordered': 'Запчасть заказана',
     'testing': 'Тестирование',
     'resolved': 'Устранена',
+    'rejected': 'Отказано',
     'closed': 'Закрыта',
     'reopened': 'Переоткрыта',
 }
@@ -42,17 +44,18 @@ STATUS_LABELS = {
 # Разрешённые переходы. Механик может менять любой статус, КРОМЕ closed.
 # closed — только админ / начальник ТС / главный механик.
 ALLOWED_TRANSITIONS = {
-    'open':          ('accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved'),
-    'accepted':      ('diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved'),
-    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved'),
-    'in_progress':   ('diagnosis', 'paused', 'testing', 'resolved', 'waiting_parts', 'parts_ordered'),
-    'paused':        ('diagnosis', 'in_progress', 'waiting_parts', 'parts_ordered', 'accepted', 'testing', 'resolved'),
+    'open':          ('accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected'),
+    'accepted':      ('diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected'),
+    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected'),
+    'in_progress':   ('diagnosis', 'paused', 'testing', 'resolved', 'waiting_parts', 'parts_ordered', 'rejected'),
+    'paused':        ('diagnosis', 'in_progress', 'waiting_parts', 'parts_ordered', 'accepted', 'testing', 'resolved', 'rejected'),
     'waiting_parts': ('parts_ordered', 'in_progress', 'diagnosis', 'paused', 'testing', 'resolved'),
     'parts_ordered': ('waiting_parts', 'in_progress', 'paused', 'diagnosis', 'testing', 'resolved'),
     'testing':       ('in_progress', 'diagnosis', 'resolved', 'paused', 'waiting_parts'),
     'resolved':      ('closed', 'reopened', 'testing', 'in_progress', 'diagnosis', 'paused'),
+    'rejected':      ('reopened', 'accepted', 'diagnosis', 'closed'),
     'closed':        ('reopened',),
-    'reopened':      ('diagnosis', 'in_progress', 'accepted', 'paused', 'resolved', 'testing'),
+    'reopened':      ('diagnosis', 'in_progress', 'accepted', 'paused', 'resolved', 'testing', 'rejected'),
 }
 
 # Пауза: статус один, причины — отдельно (для аналитики)
@@ -138,6 +141,15 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
         f.pause_started_at = now_local()
         f.pause_until = pause_until
         _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: fault paused'))
+    elif new_status == 'rejected':
+        # Отказано — причина обязательна
+        if not (reason or '').strip():
+            return False, _('Reason is required for rejection')
+        f.pause_reason = None
+        f.pause_comment = (reason or '').strip()
+        f.pause_started_at = None
+        f.pause_until = None
+        _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: fault rejected'))
     elif new_status in WAIT_STATUSES:
         comment = (pause_comment or '').strip()
         if pause_reason:
@@ -392,6 +404,9 @@ def fault_detail(fault_id):
         elif h.new_status == 'paused':
             kind = 'paused'
             label = _('Paused')
+        elif h.new_status == 'rejected':
+            kind = 'rejected'
+            label = _('Rejected')
         timeline.append({
             'at': h.changed_at, 'kind': kind,
             'title': label,
