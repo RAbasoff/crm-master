@@ -3,14 +3,62 @@
 {% block content %}
 <div class="page-header">
     <h1>🔧 {{ two.number }}</h1>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/two/{{ two.id }}/print" class="btn btn-sm" style="background:#2c3e50;color:white" target="_blank">🖨️ {{ _('Print') }}</a>
         {% if two.status != 'completed' %}
         <a href="/two/{{ two.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
         {% endif %}
+        {% if two.status in ['draft', 'rejected'] and current_user.has_role('admin', 'director', 'technician') %}
+        <form method="POST" action="/two/{{ two.id }}/submit" style="display:inline">
+            <button type="submit" class="btn btn-sm" style="background:#3498db;color:white">📤 {{ _('Submit for approval') }}</button>
+        </form>
+        {% endif %}
+        {% if two.status == 'pending_approval' and current_user.has_role('admin', 'director') %}
+        <form method="POST" action="/two/{{ two.id }}/approve" style="display:inline">
+            <input type="hidden" name="action" value="approve">
+            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">✅ {{ _('Approve') }}</button>
+        </form>
+        <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white"
+                onclick="document.getElementById('rejectBox').style.display='block'">⛔ {{ _('Reject') }}</button>
+        {% endif %}
         <a href="/two" class="btn" style="background:#eee">{{ _('Back') }}</a>
     </div>
 </div>
+
+{% if two.status == 'pending_approval' and current_user.has_role('admin', 'director') %}
+<div class="card" id="rejectBox" style="display:none;border-left:4px solid #e74c3c;margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:15px">⛔ {{ _('Reject TWO') }} {{ two.number }}</h2>
+    <form method="POST" action="/two/{{ two.id }}/approve">
+        <input type="hidden" name="action" value="reject">
+        <div class="form-group">
+            <label style="font-weight:600">{{ _('Reason') }} *</label>
+            <textarea name="comment" rows="3" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px"
+                      placeholder="{{ _('Why is this request rejected?') }}"></textarea>
+        </div>
+        <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">{{ _('Reject') }}</button>
+    </form>
+</div>
+{% endif %}
+
+{% if two.approved_by %}
+<div class="card" style="border-left:4px solid #27ae60;margin-bottom:12px">
+    <p style="margin:0;font-size:13px">
+        ✅ {{ _('Approved') }}: {{ two.approver.display_name or two.approver.username if two.approver else '—' }}
+        {% if two.approved_at %} · {{ two.approved_at.strftime('%d-%m-%Y %H:%M') }}{% endif %}
+        {% if two.approval_comment %}<br><span style="color:#666">💬 {{ two.approval_comment }}</span>{% endif %}
+    </p>
+</div>
+{% elif two.status == 'rejected' %}
+<div class="card" style="border-left:4px solid #e74c3c;margin-bottom:12px">
+    <p style="margin:0;font-size:13px">⛔ <strong>{{ _('Rejected') }}</strong>
+        {% if two.approval_comment %}<br><span style="color:#666">💬 {{ two.approval_comment }}</span>{% endif %}
+    </p>
+</div>
+{% elif two.status == 'pending_approval' %}
+<div class="card" style="border-left:4px solid #f39c12;margin-bottom:12px">
+    <p style="margin:0;font-size:13px">⏳ {{ _('Awaiting approval') }}</p>
+</div>
+{% endif %}
 
 <div class="detail-grid">
     <div class="card">

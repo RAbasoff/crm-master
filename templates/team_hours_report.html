@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Team Hours Report') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👥 {{ _('Team Hours Report') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/time-tracking" class="btn btn-sm" style="background:#eee">{{ _('Time Tracking') }}</a>
+        <a href="/time-report/team/export?month={{ month }}" class="btn btn-sm" style="background:#27ae60;color:white">⬇ CSV</a>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-weight:600">{{ _('Period') }}:</span>
+        {% set y = month[:4]|int %}
+        {% set m = month[5:]|int %}
+        <a href="/time-report/team?month={{ '%04d-%02d'|format(y if m > 1 else y-1, m-1 if m > 1 else 12) }}" class="btn btn-sm" style="background:#eee">◀</a>
+        <span style="font-size:18px;font-weight:bold;padding:0 12px">{{ month }}</span>
+        <a href="/time-report/team?month={{ '%04d-%02d'|format(y if m < 12 else y+1, m+1 if m < 12 else 1) }}" class="btn btn-sm" style="background:#eee">▶</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card ok"><div class="number">{{ "%.1f"|format(totals.hours) }}</div><div class="label">{{ _('Total Hours') }}</div></div>
+    <div class="stat-card {% if totals.overtime > 0 %}warn{% endif %}"><div class="number">{{ "%.1f"|format(totals.overtime) }}</div><div class="label">{{ _('Overtime') }}</div></div>
+    <div class="stat-card"><div class="number">{{ totals.days }}</div><div class="label">{{ _('Days Present') }}</div></div>
+    <div class="stat-card"><div class="number">{{ rows|length }}</div><div class="label">{{ _('Workers') }}</div></div>
+</div>
+
+<div class="card">
+    <h2>{{ _('Workers') }}</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Worker') }}</th>
+                <th>{{ _('Days Present') }}</th>
+                <th>{{ _('Days Absent') }}</th>
+                <th>{{ _('Total Hours') }}</th>
+                <th>{{ _('Overtime') }}</th>
+                <th></th>
+            </tr>
+            {% for r in rows %}
+            <tr>
+                <td><strong>{{ r.user.display_name or r.user.username }}</strong>
+                    <br><small style="color:#888">{{ r.user.role }}</small></td>
+                <td>{{ r.days }}</td>
+                <td>{{ r.absent }}</td>
+                <td><strong>{{ "%.1f"|format(r.hours) }}</strong></td>
+                <td>{% if r.overtime > 0 %}<span style="color:#e67e22;font-weight:700">{{ "%.1f"|format(r.overtime) }}</span>{% else %}0{% endif %}</td>
+                <td><a href="/time-report/{{ r.user.id }}?month={{ month }}" class="btn btn-sm" style="background:#eee">{{ _('Details') }}</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -6,6 +6,10 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/schedule" class="btn btn-sm" style="background:#9b59b6;color:white">📅 {{ _('Schedule') }}</a>
         <a href="/vacations" class="btn btn-sm" style="background:#f39c12;color:white">🏖 {{ _('Vacations') }}</a>
+        {% if current_user.has_role('admin', 'director') %}
+        <a href="/time-report/team" class="btn btn-sm" style="background:#27ae60;color:white">👥 {{ _('Team Hours Report') }}</a>
+        <a href="/faults/status-history" class="btn btn-sm" style="background:#5b9cf6;color:white">📜 {{ _('Status history report') }}</a>
+        {% endif %}
     </div>
 </div>
 

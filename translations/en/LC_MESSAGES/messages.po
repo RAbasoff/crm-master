@@ -6223,3 +6223,47 @@ msgstr "Reason is required for rejection"
 #: rejected
 msgid "Why is this request rejected?"
 msgstr "Why is this request rejected?"
+
+#: two-approval reports
+msgid "Team Hours Report"
+msgstr "Team Hours Report"
+
+#: two-approval reports
+msgid "Status history report"
+msgstr "Status history report"
+
+#: two-approval reports
+msgid "Submit for approval"
+msgstr "Submit for approval"
+
+#: two-approval reports
+msgid "TWO approved"
+msgstr "TWO approved"
+
+#: two-approval reports
+msgid "TWO rejected"
+msgstr "TWO rejected"
+
+#: two-approval reports
+msgid "TWO awaiting approval"
+msgstr "TWO awaiting approval"
+
+#: two-approval reports
+msgid "TWO sent for approval"
+msgstr "TWO sent for approval"
+
+#: two-approval reports
+msgid "Awaiting approval"
+msgstr "Awaiting approval"
+
+#: two-approval reports
+msgid "Reject TWO"
+msgstr "Reject TWO"
+
+#: two-approval reports
+msgid "Events"
+msgstr "Events"
+
+#: two-approval reports
+msgid "No events"
+msgstr "No events"

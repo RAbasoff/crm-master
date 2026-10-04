@@ -6361,3 +6361,47 @@ msgstr "Для отказа обязательна причина"
 #: rejected
 msgid "Why is this request rejected?"
 msgstr "Почему заявка отклонена?"
+
+#: two-approval reports
+msgid "Team Hours Report"
+msgstr "Отчёт по часам команды"
+
+#: two-approval reports
+msgid "Status history report"
+msgstr "Отчёт по истории статусов"
+
+#: two-approval reports
+msgid "Submit for approval"
+msgstr "На согласование"
+
+#: two-approval reports
+msgid "TWO approved"
+msgstr "TWO согласован"
+
+#: two-approval reports
+msgid "TWO rejected"
+msgstr "TWO отклонён"
+
+#: two-approval reports
+msgid "TWO awaiting approval"
+msgstr "TWO ожидает согласования"
+
+#: two-approval reports
+msgid "TWO sent for approval"
+msgstr "TWO отправлен на согласование"
+
+#: two-approval reports
+msgid "Awaiting approval"
+msgstr "Ожидает согласования"
+
+#: two-approval reports
+msgid "Reject TWO"
+msgstr "Отклонить TWO"
+
+#: two-approval reports
+msgid "Events"
+msgstr "События"
+
+#: two-approval reports
+msgid "No events"
+msgstr "Нет событий"

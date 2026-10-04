@@ -14,7 +14,7 @@ from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOA
                     ResponsibleGroup, TWOPhoto, now_local)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    is_work_date, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift,
-                   get_belgian_holidays, save_uploaded_file, log_audit)
+                   get_belgian_holidays, save_uploaded_file, log_audit, create_notification)
 
 bp = Blueprint('two', __name__)
 
@@ -417,6 +417,79 @@ def two_checklist_delete(item_id):
         flash(_('Save failed'), 'error')
         return redirect(url_for('two.two_detail', two_id=two_id))
     return redirect(url_for('two.two_detail', two_id=two_id))
+
+@bp.route('/two/<int:two_id>/approve', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def two_approve(two_id):
+    """Согласование TWO начальником ТС / админом."""
+    two = TechnicalWorkOrder.query.get_or_404(two_id)
+    data = request.get_json() if request.is_json else request.form
+    comment = (data.get('comment') or '').strip()
+    action = data.get('action', 'approve')
+
+    if action == 'reject':
+        if not comment:
+            msg = _('Reason is required for rejection')
+            if request.is_json:
+                return jsonify({'error': msg}), 400
+            flash(msg, 'error')
+            return redirect(url_for('two.two_detail', two_id=two.id))
+        two.status = 'rejected'
+        two.approved_by = None
+        two.approved_at = None
+        two.approval_comment = comment
+    else:
+        two.status = 'assigned' if two.workers else 'draft'
+        two.approved_by = current_user.id
+        two.approved_at = now_local()
+        two.approval_comment = comment
+
+    if not safe_commit():
+        if request.is_json:
+            return jsonify({'error': 'Save failed'}), 500
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('two.two_detail', two_id=two.id))
+
+    log_audit('two_approval', 'two', two.id,
+              f'{two.number}: {action} by {current_user.username} {comment[:80]}')
+    for w in two.workers:
+        if w.user_id:
+            create_notification(
+                w.user_id,
+                _('TWO approved') if action != 'reject' else _('TWO rejected'),
+                f'{two.number}: {two.description[:80]}',
+                'info' if action != 'reject' else 'warning',
+                url_for('two.two_detail', two_id=two.id)
+            )
+    if request.is_json:
+        return jsonify({'ok': True, 'status': two.status})
+    flash(_('TWO approved') if action != 'reject' else _('TWO rejected'), 'success' if action != 'reject' else 'warning')
+    return redirect(url_for('two.two_detail', two_id=two.id))
+
+
+@bp.route('/two/<int:two_id>/submit', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def two_submit(two_id):
+    """Отправить TWO на согласование."""
+    two = TechnicalWorkOrder.query.get_or_404(two_id)
+    two.status = 'pending_approval'
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('two.two_detail', two_id=two.id))
+    log_audit('two_submit', 'two', two.id, two.number)
+    for head in User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all():
+        create_notification(
+            head.id,
+            _('TWO awaiting approval'),
+            f'{two.number}: {two.description[:80]}',
+            'info',
+            url_for('two.two_detail', two_id=two.id)
+        )
+    flash(_('TWO sent for approval'), 'success')
+    return redirect(url_for('two.two_detail', two_id=two.id))
+
 
 @bp.route('/two/<int:two_id>/signature', methods=['POST'])
 @login_required

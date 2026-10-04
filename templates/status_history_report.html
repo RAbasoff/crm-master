@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Status history report') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📜 {{ _('Status history report') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/faults/" class="btn btn-sm" style="background:#eee">{{ _('Faults') }}</a>
+    </div>
+</div>
+
+<div class="card">
+    <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">{{ _('From') }}</label>
+            <input type="date" name="from" value="{{ date_from.strftime('%Y-%m-%d') }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+        <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">{{ _('To') }}</label>
+            <input type="date" name="to" value="{{ date_to.strftime('%Y-%m-%d') }}" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+        <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">{{ _('User') }}</label>
+            <select name="user_id" style="padding:8px;border:1px solid #ddd;border-radius:8px;min-width:160px">
+                <option value="">{{ _('All') }}</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if user_f == u.id %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">{{ _('Status') }}</label>
+            <select name="status" style="padding:8px;border:1px solid #ddd;border-radius:8px;min-width:150px">
+                <option value="">{{ _('All') }}</option>
+                {% for k, v in status_labels.items() %}
+                <option value="{{ k }}" {% if status_f == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px"># {{ _('Fault') }}</label>
+            <input type="number" name="fault_id" value="{{ fault_f or '' }}" style="padding:8px;border:1px solid #ddd;border-radius:8px;width:100px" placeholder="ID">
+        </div>
+        <button type="submit" class="btn" style="background:#3498db;color:white;padding:9px 18px">{{ _('Apply') }}</button>
+    </form>
+</div>
+
+{% if summary %}
+<div class="card">
+    <h2>{{ _('Summary') }}</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        {% for st, cnt in summary.items() %}
+        <div style="background:#f5f7fa;padding:10px 16px;border-radius:10px;min-width:100px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:#333">{{ cnt }}</div>
+            <div style="font-size:11px;color:#888">{{ status_labels.get(st, st) }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>{{ _('Events') }} ({{ history|length }})</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('Date') }}</th>
+                <th>#</th>
+                <th>{{ _('Fault') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('User') }}</th>
+                <th>{{ _('Reason') }}</th>
+            </tr>
+            {% for h in history %}
+            <tr>
+                <td style="white-space:nowrap">{{ h.changed_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                <td>{% if h.fault %}<a href="/faults/{{ h.fault_id }}">#{{ h.fault_id }}</a>{% else %}#{{ h.fault_id }}{% endif %}</td>
+                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">
+                    {% if h.fault %}{{ h.fault.title }}{% else %}—{% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ h.new_status }}" style="font-size:11px">
+                        {{ status_labels.get(h.new_status, h.new_status) }}
+                    </span>
+                    {% if h.old_status %}
+                    <small style="color:#999">← {{ status_labels.get(h.old_status, h.old_status) }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ h.changer.display_name if h.changer else '—' }}</td>
+                <td style="max-width:220px;font-size:12px;color:#666">{{ h.reason or '' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;color:#888;padding:24px">{{ _('No events') }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}

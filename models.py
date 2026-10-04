@@ -889,7 +889,11 @@ class TechnicalWorkOrder(db.Model):
     __tablename__ = 'technical_work_order'
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(30), unique=True, nullable=False)  # TWO-20260812-0001
-    status = db.Column(db.String(20), default='draft', index=True)  # draft, assigned, in_progress, completed, cancelled
+    status = db.Column(db.String(20), default='draft', index=True)  # draft, pending_approval, assigned, in_progress, completed, cancelled
+    # Согласование TWO (начальник ТС / админ)
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    approved_at = db.Column(db.DateTime)
+    approval_comment = db.Column(db.Text)
 
     # Source fault
     fault_id = db.Column(db.Integer, db.ForeignKey('fault_report.id'), index=True)
@@ -919,6 +923,7 @@ class TechnicalWorkOrder(db.Model):
     machine = db.relationship('Machine', backref='work_orders')
     section = db.relationship('FactorySection', backref='work_orders')
     creator = db.relationship('User', foreign_keys=[created_by])
+    approver = db.relationship('User', foreign_keys=[approved_by])
     workers = db.relationship('Monteur', secondary=two_workers, backref='work_orders')
     photos = db.relationship('TWOPhoto', backref='two', lazy=True, cascade='all, delete-orphan')
     checklist_items = db.relationship('TWOChecklistItem', backref='two', lazy=True, order_by='TWOChecklistItem.sort_order', cascade='all, delete-orphan')

@@ -2,7 +2,7 @@
 Faults blueprint — fault reports, work reports, status management
 """
 import os, json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, current_app
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
@@ -15,6 +15,56 @@ from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
 from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
+
+
+@bp.route('/status-history')
+@login_required
+@role_required('admin', 'director', 'technician')
+def status_history_report():
+    """Отчёт по истории статусов заявок (фильтры: период, пользователь, статус)."""
+    d_from = request.args.get('from', '') or (now_local() - timedelta(days=30)).strftime('%Y-%m-%d')
+    d_to = request.args.get('to', '') or now_local().strftime('%Y-%m-%d')
+    user_f = safe_int(request.args.get('user_id')) or None
+    status_f = (request.args.get('status') or '').strip()
+    fault_f = safe_int(request.args.get('fault_id')) or None
+
+    try:
+        date_from = datetime.strptime(d_from, '%Y-%m-%d').date()
+        date_to = datetime.strptime(d_to, '%Y-%m-%d').date()
+    except ValueError:
+        date_from = (now_local() - timedelta(days=30)).date()
+        date_to = now_local().date()
+
+    q = FaultStatusHistory.query.options(
+        joinedload(FaultStatusHistory.fault),
+        joinedload(FaultStatusHistory.changer),
+    ).filter(
+        FaultStatusHistory.changed_at >= datetime.combine(date_from, datetime.min.time()),
+        FaultStatusHistory.changed_at < datetime.combine(date_to + timedelta(days=1), datetime.min.time()),
+    )
+    if user_f:
+        q = q.filter(FaultStatusHistory.changed_by == user_f)
+    if status_f:
+        q = q.filter(FaultStatusHistory.new_status == status_f)
+    if fault_f:
+        q = q.filter(FaultStatusHistory.fault_id == fault_f)
+
+    history = q.order_by(FaultStatusHistory.changed_at.desc()).limit(500).all()
+
+    # Сводка по статусам
+    summary = {}
+    for h in history:
+        key = h.new_status or '?'
+        summary[key] = summary.get(key, 0) + 1
+
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
+    return render_template(
+        'status_history_report.html',
+        history=history, summary=summary, users=users,
+        date_from=date_from, date_to=date_to,
+        user_f=user_f, status_f=status_f, fault_f=fault_f,
+        status_labels=STATUS_LABELS,
+    )
 
 # ── Статусы заявки (CMMS-модель ProMaster) ──────────────────────────
 # open=open/NEW, diagnosis, in_progress, paused, waiting_parts,

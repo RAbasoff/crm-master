@@ -1,7 +1,7 @@
 """
 timekeeping blueprint
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from flask import (Blueprint, render_template, request, redirect, url_for, flash,
                    jsonify, send_file, session, g)
 from flask_login import login_required, current_user
@@ -255,3 +255,86 @@ def time_report(user_id):
     return render_template('time_report.html', user=user, entries=entries, month=month,
                          total_hours=total_hours, total_overtime=total_overtime,
                          days_present=days_present, days_absent=days_absent, vacations=vacations)
+
+
+@bp.route('/time-report/team')
+@login_required
+@role_required('admin', 'director')
+def team_hours_report():
+    """Отчёт по часам команды за месяц."""
+    month = request.args.get('month', now_local().strftime('%Y-%m'))
+    try:
+        year, mon = map(int, month.split('-'))
+    except ValueError:
+        year, mon = now_local().year, now_local().month
+        month = f'{year:04d}-{mon:02d}'
+    start = date(year, mon, 1)
+    end = (date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1))
+
+    users = User.query.filter(
+        User.is_active_user == True,
+        User.role.in_(['technician', 'user'])
+    ).order_by(User.display_name, User.username).all()
+
+    rows = []
+    for u in users:
+        entries = TimeEntry.query.filter(
+            TimeEntry.user_id == u.id,
+            TimeEntry.date >= start,
+            TimeEntry.date < end
+        ).all()
+        total_h = sum((e.hours_worked or 0) for e in entries)
+        total_ot = sum((e.overtime_hours or 0) for e in entries)
+        days = len([e for e in entries if e.status == 'present'])
+        absent = len([e for e in entries if e.status in ('absent', 'sick')])
+        rows.append({
+            'user': u,
+            'days': days,
+            'absent': absent,
+            'hours': round(total_h, 2),
+            'overtime': round(total_ot, 2),
+            'entries': entries,
+        })
+    rows.sort(key=lambda r: r['user'].display_name or r['user'].username)
+    totals = {
+        'hours': round(sum(r['hours'] for r in rows), 2),
+        'overtime': round(sum(r['overtime'] for r in rows), 2),
+        'days': sum(r['days'] for r in rows),
+    }
+    return render_template('team_hours_report.html', rows=rows, month=month, totals=totals)
+
+
+@bp.route('/time-report/team/export')
+@login_required
+@role_required('admin', 'director')
+def team_hours_export():
+    """CSV-выгрузка часов команды."""
+    import csv, io
+    month = request.args.get('month', now_local().strftime('%Y-%m'))
+    try:
+        year, mon = map(int, month.split('-'))
+    except ValueError:
+        year, mon = now_local().year, now_local().month
+        month = f'{year:04d}-{mon:02d}'
+    start = date(year, mon, 1)
+    end = (date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1))
+    users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).order_by(User.display_name).all()
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=';')
+    w.writerow(['User', 'Days', 'Absent', 'Hours', 'Overtime'])
+    for u in users:
+        entries = TimeEntry.query.filter(TimeEntry.user_id == u.id, TimeEntry.date >= start, TimeEntry.date < end).all()
+        w.writerow([
+            u.display_name or u.username,
+            len([e for e in entries if e.status == 'present']),
+            len([e for e in entries if e.status in ('absent', 'sick')]),
+            round(sum((e.hours_worked or 0) for e in entries), 2),
+            round(sum((e.overtime_hours or 0) for e in entries), 2),
+        ])
+    out = buf.getvalue().encode('utf-8-sig')
+    return send_file(
+        __import__('io').BytesIO(out),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'team-hours-{month}.csv'
+    )
