@@ -141,10 +141,12 @@ def user_delete(user_id):
     Monteur.query.filter_by(user_id=uid).update({'user_id': None})
     Invoice.query.filter_by(signed_by=uid).update({'signed_by': None})
     Invoice.query.filter_by(created_by=uid).update({'created_by': None})
-    FaultReport.query.filter_by(reporter_id=uid).delete()
+    # Не удаляем заявки — сохраняем историю; переводим на администратора
+    reassign_to = User.query.filter(User.role == 'admin', User.id != uid, User.is_active_user == True).first()
+    if reassign_to:
+        FaultReport.query.filter_by(reporter_id=uid).update({'reporter_id': reassign_to.id})
     FaultReport.query.filter_by(technician_id=uid).update({'technician_id': None})
     PurchaseRequest.query.filter_by(reviewer_id=uid).update({'reviewer_id': None})
-    PurchaseRequest.query.filter_by(requester_id=uid).delete()
     TechnicalWorkOrder.query.filter_by(created_by=uid).update({'created_by': None})
     AuditLog.query.filter_by(user_id=uid).update({'user_id': None})
     TimeEntry.query.filter_by(approved_by=uid).update({'approved_by': None})

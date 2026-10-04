@@ -14,7 +14,7 @@ from models import (db, Machine, MachinePart, PartMaintenanceLog, MachineDocumen
                     MachineSparePart, MachineConsumable, MaintenanceRecord, MaintenancePhoto,
                     MaintenancePlan, FactorySection, User, Contractor, Verantwoordelijke, FaultReport,
                     TechnicalWorkOrder, PurchaseRequest,
-                    VoorraadItem, VoorraadMutatie)
+                    VoorraadItem, VoorraadMutatie, now_local)
 from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
                    safe_int, safe_float, safe_date, sanitize_like,
                    find_pdf_font, ensure_fpdf)
@@ -864,15 +864,14 @@ def machine_consumables_consume(machine_id, mc_id):
     wi.hoeveelheid = old_qty - qty
     # Record warehouse movement
     mut = VoorraadMutatie(
-        voorraad_id=wi.id,
+        item_id=wi.id,
         type='uitgaand',
-        aantal=qty,
-        datum=datetime.utcnow(),
-        gebruiker_id=current_user.id if current_user.is_authenticated else None,
+        hoeveelheid=qty,
+        user_id=current_user.id if current_user.is_authenticated else None,
         opmerking=f'Consumable used on machine #{machine_id}'
     )
     db.session.add(mut)
-    mc.last_issued_at = datetime.utcnow()
+    mc.last_issued_at = now_local()
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('machines.machine_detail', machine_id=machine_id))

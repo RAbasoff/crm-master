@@ -468,10 +468,13 @@ def equipment_new():
                     number=request.form.getlist('part_number')[i] if i < len(request.form.getlist('part_number')) else '',
                     quantity=qty
                 ))
-                # Deduct from warehouse
+                # Deduct from warehouse (with stock check)
                 if wh_id:
                     wi = VoorraadItem.query.get(wh_id)
                     if wi:
+                        if (wi.hoeveelheid or 0) < qty:
+                            flash(_('Not enough stock. Available: %(qty)s %(unit)s', qty=wi.hoeveelheid, unit=wi.eenheid), 'error')
+                            return redirect(url_for('equipment.equipment_detail', eq_id=eq.id))
                         wi.hoeveelheid -= qty
                         db.session.add(VoorraadMutatie(
                             item_id=wh_id, type='uitgaand', hoeveelheid=qty,

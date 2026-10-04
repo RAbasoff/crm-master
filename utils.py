@@ -59,9 +59,9 @@ def genereer_nummer():
     return f'WO-{day}-{num:04d}'
 
 def date_plus_days(d, days):
-    if d and days:
+    if d and days is not None:
         return d + timedelta(days=days)
-    return None
+    return d if d else None
 
 
 WORK_SHIFT_TYPES = ('full', 'morning', 'afternoon')

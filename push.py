@@ -59,18 +59,19 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
         )
         return bool(resp and resp.status_code < 300)
     except WebPushException as e:
-        try:
-            import logging
-            logging.getLogger('push').warning('webpush failed: %s', e)
-        except Exception:
-            pass
+        # 404/410 — подписка протухла; остальное не трогаем
+        code = getattr(getattr(e, 'response', None), 'status_code', None)
+        if code in (404, 410):
+            try:
+                from models import PushSubscription, db
+                PushSubscription.query.filter_by(
+                    endpoint=subscription_info.get('endpoint')
+                ).delete()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         return False
-    except Exception as e:
-        try:
-            import logging
-            logging.getLogger('push').warning('webpush error: %s', e)
-        except Exception:
-            pass
+    except Exception:
         return False
 
 
@@ -79,7 +80,6 @@ def push_to_user(user_id, title, body, url=None, tag=None):
     from models import PushSubscription, db, now_local
     subs = PushSubscription.query.filter_by(user_id=user_id).all()
     ok = 0
-    dead = []
     for s in subs:
         info = {
             'endpoint': s.endpoint,
@@ -88,27 +88,10 @@ def push_to_user(user_id, title, body, url=None, tag=None):
         if send_web_push(info, title, body, url=url, tag=tag):
             ok += 1
             s.last_used_at = now_local()
-        else:
-            # 404/410 → мёртвая подписка
-            dead.append(s)
-    for s in dead:
-        try:
-            db.session.delete(s)
-        except Exception:
-            pass
-    if dead:
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
     return ok
 
 
 def notify_and_push(user_id, title, message, ntype='info', link=None):
-    """DB-уведомление + Web Push (вибрация/звук на телефоне)."""
+    """DB-уведомление + Web Push. create_notification уже шлёт push — без дубля."""
     from logs import create_notification
     create_notification(user_id, title, message, ntype, link)
-    try:
-        push_to_user(user_id, title, message, url=link, tag=ntype)
-    except Exception:
-        pass

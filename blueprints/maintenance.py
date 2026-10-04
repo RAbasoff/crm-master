@@ -874,6 +874,7 @@ def maintenance_plan_new():
         
         if create_two and worker_id:
             # Create TWO from maintenance plan
+            from blueprints.two import gen_two_number
             two = TechnicalWorkOrder(
                 number=gen_two_number(),
                 machine_id=p.machine_id,
