@@ -1292,7 +1292,8 @@ def index():
             {'status': s or 'unknown', 'count': int(c or 0)} for s, c in status_rows
         ]
 
-    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats)
+    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
+                           today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())
 
 # ============================================================
 # ROUTES — OPDRACHTEN (existing)

@@ -13,6 +13,52 @@
     </div>
 </div>
 
+<!-- CLOCK IN / OUT (механики) -->
+{% set is_mech = current_user.has_role('technician') or current_user.worker_profile %}
+{% if is_mech %}
+<div class="card" style="margin-bottom:16px;border-left:4px solid {% if today_time_entry and today_time_entry.clock_in and not today_time_entry.clock_out %}#27ae60{% else %}#5b9cf6{% endif %}">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+            <div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px">{{ _('Time Tracking') }}</div>
+            <div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums" id="dashClock">--:--</div>
+            <div style="font-size:12px;color:#666">
+                {% if today_time_entry and today_time_entry.clock_in %}
+                    🟢 {{ _('Clock In') }}: {{ today_time_entry.clock_in.strftime('%H:%M') }}
+                    {% if today_time_entry.clock_out %}
+                        · 🔴 {{ _('Clock Out') }}: {{ today_time_entry.clock_out.strftime('%H:%M') }}
+                    {% endif %}
+                {% else %}
+                    {{ _('Not clocked in today') }}
+                {% endif %}
+            </div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+            <form method="POST" action="/time-tracking/clock-in" style="display:inline">
+                <input type="hidden" name="next" value="/">
+                <button type="submit" class="btn" style="background:#27ae60;color:white;font-weight:700;padding:12px 20px;font-size:14px;min-width:160px">🟢 {{ _('Clock In') }}</button>
+            </form>
+            <form method="POST" action="/time-tracking/clock-out" style="display:inline">
+                <input type="hidden" name="next" value="/">
+                <button type="submit" class="btn" style="background:#e74c3c;color:white;font-weight:700;padding:12px 20px;font-size:14px;min-width:160px">🔴 {{ _('Clock Out') }}</button>
+            </form>
+            <a href="/time-tracking" class="btn" style="background:#eee;color:#333;padding:12px 16px;font-size:13px">⏱ {{ _('Details') }}</a>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    function tick() {
+        var el = document.getElementById('dashClock');
+        if (!el) return;
+        var d = new Date();
+        el.textContent = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+    tick();
+    setInterval(tick, 30000);
+})();
+</script>
+{% endif %}
+
 <!-- Main Stats -->
 <div class="stats">
     <div class="stat-card" style="border-left:4px solid #5b9cf6">

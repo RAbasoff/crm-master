@@ -34,6 +34,14 @@ def time_tracking():
     return render_template('time_tracking.html', users=users, entries=entries, today=today, month_start=month_start)
 
 
+def _clock_redirect():
+    """Возврат: откуда пришли (дашборд / time-tracking)."""
+    nxt = (request.form.get('next') or request.args.get('next') or '').strip()
+    if nxt in ('/', '/index', 'index', 'dashboard'):
+        return redirect(url_for('index'))
+    return redirect(url_for('timekeeping.time_tracking'))
+
+
 @bp.route('/time-tracking/clock-in', methods=['POST'])
 @login_required
 def clock_in():
@@ -41,8 +49,8 @@ def clock_in():
     existing = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
     if existing and existing.clock_in:
         flash(_('Already clocked in today'), 'error')
-        return redirect(url_for('timekeeping.time_tracking'))
-    
+        return _clock_redirect()
+
     if existing:
         existing.clock_in = now_local()
         existing.status = 'present'
@@ -56,9 +64,9 @@ def clock_in():
         db.session.add(entry)
     if not safe_commit():
         flash(_('Save failed'), 'error')
-        return redirect(url_for('timekeeping.time_tracking'))
+        return _clock_redirect()
     flash(_('Clocked in at') + ' ' + now_local().strftime('%H:%M'), 'success')
-    return redirect(url_for('timekeeping.time_tracking'))
+    return _clock_redirect()
 
 
 @bp.route('/time-tracking/clock-out', methods=['POST'])
@@ -68,25 +76,25 @@ def clock_out():
     entry = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
     if not entry or not entry.clock_in:
         flash(_('Not clocked in today'), 'error')
-        return redirect(url_for('timekeeping.time_tracking'))
+        return _clock_redirect()
     if entry.clock_out:
         flash(_('Already clocked out today'), 'error')
-        return redirect(url_for('timekeeping.time_tracking'))
-    
+        return _clock_redirect()
+
     entry.clock_out = now_local()
     delta = entry.clock_out - entry.clock_in
     hours = delta.total_seconds() / 3600
     entry.hours_worked = round(hours - (entry.break_minutes / 60), 2)
-    
+
     # Calculate overtime (standard 8h)
     if entry.hours_worked > 8:
         entry.overtime_hours = round(entry.hours_worked - 8, 2)
-    
+
     if not safe_commit():
         flash(_('Save failed'), 'error')
-        return redirect(url_for('timekeeping.time_tracking'))
+        return _clock_redirect()
     flash(_('Clocked out at') + ' ' + entry.clock_out.strftime('%H:%M') + '. ' + _('Hours worked') + ': ' + str(entry.hours_worked), 'success')
-    return redirect(url_for('timekeeping.time_tracking'))
+    return _clock_redirect()
 
 
 @bp.route('/time-tracking/manual', methods=['POST'])
