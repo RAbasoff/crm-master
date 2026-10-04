@@ -39,19 +39,20 @@ STATUS_LABELS = {
     'reopened': 'Переоткрыта',
 }
 
-# Разрешённые переходы. Техник не может прыгнуть в любой статус.
+# Разрешённые переходы. Механик может менять любой статус, КРОМЕ closed.
+# closed — только админ / начальник ТС / главный механик.
 ALLOWED_TRANSITIONS = {
-    'open':          ('accepted', 'diagnosis', 'in_progress', 'paused'),
-    'accepted':      ('diagnosis', 'in_progress', 'paused', 'waiting_parts'),
-    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'resolved'),
+    'open':          ('accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved'),
+    'accepted':      ('diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved'),
+    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved'),
     'in_progress':   ('diagnosis', 'paused', 'testing', 'resolved', 'waiting_parts', 'parts_ordered'),
-    'paused':        ('diagnosis', 'in_progress', 'waiting_parts', 'parts_ordered', 'accepted'),
-    'waiting_parts': ('parts_ordered', 'in_progress', 'diagnosis', 'paused'),
-    'parts_ordered': ('waiting_parts', 'in_progress', 'paused'),
-    'testing':       ('in_progress', 'diagnosis', 'resolved', 'paused'),
-    'resolved':      ('closed', 'reopened', 'testing'),
+    'paused':        ('diagnosis', 'in_progress', 'waiting_parts', 'parts_ordered', 'accepted', 'testing', 'resolved'),
+    'waiting_parts': ('parts_ordered', 'in_progress', 'diagnosis', 'paused', 'testing', 'resolved'),
+    'parts_ordered': ('waiting_parts', 'in_progress', 'paused', 'diagnosis', 'testing', 'resolved'),
+    'testing':       ('in_progress', 'diagnosis', 'resolved', 'paused', 'waiting_parts'),
+    'resolved':      ('closed', 'reopened', 'testing', 'in_progress', 'diagnosis', 'paused'),
     'closed':        ('reopened',),
-    'reopened':      ('diagnosis', 'in_progress', 'accepted'),
+    'reopened':      ('diagnosis', 'in_progress', 'accepted', 'paused', 'resolved', 'testing'),
 }
 
 # Пауза: статус один, причины — отдельно (для аналитики)
@@ -126,22 +127,27 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
                 STATUS_LABELS.get(new_status, new_status))
 
     if new_status == 'paused':
+        # Описание причины обязательно
+        comment = (pause_comment or '').strip()
         if pause_reason not in PAUSE_REASONS:
             return False, _('Select a pause reason')
-        if pause_reason == 'other' and not (pause_comment or '').strip():
-            return False, _('Comment is required for «Other» pause reason')
+        if not comment:
+            return False, _('Describe the reason for pause')
         f.pause_reason = pause_reason
-        f.pause_comment = (pause_comment or '').strip()
+        f.pause_comment = comment
         f.pause_started_at = datetime.utcnow()
         f.pause_until = pause_until
         _end_open_work_sessions(user.id, f.id, note=_('Auto-stopped: fault paused'))
     elif new_status in WAIT_STATUSES:
+        comment = (pause_comment or '').strip()
         if pause_reason:
             f.pause_reason = pause_reason
         elif not f.pause_reason:
             f.pause_reason = 'need_info' if new_status != 'waiting_parts' else 'waiting_production'
-        if pause_comment:
-            f.pause_comment = pause_comment.strip()
+        if comment:
+            f.pause_comment = comment
+        elif not f.pause_comment:
+            return False, _('Describe the reason for pause')
         if pause_until:
             f.pause_until = pause_until
         if not f.pause_started_at:

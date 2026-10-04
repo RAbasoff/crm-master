@@ -37,6 +37,50 @@ def schedule_list():
     return render_template('schedule.html', monteurs=monteurs, schedules=schedules)
 
 
+@bp.route('/schedule/test-push', methods=['POST'])
+@login_required
+@role_required('admin')
+def schedule_test_push():
+    """Тестовое оповещение (только админ): конкретному механику или всем."""
+    from logs import create_notification
+    data = request.get_json() if request.is_json else request.form
+    target = (data.get('target') or 'all').strip()
+    message = (data.get('message') or '').strip() or _('Test notification from ProMaster')
+
+    monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
+    targets = []
+    if target == 'all':
+        for m in monteurs:
+            if m.user_id and m.user and m.user.is_active_user:
+                targets.append(m.user)
+    else:
+        uid = safe_int(target)
+        u = User.query.get(uid) if uid else None
+        if u:
+            targets.append(u)
+
+    if not targets:
+        if request.is_json:
+            return jsonify({'error': _('Select a mechanic')}), 400
+        flash(_('Select a mechanic'), 'error')
+        return redirect(url_for('schedule.schedule_list'))
+
+    for u in targets:
+        create_notification(
+            u.id,
+            _('Test push'),
+            message,
+            'info',
+            '/schedule',
+        )
+    log_audit('test_push', 'schedule', None,
+              f'to {len(targets)} user(s): {message[:80]}')
+    if request.is_json:
+        return jsonify({'ok': True, 'sent': len(targets)})
+    flash(_('Test notification sent') + f' ({len(targets)})', 'success')
+    return redirect(url_for('schedule.schedule_list'))
+
+
 @bp.route('/schedule/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def schedule_user(user_id):

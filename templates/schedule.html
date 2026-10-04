@@ -13,6 +13,53 @@
     </div>
 </div>
 
+{% if current_user.role == 'admin' %}
+<div class="card" id="testPushCard" style="margin-bottom:12px;border-left:4px solid #9b59b6;display:none">
+    <h2 style="margin:0 0 10px;font-size:15px">🧪 {{ _('Send test notification') }}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="min-width:220px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">{{ _('Send to') }}</label>
+            <select id="testPushTarget" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+                <option value="all">{{ _('All mechanics') }}</option>
+                {% for m in monteurs if m.user_id %}
+                <option value="{{ m.user_id }}">{{ m.naam }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex:1;min-width:220px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">{{ _('Message') }}</label>
+            <input id="testPushMsg" type="text" value="{{ _('Test notification from ProMaster') }}"
+                   style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+        </div>
+        <button type="button" class="btn btn-sm" style="background:#9b59b6;color:white;padding:8px 14px;font-weight:700"
+                onclick="sendTestPush()">📲 {{ _('Test push') }}</button>
+    </div>
+</div>
+<script>
+// Показать тест-панель только админу (на случай кэша шаблона)
+(function () {
+    try {
+        if ({{ 'true' if current_user.role == 'admin' else 'false' }}) {
+            var el = document.getElementById('testPushCard');
+            if (el) el.style.display = 'block';
+        }
+    } catch (e) {}
+})();
+function sendTestPush() {
+    const target = document.getElementById('testPushTarget').value;
+    const message = document.getElementById('testPushMsg').value;
+    csrfFetch('/schedule/test-push', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({target: target, message: message})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) alert('{{ _("Test notification sent") }} (' + d.sent + ')');
+        else alert(d.error || 'Error');
+    }).catch(e => alert('Error: ' + e.message));
+}
+</script>
+{% endif %}
+
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
         <tr><th>{{ _('Worker') }}</th><th>{{ _('Specialization') }}</th><th>{{ _('Schedule') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>

@@ -6147,3 +6147,39 @@ msgstr "by mechanic"
 #: faults status
 msgid "24/7 access (no work-hours limit)"
 msgstr "24/7 access (no work-hours limit)"
+
+#: pause test-push
+msgid "Describe the reason"
+msgstr "Describe the reason"
+
+#: pause test-push
+msgid "Describe the reason for pause"
+msgstr "Describe the reason for pause"
+
+#: pause test-push
+msgid "What is blocking the work? Be specific..."
+msgstr "What is blocking the work? Be specific..."
+
+#: pause test-push
+msgid "Send test notification"
+msgstr "Send test notification"
+
+#: pause test-push
+msgid "Test push"
+msgstr "Test push"
+
+#: pause test-push
+msgid "Send to"
+msgstr "Send to"
+
+#: pause test-push
+msgid "All mechanics"
+msgstr "All mechanics"
+
+#: pause test-push
+msgid "Test notification sent"
+msgstr "Test notification sent"
+
+#: pause test-push
+msgid "Select a mechanic"
+msgstr "Select a mechanic"

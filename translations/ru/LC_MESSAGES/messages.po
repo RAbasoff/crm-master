@@ -6285,3 +6285,39 @@ msgstr "механиком"
 #: faults status
 msgid "24/7 access (no work-hours limit)"
 msgstr "Доступ 24/7 (без ограничения по графику)"
+
+#: pause test-push
+msgid "Describe the reason"
+msgstr "Опишите причину"
+
+#: pause test-push
+msgid "Describe the reason for pause"
+msgstr "Опишите причину постановки на паузу"
+
+#: pause test-push
+msgid "What is blocking the work? Be specific..."
+msgstr "Что мешает работе? Опишите конкретно..."
+
+#: pause test-push
+msgid "Send test notification"
+msgstr "Отправить тестовое оповещение"
+
+#: pause test-push
+msgid "Test push"
+msgstr "Тест"
+
+#: pause test-push
+msgid "Send to"
+msgstr "Кому"
+
+#: pause test-push
+msgid "All mechanics"
+msgstr "Все механики"
+
+#: pause test-push
+msgid "Test notification sent"
+msgstr "Тестовое оповещение отправлено"
+
+#: pause test-push
+msgid "Select a mechanic"
+msgstr "Выберите механика"

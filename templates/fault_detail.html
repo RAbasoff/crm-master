@@ -19,23 +19,27 @@
         <div style="position:relative;display:inline-block">
             <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
-                {% for st in allowed_next %}
-                {% if st == 'closed' and not current_user.has_role('admin', 'director') %}
-                {% else %}
+                {% for st in ['accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'reopened'] %}
+                {% if not (st == 'closed' and not current_user.has_role('admin', 'director')) %}
+                {% if st != fault.status %}
                 <option value="{{ st }}" style="background:white;color:#333">{{ status_labels.get(st, st) }}</option>
                 {% endif %}
+                {% endif %}
                 {% endfor %}
+                {% if current_user.has_role('admin', 'director') and fault.status not in ['closed'] %}
+                <option value="closed" style="background:white;color:#333">{{ status_labels.get('closed', 'closed') }}</option>
+                {% endif %}
             </select>
         </div>
         {% endif %}
-        {% if fault.status in ['accepted', 'in_progress', 'diagnosis', 'testing'] and current_user.has_role('technician', 'admin', 'director') %}
+        {% if fault.status not in ['closed', 'resolved'] and current_user.has_role('technician', 'admin', 'director') %}
         <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="setStatus('resolved')">✅ {{ _('Resolved') }}</button>
         {% endif %}
         {% if fault.status in ['paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') %}
         <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="setStatus('in_progress')">▶ {{ _('Resume work') }}</button>
         {% endif %}
-        {% if fault.status in ['accepted', 'diagnosis', 'in_progress'] and current_user.has_role('technician', 'admin', 'director') %}
-        <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="openPauseModal()">⏸ {{ _('Pause') }}</button>
+        {% if fault.status not in ['closed', 'resolved', 'paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') %}
+        <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="openPauseModal('paused')">⏸ {{ _('Pause') }}</button>
         {% endif %}
         {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
         <button type="button" class="btn btn-sm" style="background:#e67e22;color:white" onclick="openCloseModal()">🔒 {{ _('Close Fault') }}</button>
@@ -276,11 +280,21 @@ function endWorkById(faultId) {
                     ⏸ {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if pause_reasons is defined else fault.pause_reason }}
                     {% if fault.pause_until %} · {{ _('Planned resume') }}: {{ fault.pause_until.strftime('%d-%m-%Y') }}{% endif %}
                 </span>
+                {% if fault.pause_comment %}
+                <div style="margin-top:4px;font-size:12px;color:#666;background:#fff8e6;padding:6px 10px;border-radius:8px">
+                    💬 {{ fault.pause_comment }}
+                </div>
+                {% endif %}
             {% endif %}
-            {% if fault.status in ['waiting_parts', 'parts_ordered'] and fault.pause_reason %}
+            {% if fault.status in ['waiting_parts', 'parts_ordered'] %}
                 <span style="margin-left:8px;font-size:12px;color:#e67e22">
-                    📦 {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if pause_reasons is defined else fault.pause_reason }}
+                    📦 {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if (pause_reasons is defined and fault.pause_reason) else '' }}
                 </span>
+                {% if fault.pause_comment %}
+                <div style="margin-top:4px;font-size:12px;color:#666;background:#fff8e6;padding:6px 10px;border-radius:8px">
+                    💬 {{ fault.pause_comment }}
+                </div>
+                {% endif %}
             {% endif %}
             </p>
             <p><strong>{{ _('Reporter') }}:</strong> {{ fault.reporter_label }}</p>
@@ -468,6 +482,12 @@ function endWorkById(faultId) {
 <script>
 function changeFaultStatus(newStatus) {
     if (!newStatus) return;
+    // Пауза / ожидание — всегда с обязательной причиной и описанием
+    if (newStatus === 'paused' || newStatus === 'waiting_parts' || newStatus === 'parts_ordered') {
+        document.getElementById('statusSelect').value = '';
+        openPauseModal(newStatus);
+        return;
+    }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -480,6 +500,10 @@ function changeFaultStatus(newStatus) {
 }
 
 function setStatus(st) {
+    if (st === 'paused' || st === 'waiting_parts' || st === 'parts_ordered') {
+        openPauseModal(st);
+        return;
+    }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -490,25 +514,42 @@ function setStatus(st) {
     });
 }
 
-function openPauseModal() {
-    document.getElementById('pauseModal').style.display = 'flex';
+function openPauseModal(targetStatus) {
+    const modal = document.getElementById('pauseModal');
+    modal.style.display = 'flex';
+    modal.dataset.targetStatus = targetStatus || 'paused';
+    const titles = {
+        paused: '⏸ {{ _("Pause") }}',
+        waiting_parts: '📦 {{ _("Waiting for parts") }}',
+        parts_ordered: '🛒 {{ _("Parts ordered") }}'
+    };
+    const h = document.getElementById('pauseModalTitle');
+    if (h) h.textContent = (titles[targetStatus] || titles.paused) + ' #{{ fault.id }}';
 }
 function closePauseModal() {
     document.getElementById('pauseModal').style.display = 'none';
 }
 function submitPause() {
+    const modal = document.getElementById('pauseModal');
+    const target = modal.dataset.targetStatus || 'paused';
     const reason = document.getElementById('pauseReason').value;
     const comment = document.getElementById('pauseComment').value;
     const until = document.getElementById('pauseUntil').value;
     if (!reason) { alert('{{ _("Select a pause reason") }}'); return; }
-    if (reason === 'other' && !comment.trim()) {
-        alert('{{ _("Comment is required for «Other» pause reason") }}');
+    if (!comment.trim()) {
+        alert('{{ _("Describe the reason for pause") }}');
+        document.getElementById('pauseComment').focus();
         return;
     }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({status: 'paused', pause_reason: reason, pause_comment: comment, pause_until: until})
+        body: JSON.stringify({
+            status: target,
+            pause_reason: reason,
+            pause_comment: comment,
+            pause_until: until
+        })
     }).then(r => r.json()).then(d => {
         if (d.ok) { closePauseModal(); location.reload(); }
         else alert(d.error || 'Error');
@@ -575,25 +616,27 @@ document.getElementById('reopenModal').addEventListener('click', function(e) {
 <div id="pauseModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center">
     <div style="background:white;border-radius:16px;padding:28px;max-width:450px;width:92%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="margin:0;font-size:18px">⏸ {{ _('Pause') }} #{{ fault.id }}</h2>
+            <h2 id="pauseModalTitle" style="margin:0;font-size:18px">⏸ {{ _('Pause') }} #{{ fault.id }}</h2>
             <button onclick="closePauseModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
         </div>
         <div class="form-group">
             <label style="font-weight:600">{{ _('Pause reason') }} *</label>
-            <select id="pauseReason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-                <option value="">—</option>
+            <select id="pauseReason" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+                <option value="">— {{ _('Select a pause reason') }} —</option>
                 {% for key, label in pause_reasons.items() %}
                 <option value="{{ key }}">{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group">
-            <label style="font-weight:600">{{ _('Planned resume date') }}</label>
-            <input type="date" id="pauseUntil" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px">
+            <label style="font-weight:600">{{ _('Describe the reason') }} *</label>
+            <textarea id="pauseComment" rows="3" required
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px"
+                placeholder="{{ _('What is blocking the work? Be specific...') }}"></textarea>
         </div>
         <div class="form-group">
-            <label style="font-weight:600">{{ _('Comment') }}</label>
-            <textarea id="pauseComment" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Required for «Other» reason') }}"></textarea>
+            <label style="font-weight:600">{{ _('Planned resume date') }}</label>
+            <input type="date" id="pauseUntil" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px">
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
             <button class="btn" style="background:#eee" onclick="closePauseModal()">{{ _('Cancel') }}</button>
