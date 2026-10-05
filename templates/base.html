@@ -440,8 +440,12 @@
             {% if has_access('floor') %}
             <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
             {% endif %}
+            {# СТАНКИ — свёрнутый модуль #}
+            {% if has_access('machines') or has_access('equipment') or has_access('tool_wear') %}
+            <div class="sb-section" data-module="machines" onclick="toggleSbGroup(this)">{{ _('Machines') }} <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items" data-module-items="machines">
             {% if has_access('machines') %}
-            <a href="/machines" class="sb-item {% if request.endpoint == 'machines.machines_list' %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Machines') }}</a>
+            <a href="/machines" class="sb-item {% if request.endpoint == 'machines.machines_list' %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">⚙️</span>{{ _('Machines') }}</a>
             <a href="/machines/scan" class="sb-item {% if request.endpoint == 'machines.machine_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Machines') }}</a>
             {% endif %}
             {% if has_access('equipment') %}
@@ -452,6 +456,8 @@
             {% endif %}
             {% if has_access('machines') %}
             <a href="/assets" class="sb-item {% if 'asset' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>{{ _('Other Devices') }}</a>
+            {% endif %}
+            </div>
             {% endif %}
             {# EGWL — Elektriciteit / Gas / Water / Lucht (сворачиваемый блок) #}
             <div class="sb-section" data-egwl="1" onclick="toggleSbGroup(this)" title="Elektriciteit · Gas · Water · Lucht">
@@ -479,10 +485,14 @@
             <a href="/moeskroen/plan" class="sb-item {% if request.endpoint == 'moeskroen.plan' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📐</span>{{ _('Plan') }}</a>
             <a href="/moeskroen/map" class="sb-item {% if request.endpoint == 'moeskroen.factory_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Factory Map') }}</a>
             {% endif %}
+            {# КАЛЕНДАРЬ ТО — свёрнутый модуль #}
             {% if has_access('maintenance') %}
-            <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📅</span>{{ _('Maint. Calendar') }}</a>
-            <a href="/maintenance-schedule" class="sb-item {% if 'maintenance_schedule' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Maint. Schedule') }}</a>
-            <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Maint. Plans') }}</a>
+            <div class="sb-section" data-module="maint" onclick="toggleSbGroup(this)">📅 {{ _('Maint. Calendar') }} <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items" data-module-items="maint">
+            <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">📅</span>{{ _('Maint. Calendar') }}</a>
+            <a href="/maintenance-schedule" class="sb-item {% if 'maintenance_schedule' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">⚙️</span>{{ _('Maint. Schedule') }}</a>
+            <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📋</span>{{ _('Maint. Plans') }}</a>
+            </div>
             {% endif %}
             {% if has_access('equipment') %}
             <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Equipment Repairs') }}</a>
@@ -535,15 +545,19 @@
             {% if has_access('contractors') %}
             <a href="/contractors" class="sb-item {% if 'contractor' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🏢</span>{{ _('Contractors') }}</a>
             {% endif %}
+            {# СКЛАД — свёрнутый модуль #}
+            {% if has_access('warehouse') or has_access('purchase_requests') %}
+            <div class="sb-section" data-module="warehouse" onclick="toggleSbGroup(this)">{{ _('Warehouse') }} <span class="sb-arrow">▼</span></div>
+            <div class="sb-group-items" data-module-items="warehouse">
             {% if has_access('warehouse') %}
-            <a href="/warehouse" class="sb-item {% if 'warehouse' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Warehouse') }}</a>
+            <a href="/warehouse" class="sb-item {% if 'warehouse' in (request.endpoint or '') and 'scan' not in (request.endpoint or '') %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">📦</span>{{ _('Warehouse') }}</a>
             <a href="/warehouse/scan" class="sb-item {% if request.endpoint == 'qr.warehouse_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Warehouse') }}</a>
             <a href="/consumable-reminders" class="sb-item {% if 'consumable_reminders' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔔</span>{{ _('Replacement Reminders') }}</a>
             {% endif %}
-            {% if has_access('purchase_requests') %}
-            {% if not is_mechanic %}
+            {% if has_access('purchase_requests') and not is_mechanic %}
             <a href="/purchase-requests" class="sb-item {% if 'purchase' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🛒</span>{{ _('Purchase Requests') }}</a>
             {% endif %}
+            </div>
             {% endif %}
             </div>
             {% endif %}
@@ -748,23 +762,52 @@
         (function () {
             const egwl = document.querySelector('.sb-section[data-egwl]');
             const egwlItems = document.querySelector('.sb-group-items[data-egwl-items]');
-            if (!egwl || !egwlItems) return;
-            const path = location.pathname || '';
-            const inEgwl = /^\/(electricity|gas|air|water)(\/|$)/.test(path);
-            const userPref = localStorage.getItem('sb-collapsed-' + egwl.textContent.trim());
-            const collapse = () => {
-                egwlItems.style.maxHeight = '0';
-                egwlItems.classList.add('collapsed');
-                egwl.classList.add('collapsed');
+            if (egwl && egwlItems) {
+                const path = location.pathname || '';
+                const inEgwl = /^\/(electricity|gas|air|water)(\/|$)/.test(path);
+                const userPref = localStorage.getItem('sb-collapsed-' + egwl.textContent.trim());
+                const collapse = () => {
+                    egwlItems.style.maxHeight = '0';
+                    egwlItems.classList.add('collapsed');
+                    egwl.classList.add('collapsed');
+                };
+                const expand = () => {
+                    egwlItems.style.maxHeight = egwlItems.scrollHeight + 'px';
+                    egwlItems.classList.remove('collapsed');
+                    egwl.classList.remove('collapsed');
+                };
+                if (userPref === '1' && !inEgwl) collapse();
+                else if (inEgwl || userPref === '0') expand();
+                else collapse();
+            }
+
+            // Свёрнутые модули: machines / maint / warehouse
+            const MODULE_PATHS = {
+                machines: /^\/(machines|equipment|tool-wear|assets)(\/|$)/,
+                maint: /^\/(maintenance-calendar|maintenance-schedule|maintenance-plans)(\/|$)/,
+                warehouse: /^\/(warehouse|consumable-reminders|purchase-requests)(\/|$)/,
             };
-            const expand = () => {
-                egwlItems.style.maxHeight = egwlItems.scrollHeight + 'px';
-                egwlItems.classList.remove('collapsed');
-                egwl.classList.remove('collapsed');
-            };
-            if (userPref === '1' && !inEgwl) collapse();
-            else if (inEgwl || userPref === '0') expand();
-            else collapse(); // default: collapsed
+            Object.keys(MODULE_PATHS).forEach(function (name) {
+                const sec = document.querySelector('.sb-section[data-module="' + name + '"]');
+                const items = document.querySelector('.sb-group-items[data-module-items="' + name + '"]');
+                if (!sec || !items) return;
+                const path = location.pathname || '';
+                const inside = MODULE_PATHS[name].test(path);
+                const userPref = localStorage.getItem('sb-collapsed-' + sec.textContent.trim());
+                const collapse = () => {
+                    items.style.maxHeight = '0';
+                    items.classList.add('collapsed');
+                    sec.classList.add('collapsed');
+                };
+                const expand = () => {
+                    items.style.maxHeight = items.scrollHeight + 'px';
+                    items.classList.remove('collapsed');
+                    sec.classList.remove('collapsed');
+                };
+                if (userPref === '1' && !inside) collapse();
+                else if (inside || userPref === '0') expand();
+                else collapse();
+            });
         })();
         
         // Close sidebar on Escape
