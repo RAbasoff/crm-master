@@ -1,9 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Edit Worker') if worker else _('New Worker') }} — CRM<form id="deleteWorkerForm" method="POST" action="{{ url_for('workers.worker_delete', worker_id=worker.id) }}" style="display:none">
+{% block title %}{{ _('Edit Worker') if worker else _('New Worker') }} — CRM{% endblock %}
+{% block content %}
+{% if worker %}
+<form id="deleteWorkerForm" method="POST" action="{{ url_for('workers.worker_delete', worker_id=worker.id) }}" style="display:none">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
-{% endblock %}
-{% block content %}
+{% endif %}
 <h1>{{ _('Edit Worker') + ': ' + worker.naam if worker else _('New Worker') }}</h1>
 <div class="card">
     <form method="POST">
@@ -101,7 +103,4 @@
     </div>
     {% endif %}
 </div>
-<form id="deleteWorkerForm" method="POST" action="{{ url_for('workers.worker_delete', worker_id=worker.id) }}" style="display:none">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-</form>
 {% endblock %}

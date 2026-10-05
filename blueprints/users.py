@@ -174,8 +174,16 @@ def user_delete(user_id):
 @role_required('admin')
 def user_new():
     if request.method == 'POST':
+        username = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
+        if not username or not password:
+            flash(_('Username and password are required'), 'error')
+            return redirect(url_for('users.user_new'))
+        if User.query.filter_by(username=username).first():
+            flash(_('Username already exists'), 'error')
+            return redirect(url_for('users.user_new'))
         u = User(
-            username=request.form['username'],
+            username=username,
             first_name=request.form.get('first_name', ''),
             last_name=request.form.get('last_name', ''),
             display_name=request.form.get('display_name', ''),
@@ -186,7 +194,7 @@ def user_new():
             hire_date=(d := safe_date(request.form.get('hire_date'))) and d.date() or None
         )
         u.ensure_display_name()
-        u.set_password(request.form['password'])
+        u.set_password(password)
         db.session.add(u)
         db.session.flush()
         # Save allowed sections
