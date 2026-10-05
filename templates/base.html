@@ -1301,7 +1301,7 @@
         replace: '{{ _("REPLACE") }}',
         remaining: '{{ _("Remaining") }}',
         needOrder: '{{ _("NEED TO ORDER!") }}',
-        canReplace: {{ 'true' if current_user.has_role('admin') or has_access('tool_wear') else 'false' }}
+        canReplace: {{ 'true' if current_user.has_role('admin', 'director') else 'false' }}
     };
     </script>
     

@@ -20,7 +20,7 @@
             <td>{{ c.compatible_machines or '—' }}</td>
             <td style="color:#e74c3c;font-weight:bold">{{ c.next_replacement.strftime('%d-%m-%Y') }}</td>
             <td style="color:#e74c3c;font-weight:bold">{{ (today - c.next_replacement).days }}</td>
-            <td><a href="/warehouse/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Replace') }}</a></td>
+            <td>{% if current_user.has_role('admin', 'director') %}<a href="/warehouse/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Replace') }}</a>{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
     </table></div>
@@ -41,7 +41,7 @@
             <td>{{ c.compatible_machines or '—' }}</td>
             <td>{{ c.next_replacement.strftime('%d-%m-%Y') }}</td>
             <td style="color:{% if (c.next_replacement - today).days <= 7 %}#e74c3c{% else %}#f39c12{% endif %};font-weight:bold">{{ (c.next_replacement - today).days }}</td>
-            <td><a href="/warehouse/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Replace') }}</a></td>
+            <td>{% if current_user.has_role('admin', 'director') %}<a href="/warehouse/{{ c.id }}/edit" class="btn btn-sm btn-primary">{{ _('Replace') }}</a>{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
     </table></div>

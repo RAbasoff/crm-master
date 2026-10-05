@@ -44,7 +44,7 @@ def tool_wear_page():
 
 @bp.route('/tool-wear/add', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director')
 def tool_wear_add():
     machine_name = request.form.get('machine_name', '').strip()
     tool_name = request.form.get('tool_name', '').strip() or 'Ножи / Фреза'
@@ -62,7 +62,7 @@ def tool_wear_add():
 
 @bp.route('/tool-wear/update/<int:tool_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director')
 def tool_wear_update(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.machine_name = request.form.get('machine_name', tool.machine_name).strip()
@@ -95,7 +95,7 @@ def tool_wear_delete(tool_id):
 
 @bp.route('/tool-wear/reset/<int:tool_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director')
 def tool_wear_reset(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.wear_percent = 0
