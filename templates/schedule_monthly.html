@@ -12,7 +12,8 @@
         <select onchange="location.href='/schedule/monthly?year={{ year }}&month={{ month }}&user='+this.value" style="padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px">
             <option value="">{{ _('All monteurs') }}</option>
             {% for u in all_users %}
-            <option value="{{ u.id }}" {% if filter_user == u.id|string %}selected{% endif %}>{{ u.display_name or u.username }}</option>
+            {% set uname = (u.worker_profile.naam if u.worker_profile and u.worker_profile.naam else (u.display_name or u.username)) %}
+            <option value="{{ u.id }}" {% if filter_user == u.id|string %}selected{% endif %}>{{ uname }}</option>
             {% endfor %}
         </select>
         <button onclick="window.print()" class="btn btn-sm" style="background:#2c3e50;color:white;padding:4px 8px;font-size:11px">🖨️</button>
@@ -64,14 +65,17 @@
             {% set sched = user_schedules.get(u.id) %}
             <tr>
                 <td style="position:sticky;left:0;background:white;z-index:1;padding:3px 4px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #eee">
-                    {{ u.display_name or u.username }}
+                    {% set uname = (u.worker_profile.naam if u.worker_profile and u.worker_profile.naam else (u.display_name or u.username)) %}
+                    {{ uname }}
                     {% if sched %}<br><span style="color:#27ae60;font-size:8px">{{ sched.shift_start }}-{{ sched.shift_end }}</span>{% endif %}
-                    <span onclick="deleteUserShifts({{ u.id }},'{{ u.display_name or u.username }}')" style="float:right;cursor:pointer;color:#e74c3c;font-size:10px;opacity:0.5" title="{{ _('Delete shifts') }}">🗑️</span>
+                    <span onclick="deleteUserShifts({{ u.id }},'{{ uname }}')" style="float:right;cursor:pointer;color:#e74c3c;font-size:10px;opacity:0.5" title="{{ _('Delete shifts') }}">🗑️</span>
                 </td>
                 {% for d in days %}
                 {% set key = (u.id, d.date) %}
                 {% set shift = shift_map.get(key) %}
-                {% set is_workday = sched and (d.weekday + 1)|string in sched.work_days.split(',') %}
+                {% set hire = u.worker_profile.hire_date if u.worker_profile else none %}
+                {% set fire = u.worker_profile.fire_date if u.worker_profile else none %}
+                {% set is_workday = sched and (d.weekday + 1)|string in sched.work_days.split(',') and (not hire or d.date >= hire) and (not fire or d.date <= fire) %}
                 <td class="shift-cell" style="text-align:center;padding:1px;cursor:pointer;{% if d.is_holiday %}background:#fdf0f0{% elif d.is_weekend %}background:#f0f8ff{% elif is_workday %}background:#e8f5e9{% endif %};border-bottom:1px solid #f0f0f0"
                     onclick="toggleCell(this,{{ u.id }},'{{ d.date.strftime('%Y-%m-%d') }}')"
                     data-user="{{ u.id }}"

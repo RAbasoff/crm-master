@@ -14,6 +14,26 @@ from utils import log_audit, role_required, safe_commit, safe_date, safe_float, 
 
 bp = Blueprint('workers', __name__)
 
+
+def _ensure_default_schedule(worker):
+    """Стандартный график Пн–Пт, если у механика есть учётка и нет активного графика."""
+    if not worker or not worker.user_id:
+        return
+    from models import WorkSchedule
+    if WorkSchedule.query.filter_by(user_id=worker.user_id, is_active=True).first():
+        return
+    name = worker.naam or 'Standard'
+    db.session.add(WorkSchedule(
+        user_id=worker.user_id,
+        name=f'{name} (Пн–Пт)',
+        shift_start='08:00',
+        shift_end='17:00',
+        break_minutes=60,
+        work_days='1,2,3,4,5',
+        is_active=True,
+    ))
+    safe_commit()
+
 @bp.route('/workers')
 @login_required
 @role_required('admin', 'director')
@@ -37,6 +57,7 @@ def worker_new():
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('workers.workers_list'))
+        _ensure_default_schedule(w)
         flash(_('Worker added') + f': {w.naam}', 'success')
         return redirect(url_for('workers.workers_list'))
     users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).order_by(User.display_name).all()
@@ -61,6 +82,7 @@ def worker_edit(worker_id):
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('workers.workers_list'))
+        _ensure_default_schedule(w)
         flash(_('Worker updated'), 'success')
         return redirect(url_for('workers.workers_list'))
     users = User.query.filter(User.is_active_user == True, User.role.in_(['technician', 'user'])).order_by(User.display_name).all()
@@ -124,13 +146,15 @@ def worker_create_user(worker_id):
     parts = (w.naam or '').split(None, 1)
     u = User(
         username=username,
-        display_name=w.naam,
+        display_name=w.naam or username,
         first_name=parts[0] if parts else '',
         last_name=parts[1] if len(parts) > 1 else '',
         role='technician',
         is_active_user=True,
     )
     u.ensure_display_name()
+    if not u.display_name:
+        u.display_name = w.naam or username
     u.set_password(password)
     db.session.add(u)
     db.session.flush()
@@ -139,7 +163,8 @@ def worker_create_user(worker_id):
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('workers.worker_edit', worker_id=worker_id))
-    
+    _ensure_default_schedule(w)
+
     log_audit('create', 'user_from_worker', u.id, f'{w.naam} -> {username} (technician)')
     flash(_('Login created for') + f' {w.naam}: {username}', 'success')
     return redirect(url_for('workers.worker_edit', worker_id=worker_id))
