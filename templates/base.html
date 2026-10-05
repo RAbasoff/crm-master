@@ -453,21 +453,27 @@
             {% if has_access('machines') %}
             <a href="/assets" class="sb-item {% if 'asset' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>{{ _('Other Devices') }}</a>
             {% endif %}
+            {# EGWL — Elektriciteit / Gas / Water / Lucht (сворачиваемый блок) #}
+            <div class="sb-section" data-egwl="1" onclick="toggleSbGroup(this)" title="Elektriciteit · Gas · Water · Lucht">
+                ⚡ EGWL <span class="sb-arrow">▼</span>
+            </div>
+            <div class="sb-group-items" data-egwl-items="1">
             {% if has_access('electricity') %}
-            <a href="/electricity" class="sb-item" data-section="electricity" style="{% if not has_access('electricity') %}display:none{% endif %}"><span class="sb-icon">⚡</span>{{ _('Electricity') }}</a>
+            <a href="/electricity" class="sb-item {% if request.endpoint and request.endpoint.startswith('electricity') %}active{% endif %}" data-section="electricity" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">⚡</span>{{ _('Electricity') }}</a>
             {% endif %}
             {% if has_access('gas') or has_access('machines') %}
-            <a href="/gas" class="sb-item {% if 'gas' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔴</span>{{ _('Gas System') }}</a>
+            <a href="/gas" class="sb-item {% if request.endpoint and request.endpoint.startswith('gas') %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">🔴</span>{{ _('Gas System') }}</a>
             <a href="/gas/scan" class="sb-item {% if request.endpoint == 'gas.cylinder_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Cylinders') }}</a>
             {% endif %}
             {% if has_access('air') %}
-            <a href="/air" class="sb-item {% if request.endpoint and request.endpoint.startswith('air.') and request.endpoint != 'air.air_map' %}active{% endif %}" data-section="air"><span class="sb-icon">💨</span>{{ _('Compressed Air') }}</a>
+            <a href="/air" class="sb-item {% if request.endpoint and request.endpoint.startswith('air.') and request.endpoint != 'air.air_map' %}active{% endif %}" data-section="air" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">💨</span>{{ _('Compressed Air') }}</a>
             <a href="/air/map" class="sb-item {% if request.endpoint == 'air.air_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Air Map') }}</a>
             {% endif %}
             {% if has_access('water') %}
-            <a href="/water" class="sb-item {% if request.endpoint and request.endpoint.startswith('water.') and request.endpoint != 'water.water_map' %}active{% endif %}" data-section="water"><span class="sb-icon">💧</span>{{ _('Water Supply') }}</a>
+            <a href="/water" class="sb-item {% if request.endpoint and request.endpoint.startswith('water.') and request.endpoint != 'water.water_map' %}active{% endif %}" data-section="water" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">💧</span>{{ _('Water Supply') }}</a>
             <a href="/water/map" class="sb-item {% if request.endpoint == 'water.water_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Water Map') }}</a>
             {% endif %}
+            </div>
             {% if current_user.has_role('admin', 'director') %}
             <a href="/moeskroen" class="sb-item {% if request.endpoint and request.endpoint.startswith('moeskroen.') and request.endpoint not in ('moeskroen.plan', 'moeskroen.factory_map') %}active{% endif %}"><span class="sb-icon">🏭</span>Moeskroen</a>
             <a href="/moeskroen/plan" class="sb-item {% if request.endpoint == 'moeskroen.plan' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📐</span>{{ _('Plan') }}</a>
@@ -737,6 +743,29 @@
                 }
             }
         });
+
+        // EGWL: свёрнут по умолчанию; раскрыть, если мы внутри EGWL-раздела
+        (function () {
+            const egwl = document.querySelector('.sb-section[data-egwl]');
+            const egwlItems = document.querySelector('.sb-group-items[data-egwl-items]');
+            if (!egwl || !egwlItems) return;
+            const path = location.pathname || '';
+            const inEgwl = /^\/(electricity|gas|air|water)(\/|$)/.test(path);
+            const userPref = localStorage.getItem('sb-collapsed-' + egwl.textContent.trim());
+            const collapse = () => {
+                egwlItems.style.maxHeight = '0';
+                egwlItems.classList.add('collapsed');
+                egwl.classList.add('collapsed');
+            };
+            const expand = () => {
+                egwlItems.style.maxHeight = egwlItems.scrollHeight + 'px';
+                egwlItems.classList.remove('collapsed');
+                egwl.classList.remove('collapsed');
+            };
+            if (userPref === '1' && !inEgwl) collapse();
+            else if (inEgwl || userPref === '0') expand();
+            else collapse(); // default: collapsed
+        })();
         
         // Close sidebar on Escape
         document.addEventListener('keydown', function(e) {
