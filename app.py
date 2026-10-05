@@ -9,7 +9,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
-import os, io, json
+import os, io, json, time
 import qrcode
 from sqlalchemy import func, case
 
@@ -405,6 +405,7 @@ babel = Babel(app, locale_selector=get_current_locale)
 
 @app.before_request
 def before_request():
+    g._req_start = time.time()
     if 'lang' not in session:
         session['lang'] = 'ru'
     g.lang = session.get('lang', 'ru')
@@ -468,6 +469,47 @@ def before_request():
                     return jsonify(payload), 200
                 except Exception:
                     pass
+
+# ── Подробный журнал активности (кто онлайн, что смотрит) ─────────
+_SKIP_LOG_PATHS = (
+    '/notifications/unread', '/api/tool-wear/warnings', '/api/maintenance/reminders',
+    '/api/push/', '/static/', '/favicon',
+)
+
+
+@app.after_request
+def log_request_activity(response):
+    """Пишем переходы и действия пользователей (без служебного шума)."""
+    try:
+        if not current_user.is_authenticated:
+            return response
+        path = request.path or ''
+        if any(path.startswith(p) for p in _SKIP_LOG_PATHS):
+            return response
+        if request.endpoint in (None, 'static'):
+            return response
+        method = request.method
+        # GET — только HTML-страницы; POST/PUT/DELETE — все действия
+        is_page = method == 'GET' and 'text/html' in (response.headers.get('Content-Type') or '')
+        is_write = method in ('POST', 'PUT', 'PATCH', 'DELETE')
+        if not (is_page or is_write):
+            return response
+        dur = None
+        start = getattr(g, '_req_start', None)
+        if start:
+            dur = int((time.time() - start) * 1000)
+        action = 'view' if is_page else method.lower()
+        details = None
+        if is_write:
+            keys = [k for k in request.form.keys() if k not in ('csrf_token', 'password', 'new_password', 'confirm_password')][:8]
+            details = f'form:{",".join(keys)}' if keys else None
+        log_user_activity(action, page=path, method=method,
+                          details=details, duration_ms=dur,
+                          status_code=response.status_code)
+    except Exception:
+        pass
+    return response
+
 
 @app.context_processor
 def inject_section_access():

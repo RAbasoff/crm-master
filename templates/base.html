@@ -587,6 +587,7 @@
             <div class="sb-group-items">
             {% if has_access('settings') %}
             <a href="/settings" class="sb-item {% if request.endpoint == 'settings.settings' %}active{% endif %}"><span class="sb-icon">⚙️</span>{{ _('Settings') }}</a>
+            <a href="/settings/activity" class="sb-item {% if request.endpoint == 'settings.settings_activity' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📡</span>{{ _('User Activity') }}</a>
             {% endif %}
             {% if has_access('users') %}
             <a href="/users" class="sb-item {% if 'user' in (request.endpoint or '') and 'profile' not in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👥</span>{{ _('Users') }}</a>

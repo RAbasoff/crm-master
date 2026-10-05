@@ -10,11 +10,46 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from config import SECTIONS_TREE
-from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke)
+from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog)
 from utils import log_audit, role_required, safe_commit
 from sqlalchemy import func, case
 
 bp = Blueprint('settings', __name__)
+
+
+@bp.route('/settings/activity')
+@login_required
+@role_required('admin')
+def settings_activity():
+    """Подробный журнал: кто онлайн, что смотрит и делает."""
+    from models import now_local
+    now = now_local()
+    online_window = now - timedelta(minutes=5)
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
+
+    rows = []
+    for u in users:
+        last = UserActivityLog.query.filter_by(user_id=u.id).order_by(UserActivityLog.id.desc()).first()
+        last_act = UserActivityLog.query.filter_by(user_id=u.id, action='view').order_by(UserActivityLog.id.desc()).first()
+        last_write = UserActivityLog.query.filter(
+            UserActivityLog.user_id == u.id,
+            UserActivityLog.method.in_(['POST', 'PUT', 'PATCH', 'DELETE'])
+        ).order_by(UserActivityLog.id.desc()).first()
+        is_online = bool(last and last.created_at and last.created_at >= online_window)
+        rows.append({
+            'user': u,
+            'online': is_online,
+            'last': last,
+            'last_view': last_act,
+            'last_write': last_write,
+        })
+    rows.sort(key=lambda r: (0 if r['online'] else 1,
+                             -(r['last'].created_at.timestamp() if r['last'] and r['last'].created_at else 0)))
+
+    # Лента действий
+    feed = UserActivityLog.query.order_by(UserActivityLog.id.desc()).limit(120).all()
+    audit = AuditLog.query.order_by(AuditLog.id.desc()).limit(40).all()
+    return render_template('settings_activity.html', rows=rows, feed=feed, audit=audit, now=now)
 
 @bp.route('/settings')
 @login_required

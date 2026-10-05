@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ _('User Activity') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📡 {{ _('User Activity') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/settings" class="btn btn-sm" style="background:#eee">{{ _('Settings') }}</a>
+        <button class="btn btn-sm" style="background:#3498db;color:white" onclick="location.reload()">🔄</button>
+    </div>
+</div>
+
+<!-- WHO IS ONLINE -->
+<div class="card">
+    <h2 style="margin:0 0 12px">👥 {{ _('Online / Offline') }}</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('User') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Now / last page') }}</th>
+                <th>{{ _('Last action') }}</th>
+                <th>{{ _('Last seen') }}</th>
+            </tr>
+            {% for r in rows %}
+            <tr {% if r.online %}style="background:#eafaf1"{% endif %}>
+                <td>
+                    <strong>{{ r.user.display_name or r.user.username }}</strong>
+                    <br><small style="color:#888">{{ r.user.role }} · @{{ r.user.username }}</small>
+                </td>
+                <td>
+                    {% if r.online %}
+                    <span class="badge badge-active">🟢 {{ _('Online') }}</span>
+                    {% else %}
+                    <span class="badge badge-offline">⚪ {{ _('Offline') }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis">
+                    {% if r.last and r.last.action == 'view' %}{{ r.last.page }}
+                    {% elif r.last_view %}{{ r.last_view.page }}
+                    {% else %}—{% endif %}
+                </td>
+                <td style="font-size:12px">
+                    {% if r.last %}
+                        <span style="font-weight:600">{{ r.last.method or r.last.action }}</span>
+                        {{ r.last.page }}
+                        {% if r.last.details %}<br><small style="color:#888">{{ r.last.details }}</small>{% endif %}
+                    {% else %}—{% endif %}
+                </td>
+                <td style="white-space:nowrap;font-size:12px">
+                    {% if r.last and r.last.created_at %}{{ r.last.created_at.strftime('%d-%m %H:%M:%S') }}
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<!-- ACTIVITY FEED -->
+<div class="card">
+    <h2 style="margin:0 0 12px">📋 {{ _('Activity feed') }} ({{ feed|length }})</h2>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{{ _('When') }}</th>
+                <th>{{ _('User') }}</th>
+                <th>{{ _('Action') }}</th>
+                <th>{{ _('Page') }}</th>
+                <th>HTTP</th>
+                <th>ms</th>
+            </tr>
+            {% for a in feed %}
+            <tr>
+                <td style="white-space:nowrap;font-size:11px">{{ a.created_at.strftime('%d-%m %H:%M:%S') if a.created_at else '—' }}</td>
+                <td style="font-size:12px">{{ a.username or '—' }}</td>
+                <td><span class="badge" style="background:{% if a.method == 'POST' %}#f39c12{% elif a.action == 'view' %}#3498db{% else %}#95a5a6{% endif %};color:white;font-size:10px">{{ a.method or a.action }}</span></td>
+                <td style="font-size:11px;max-width:240px;overflow:hidden;text-overflow:ellipsis">{{ a.page }}</td>
+                <td style="font-size:11px">{{ a.status_code or '' }}</td>
+                <td style="font-size:11px">{{ a.duration_ms if a.duration_ms is defined else '' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;color:#888;padding:20px">{{ _('No activity yet') }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<!-- AUDIT -->
+<div class="card">
+    <h2 style="margin:0 0 12px">🔐 {{ _('Audit log') }}</h2>
+    <div class="table-wrap">
+        <table>
+            <tr><th>{{ _('When') }}</th><th>{{ _('User') }}</th><th>{{ _('Action') }}</th><th>{{ _('Details') }}</th></tr>
+            {% for a in audit %}
+            <tr>
+                <td style="white-space:nowrap;font-size:11px">{{ a.created_at.strftime('%d-%m %H:%M:%S') if a.created_at else '—' }}</td>
+                <td style="font-size:12px">{{ a.user.username if a.user else a.user_id }}</td>
+                <td style="font-size:12px">{{ a.action }} {{ a.entity_type or '' }}</td>
+                <td style="font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis">{{ a.details }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="text-align:center;color:#888;padding:20px">{{ _('No events') }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}
