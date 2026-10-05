@@ -20,14 +20,13 @@
             <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
                 {% for st in ['accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected', 'reopened'] %}
-                {% if not (st == 'closed' and not current_user.has_role('admin', 'director')) %}
                 {% if st != fault.status %}
                 <option value="{{ st }}" style="background:white;color:#333">{{ status_labels.get(st, st) }}</option>
                 {% endif %}
-                {% endif %}
                 {% endfor %}
+                {# Закрыть — только админ / главный механик / начальник ТС #}
                 {% if current_user.has_role('admin', 'director') and fault.status not in ['closed'] %}
-                <option value="closed" style="background:white;color:#333">{{ status_labels.get('closed', 'closed') }}</option>
+                <option value="closed" style="background:#fff3e0;color:#e65100;font-weight:700">🔒 {{ status_labels.get('closed', 'closed') }}</option>
                 {% endif %}
             </select>
         </div>
@@ -42,7 +41,14 @@
         <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="openPauseModal('paused')">⏸ {{ _('Pause') }}</button>
         {% endif %}
         {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
-        <button type="button" class="btn btn-sm" style="background:#e67e22;color:white" onclick="openCloseModal()">🔒 {{ _('Close Fault') }}</button>
+        <button type="button" class="btn btn-sm" style="background:#e67e22;color:white;font-weight:700"
+                title="{{ _('Only admin / head of technical service / head mechanic') }}"
+                onclick="openCloseModal()">🔒 {{ _('Close Fault') }}</button>
+        {% endif %}
+        {% if fault.status == 'resolved' and current_user.has_role('technician') %}
+        <span style="background:#fff3e0;color:#e65100;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600">
+            ✅ {{ _('Resolved') }} — {{ _('Awaiting close by head') }}
+        </span>
         {% endif %}
         {% if fault.status in ['closed', 'resolved'] and current_user.has_role('admin', 'director') %}
         <button type="button" class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReopenModal()">🔄 {{ _('Reopen') }}</button>
