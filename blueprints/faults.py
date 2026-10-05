@@ -174,7 +174,10 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
 
     if not allow_illegal and new_status != old_status:
         allowed = ALLOWED_TRANSITIONS.get(old_status, ())
-        if new_status not in allowed:
+        # Начальство может закрыть заявку из любого статуса (кроме уже закрытой)
+        if new_status == 'closed' and user.has_role('admin', 'director'):
+            pass
+        elif new_status not in allowed:
             return False, _('Transition not allowed: {} → {}').format(
                 STATUS_LABELS.get(old_status, old_status),
                 STATUS_LABELS.get(new_status, new_status))
@@ -714,6 +717,9 @@ def fault_close(fault_id):
     close_notes = data.get('close_notes', '')
     if has_report == 'no':
         return jsonify({'error': _('Work report is required to close this fault')}), 400
+    # closed → уже закрыта
+    if f.status == 'closed':
+        return jsonify({'error': _('Fault is closed')}), 400
     ok, err = _set_fault_status(f, 'closed', current_user,
                                 reason=close_notes or 'closed by head')
     if not ok:
