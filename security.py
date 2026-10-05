@@ -1,6 +1,6 @@
 """Roles, group permissions, and access decorators."""
 from functools import wraps
-from flask import flash, redirect, url_for
+from flask import flash, redirect, url_for, request
 from flask_login import current_user
 from flask_babel import gettext as _
 from models import GroupPermission, ResponsibleGroup, Verantwoordelijke
@@ -82,3 +82,55 @@ def section_access_required(section_key, action='view'):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+
+# ── Права механика (role=technician) ─────────────────────────────
+# Механик НЕ видит модули «Аналитика» и «Система».
+
+MECHANIC_DENIED_PREFIXES = (
+    'reports.', 'stats.', 'archive.',          # Аналитика
+    'settings.', 'users.', 'audit_log.',       # Система
+    'export.', 'invoices.',                    # финансы
+)
+
+MECHANIC_DENIED_PATHS = (
+    '/reports', '/stats', '/archive', '/work-report',
+    '/settings', '/users', '/audit-log',
+    '/invoices', '/export',
+)
+
+
+def is_mechanic(user=None):
+    u = user or current_user
+    return bool(u and getattr(u, 'is_authenticated', False) and getattr(u, 'role', '') == 'technician')
+
+
+def is_privileged(user=None):
+    """Админ / начальник ТС / главный механик (в будущем)."""
+    u = user or current_user
+    return bool(u and getattr(u, 'is_authenticated', False) and u.has_role('admin', 'director'))
+
+
+def mechanic_denied_endpoint(endpoint):
+    """True, если механику нельзя на этот endpoint."""
+    if not endpoint:
+        return False
+    return any(endpoint.startswith(p) for p in MECHANIC_DENIED_PREFIXES)
+
+
+def enforce_mechanic_access():
+    """Вызвать в before_request: 403/redirect для механика на аналитике и системе."""
+    if not current_user.is_authenticated:
+        return None
+    if not is_mechanic(current_user):
+        return None
+    endpoint = getattr(request, 'endpoint', None) or ''
+    path = getattr(request, 'path', '') or ''
+    if mechanic_denied_endpoint(endpoint):
+        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        return redirect(url_for('index'))
+    for p in MECHANIC_DENIED_PATHS:
+        if path == p or path.startswith(p + '/'):
+            flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+            return redirect(url_for('index'))
+    return None

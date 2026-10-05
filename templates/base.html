@@ -540,20 +540,26 @@
             </div>
             {% endif %}
             
-            {% if has_access('reports') or has_access('statistics') %}
+            {# Аналитика — только не механики (admin/director/user без technician) #}
+            {% if not is_mechanic and (has_access('reports') or has_access('statistics') or current_user.has_role('admin', 'director')) %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Analytics') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
-            {% if has_access('reports') %}
+            {% if has_access('reports') or current_user.has_role('admin', 'director') %}
             <a href="/reports" class="sb-item {% if request.endpoint in ['reports.reports', 'reports.report_period', 'reports.report_worker'] %}active{% endif %}"><span class="sb-icon">📊</span>{{ _('Reports') }}</a>
             <a href="/work-report" class="sb-item {% if 'work_report' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Report') }}</a>
             <a href="/archive" class="sb-item {% if 'archive' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Archive') }}</a>
             {% endif %}
-            {% if has_access('statistics') %}
+            {% if has_access('statistics') or current_user.has_role('admin', 'director') %}
             <a href="/stats/faults" class="sb-item {% if 'stats' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📈</span>{{ _('Statistics') }}</a>
+            {% endif %}
+            {% if current_user.has_role('admin', 'director') %}
+            <a href="/faults/status-history" class="sb-item {% if 'status_history' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📜</span>{{ _('Status history report') }}</a>
+            <a href="/time-report/team" class="sb-item {% if 'team_hours' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👥</span>{{ _('Team Hours Report') }}</a>
             {% endif %}
             </div>
             {% endif %}
-            
+
+            {# Система — только админ #}
             {% if current_user.role == 'admin' %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('System') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">

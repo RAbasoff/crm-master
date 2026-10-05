@@ -38,6 +38,7 @@ from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    check_tool_wear_notifications, safe_commit, add_work_report,
                    safe_int, safe_float, safe_date, find_pdf_font, ensure_fpdf,
                    is_user_at_work, user_schedule_restricted)
+from security import enforce_mechanic_access, is_mechanic
 
 # ============================================================
 # APP CONFIG
@@ -425,6 +426,12 @@ def before_request():
         if request.endpoint and request.endpoint not in allowed:
             return redirect(url_for('change_password'))
 
+    # Права механика: без «Аналитики» и «Системы»
+    if current_user.is_authenticated:
+        denied = enforce_mechanic_access()
+        if denied is not None:
+            return denied
+
     # Доступ механиков только в рабочие часы по графику
     # (не действует, если администратор смотрит от имени пользователя)
     if current_user.is_authenticated and not session.get('impersonate_admin_id') and user_schedule_restricted(current_user):
@@ -501,6 +508,8 @@ def inject_section_access():
                 impersonate_admin_id=session.get('impersonate_admin_id'),
                 impersonate_admin=db.session.get(User, session['impersonate_admin_id']) if session.get('impersonate_admin_id') else None,
                 is_admin=(current_user.is_authenticated and current_user.has_role('admin') and not session.get('impersonate_admin_id')),
+                is_mechanic=is_mechanic(),
+                can_view_analytics=(current_user.is_authenticated and (current_user.has_role('admin', 'director') or not is_mechanic())),
                 all_users_list=User.query.filter(User.is_active_user == True).order_by(User.username).all() if (current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id'))) else [])
 
 
