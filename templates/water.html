@@ -103,8 +103,9 @@
                 <td></td>
                 <td colspan="7" style="padding:4px 8px">
                     {% for ph in p.photos %}
-                    <img src="/static/uploads/{{ ph.filename }}" style="height:48px;border-radius:4px;margin:2px;object-fit:cover"
-                         alt="photo">
+                    <img src="/static/uploads/{{ ph.filename }}" style="height:48px;border-radius:4px;margin:2px;object-fit:cover;cursor:pointer"
+                         alt="{{ ph.description or 'photo' }}" title="{{ ph.description or ph.filename }}"
+                         onclick="window.open(this.src, '_blank')">
                     {% endfor %}
                 </td>
             </tr>

@@ -68,7 +68,8 @@
             <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
                 {% for ph in point.photos %}
                 <div style="position:relative">
-                    <img src="/static/uploads/{{ ph.filename }}" style="height:80px;border-radius:6px;object-fit:cover">
+                    <img src="/static/uploads/{{ ph.filename }}" style="height:80px;border-radius:6px;object-fit:cover;cursor:pointer"
+                         onclick="window.open(this.src, '_blank')" title="{{ ph.description or ph.filename }}">
                     <button type="submit" formaction="/air/points/photo/{{ ph.id }}/delete"
                             style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:4px;cursor:pointer;padding:2px 5px">✕</button>
                 </div>
