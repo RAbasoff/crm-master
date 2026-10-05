@@ -6128,3 +6128,19 @@ msgstr "Werk op deze melding beëindigen?"
 #: faults work-timer
 msgid "Finish work on fault"
 msgstr "Werk beëindigen op melding"
+
+#: equip-cal
+msgid "Other equipment"
+msgstr "Overige apparatuur"
+
+#: equip-cal
+msgid "no service date"
+msgstr "geen service-datum"
+
+#: equip-cal
+msgid "Set date"
+msgstr "Datum instellen"
+
+#: equip-cal
+msgid "Last service"
+msgstr "Laatste service"

@@ -6111,3 +6111,19 @@ msgstr "Zakończyć pracę przy tym zgłoszeniu?"
 #: faults work-timer
 msgid "Finish work on fault"
 msgstr "Zakończ pracę przy zgłoszeniu"
+
+#: equip-cal
+msgid "Other equipment"
+msgstr "Pozostały sprzęt"
+
+#: equip-cal
+msgid "no service date"
+msgstr "brak daty serwisu"
+
+#: equip-cal
+msgid "Set date"
+msgstr "Ustaw datę"
+
+#: equip-cal
+msgid "Last service"
+msgstr "Ostatni serwis"

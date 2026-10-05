@@ -341,12 +341,19 @@ def maintenance_calendar():
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
     next_month = month_end.strftime('%Y-%m')
     
+    # Прочее оборудование без даты ТО — чтобы не «терялось» из списка
+    from models import Equipment as _Eq
+    eq_all = _Eq.query.all()
+    equipment_unscheduled = [e for e in eq_all if not e.next_service_date]
+
     return render_template('maintenance_calendar.html',
         month=month, month_start=month_start, month_end=month_end,
         events=sorted(events, key=lambda e: e['date']),
         overdue=overdue, today=today,
         prev_month=prev_month, next_month=next_month,
-        timedelta=timedelta)
+        timedelta=timedelta,
+        month_name=month_start.strftime('%B %Y'),
+        equipment_unscheduled=equipment_unscheduled)
 
 @bp.route('/maintenance-calendar/complete', methods=['POST'])
 @login_required

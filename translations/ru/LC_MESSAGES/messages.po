@@ -6405,3 +6405,19 @@ msgstr "События"
 #: two-approval reports
 msgid "No events"
 msgstr "Нет событий"
+
+#: equip-cal
+msgid "Other equipment"
+msgstr "Прочее оборудование"
+
+#: equip-cal
+msgid "no service date"
+msgstr "без даты ТО"
+
+#: equip-cal
+msgid "Set date"
+msgstr "Задать дату"
+
+#: equip-cal
+msgid "Last service"
+msgstr "Последнее ТО"

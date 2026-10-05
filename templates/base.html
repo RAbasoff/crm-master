@@ -454,7 +454,7 @@
             {% if has_access('tool_wear') %}
             <a href="/tool-wear" class="sb-item {% if 'tool_wear' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔪</span>{{ _('Knife Sharpening') }}</a>
             {% endif %}
-            {% if has_access('machines') %}
+            {% if has_access('machines') or has_access('equipment') %}
             <a href="/assets" class="sb-item {% if 'asset' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🏭</span>{{ _('Other Devices') }}</a>
             {% endif %}
             </div>

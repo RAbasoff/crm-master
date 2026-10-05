@@ -275,6 +275,24 @@
     {% endif %}
 </div>
 
+{% if equipment_unscheduled %}
+<div class="card">
+    <h2>🏭 {{ _('Other equipment') }} — {{ _('no service date') }} ({{ equipment_unscheduled|length }})</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th>{{ _('Last service') }}</th><th></th></tr>
+        {% for eq in equipment_unscheduled %}
+        <tr>
+            <td><a href="/assets/{{ eq.id }}">{{ eq.name }}</a></td>
+            <td>{{ eq.equipment_type or '—' }}</td>
+            <td>{{ eq.status or '—' }}</td>
+            <td>{{ eq.last_service_date.strftime('%d-%m-%Y') if eq.last_service_date else '—' }}</td>
+            <td><a href="/assets/{{ eq.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Set date') }}</a></td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endif %}
+
 <script>
 var _printStyle = null;
 function doCalPrint() {

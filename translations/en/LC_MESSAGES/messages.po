@@ -6267,3 +6267,19 @@ msgstr "Events"
 #: two-approval reports
 msgid "No events"
 msgstr "No events"
+
+#: equip-cal
+msgid "Other equipment"
+msgstr "Other equipment"
+
+#: equip-cal
+msgid "no service date"
+msgstr "no service date"
+
+#: equip-cal
+msgid "Set date"
+msgstr "Set date"
+
+#: equip-cal
+msgid "Last service"
+msgstr "Last service"

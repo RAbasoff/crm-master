@@ -72,8 +72,8 @@
             <td style="font-size:12px">{{ eq.model_name or '—' }}</td>
             <td style="font-size:12px;color:#888">{{ eq.serial_number or '—' }}</td>
             <td style="font-size:12px">{{ eq.section.name if eq.section else '—' }}</td>
-            <td><span class="badge badge-{% if eq.status=='active' %}active{% elif eq.status=='broken' %}critical{% elif eq.status=='maintenance' %}high{% else %}open{% endif %}">{{ eq.status }}</span></td>
-            <td><span class="badge badge-{% if eq.condition=='excellent' %}active{% elif eq.condition=='good' %}active{% elif eq.condition=='fair' %}high{% else %}critical{% endif %}">{{ eq.condition }}</span></td>
+            <td><span class="badge badge-{% if eq.status=='active' %}active{% elif eq.status=='broken' %}critical{% elif eq.status=='maintenance' %}high{% else %}open{% endif %}">{{ eq.status or '—' }}</span></td>
+            <td><span class="badge badge-{% if eq.condition in ('excellent', 'good') %}active{% elif eq.condition=='fair' %}high{% else %}critical{% endif %}">{{ eq.condition or '—' }}</span></td>
             <td>
                 <div style="display:flex;gap:4px">
                     <a href="/assets/{{ eq.id }}" class="btn btn-sm" style="font-size:11px;background:#eee">{{ _('View') }}</a>
