@@ -16,7 +16,7 @@ bp = Blueprint('purchase', __name__)
 
 @bp.route('/purchase-requests')
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'director')
 def purchase_requests_list():
     if current_user.has_role('admin', 'director'):
         requests = PurchaseRequest.query.order_by(PurchaseRequest.created_at.desc()).all()
@@ -27,7 +27,7 @@ def purchase_requests_list():
 
 @bp.route('/purchase-requests/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'director')
 def purchase_request_new():
     if request.method == 'POST':
         try:
@@ -82,7 +82,7 @@ def purchase_request_new():
 
 @bp.route('/purchase-requests/<int:request_id>')
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'director')
 def purchase_request_detail(request_id):
     pr = PurchaseRequest.query.get_or_404(request_id)
     return render_template('purchase_request_detail.html', pr=pr)

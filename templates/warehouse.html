@@ -67,7 +67,7 @@
 </div>
 <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-        <tr><th style="width:30px"><input type="checkbox" id="selectAllQR" onclick="toggleAllQR(this)"></th><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th class="hide-mobile">{{ _('Type') }}</th><th class="hide-mobile">{{ _('Group') }}</th><th class="hide-mobile">{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th><th class="hide-mobile">{{ _('Price') }}</th><th style="width:120px"></th></tr>
+        <tr><th style="width:30px"><input type="checkbox" id="selectAllQR" onclick="toggleAllQR(this)"></th><th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Category') }}</th><th class="hide-mobile">{{ _('Type') }}</th><th class="hide-mobile">{{ _('Group') }}</th><th class="hide-mobile">{{ _('Location') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Unit') }}</th>{% if not is_mechanic %}<th class="hide-mobile">{{ _('Price') }}</th>{% endif %}<th style="width:120px"></th></tr>
         {% for i in items %}
         <tr class="wh-row" data-name="{{ i.naam|lower }}">
             <td><input type="checkbox" class="qr-check" data-id="{{ i.id }}" data-name="{{ i.naam }}" data-spn="{{ i.supplier_part_number or '' }}"></td>
@@ -82,10 +82,14 @@
                 <button class="btn btn-sm" style="background:#f0f2f5;padding:2px 6px;font-size:11px;margin-left:4px" onclick="editQty({{ i.id }})" title="{{ _('Edit quantity') }}">✏️</button>
             </td>
             <td>{{ i.eenheid }}</td>
+            {% if not is_mechanic %}
             <td class="hide-mobile">€{{ "%.2f"|format(i.prijs) }}</td>
+            {% endif %}
             <td style="white-space:nowrap">
                 <div style="display:inline-flex;gap:2px;flex-wrap:nowrap">
+                {% if not is_mechanic %}
                 <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary" style="padding:3px 5px;font-size:11px">{{ _('Edit') }}</a>
+                {% endif %}
                 <a href="/warehouse/{{ i.id }}/transfer" class="btn btn-sm" style="background:#8e44ad;color:white;padding:3px 5px;font-size:11px" title="{{ _('Transfer') }}">📦</a>
                 <button class="btn btn-sm btn-success" style="padding:3px 5px;font-size:11px" onclick="document.getElementById('mv-{{ i.id }}').style.display='table-row'">+</button>
                 <div class="dropdown" style="display:inline-block;position:relative">
@@ -94,10 +98,12 @@
                         <a href="/api/warehouse/qr/{{ i.id }}" target="_blank" style="display:block;padding:6px 12px;font-size:12px;color:#333;text-decoration:none">📱 QR</a>
                         <a href="#" onclick="showBarcode('{{ i.id }}', '{{ i.naam }}', '{{ i.supplier_part_number or '' }}');return false" style="display:block;padding:6px 12px;font-size:12px;color:#333;text-decoration:none">||| {{ _('Barcode') }}</a>
                         <a href="/warehouse/labels?ids={{ i.id }}" target="_blank" style="display:block;padding:6px 12px;font-size:12px;color:#333;text-decoration:none">🏷️ {{ _('Label') }}</a>
+                        {% if not is_mechanic %}
                         <a href="/warehouse/{{ i.id }}/prices" style="display:block;padding:6px 12px;font-size:12px;color:#333;text-decoration:none">💰 {{ _('Prices') }}</a>
                         <form method="POST" action="/warehouse/{{ i.id }}/delete" style="margin:0" onsubmit="return confirm('{{ _('Delete') }} {{ i.naam }}?')">
                             <button type="submit" style="display:block;width:100%;padding:6px 12px;font-size:12px;color:#e74c3c;background:none;border:none;text-align:left;cursor:pointer">🗑 {{ _('Delete') }}</button>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
                 </div>

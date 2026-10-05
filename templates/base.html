@@ -535,7 +535,9 @@
             <a href="/consumable-reminders" class="sb-item {% if 'consumable_reminders' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔔</span>{{ _('Replacement Reminders') }}</a>
             {% endif %}
             {% if has_access('purchase_requests') %}
+            {% if not is_mechanic %}
             <a href="/purchase-requests" class="sb-item {% if 'purchase' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🛒</span>{{ _('Purchase Requests') }}</a>
+            {% endif %}
             {% endif %}
             </div>
             {% endif %}

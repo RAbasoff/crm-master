@@ -91,12 +91,14 @@ MECHANIC_DENIED_PREFIXES = (
     'reports.', 'stats.', 'archive.',          # Аналитика
     'settings.', 'users.', 'audit_log.',       # Система
     'export.', 'invoices.',                    # финансы
+    'purchase.',                               # закупки — только начальство
 )
 
 MECHANIC_DENIED_PATHS = (
     '/reports', '/stats', '/archive', '/work-report',
     '/settings', '/users', '/audit-log',
     '/invoices', '/export',
+    '/purchase-requests',
 )
 
 
