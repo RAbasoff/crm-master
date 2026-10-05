@@ -455,9 +455,7 @@ def two_approve(two_id):
               f'{two.number}: {action} by {current_user.username} {comment[:80]}')
     for w in two.workers:
         if w.user_id:
-            create_notification(
-                w.user_id,
-                _('TWO approved') if action != 'reject' else _('TWO rejected'),
+            create_notification(w.user_id, 'TWO approved' if action != 'reject' else 'TWO rejected',
                 f'{two.number}: {two.description[:80]}',
                 'info' if action != 'reject' else 'warning',
                 url_for('two.two_detail', two_id=two.id)
@@ -480,9 +478,7 @@ def two_submit(two_id):
         return redirect(url_for('two.two_detail', two_id=two.id))
     log_audit('two_submit', 'two', two.id, two.number)
     for head in User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all():
-        create_notification(
-            head.id,
-            _('TWO awaiting approval'),
+        create_notification(head.id, 'TWO awaiting approval',
             f'{two.number}: {two.description[:80]}',
             'info',
             url_for('two.two_detail', two_id=two.id)

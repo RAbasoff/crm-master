@@ -97,6 +97,14 @@
         <div class="form-group">
             <label><input type="checkbox" name="is_active" {% if user.is_active_user %}checked{% endif %}> {{ _('Active') }}</label>
             <label style="margin-left:12px"><input type="checkbox" name="work_hours_exempt" {% if user and user.work_hours_exempt %}checked{% endif %}> {{ _('24/7 access (no work-hours limit)') }}</label>
+            <label style="margin-left:12px">{{ _('Language') }}:
+                <select name="preferred_language" style="margin-left:4px;padding:4px 8px">
+                    <option value="">{{ _('Auto') }}</option>
+                    {% for code, name in [('ru','RU'),('nl','NL'),('en','EN'),('pl','PL')] %}
+                    <option value="{{ code }}" {% if user and user.preferred_language == code %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
         </div>
         {% endif %}
         <div class="form-group">

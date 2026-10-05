@@ -351,7 +351,7 @@ def warehouse_move(item_id):
         level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
         msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
         for a in admins:
-            create_notification(a.id, _('Low stock'), msg, 'warning', '/warehouse/')
+            create_notification(a.id, 'Low stock', msg, 'warning', '/warehouse/')
         _notify_logistiek_low_stock(item)
     flash(_('{} {} {} — {}').format(mt.capitalize(), qty, item.eenheid, item.naam), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
@@ -657,7 +657,7 @@ def warehouse_qty_update():
         level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
         msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
         for a in admins:
-            create_notification(a.id, _('Low stock'), msg, 'warning', '/warehouse/')
+            create_notification(a.id, 'Low stock', msg, 'warning', '/warehouse/')
         _notify_logistiek_low_stock(item)
     return jsonify({'ok': True, 'min_warning': qty <= item.minimum})
 
@@ -747,7 +747,7 @@ def warehouse_transfer(item_id):
             level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
             msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
             for a in admins:
-                create_notification(a.id, _('Low stock'), msg, 'warning', '/warehouse/')
+                create_notification(a.id, 'Low stock', msg, 'warning', '/warehouse/')
 
         flash(_('Transferred {} {} {} to {}').format(qty, item.eenheid, item.naam, person.naam), 'success')
         return redirect(url_for('warehouse.warehouse_list'))
@@ -781,7 +781,7 @@ def _notify_logistiek_low_stock(item):
         if p.username:
             user = User.query.filter_by(username=p.username).first()
             if user:
-                create_notification(user.id, _('Low stock'), f'⚠️ Склад Oktopus: {msg}', 'warning', '/warehouse/')
+                create_notification(user.id, 'Low stock', f'⚠️ Склад Oktopus: {msg}', 'warning', '/warehouse/')
 
 
 @bp.route('/transfer-to-oktopus', methods=['POST'])

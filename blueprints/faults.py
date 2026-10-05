@@ -339,18 +339,14 @@ def fault_new():
                     flash(_('Fault created but video upload failed'), 'warning')
 
             for tech in f.assigned_technicians:
-                create_notification(
-                    tech.id,
-                    _('Fault assigned to you'),
+                create_notification(tech.id, 'Fault assigned to you',
                     f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})",
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
             if not f.assigned_technicians:
                 for tech in User.query.filter_by(role='technician', is_active_user=True).all():
-                    create_notification(
-                        tech.id,
-                        _('New fault report'),
+                    create_notification(tech.id, 'New fault report',
                         f"{_('Machine')}: {target} - {f.title} ({_('Reporter')}: {who})",
                         'fault',
                         url_for('faults.fault_detail', fault_id=f.id)
@@ -588,9 +584,7 @@ def fault_accept(fault_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('accept', 'fault', f.id, f'{f.title} — {f.target_name}')
-    create_notification(
-        f.reporter_id,
-        _('Fault accepted'),
+    create_notification(f.reporter_id, 'Fault accepted',
         f"{_('Technician')} {current_user.display_name} {_('accepted your fault report')}: {f.title}",
         'info',
         url_for('faults.fault_detail', fault_id=f.id)
@@ -630,16 +624,12 @@ def fault_assign(fault_id):
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
     for tech in f.assigned_technicians:
-        create_notification(
-            tech.id,
-            _('Fault assigned to you'),
+        create_notification(tech.id, 'Fault assigned to you',
             f"{_('Admin assigned fault to you')}: {f.title} ({_('Machine')}: {f.target_name})",
             'fault',
             url_for('faults.fault_detail', fault_id=f.id)
         )
-    create_notification(
-        f.reporter_id,
-        _('Fault assigned'),
+    create_notification(f.reporter_id, 'Fault assigned',
         f"{_('Your fault assigned to')} {', '.join(names)}: {f.title}",
         'info',
         url_for('faults.fault_detail', fault_id=f.id)
@@ -663,9 +653,7 @@ def fault_resolve(fault_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('resolve', 'fault', f.id, f'{f.title} — {f.target_name}')
-    create_notification(
-        f.reporter_id,
-        _('Fault resolved'),
+    create_notification(f.reporter_id, 'Fault resolved',
         f"{_('Your fault report has been resolved')}: {f.title}",
         'info',
         url_for('faults.fault_detail', fault_id=f.id)
@@ -673,9 +661,7 @@ def fault_resolve(fault_id):
     # Уведомить начальство: заявка ждёт закрытия
     for head in User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all():
         if head.id != current_user.id:
-            create_notification(
-                head.id,
-                _('Fault resolved — awaiting close'),
+            create_notification(head.id, 'Fault resolved — awaiting close',
                 f"#{f.id} {f.title} — {_('Resolved by')} {current_user.display_name or current_user.username}. {_('Please verify and close')}.",
                 'info',
                 url_for('faults.fault_detail', fault_id=f.id)
@@ -740,9 +726,7 @@ def fault_close(fault_id):
             return jsonify({'error': 'Save failed'}), 500
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
-    create_notification(
-        f.reporter_id,
-        _('Fault closed'),
+    create_notification(f.reporter_id, 'Fault closed',
         f"{_('Your fault report has been closed')}: {f.title}. {close_notes}",
         'success',
         url_for('faults.fault_detail', fault_id=f.id)
@@ -785,9 +769,7 @@ def fault_reopen(fault_id):
             return jsonify({'error': 'Save failed'}), 500
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
-    create_notification(
-        f.reporter_id,
-        _('Fault reopened'),
+    create_notification(f.reporter_id, 'Fault reopened',
         f"{_('Fault reopened')}: {f.title}. {reason}",
         'warning',
         url_for('faults.fault_detail', fault_id=f.id)

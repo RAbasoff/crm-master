@@ -66,9 +66,7 @@ def schedule_test_push():
         return redirect(url_for('schedule.schedule_list'))
 
     for u in targets:
-        create_notification(
-            u.id,
-            _('Test push'),
+        create_notification(u.id, 'Test push',
             message,
             'info',
             '/schedule',

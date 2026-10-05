@@ -8,8 +8,8 @@
 <div class="card">
     {% for n in notifications %}
     <div class="notif-item {% if not n.is_read %}unread{% endif %}" data-id="{{ n.id }}" data-link="{{ n.link or '' }}" onclick="handleNotifClick(this)" style="padding:12px;border-bottom:1px solid #f0f0f0;cursor:pointer">
-        <div class="notif-title" style="font-weight:600;font-size:14px">{{ n.title }}</div>
-        <div class="notif-msg" style="font-size:13px;color:#666;margin-top:4px">{{ n.message }}</div>
+        <div class="notif-title" style="font-weight:600;font-size:14px">{{ _(n.title) }}</div>
+        <div class="notif-msg" style="font-size:13px;color:#666;margin-top:4px">{{ _(n.message) if n.message else '' }}</div>
         <div class="notif-time" style="font-size:11px;color:#999;margin-top:4px">{{ n.created_at.strftime('%d-%m-%Y %H:%M') }}</div>
     </div>
     {% else %}

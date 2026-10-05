@@ -59,9 +59,7 @@ def purchase_request_new():
 
         admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
         for admin in admins:
-            create_notification(
-                admin.id,
-                _('New purchase request'),
+            create_notification(admin.id, 'New purchase request',
                 f"{pr.part_name} x{pr.quantity} — {pr.machine.name} ({_('Requester')}: {pr.requester.name if pr.requester else '?'})",
                 'fault',
                 url_for('purchase.purchase_request_detail', request_id=pr.id)
@@ -103,9 +101,7 @@ def purchase_request_approve(request_id):
     log_audit('approve', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name}')
     add_work_report(f'✅ Заявка одобрена: {pr.part_name} x{pr.quantity} — {pr.machine.name}')
     
-    create_notification(
-        pr.requester_id,
-        _('Purchase request approved'),
+    create_notification(pr.requester_id, 'Purchase request approved',
         f"{pr.part_name} x{pr.quantity} — {pr.machine.name}",
         'info',
         url_for('purchase.purchase_request_detail', request_id=pr.id)
@@ -130,9 +126,7 @@ def purchase_request_reject(request_id):
     log_audit('reject', 'purchase_request', pr.id, f'{pr.part_name} x{pr.quantity} — {pr.machine.name}')
     add_work_report(f'❌ Заявка отклонена: {pr.part_name} x{pr.quantity} — {pr.machine.name}')
     
-    create_notification(
-        pr.requester_id,
-        _('Purchase request rejected'),
+    create_notification(pr.requester_id, 'Purchase request rejected',
         f"{pr.part_name} x{pr.quantity} — {pr.machine.name}",
         'warning',
         url_for('purchase.purchase_request_detail', request_id=pr.id)

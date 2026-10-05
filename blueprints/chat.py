@@ -192,9 +192,7 @@ def api_send():
         if p.user_id != current_user.id:
             status[str(p.user_id)] = 'delivered'
             # Create notification
-            create_notification(
-                p.user_id,
-                _('New message'),
+            create_notification(p.user_id, 'New message',
                 f"{current_user.display_name}: {body[:50]}",
                 'chat',
                 url_for('chat.chat_room', room_id=room_id)

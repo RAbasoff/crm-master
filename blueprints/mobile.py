@@ -85,9 +85,7 @@ def mobile_fault_new():
 
         # Notify all technicians
         for tech in User.query.filter_by(role='technician', is_active_user=True).all():
-            create_notification(
-                tech.id,
-                _('New fault report'),
+            create_notification(tech.id, 'New fault report',
                 f"{_('Machine')}: {target} - {title} ({_('Reporter')}: {who})",
                 'fault',
                 url_for('faults.fault_detail', fault_id=fault.id)

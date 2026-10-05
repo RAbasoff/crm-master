@@ -175,9 +175,7 @@ def vacation_new():
         
         admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
         for admin in admins:
-            create_notification(
-                admin.id,
-                _('New vacation request'),
+            create_notification(admin.id, 'New vacation request',
                 f"{current_user.display_name}: {v.vacation_type} {v.date_from} - {v.date_to}",
                 'info',
                 url_for('timekeeping.vacations_list')
@@ -198,7 +196,7 @@ def vacation_approve(vacation_id):
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('timekeeping.vacations_list'))
-    create_notification(v.user_id, _('Vacation approved'), f"{v.vacation_type} {v.date_from} - {v.date_to}", 'info')
+    create_notification(v.user_id, 'Vacation approved', f"{v.vacation_type} {v.date_from} - {v.date_to}", 'info')
     flash(_('Vacation approved'), 'success')
     return redirect(url_for('timekeeping.vacations_list'))
 
@@ -213,7 +211,7 @@ def vacation_reject(vacation_id):
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('timekeeping.vacations_list'))
-    create_notification(v.user_id, _('Vacation rejected'), f"{v.vacation_type} {v.date_from} - {v.date_to}", 'warning')
+    create_notification(v.user_id, 'Vacation rejected', f"{v.vacation_type} {v.date_from} - {v.date_to}", 'warning')
     flash(_('Vacation rejected'), 'error')
     return redirect(url_for('timekeeping.vacations_list'))
 

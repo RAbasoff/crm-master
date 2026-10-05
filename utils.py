@@ -413,7 +413,7 @@ def check_tool_wear_notifications():
         for uid in notify_user_ids:
             if uid in existing_notifs:
                 continue
-            create_notification(uid, _('Knife replacement needed'), msg, 'tool_wear', '/tool-wear')
+            create_notification(uid, 'Knife replacement needed', msg, 'tool_wear', '/tool-wear')
             existing_notifs.add(uid)
 
 

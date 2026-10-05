@@ -79,9 +79,7 @@ def message_new():
             )
             db.session.add(m)
             try:
-                create_notification(
-                    rid,
-                    _('New message'),
+                create_notification(rid, 'New message',
                     f"{_('From')}: {current_user.name} - {subject}",
                     'message',
                     link

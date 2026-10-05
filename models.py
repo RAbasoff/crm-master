@@ -59,6 +59,8 @@ class User(UserMixin, db.Model):
     fire_date = db.Column(db.Date)
     # Постоянный доступ без привязки к графику (вне work-hours / idle logout)
     work_hours_exempt = db.Column(db.Boolean, default=False)
+    # Язык интерфейса и уведомлений (ru/nl/en/pl)
+    preferred_language = db.Column(db.String(5))
     created_at = db.Column(db.DateTime, default=now_local)
 
     assigned_machines = db.relationship('Machine', secondary='user_machine', backref='assigned_users')

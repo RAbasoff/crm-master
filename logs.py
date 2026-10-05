@@ -4,16 +4,43 @@ from flask_login import current_user
 from models import db, Notification, AuditLog, UserActivityLog, SystemLog
 from schema import safe_commit
 
+
+def _user_language(user_id):
+    """Язык пользователя для уведомлений."""
+    try:
+        from models import User
+        u = db.session.get(User, user_id)
+        if u and getattr(u, 'preferred_language', None):
+            return u.preferred_language
+        if u and u.id == getattr(current_user, 'id', None):
+            return session.get('lang', 'ru')
+    except Exception:
+        pass
+    return session.get('lang', 'ru') or 'ru'
+
+
 def create_notification(user_id, title, message, ntype='info', link=None):
+    """Создать уведомление.
+
+    title/message хранятся как msgid (англ.) — перевод при показе
+    на языке текущего пользователя. Push — на языке получателя.
+    """
     n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
     db.session.add(n)
     safe_commit()
-    # Web Push: вибрация + звук на телефоне (PWA), даже если приложение закрыто
+    # Web Push на языке получателя
     try:
+        from flask_babel import force_locale, gettext as _t
         from push import push_to_user
-        push_to_user(user_id, title, message, url=link, tag=ntype or 'info')
+        lang = _user_language(user_id)
+        with force_locale(lang):
+            push_to_user(user_id, _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
     except Exception:
-        pass
+        try:
+            from push import push_to_user
+            push_to_user(user_id, title, message or '', url=link, tag=ntype or 'info')
+        except Exception:
+            pass
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:
