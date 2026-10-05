@@ -110,6 +110,42 @@ def maintenance_calendar():
                 'mro_id': None,
                 'record_id': None
             })
+        # Выполненные работы из журнала — чтобы запись оставалась в календаре (зелёной)
+        for log in logs_by_part.get(p.id, []):
+            if not log.date:
+                continue
+            ld = log.date.date() if hasattr(log.date, 'date') else log.date
+            if not (month_start <= ld < month_end):
+                continue
+            if log.action in ('replacement', 'replaced'):
+                ltype = 'replacement'
+            elif log.action in ('maintenance', 'maint'):
+                ltype = 'maintenance'
+            else:
+                continue
+            # пропускаем, если уже есть плановое событие на эту дату
+            skip = False
+            for e in events:
+                if e.get('part_id') == p.id and e.get('type') == ltype and e.get('date') == ld:
+                    skip = True
+                    break
+            if skip:
+                continue
+            events.append({
+                'date': ld,
+                'type': ltype,
+                'part': p.name,
+                'machine': p.machine.name,
+                'machine_id': p.machine_id,
+                'part_id': p.id,
+                'category': p.category,
+                'overdue': False,
+                'done': True,
+                'plan_id': None,
+                'equipment_id': None,
+                'mro_id': None,
+                'record_id': None
+            })
         # Check maintenance records (from batch-fetched data)
         for mr in maint_by_machine.get(p.machine_id, []):
             if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
@@ -119,6 +155,8 @@ def maintenance_calendar():
                     if log.date and log.date.date() >= mr.next_maintenance.date():
                         done = True
                         break
+                if mr.date_performed and mr.date_performed.date() >= mr.next_maintenance.date():
+                    done = True
                 events.append({
                     'date': mr.next_maintenance.date(),
                     'type': 'machine_maintenance',
@@ -362,12 +400,17 @@ def maintenance_calendar_complete():
             part = MachinePart.query.get(int(part_id))
             if part:
                 action = 'replacement' if ev_type == 'replacement' else 'maintenance'
+                event_date = request.form.get('date')
+                try:
+                    ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else datetime.utcnow().date()
+                except ValueError:
+                    ev_d = datetime.utcnow().date()
                 log = PartMaintenanceLog(
                     part_id=part.id,
                     action=action,
                     description=f'Completed from calendar by {current_user.display_name or current_user.username}',
                     performed_by=current_user.id,
-                    date=datetime.utcnow()
+                    date=datetime.combine(ev_d, datetime.min.time())
                 )
                 db.session.add(log)
                 today_d = datetime.utcnow().date()
@@ -380,7 +423,9 @@ def maintenance_calendar_complete():
                         part.next_replacement = today_d + timedelta(days=part.replacement_interval_days)
                 else:
                     part.last_maintenance = today_d
-                    if part.replacement_interval_days:
+                    if part.maintenance_interval_days:
+                        part.next_maintenance = today_d + timedelta(days=part.maintenance_interval_days)
+                    elif part.replacement_interval_days:
                         part.next_maintenance = today_d + timedelta(days=part.replacement_interval_days)
                 part.status = 'ok'
                 db.session.commit()
@@ -414,7 +459,12 @@ def maintenance_calendar_complete():
             if mr:
                 # Не обнуляем next_maintenance — иначе событие исчезает из календаря.
                 # Лог ниже делает запись «выполнено» (зелёной).
-                mr.date_performed = datetime.utcnow()
+                event_date = request.form.get('date')
+                try:
+                    ev_d = datetime.strptime(event_date, '%Y-%m-%d') if event_date else datetime.utcnow()
+                except ValueError:
+                    ev_d = datetime.utcnow()
+                mr.date_performed = ev_d
                 mr.performed_by = current_user.id
                 # Create PartMaintenanceLog so calendar shows green (done=True)
                 first_part = MachinePart.query.filter_by(machine_id=mr.machine_id).first()
@@ -424,7 +474,7 @@ def maintenance_calendar_complete():
                         action='maintenance',
                         description=f'{mr.description[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
                         performed_by=current_user.id,
-                        date=datetime.utcnow()
+                        date=ev_d
                     )
                     db.session.add(log)
                 db.session.commit()
@@ -438,9 +488,14 @@ def maintenance_calendar_complete():
             if equip_id:
                 eq = Equipment.query.get(int(equip_id))
                 if eq:
-                    eq.last_service_date = datetime.utcnow().date()
+                    event_date = request.form.get('date')
+                    try:
+                        ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else datetime.utcnow().date()
+                    except ValueError:
+                        ev_d = datetime.utcnow().date()
+                    eq.last_service_date = ev_d
                     if eq.service_interval_days:
-                        eq.next_service_date = datetime.utcnow().date() + timedelta(days=eq.service_interval_days)
+                        eq.next_service_date = ev_d + timedelta(days=eq.service_interval_days)
                     # без интервала — дата остаётся, запись остаётся в календаре как выполненная
                     db.session.commit()
                     flash(_('Equipment service marked as completed'), 'success')

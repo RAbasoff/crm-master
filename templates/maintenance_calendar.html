@@ -137,15 +137,15 @@
                             {% set is_done = ev.done if ev.done is defined else False %}
                             {% set ev_status = ev.status if ev.status is defined else '' %}
                             <div class="cal-event" draggable="{% if not is_done and current_user.has_role('admin','technician') %}true{% else %}false{% endif %}" data-type="{{ ev.type }}" data-plan-id="{{ ev.plan_id or '' }}" data-part-id="{{ ev.part_id or '' }}" data-date="{{ ev.date.strftime('%Y-%m-%d') }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px;{% if not is_done and current_user.has_role('admin','technician') %}cursor:grab{% endif %}">
-                            {% set ev_link = '#' %}
                             {% if ev.type == 'plan' and ev.plan_id %}
-                                {% set ev_link = '/maintenance-plans/' ~ ev.plan_id %}
+                            <a href="/maintenance-plans/{{ ev.plan_id }}"
                             {% elif ev.type == 'equipment' and ev.equipment_id %}
-                                {% set ev_link = '/equipment/' ~ ev.equipment_id %}
+                            <a href="/equipment/{{ ev.equipment_id }}"
                             {% elif ev.machine_id %}
-                                {% set ev_link = '/machines/' ~ ev.machine_id %}
-                            {% endif %}
-                            <a href="{{ ev_link }}" style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
+                            <a href="/machines/{{ ev.machine_id }}"
+                            {% else %}
+                            <a href="#"
+                            {% endif %} style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}{% if request.args.get('debug') %} [{{ ev.done }}]{% endif %}
                             </a>
                             {% if not is_done and current_user.has_role('admin', 'director', 'technician') %}
@@ -213,7 +213,7 @@
         {% set is_done = ev.done if ev.done is defined else False %}
         <tr{% if is_done %} style="background:#eafaf1"{% endif %}>
             <td style="white-space:nowrap">{{ ev.date.strftime('%d-%m-%Y') }}</td>
-            <td><a href="/machines/{{ ev.machine_id }}">{{ ev.machine }}</a></td>
+            <td>{% if ev.machine_id %}<a href="/machines/{{ ev.machine_id }}">{{ ev.machine }}</a>{% else %}{{ ev.machine }}{% endif %}</td>
             <td>{{ ev.part }}{% if is_done %} ✅{% endif %}</td>
             <td>
                 {% if ev.type == 'replacement' %}🔄 {{ _('Replacement') }}
