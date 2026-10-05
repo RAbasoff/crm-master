@@ -136,15 +136,15 @@
                             {% for ev in day_events %}
                             {% set is_done = ev.done if ev.done is defined else False %}
                             {% set ev_status = ev.status if ev.status is defined else '' %}
-                            <div class="cal-event" draggable="{% if not is_done and current_user.has_role('admin','technician') %}true{% else %}false{% endif %}" data-type="{{ ev.type }}" data-plan-id="{{ ev.plan_id or '' }}" data-part-id="{{ ev.part_id or '' }}" data-date="{{ ev.date.strftime('%Y-%m-%d') }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px;{% if not is_done and current_user.has_role('admin','technician') %}cursor:grab{% endif %}">
+                            <div class="cal-event" draggable="{% if not is_done and current_user.has_role('admin','director','technician') %}true{% else %}false{% endif %}" data-type="{{ ev.type }}" data-plan-id="{{ ev.plan_id or '' }}" data-part-id="{{ ev.part_id or '' }}" data-machine-id="{{ ev.machine_id or '' }}" data-equipment-id="{{ ev.equipment_id or '' }}" data-mro-id="{{ ev.mro_id or '' }}" data-record-id="{{ ev.record_id or '' }}" data-date="{{ ev.date.strftime('%Y-%m-%d') }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px;{% if not is_done and current_user.has_role('admin','director','technician') %}cursor:grab{% endif %}">
                             {% if ev.type == 'plan' and ev.plan_id %}
-                            <a href="/maintenance-plans/{{ ev.plan_id }}"
+                            <a href="/maintenance-plans/{{ ev.plan_id }}" draggable="false"
                             {% elif ev.type == 'equipment' and ev.equipment_id %}
-                            <a href="/equipment/{{ ev.equipment_id }}"
+                            <a href="/equipment/{{ ev.equipment_id }}" draggable="false"
                             {% elif ev.machine_id %}
-                            <a href="/machines/{{ ev.machine_id }}"
+                            <a href="/machines/{{ ev.machine_id }}" draggable="false"
                             {% else %}
-                            <a href="#"
+                            <a href="#" draggable="false"
                             {% endif %} style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}{% if request.args.get('debug') %} [{{ ev.done }}]{% endif %}
                             </a>
@@ -353,11 +353,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── DRAG & DROP ──
     var draggedEvent = null;
 
+    // Ссылки/кнопки внутри события не должны ломать перетаскивание
+    document.querySelectorAll('.cal-event a, .cal-event button').forEach(function(el) {
+        el.setAttribute('draggable', 'false');
+        el.addEventListener('dragstart', function(e) { e.preventDefault(); e.stopPropagation(); });
+    });
+
     document.querySelectorAll('.cal-event[draggable="true"]').forEach(function(el) {
         el.addEventListener('dragstart', function(e) {
             draggedEvent = el;
             el.style.opacity = '0.4';
-            e.dataTransfer.setData('text/plain', '');
+            try {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', el.dataset.date || '');
+            } catch (err) {}
         });
         el.addEventListener('dragend', function() {
             el.style.opacity = '1';
@@ -384,24 +393,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var newDate = cell.dataset.date;
             var oldDate = draggedEvent.dataset.date;
-            var evType = draggedEvent.dataset.type;
-            var planId = draggedEvent.dataset.planId;
-            var partId = draggedEvent.dataset.partId;
-
             if (!newDate || newDate === oldDate) return;
-
-            // Check weekend
-            var d = new Date(newDate + 'T00:00:00');
-            if (d.getDay() === 0 || d.getDay() === 6) {
-                alert('{{ _("Cannot move to weekend") }}');
-                return;
-            }
 
             var fd = new FormData();
             fd.append('csrf_token', '{{ csrf_token() }}');
-            fd.append('type', evType);
-            fd.append('plan_id', planId);
-            fd.append('part_id', partId);
+            fd.append('type', draggedEvent.dataset.type || '');
+            fd.append('plan_id', draggedEvent.dataset.planId || '');
+            fd.append('part_id', draggedEvent.dataset.partId || '');
+            fd.append('machine_id', draggedEvent.dataset.machineId || '');
+            fd.append('equipment_id', draggedEvent.dataset.equipmentId || '');
+            fd.append('mro_id', draggedEvent.dataset.mroId || '');
+            fd.append('record_id', draggedEvent.dataset.recordId || '');
+            fd.append('old_date', oldDate || '');
             fd.append('new_date', newDate);
 
             fetch('/maintenance-calendar/move', {

@@ -638,7 +638,7 @@ def maintenance_calendar_delete():
 
 @bp.route('/maintenance-calendar/move', methods=['POST'])
 @login_required
-@role_required('admin', 'technician')
+@role_required('admin', 'director', 'technician')
 def maintenance_calendar_move():
     """Drag & drop: move a calendar event to a new date."""
     ev_type = request.form.get('type', '')
@@ -652,10 +652,6 @@ def maintenance_calendar_move():
         new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
-
-    # Don't allow moving to weekends
-    if new_date.weekday() >= 5:
-        return jsonify({'error': 'Cannot move to weekend'}), 400
 
     try:
         if ev_type == 'plan' and plan_id:
@@ -675,6 +671,48 @@ def maintenance_calendar_move():
                         part.next_replacement = new_date
                     else:
                         part.next_maintenance = new_date
+                    if not safe_commit():
+                        return jsonify({'error': 'Save failed'}), 500
+                    return jsonify({'ok': True, 'new_date': new_date_str})
+
+        elif ev_type == 'machine_maintenance':
+            record_id = request.form.get('record_id')
+            machine_id = request.form.get('machine_id')
+            old_date = request.form.get('old_date')
+            mr = None
+            if record_id:
+                try:
+                    mr = MaintenanceRecord.query.get(int(record_id))
+                except (ValueError, TypeError):
+                    mr = None
+            if not mr and machine_id:
+                try:
+                    q = MaintenanceRecord.query.filter(
+                        MaintenanceRecord.machine_id == int(machine_id),
+                        MaintenanceRecord.next_maintenance.isnot(None)
+                    )
+                    if old_date:
+                        try:
+                            od = datetime.strptime(old_date, '%Y-%m-%d').date()
+                            q = q.filter(db.func.date(MaintenanceRecord.next_maintenance) == od)
+                        except ValueError:
+                            pass
+                    mr = q.first()
+                except (ValueError, TypeError):
+                    mr = None
+            if mr:
+                mr.next_maintenance = datetime.combine(new_date, datetime.min.time())
+                if not safe_commit():
+                    return jsonify({'error': 'Save failed'}), 500
+                return jsonify({'ok': True, 'new_date': new_date_str})
+
+        elif ev_type == 'equipment':
+            from models import Equipment
+            equipment_id = request.form.get('equipment_id')
+            if equipment_id:
+                eq = Equipment.query.get(int(equipment_id))
+                if eq:
+                    eq.next_service_date = new_date
                     if not safe_commit():
                         return jsonify({'error': 'Save failed'}), 500
                     return jsonify({'ok': True, 'new_date': new_date_str})
