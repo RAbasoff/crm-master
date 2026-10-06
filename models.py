@@ -1074,6 +1074,26 @@ class PushSubscription(db.Model):
     last_used_at = db.Column(db.DateTime)
     user = db.relationship('User', backref='push_subscriptions')
 
+
+class UserReminder(db.Model):
+    """Напоминание: своё (видит только автор) или для выбранных пользователей."""
+    __tablename__ = 'user_reminder'
+    id = db.Column(db.Integer, primary_key=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text)
+    due_at = db.Column(db.DateTime)
+    is_done = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=now_local)
+    creator = db.relationship('User', foreign_keys=[created_by])
+    targets = db.relationship('User', secondary='user_reminder_target', backref='reminders')
+
+
+user_reminder_target = db.Table('user_reminder_target',
+    db.Column('reminder_id', db.Integer, db.ForeignKey('user_reminder.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
 class Message(db.Model):
     __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)

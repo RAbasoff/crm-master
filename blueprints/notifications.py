@@ -7,8 +7,8 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, Notification, MachinePart, VoorraadItem, now_local
-from utils import role_required, safe_commit
+from models import db, Notification, MachinePart, VoorraadItem, User, UserReminder, now_local
+from utils import role_required, safe_commit, create_notification
 
 bp = Blueprint('notifications', __name__)
 
@@ -94,10 +94,90 @@ def reminders():
     overdue_parts.sort(key=lambda x: x['date'])
     upcoming_parts.sort(key=lambda x: x['date'])
 
+    # Личные / общие напоминания
+    from sqlalchemy import or_
+    from models import user_reminder_target
+    mine_q = UserReminder.query.filter(
+        or_(UserReminder.created_by == current_user.id,
+            UserReminder.targets.any(User.id == current_user.id))
+    ).order_by(UserReminder.is_done.asc(), UserReminder.due_at.asc().nullslast(),
+               UserReminder.created_at.desc()).all()
+    all_users = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
+
     return render_template('reminders.html',
         overdue_parts=overdue_parts, upcoming_parts=upcoming_parts,
         overdue_consumables=overdue_consumables, upcoming_consumables=upcoming_consumables,
-        low_stock=low_stock, today=today)
+        low_stock=low_stock, today=today,
+        my_reminders=mine_q, all_users=all_users)
+
+
+@bp.route('/reminders/new', methods=['POST'])
+@login_required
+def reminder_new():
+    """Создать напоминание: себе (видит только автор) или выбранным пользователям."""
+    title = (request.form.get('title') or '').strip()
+    body = (request.form.get('body') or '').strip()
+    due_raw = (request.form.get('due_at') or '').strip()
+    if not title:
+        flash(_('Title is required'), 'error')
+        return redirect(url_for('notifications.reminders'))
+    due_at = None
+    if due_raw:
+        try:
+            due_at = datetime.strptime(due_raw, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            try:
+                due_at = datetime.strptime(due_raw, '%Y-%m-%d')
+            except ValueError:
+                due_at = None
+    r = UserReminder(created_by=current_user.id, title=title, body=body, due_at=due_at)
+    target_ids = request.form.getlist('target_ids')
+    for tid in target_ids:
+        try:
+            u = db.session.get(User, int(tid))
+        except (ValueError, TypeError):
+            continue
+        if u:
+            r.targets.append(u)
+    db.session.add(r)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('notifications.reminders'))
+
+    # Уведомления получателям (заголовок «Напоминание»)
+    for u in r.targets:
+        if u.id != current_user.id:
+            create_notification(u.id, 'Reminder', title, 'info', '/reminders')
+    flash(_('Reminder created'), 'success')
+    return redirect(url_for('notifications.reminders'))
+
+
+@bp.route('/reminders/<int:rem_id>/done', methods=['POST'])
+@login_required
+def reminder_done(rem_id):
+    r = UserReminder.query.get_or_404(rem_id)
+    # отметить может автор или любой, кому адресовано
+    allowed = r.created_by == current_user.id or any(t.id == current_user.id for t in r.targets)
+    if not allowed and not current_user.has_role('admin', 'director'):
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('notifications.reminders'))
+    r.is_done = not r.is_done
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    return redirect(url_for('notifications.reminders'))
+
+
+@bp.route('/reminders/<int:rem_id>/delete', methods=['POST'])
+@login_required
+def reminder_delete(rem_id):
+    r = UserReminder.query.get_or_404(rem_id)
+    if r.created_by != current_user.id and not current_user.has_role('admin'):
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('notifications.reminders'))
+    db.session.delete(r)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    return redirect(url_for('notifications.reminders'))
 
 
 @bp.route('/consumable-reminders')

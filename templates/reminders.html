@@ -6,6 +6,78 @@
     <span style="font-size:12px;color:#888">{{ today.strftime('%d-%m-%Y') }}</span>
 </div>
 
+<!-- ЛИЧНЫЕ / ОБЩИЕ НАПОМИНАНИЯ -->
+<div class="card" style="margin-bottom:12px;border-left:4px solid #3498db">
+    <h2 style="margin:0 0 10px;font-size:14px">📝 {{ _('My reminders') }}</h2>
+    <form method="POST" action="/reminders/new" style="margin-bottom:12px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div style="min-width:180px">
+                <label style="font-size:11px;font-weight:600;display:block">{{ _('Title') }} *</label>
+                <input name="title" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <div style="flex:1;min-width:200px">
+                <label style="font-size:11px;font-weight:600;display:block">{{ _('Note') }}</label>
+                <input name="body" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:600;display:block">{{ _('Due') }}</label>
+                <input type="datetime-local" name="due_at" style="padding:8px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <button type="submit" class="btn btn-primary" style="height:36px">{{ _('Add') }}</button>
+        </div>
+        <details style="margin-top:8px">
+            <summary style="cursor:pointer;font-size:12px;color:#3498db">{{ _('Show to users (leave empty = only me)') }}</summary>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-top:8px">
+                {% for u in all_users %}
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px">
+                    <input type="checkbox" name="target_ids" value="{{ u.id }}">
+                    {{ u.display_name or u.username }} ({{ u.role }})
+                </label>
+                {% endfor %}
+            </div>
+        </details>
+    </form>
+
+    {% if my_reminders %}
+    <div class="table-wrap">
+        <table>
+            <tr><th></th><th>{{ _('Title') }}</th><th>{{ _('Note') }}</th><th>{{ _('Due') }}</th><th>{{ _('For') }}</th><th></th></tr>
+            {% for r in my_reminders %}
+            <tr {% if r.is_done %}style="opacity:.55"{% endif %}>
+                <td>
+                    <form method="POST" action="/reminders/{{ r.id }}/done" style="margin:0">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none;border:none;cursor:pointer;font-size:16px">
+                            {% if r.is_done %}✅{% else %}☐{% endif %}
+                        </button>
+                    </form>
+                </td>
+                <td><strong style="{% if r.is_done %}text-decoration:line-through{% endif %}">{{ r.title }}</strong></td>
+                <td style="font-size:12px;color:#666">{{ r.body or '' }}</td>
+                <td style="font-size:12px;white-space:nowrap">{{ r.due_at.strftime('%d-%m %H:%M') if r.due_at else '—' }}</td>
+                <td style="font-size:11px">
+                    {% if r.targets %}
+                        {% for t in r.targets %}{{ t.display_name or t.username }}{% if not loop.last %}, {% endif %}{% endfor %}
+                    {% else %}{{ _('Only me') }}{% endif %}
+                </td>
+                <td>
+                    {% if r.created_by == current_user.id or current_user.role == 'admin' %}
+                    <form method="POST" action="/reminders/{{ r.id }}/delete" style="margin:0" onsubmit="return confirm('{{ _('Delete') }}?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none;border:none;cursor:pointer">🗑</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <p style="color:#888;font-size:12px">{{ _('No reminders') }}</p>
+    {% endif %}
+</div>
+
 {% set total_overdue = overdue_parts|length + overdue_consumables|length %}
 {% set total_upcoming = upcoming_parts|length + upcoming_consumables|length %}
 {% set total_low = low_stock|length %}
