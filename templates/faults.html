@@ -47,7 +47,11 @@
                 <div style="font-size:10px;color:#27ae60;font-weight:700">✅ {{ _('Awaiting close') }}</div>
                 {% endif %}
             </td>
-            <td>{% if f.assigned_technicians %}{% for t in f.assigned_technicians %}{{ t.display_name or t.username }}{% if t.worker_profile and t.worker_profile.specialisatie %} <small style="color:#888">({{ t.worker_profile.specialisatie }})</small>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% elif f.technician %}{{ f.technician.display_name or f.technician.username }}{% if f.technician.worker_profile and f.technician.worker_profile.specialisatie %} <small style="color:#888">({{ f.technician.worker_profile.specialisatie }})</small>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if f.machine %}🏭 {{ f.machine.name }}{% elif f.equipment %}⚙️ {{ f.equipment.name }}{% else %}—{% endif %}</td>
+            <td>{{ f.reporter_label }}</td>
+            <td><span class="badge badge-{{ f.priority }}">{{ f.priority }}</span></td>
+            <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
+            <td>{% if f.assigned_technicians %}{% for t in f.assigned_technicians %}{{ t.display_name or t.username }}{% if not loop.last %}, {% endif %}{% endfor %}{% elif f.technician %}{{ f.technician.display_name or f.technician.username }}{% else %}—{% endif %}</td>
             <td>{{ f.created_at.strftime('%d-%m %H:%M') }}</td>
             <td><a href="/faults/{{ f.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a></td>
         </tr>
