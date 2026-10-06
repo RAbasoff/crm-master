@@ -6144,3 +6144,55 @@ msgstr "Datum instellen"
 #: equip-cal
 msgid "Last service"
 msgstr "Laatste service"
+
+#: fault-status
+msgid "New"
+msgstr "Nieuw"
+
+#: fault-status
+msgid "Paused"
+msgstr "Gepauzeerd"
+
+#: fault-status
+msgid "Waiting for part"
+msgstr "Wacht op onderdeel"
+
+#: fault-status
+msgid "Part ordered"
+msgstr "Onderdeel besteld"
+
+#: fault-status
+msgid "Testing"
+msgstr "Testen"
+
+#: fault-status
+msgid "Machine cannot be stopped / waiting for production"
+msgstr "Machine kan niet stoppen / wachten op productie"
+
+#: fault-status
+msgid "Waiting for approval"
+msgstr "Wacht op goedkeuring"
+
+#: fault-status
+msgid "Waiting for another specialist"
+msgstr "Wacht op andere specialist"
+
+#: fault-status
+msgid "No access to equipment"
+msgstr "Geen toegang tot apparatuur"
+
+#: fault-status
+msgid "Missing tools"
+msgstr "Nodig gereedschap ontbreekt"
+
+#: fault-status
+msgid "Additional information required"
+msgstr "Aanvullende informatie nodig"
+
+#: fault-status
+msgid "Work scheduled for another date"
+msgstr "Werk gepland op andere datum"
+
+#: fault-status
+msgid "Other reason"
+msgstr "Andere reden"

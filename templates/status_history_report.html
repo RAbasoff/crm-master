@@ -32,7 +32,7 @@
             <select name="status" style="padding:8px;border:1px solid #ddd;border-radius:8px;min-width:150px">
                 <option value="">{{ _('All') }}</option>
                 {% for k, v in status_labels.items() %}
-                <option value="{{ k }}" {% if status_f == k %}selected{% endif %}>{{ v }}</option>
+                <option value="{{ k }}" {% if status_f == k %}selected{% endif %}>{{ _(status_msgs.get(k, k)) if status_msgs is defined else v }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -51,7 +51,7 @@
         {% for st, cnt in summary.items() %}
         <div style="background:#f5f7fa;padding:10px 16px;border-radius:10px;min-width:100px;text-align:center">
             <div style="font-size:20px;font-weight:800;color:#333">{{ cnt }}</div>
-            <div style="font-size:11px;color:#888">{{ status_labels.get(st, st) }}</div>
+            <div style="font-size:11px;color:#888">{{ _(status_msgs.get(st, st)) if status_msgs is defined else status_labels.get(st, st) }}</div>
         </div>
         {% endfor %}
     </div>
@@ -79,10 +79,10 @@
                 </td>
                 <td>
                     <span class="badge badge-{{ h.new_status }}" style="font-size:11px">
-                        {{ status_labels.get(h.new_status, h.new_status) }}
+                        {{ _(status_msgs.get(h.new_status, h.new_status)) if status_msgs is defined else h.new_status }}
                     </span>
                     {% if h.old_status %}
-                    <small style="color:#999">← {{ status_labels.get(h.old_status, h.old_status) }}</small>
+                    <small style="color:#999">← {{ _(status_msgs.get(h.old_status, h.old_status)) if status_msgs is defined else h.old_status }}</small>
                     {% endif %}
                 </td>
                 <td>{{ h.changer.display_name if h.changer else '—' }}</td>

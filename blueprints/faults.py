@@ -64,6 +64,7 @@ def status_history_report():
         date_from=date_from, date_to=date_to,
         user_f=user_f, status_f=status_f, fault_f=fault_f,
         status_labels=STATUS_LABELS,
+        status_msgs=STATUS_MSGIDS,
     )
 
 # ── Статусы заявки (CMMS-модель ProMaster) ──────────────────────────
@@ -90,6 +91,28 @@ STATUS_LABELS = {
     'closed': 'Закрыта',
     'reopened': 'Переоткрыта',
 }
+
+# msgid для перевода при показе (см. translate_status)
+STATUS_MSGIDS = {
+    'open': 'New',
+    'accepted': 'Accepted',
+    'diagnosis': 'Diagnosis',
+    'in_progress': 'In progress',
+    'paused': 'Paused',
+    'waiting_parts': 'Waiting for part',
+    'parts_ordered': 'Part ordered',
+    'testing': 'Testing',
+    'resolved': 'Resolved',
+    'rejected': 'Rejected',
+    'closed': 'Closed',
+    'reopened': 'Reopened',
+}
+
+
+def translate_status(status):
+    """Подпись статуса на языке текущего пользователя."""
+    key = STATUS_MSGIDS.get(status)
+    return _(key) if key else (STATUS_LABELS.get(status, status))
 
 # Разрешённые переходы. Механик может менять любой статус, КРОМЕ closed.
 # closed — только админ / начальник ТС / главный механик.
@@ -119,6 +142,22 @@ PAUSE_REASONS = {
     'scheduled_other': 'Работа запланирована на другую дату',
     'other': 'Другая причина',
 }
+
+PAUSE_REASON_MSGIDS = {
+    'waiting_production': 'Machine cannot be stopped / waiting for production',
+    'waiting_approval': 'Waiting for approval',
+    'waiting_specialist': 'Waiting for another specialist',
+    'no_access': 'No access to equipment',
+    'no_tools': 'Missing tools',
+    'need_info': 'Additional information required',
+    'scheduled_other': 'Work scheduled for another date',
+    'other': 'Other reason',
+}
+
+
+def translate_pause_reason(code):
+    key = PAUSE_REASON_MSGIDS.get(code)
+    return _(key) if key else (PAUSE_REASONS.get(code, code))
 
 # Статусы «работа идёт» — таймер имеет смысл
 ACTIVE_WORK_STATUSES = ('in_progress', 'diagnosis', 'testing')
@@ -179,8 +218,8 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
             pass
         elif new_status not in allowed:
             return False, _('Transition not allowed: {} → {}').format(
-                STATUS_LABELS.get(old_status, old_status),
-                STATUS_LABELS.get(new_status, new_status))
+                translate_status(old_status),
+                translate_status(new_status))
 
     if new_status == 'paused':
         # Описание причины обязательно
@@ -477,6 +516,7 @@ def fault_detail(fault_id):
         status_labels=STATUS_LABELS, wait_minutes=wait_minutes,
         active_work_statuses=ACTIVE_WORK_STATUSES, wait_statuses=WAIT_STATUSES,
         timeline=timeline,
+        status_msgs=STATUS_MSGIDS, pause_reason_msgs=PAUSE_REASON_MSGIDS,
     )
 
 

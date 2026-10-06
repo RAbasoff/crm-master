@@ -6127,3 +6127,55 @@ msgstr "Ustaw datę"
 #: equip-cal
 msgid "Last service"
 msgstr "Ostatni serwis"
+
+#: fault-status
+msgid "New"
+msgstr "Nowe"
+
+#: fault-status
+msgid "Paused"
+msgstr "Wstrzymane"
+
+#: fault-status
+msgid "Waiting for part"
+msgstr "Część"
+
+#: fault-status
+msgid "Part ordered"
+msgstr "Część zamówiona"
+
+#: fault-status
+msgid "Testing"
+msgstr "Testy"
+
+#: fault-status
+msgid "Machine cannot be stopped / waiting for production"
+msgstr "Nie można zatrzymać maszyny / oczekiwanie"
+
+#: fault-status
+msgid "Waiting for approval"
+msgstr "Oczekiwanie na akceptację"
+
+#: fault-status
+msgid "Waiting for another specialist"
+msgstr "Oczekiwanie na specjalistę"
+
+#: fault-status
+msgid "No access to equipment"
+msgstr "Brak dostępu do sprzęту"
+
+#: fault-status
+msgid "Missing tools"
+msgstr "Brak narzędzi"
+
+#: fault-status
+msgid "Additional information required"
+msgstr "Wymagane dodatkowe informacje"
+
+#: fault-status
+msgid "Work scheduled for another date"
+msgstr "Praca zaplanowana na inny termin"
+
+#: fault-status
+msgid "Other reason"
+msgstr "Inny powód"

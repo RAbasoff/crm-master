@@ -6421,3 +6421,55 @@ msgstr "Задать дату"
 #: equip-cal
 msgid "Last service"
 msgstr "Последнее ТО"
+
+#: fault-status
+msgid "New"
+msgstr "Новая"
+
+#: fault-status
+msgid "Paused"
+msgstr "Приостановлена"
+
+#: fault-status
+msgid "Waiting for part"
+msgstr "Ожидание запчасти"
+
+#: fault-status
+msgid "Part ordered"
+msgstr "Запчасть заказана"
+
+#: fault-status
+msgid "Testing"
+msgstr "Тестирование"
+
+#: fault-status
+msgid "Machine cannot be stopped / waiting for production"
+msgstr "Машину нельзя остановить / ожидание производства"
+
+#: fault-status
+msgid "Waiting for approval"
+msgstr "Ожидание согласования"
+
+#: fault-status
+msgid "Waiting for another specialist"
+msgstr "Ожидание другого специалиста"
+
+#: fault-status
+msgid "No access to equipment"
+msgstr "Нет доступа к оборудованию"
+
+#: fault-status
+msgid "Missing tools"
+msgstr "Нет необходимых инструментов"
+
+#: fault-status
+msgid "Additional information required"
+msgstr "Требуется дополнительная информация"
+
+#: fault-status
+msgid "Work scheduled for another date"
+msgstr "Работа запланирована на другую дату"
+
+#: fault-status
+msgid "Other reason"
+msgstr "Другая причина"

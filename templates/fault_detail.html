@@ -21,12 +21,12 @@
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
                 {% for st in ['accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected', 'reopened'] %}
                 {% if st != fault.status %}
-                <option value="{{ st }}" style="background:white;color:#333">{{ status_labels.get(st, st) }}</option>
+                <option value="{{ st }}" style="background:white;color:#333">{{ _(status_msgs.get(st, st)) if status_msgs is defined else st }}</option>
                 {% endif %}
                 {% endfor %}
                 {# Закрыть — только админ / главный механик / начальник ТС #}
                 {% if current_user.has_role('admin', 'director') and fault.status not in ['closed'] %}
-                <option value="closed" style="background:#fff3e0;color:#e65100;font-weight:700">🔒 {{ status_labels.get('closed', 'closed') }}</option>
+                <option value="closed" style="background:#fff3e0;color:#e65100;font-weight:700">🔒 {{ _(status_msgs.get('closed', 'closed')) if status_msgs is defined else 'Closed' }}</option>
                 {% endif %}
             </select>
         </div>
@@ -281,7 +281,7 @@ function endWorkById(faultId) {
             <p><strong>{{ _('Title') }}:</strong> {{ fault.title }}</p>
             <p><strong>{{ _('Machine / Equipment') }}:</strong> {% if fault.machine %}🏭 <a href="/floor?highlight={{ fault.machine_id }}">{{ fault.machine.name }}</a>{% elif fault.equipment %}⚙️ {{ fault.equipment.name }}{% else %}—{% endif %}</p>
             <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span></p>
-            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ status_labels.get(fault.status, fault.status) if status_labels is defined else fault.status }}</span>
+            <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ _(status_msgs.get(fault.status, fault.status)) if status_msgs is defined else fault.status }}</span>
             {% if fault.status == 'rejected' %}
                 <div style="margin-top:4px;font-size:12px;color:#c0392b;background:#fdecea;padding:6px 10px;border-radius:8px">
                     ⛔ {{ _('Rejection reason') }}: {{ fault.pause_comment or '—' }}
@@ -289,7 +289,7 @@ function endWorkById(faultId) {
             {% endif %}
             {% if fault.status == 'paused' and fault.pause_reason %}
                 <span style="margin-left:8px;font-size:12px;color:#f39c12">
-                    ⏸ {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if pause_reasons is defined else fault.pause_reason }}
+                    ⏸ {{ _(pause_reason_msgs.get(fault.pause_reason, fault.pause_reason)) if pause_reason_msgs is defined else fault.pause_reason }}
                     {% if fault.pause_until %} · {{ _('Planned resume') }}: {{ fault.pause_until.strftime('%d-%m-%Y') }}{% endif %}
                 </span>
                 {% if fault.pause_comment %}
@@ -300,7 +300,7 @@ function endWorkById(faultId) {
             {% endif %}
             {% if fault.status in ['waiting_parts', 'parts_ordered'] %}
                 <span style="margin-left:8px;font-size:12px;color:#e67e22">
-                    📦 {{ pause_reasons.get(fault.pause_reason, fault.pause_reason) if (pause_reasons is defined and fault.pause_reason) else '' }}
+                    📦 {{ _(pause_reason_msgs.get(fault.pause_reason, fault.pause_reason)) if (pause_reason_msgs is defined and fault.pause_reason) else '' }}
                 </span>
                 {% if fault.pause_comment %}
                 <div style="margin-top:4px;font-size:12px;color:#666;background:#fff8e6;padding:6px 10px;border-radius:8px">
@@ -667,9 +667,9 @@ document.getElementById('reopenModal').addEventListener('click', function(e) {
         <div class="form-group">
             <label style="font-weight:600">{{ _('Pause reason') }} *</label>
             <select id="pauseReason" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-                <option value="">— {{ _('Select a pause reason') }} —</option>
+                <option value="">{{ _('Select a pause reason') }}</option>
                 {% for key, label in pause_reasons.items() %}
-                <option value="{{ key }}">{{ label }}</option>
+                <option value="{{ key }}">{{ _(pause_reason_msgs.get(key, key)) if pause_reason_msgs is defined else label }}</option>
                 {% endfor %}
             </select>
         </div>
