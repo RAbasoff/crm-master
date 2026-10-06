@@ -871,12 +871,7 @@ def fault_reopen(fault_id):
 @role_required('technician', 'admin', 'director')
 def work_report_new(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
-    # Записи ведёт старший в группе (или админ/начальник)
-    lead_id = f.lead_technician_id or f.technician_id
-    if (not current_user.has_role('admin', 'director')
-            and lead_id and current_user.id != lead_id):
-        flash(_('Only the lead mechanic keeps the work records'), 'error')
-        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+    # Каждый механик ведёт свой отчёт (диагностика, ход работ, результат)
     if request.method == 'POST':
         wr = WorkReport(
             fault_id=f.id,
