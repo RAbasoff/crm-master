@@ -307,8 +307,11 @@ def faults_list():
     if current_user.has_role('admin', 'director'):
         pagination = base.order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     elif current_user.has_role('technician'):
+        # Механик видит: свои назначения, созданные им, свободные (open)
         pagination = base.filter(
             (FaultReport.technician_id == current_user.id) |
+            (FaultReport.reporter_id == current_user.id) |
+            (FaultReport.assigned_technicians.any(User.id == current_user.id)) |
             (FaultReport.status == 'open')
         ).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     else:
