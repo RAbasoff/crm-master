@@ -685,7 +685,9 @@ class GasCylinder(db.Model):
     gas_type = db.Column(db.String(20), nullable=False)
     cylinder_number = db.Column(db.String(50), nullable=False)
     barcode = db.Column(db.String(100))
-    status = db.Column(db.String(20), default='full')
+    status = db.Column(db.String(20), default='full')  # full, in_use, empty, maintenance, defect
+    side = db.Column(db.String(10))  # left / right (для работающего баллона)
+    refill_date = db.Column(db.Date)  # дата заправки (штрихкод с Z)
     received_at = db.Column(db.DateTime)
     installed_at = db.Column(db.DateTime)
     notes = db.Column(db.Text)

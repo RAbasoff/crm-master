@@ -45,7 +45,8 @@ def _inventory_balance():
         in_use = counts.get('in_use', 0)
         empty = counts.get('empty', 0)
         maint = counts.get('maintenance', 0)
-        total = full + in_use + empty + maint
+        defect = counts.get('defect', 0)
+        total = full + in_use + empty + maint + defect
         # delivered orders (informational): how many were supposed to arrive
         ordered = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
             CylinderOrder.gas_type == gt
@@ -59,8 +60,9 @@ def _inventory_balance():
             'in_use': in_use,
             'empty': empty,
             'maintenance': maint,
+            'defect': defect,
             'total': total,
-            'identity_ok': (full + in_use + empty + maint == total),
+            'identity_ok': (full + in_use + empty + maint + defect == total),
             'has_working_pair': (in_use >= WORKING_IN_USE and full >= WORKING_READY_FULL),
             'ready_full': full,  # full cylinders available to become in_use
             'spare_full': max(0, full - WORKING_READY_FULL),  # stock beyond the working pair
@@ -198,6 +200,22 @@ def gas_dashboard():
     stats['n2_received_month'] = n2_received
     stats['co2_received_month'] = co2_received
     stats['total_received_month'] = n2_received + co2_received
+
+    # Заказано с начала месяца (все заказы)
+    orders_month = CylinderOrder.query.filter(CylinderOrder.ordered_at >= month_start).all()
+    stats['ordered_n2_month'] = sum(o.quantity or 0 for o in orders_month if o.gas_type == 'nitrogen')
+    stats['ordered_co2_month'] = sum(o.quantity or 0 for o in orders_month if o.gas_type == 'co2')
+    stats['ordered_total_month'] = stats['ordered_n2_month'] + stats['ordered_co2_month']
+
+    # Итого в наличии + неисправности + в работе (с указанием стороны)
+    stats['total_on_hand'] = stats['n2_total'] + stats['co2_total']
+    stats['n2_defect'] = balance['nitrogen'].get('defect', 0) + balance['nitrogen'].get('maintenance', 0)
+    stats['co2_defect'] = balance['co2'].get('defect', 0) + balance['co2'].get('maintenance', 0)
+    stats['total_defect'] = stats['n2_defect'] + stats['co2_defect']
+    stats['n2_in_use_list'] = [c for c in n2_cylinders if c.status == 'in_use']
+    stats['co2_in_use_list'] = [c for c in co2_cylinders if c.status == 'in_use']
+    stats['n2_empty_list'] = [c for c in n2_cylinders if c.status == 'empty']
+    stats['co2_empty_list'] = [c for c in co2_cylinders if c.status == 'empty']
 
     # Spare cylinders (empty, available for replacement)
     n2_spare = [c for c in n2_cylinders if c.status == 'empty']
@@ -338,7 +356,7 @@ def cylinder_status(cyl_id):
     c = GasCylinder.query.get_or_404(cyl_id)
     data = request.get_json() if request.is_json else request.form
     new_status = data.get('status')
-    if new_status not in ('full', 'in_use', 'empty', 'maintenance'):
+    if new_status not in ('full', 'in_use', 'empty', 'maintenance', 'defect'):
         return jsonify({'error': 'Invalid status'}), 400
 
     old_status = c.status
@@ -795,6 +813,168 @@ def cylinder_quick_add():
 # ============================================================
 # BARCODE SCANNING — cylinder install/replace
 # ============================================================
+
+@bp.route('/api/cylinders/scan-number', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinder_scan_number():
+    """Первое сканирование — НОМЕР баллона (главный идентификатор)."""
+    data = request.get_json() or {}
+    number = (data.get('number') or data.get('code') or '').strip()
+    gas_type = data.get('gas_type') or 'nitrogen'
+    if not number:
+        return jsonify({'error': 'No number'}), 400
+    if gas_type not in GAS_TYPES:
+        gas_type = 'nitrogen'
+    c = GasCylinder.query.filter(GasCylinder.cylinder_number == number).first()
+    created = False
+    if not c:
+        c = GasCylinder(gas_type=gas_type, cylinder_number=number, barcode=number,
+                        status='full', received_at=datetime.utcnow())
+        db.session.add(c)
+        db.session.flush()
+        created = True
+        db.session.add(CylinderLog(cylinder_id=c.id, action='created',
+                                   performed_by=current_user.id,
+                                   new_cylinder_number=number, notes='Scan number'))
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'created': created, 'cylinder_id': c.id,
+                    'number': c.cylinder_number, 'gas_type': c.gas_type,
+                    'status': c.status, 'side': c.side or '',
+                    'refill_date': c.refill_date.isoformat() if c.refill_date else None})
+
+
+@bp.route('/api/cylinders/scan-refill', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinder_scan_refill():
+    """Второе сканирование — штрихкод с Z = дата заправки."""
+    data = request.get_json() or {}
+    code = (data.get('code') or data.get('barcode') or '').strip()
+    cyl_id = safe_int(data.get('cylinder_id'))
+    number = (data.get('number') or '').strip()
+    if not code:
+        return jsonify({'error': 'No code'}), 400
+    c = db.session.get(GasCylinder, cyl_id) if cyl_id else None
+    if not c and number:
+        c = GasCylinder.query.filter_by(cylinder_number=number).first()
+    if not c:
+        return jsonify({'error': 'Cylinder not found — scan number first'}), 404
+    refill = _parse_z_refill(code)
+    if not refill:
+        return jsonify({'error': 'Invalid refill barcode (need Z + date)'}), 400
+    c.refill_date = refill
+    c.barcode = code
+    db.session.add(CylinderLog(cylinder_id=c.id, action='refill_date',
+                               performed_by=current_user.id,
+                               notes=f'Refill {refill.isoformat()} from {code}'))
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'number': c.cylinder_number,
+                    'refill_date': c.refill_date.isoformat(),
+                    'gas_type': c.gas_type, 'status': c.status})
+
+
+def _parse_z_refill(code):
+    """Штрихкод заправки: Z + дата (Z20261005, Z26-10-05, Z26/10/05)."""
+    import re as _re
+    from datetime import date as _date
+    s = (code or '').strip().upper()
+    if not s.startswith('Z'):
+        return None
+    s = s[1:]
+    try:
+        if len(s) == 8 and s.isdigit():
+            return _date(int(s[:4]), int(s[4:6]), int(s[6:8]))
+        for sep in ('-', '/'):
+            if sep in s:
+                parts = s.split(sep)
+                if len(parts) == 3:
+                    a, b, c_ = parts
+                    if len(a) == 4:
+                        return _date(int(a), int(b), int(c_))
+                    return _date(2000 + int(a), int(b), int(c_))
+    except ValueError:
+        return None
+    return None
+
+
+@bp.route('/scan-list')
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinder_scan_list():
+    return render_template('gas/scan_list.html')
+
+
+@bp.route('/api/cylinders/scan-list', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinder_scan_list_add():
+    data = request.get_json() or {}
+    number = (data.get('number') or '').strip()
+    gas_type = data.get('gas_type') or 'nitrogen'
+    if not number:
+        return jsonify({'error': 'No number'}), 400
+    c = GasCylinder.query.filter_by(cylinder_number=number).first()
+    created = False
+    if not c:
+        c = GasCylinder(gas_type=gas_type if gas_type in GAS_TYPES else 'nitrogen',
+                        cylinder_number=number, barcode=number, status='full',
+                        received_at=datetime.utcnow())
+        db.session.add(c)
+        db.session.flush()
+        created = True
+        db.session.add(CylinderLog(cylinder_id=c.id, action='created',
+                                   performed_by=current_user.id,
+                                   new_cylinder_number=number,
+                                   notes='Added to scan list'))
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'created': created, 'cylinder_id': c.id,
+                    'number': c.cylinder_number, 'gas_type': c.gas_type,
+                    'status': c.status, 'side': c.side or '',
+                    'refill_date': c.refill_date.isoformat() if c.refill_date else None})
+
+
+@bp.route('/api/cylinders/assign-work', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinder_assign_work():
+    """Назначить баллон из списка в работу (left/right)."""
+    data = request.get_json() or {}
+    cyl_id = safe_int(data.get('cylinder_id'))
+    side = (data.get('side') or '').strip()
+    if side not in ('left', 'right'):
+        return jsonify({'error': 'Side must be left or right'}), 400
+    c = db.session.get(GasCylinder, cyl_id) if cyl_id else None
+    if not c:
+        return jsonify({'error': 'Cylinder not found'}), 404
+    for other in GasCylinder.query.filter(
+        GasCylinder.gas_type == c.gas_type,
+        GasCylinder.side == side,
+        GasCylinder.status == 'in_use',
+        GasCylinder.id != c.id
+    ).all():
+        other.status = 'empty'
+        other.side = None
+        other.installed_at = None
+        db.session.add(CylinderLog(
+            cylinder_id=other.id, action='status_in_use_to_empty',
+            performed_by=current_user.id,
+            notes=f'Replaced by #{c.cylinder_number} on {side}'
+        ))
+    c.status = 'in_use'
+    c.side = side
+    c.installed_at = datetime.utcnow()
+    db.session.add(CylinderLog(cylinder_id=c.id, action='install',
+                               performed_by=current_user.id,
+                               notes=f'Assigned to work: {side}'))
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    log_audit('assign_work', 'gas_cylinder', c.id, f'{c.cylinder_number} → {side}')
+    return jsonify({'ok': True, 'number': c.cylinder_number, 'side': side})
+
 
 @bp.route('/scan')
 @login_required

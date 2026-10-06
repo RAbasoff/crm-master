@@ -136,6 +136,26 @@
 </div>
 {% endif %}
 
+<!-- SUMMARY -->
+<div class="card" style="margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:15px">📊 {{ _('Summary') }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">
+        <div class="stat-card"><div class="number">{{ stats.total_received_month }}</div><div class="label">{{ _('Received this month') }} (N₂ {{ stats.n2_received_month }} · CO₂ {{ stats.co2_received_month }})</div></div>
+        <div class="stat-card"><div class="number">{{ stats.total_on_hand }}</div><div class="label">{{ _('In stock total') }} (N₂ {{ stats.n2_total }} · CO₂ {{ stats.co2_total }})</div></div>
+        <div class="stat-card ok"><div class="number">{{ (stats.n2_in_use_list|length) + (stats.co2_in_use_list|length) }}</div><div class="label">{{ _('In work') }}
+            {% for c in stats.n2_in_use_list %}· N₂ {{ c.side or '?' }}{% endfor %}
+            {% for c in stats.co2_in_use_list %}· CO₂ {{ c.side or '?' }}{% endfor %}
+        </div></div>
+        <div class="stat-card warn"><div class="number">{{ (stats.n2_empty_list|length) + (stats.co2_empty_list|length) }}</div><div class="label">{{ _('Empty') }}</div></div>
+        <div class="stat-card {% if stats.total_defect %}warn{% endif %}"><div class="number">{{ stats.total_defect }}</div><div class="label">{{ _('Defects') }}</div></div>
+        <div class="stat-card" style="border-left:4px solid #3498db"><div class="number">{{ stats.ordered_total_month }}</div><div class="label">{{ _('Ordered since month start') }} (N₂ {{ stats.ordered_n2_month }} · CO₂ {{ stats.ordered_co2_month }})</div></div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/gas/scan-list" class="btn btn-sm" style="background:#3498db;color:white">📋 {{ _('Scan list') }}</a>
+        <a href="/gas/scan" class="btn btn-sm" style="background:#eee">📷 {{ _('Scan') }}</a>
+    </div>
+</div>
+
 <div class="gas-grid">
 
 <!-- ═══ N₂ ═══ -->
