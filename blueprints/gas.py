@@ -849,26 +849,37 @@ def cylinder_scan_number():
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_scan_refill():
-    """Второе сканирование — штрихкод с Z = дата заправки."""
+    """Второе сканирование — штрихкод с Z = дата заправки (или ввод даты вручную)."""
     data = request.get_json() or {}
     code = (data.get('code') or data.get('barcode') or '').strip()
+    date_str = (data.get('date') or '').strip()
     cyl_id = safe_int(data.get('cylinder_id'))
     number = (data.get('number') or '').strip()
-    if not code:
-        return jsonify({'error': 'No code'}), 400
     c = db.session.get(GasCylinder, cyl_id) if cyl_id else None
     if not c and number:
         c = GasCylinder.query.filter_by(cylinder_number=number).first()
     if not c:
         return jsonify({'error': 'Cylinder not found — scan number first'}), 404
-    refill = _parse_z_refill(code)
-    if not refill:
-        return jsonify({'error': 'Invalid refill barcode (need Z + date)'}), 400
+
+    refill = None
+    if date_str:
+        try:
+            refill = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format YYYY-MM-DD'}), 400
+    elif code:
+        refill = _parse_z_refill(code)
+        if not refill:
+            return jsonify({'error': 'Invalid refill barcode (Z + date) or enter date manually'}), 400
+    else:
+        return jsonify({'error': 'No date'}), 400
+
     c.refill_date = refill
-    c.barcode = code
+    if code:
+        c.barcode = code
     db.session.add(CylinderLog(cylinder_id=c.id, action='refill_date',
                                performed_by=current_user.id,
-                               notes=f'Refill {refill.isoformat()} from {code}'))
+                               notes=f'Refill {refill.isoformat()}'))
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True, 'number': c.cylinder_number,
@@ -911,24 +922,26 @@ def cylinder_scan_list():
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_scan_list_add():
+    """Добавить номер баллона в список приёмки (без требования Z)."""
     data = request.get_json() or {}
     number = (data.get('number') or '').strip()
     gas_type = data.get('gas_type') or 'nitrogen'
     if not number:
         return jsonify({'error': 'No number'}), 400
+    if gas_type not in GAS_TYPES:
+        gas_type = 'nitrogen'
     c = GasCylinder.query.filter_by(cylinder_number=number).first()
     created = False
     if not c:
-        c = GasCylinder(gas_type=gas_type if gas_type in GAS_TYPES else 'nitrogen',
-                        cylinder_number=number, barcode=number, status='full',
-                        received_at=datetime.utcnow())
+        c = GasCylinder(gas_type=gas_type, cylinder_number=number,
+                        status='full', received_at=datetime.utcnow())
         db.session.add(c)
         db.session.flush()
         created = True
         db.session.add(CylinderLog(cylinder_id=c.id, action='created',
                                    performed_by=current_user.id,
                                    new_cylinder_number=number,
-                                   notes='Added to scan list'))
+                                   notes='Scan list (not in stock yet)'))
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True, 'created': created, 'cylinder_id': c.id,
@@ -937,19 +950,68 @@ def cylinder_scan_list_add():
                     'refill_date': c.refill_date.isoformat() if c.refill_date else None})
 
 
+@bp.route('/api/cylinders/scan-list/add-stock', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def cylinder_scan_list_add_stock():
+    """Ответ «ДА» — добавить баллоны из списка на склад (received)."""
+    data = request.get_json() or {}
+    ids = data.get('ids') or []
+    if not ids:
+        return jsonify({'error': 'No cylinders'}), 400
+    n = 0
+    for cid in ids:
+        c = db.session.get(GasCylinder, int(cid))
+        if not c:
+            continue
+        if not c.received_at:
+            c.received_at = datetime.utcnow()
+        if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
+            c.status = 'full'
+        db.session.add(CylinderLog(
+            cylinder_id=c.id, action='received', performed_by=current_user.id,
+            notes='Added to stock from scan list'
+        ))
+        n += 1
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'added': n})
+
+
 @bp.route('/api/cylinders/assign-work', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_assign_work():
-    """Назначить баллон из списка в работу (left/right)."""
+    """Установить баллон на место (left/right). Вне списка — только после подтверждения."""
     data = request.get_json() or {}
+    number = (data.get('number') or '').strip()
     cyl_id = safe_int(data.get('cylinder_id'))
     side = (data.get('side') or '').strip()
+    gas_type = data.get('gas_type') or 'nitrogen'
+    force = bool(data.get('force'))
     if side not in ('left', 'right'):
         return jsonify({'error': 'Side must be left or right'}), 400
+
     c = db.session.get(GasCylinder, cyl_id) if cyl_id else None
+    if not c and number:
+        c = GasCylinder.query.filter_by(cylinder_number=number).first()
+
+    in_list = bool(c)  # уже есть в базе = был в списке/складе
     if not c:
-        return jsonify({'error': 'Cylinder not found'}), 404
+        if not force:
+            return jsonify({'ok': True, 'need_confirm': True, 'number': number,
+                            'message': 'Not in scan list. Install anyway?'}), 200
+        c = GasCylinder(gas_type=gas_type if gas_type in GAS_TYPES else 'nitrogen',
+                        cylinder_number=number, barcode=number,
+                        status='in_use', side=side,
+                        received_at=datetime.utcnow(), installed_at=datetime.utcnow())
+        db.session.add(c)
+        db.session.flush()
+        db.session.add(CylinderLog(cylinder_id=c.id, action='created',
+                                   performed_by=current_user.id,
+                                   new_cylinder_number=number,
+                                   notes='Installed without scan list'))
+    # снять предыдущий с этой стороны
     for other in GasCylinder.query.filter(
         GasCylinder.gas_type == c.gas_type,
         GasCylinder.side == side,
@@ -966,14 +1028,16 @@ def cylinder_assign_work():
         ))
     c.status = 'in_use'
     c.side = side
+    c.gas_type = gas_type if gas_type in GAS_TYPES else c.gas_type
     c.installed_at = datetime.utcnow()
     db.session.add(CylinderLog(cylinder_id=c.id, action='install',
                                performed_by=current_user.id,
-                               notes=f'Assigned to work: {side}'))
+                               notes=f'Installed on {side}'))
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     log_audit('assign_work', 'gas_cylinder', c.id, f'{c.cylinder_number} → {side}')
-    return jsonify({'ok': True, 'number': c.cylinder_number, 'side': side})
+    return jsonify({'ok': True, 'number': c.cylinder_number, 'side': side,
+                    'in_list': in_list, 'cylinder_id': c.id})
 
 
 @bp.route('/scan')

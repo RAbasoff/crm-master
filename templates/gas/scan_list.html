@@ -8,8 +8,9 @@
     </div>
 </div>
 
+<!-- A. ПРИЁМКА: номер → дата -->
 <div class="card" style="margin-bottom:12px">
-    <h2 style="margin:0 0 10px;font-size:15px">📷 1 — {{ _('Cylinder number') }}</h2>
+    <h2 style="margin:0 0 10px;font-size:15px">1️⃣ {{ _('Scan cylinder number') }} ({{ _('no Z') }})</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="scanNumber" type="text" placeholder="{{ _('Scan or type number') }}" autofocus
                style="flex:1;min-width:180px;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px">
@@ -17,36 +18,63 @@
             <option value="nitrogen">N₂</option>
             <option value="co2">CO₂</option>
         </select>
-        <button class="btn" style="background:#27ae60;color:white;padding:10px 16px" onclick="scanNumber()">{{ _('Add') }}</button>
+        <button class="btn" style="background:#27ae60;color:white;padding:10px 16px" onclick="addNumber()">＋</button>
     </div>
-    <div id="numMsg" style="margin-top:8px;font-size:12px;color:#888"></div>
+    <div id="stepDate" style="display:none;margin-top:12px;padding:12px;background:#f0f7ff;border-radius:8px">
+        <strong id="stepNumLabel"></strong>
+        <div style="margin-top:8px;font-size:13px;color:#555">2️⃣ {{ _('Scan refill date (Z…) or enter manually') }}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+            <input id="scanRefill" type="text" placeholder="Z20261005"
+                   style="flex:1;min-width:140px;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <input id="refillDate" type="date" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+            <button class="btn btn-sm" style="background:#3498db;color:white;padding:8px 12px" onclick="saveRefill()">✓ {{ _('Save date') }}</button>
+            <button class="btn btn-sm" style="background:#eee;padding:8px 12px" onclick="skipDate()">{{ _('Skip') }}</button>
+        </div>
+        <div id="dateMsg" style="margin-top:6px;font-size:12px;color:#888"></div>
+    </div>
 </div>
 
+<!-- СПИСОК -->
 <div class="card" style="margin-bottom:12px">
-    <h2 style="margin:0 0 10px;font-size:15px">📅 2 — {{ _('Refill date') }} (Z…)</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="scanRefill" type="text" placeholder="Z20261005"
-               style="flex:1;min-width:180px;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px">
-        <button class="btn" style="background:#3498db;color:white;padding:10px 16px" onclick="scanRefill()">{{ _('Save') }}</button>
-    </div>
-    <div id="refillMsg" style="margin-top:8px;font-size:12px;color:#888">{{ _('Shtrihkod Z + date. Last scanned number is used.') }}</div>
-</div>
-
-<div class="card">
-    <h2 style="margin:0 0 10px;font-size:15px">🗂 {{ _('Scanned list') }}</h2>
+    <h2 style="margin:0 0 10px;font-size:15px">🗂 {{ _('Scanned list') }} (<span id="listCount">0</span>)</h2>
     <div class="table-wrap">
         <table>
-            <tr><th>#</th><th>{{ _('Cylinder number') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Status') }}</th><th>{{ _('Refill date') }}</th><th>{{ _('Assign to work') }}</th></tr>
+            <tr><th>#</th><th>{{ _('Cylinder number') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Refill date') }}</th><th></th></tr>
             <tbody id="scanListBody">
-            <tr><td colspan="6" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>
             </tbody>
         </table>
     </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" style="background:#27ae60;color:white;padding:10px 16px;font-weight:700"
+                onclick="askAddStock()">📦 {{ _('Add these to stock?') }}</button>
+    </div>
+    <div id="stockMsg" style="margin-top:8px;font-size:12px;color:#888"></div>
+</div>
+
+<!-- B. УСТАНОВКА -->
+<div class="card" style="margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:15px">🔧 {{ _('Install on machine') }}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="instGas" style="padding:10px;border:1px solid #ddd;border-radius:8px">
+            <option value="nitrogen">N₂</option>
+            <option value="co2">CO₂</option>
+        </select>
+        <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" id="sideLeft" onclick="pickSide('left')" style="background:#eee;padding:8px 12px">⬅ {{ _('Left') }}</button>
+            <button class="btn btn-sm" id="sideRight" onclick="pickSide('right')" style="background:#eee;padding:8px 12px">➡ {{ _('Right') }}</button>
+        </div>
+        <input id="instNumber" type="text" placeholder="{{ _('Scan or type number') }}"
+               style="flex:1;min-width:160px;padding:10px;border:1px solid #ddd;border-radius:8px">
+        <button class="btn" style="background:#27ae60;color:white;padding:10px 16px" onclick="installNow()">🔧 {{ _('Install') }}</button>
+    </div>
+    <div id="instMsg" style="margin-top:8px;font-size:12px;color:#888"></div>
 </div>
 
 <script>
-var lastId = null;
 var rows = [];
+var lastId = null;
+var instSide = 'right';
 
 function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
@@ -56,27 +84,34 @@ function esc(s) {
 
 function renderList() {
     const tb = document.getElementById('scanListBody');
+    document.getElementById('listCount').textContent = rows.length;
     if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>';
+        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>';
         return;
     }
     tb.innerHTML = rows.map(function (r, i) {
-        return '<tr>' +
+        return '<tr data-num="' + esc(r.number) + '">' +
             '<td>' + (i + 1) + '</td>' +
             '<td><strong>' + esc(r.number) + '</strong></td>' +
             '<td>' + esc(r.gas_type) + '</td>' +
-            '<td>' + esc(r.status) + '</td>' +
             '<td>' + esc(r.refill_date || '—') + '</td>' +
-            '<td>' +
-            '<button class="btn btn-sm" style="background:#27ae60;color:white" onclick="assign(' + r.cylinder_id + ',\'right\')">➡ {{ _('Right') }}</button> ' +
-            '<button class="btn btn-sm" style="background:#3498db;color:white" onclick="assign(' + r.cylinder_id + ',\'left\')">⬅ {{ _('Left') }}</button>' +
-            '</td></tr>';
+            '<td><button class="btn btn-sm" style="background:#eee" onclick="removeRow(' + i + ')">✕</button></td>' +
+            '</tr>';
     }).join('');
 }
 
-function scanNumber() {
+function removeRow(i) {
+    rows.splice(i, 1);
+    renderList();
+}
+
+function addNumber() {
     const number = document.getElementById('scanNumber').value.trim();
     if (!number) return;
+    if (/^Z/i.test(number)) {
+        alert('{{ _("Number should NOT start with Z — Z is only for refill date") }}');
+        return;
+    }
     csrfFetch('/gas/api/cylinders/scan-list', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -86,52 +121,124 @@ function scanNumber() {
         lastId = d.cylinder_id;
         rows.unshift(d);
         renderList();
-        document.getElementById('numMsg').textContent = '✓ ' + d.number + (d.created ? ' ({{ _('created') }})' : '');
         document.getElementById('scanNumber').value = '';
-        document.getElementById('scanNumber').focus();
+        document.getElementById('stepNumLabel').textContent = d.number + ' (' + d.gas_type + ')';
+        document.getElementById('stepDate').style.display = 'block';
+        document.getElementById('dateMsg').textContent = '';
+        document.getElementById('scanRefill').value = '';
+        document.getElementById('refillDate').value = '';
+        document.getElementById('scanRefill').focus();
     });
 }
 
-function scanRefill() {
+function saveRefill() {
     const code = document.getElementById('scanRefill').value.trim();
-    if (!code || !lastId) {
-        alert('{{ _('Scan a number first') }}');
+    const dt = document.getElementById('refillDate').value;
+    if (!lastId) return;
+    const body = { cylinder_id: lastId };
+    if (code) body.code = code;
+    if (dt) body.date = dt;
+    if (!code && !dt) {
+        alert('{{ _("Enter refill date (Z-code or date)") }}');
         return;
     }
     csrfFetch('/gas/api/cylinders/scan-refill', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({code: code, cylinder_id: lastId})
+        body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d.ok) { alert(d.error || 'Error'); return; }
-        document.getElementById('refillMsg').textContent = '✓ ' + d.number + ' → ' + d.refill_date;
         const row = rows.find(function (x) { return x.cylinder_id === d.cylinder_id || x.number === d.number; });
         if (row) row.refill_date = d.refill_date;
         renderList();
-        document.getElementById('scanRefill').value = '';
-        document.getElementById('scanRefill').focus();
+        document.getElementById('dateMsg').textContent = '✓ ' + d.number + ' → ' + d.refill_date;
+        document.getElementById('stepDate').style.display = 'none';
+        document.getElementById('scanNumber').focus();
     });
 }
 
-function assign(id, side) {
+function skipDate() {
+    document.getElementById('stepDate').style.display = 'none';
+    document.getElementById('scanNumber').focus();
+}
+
+function askAddStock() {
+    if (!rows.length) return;
+    if (!confirm('{{ _("Add these cylinders to stock? YES = add, NO = keep list only") }}')) {
+        document.getElementById('stockMsg').textContent = '{{ _("List kept (not added to stock)") }}';
+        return;
+    }
+    const ids = rows.map(function (r) { return r.cylinder_id; });
+    csrfFetch('/gas/api/cylinders/scan-list/add-stock', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ids: ids})
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) { alert(d.error || 'Error'); return; }
+        document.getElementById('stockMsg').textContent = '✓ {{ _("Added to stock") }}: ' + d.added;
+    });
+}
+
+function pickSide(side) {
+    instSide = side;
+    document.getElementById('sideLeft').style.background = side === 'left' ? '#3498db' : '#eee';
+    document.getElementById('sideLeft').style.color = side === 'left' ? '#fff' : '#333';
+    document.getElementById('sideRight').style.background = side === 'right' ? '#3498db' : '#eee';
+    document.getElementById('sideRight').style.color = side === 'right' ? '#fff' : '#333';
+}
+
+function installNow(force) {
+    const number = document.getElementById('instNumber').value.trim();
+    if (!number) return;
+    if (/^Z/i.test(number)) {
+        alert('{{ _("Number should NOT start with Z — Z is only for refill date") }}');
+        return;
+    }
+    // Сверка со списком обязательна
+    const inList = rows.some(function (r) { return r.number === number; });
+    if (!inList && !force) {
+        alert('{{ _("This cylinder is NOT in the scan list") }}: ' + number);
+        if (!confirm('{{ _("Install anyway?") }}')) {
+            document.getElementById('instMsg').textContent = '{{ _("Not installed") }}';
+            return;
+        }
+        force = true;
+    }
     csrfFetch('/gas/api/cylinders/assign-work', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({cylinder_id: id, side: side})
+        body: JSON.stringify({
+            number: number,
+            gas_type: document.getElementById('instGas').value,
+            side: instSide,
+            force: !!force
+        })
     }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.need_confirm) {
+            alert('{{ _("This cylinder is NOT in the scan list") }}: ' + number);
+            if (confirm('{{ _("Install anyway?") }}')) {
+                installNow(true);
+            } else {
+                document.getElementById('instMsg').textContent = '{{ _("Not installed") }}';
+            }
+            return;
+        }
         if (!d.ok) { alert(d.error || 'Error'); return; }
-        alert('✓ ' + d.number + ' → ' + d.side);
-        const row = rows.find(function (x) { return x.cylinder_id === id; });
-        if (row) { row.status = 'in_use'; row.side = d.side; }
-        renderList();
+        document.getElementById('instMsg').textContent = '✓ ' + d.number + ' → ' + d.side;
+        document.getElementById('instNumber').value = '';
+        document.getElementById('instNumber').focus();
     });
 }
 
 document.getElementById('scanNumber').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); scanNumber(); }
+    if (e.key === 'Enter') { e.preventDefault(); addNumber(); }
 });
 document.getElementById('scanRefill').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); scanRefill(); }
+    if (e.key === 'Enter') { e.preventDefault(); saveRefill(); }
 });
+document.getElementById('instNumber').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); installNow(false); }
+});
+pickSide('right');
 </script>
 {% endblock %}
