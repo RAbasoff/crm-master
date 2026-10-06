@@ -258,6 +258,15 @@ function endWorkById(faultId) {
             {% endif %}
         </div>
         <div class="form-group" style="margin-top:12px">
+            <label style="font-weight:600">{{ _('Lead mechanic') }} ({{ _('keeps records, photos, reports') }})</label>
+            <select name="lead_technician_id" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px">
+                <option value="">{{ _('First assigned') }}</option>
+                {% for t in technicians %}
+                <option value="{{ t.id }}">{{ t.display_name or t.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-top:12px">
             <label style="font-weight:600;margin-bottom:8px">🏢 {{ _('Contractor') }} ({{ _('optional') }})</label>
             <select name="contractor_id" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
                 <option value="">{{ _('— No contractor —') }}</option>
@@ -280,7 +289,18 @@ function endWorkById(faultId) {
             <h2>{{ _('Details') }}</h2>
             <p><strong>{{ _('Title') }}:</strong> {{ fault.title }}</p>
             <p><strong>{{ _('Machine / Equipment') }}:</strong> {% if fault.machine %}🏭 <a href="/floor?highlight={{ fault.machine_id }}">{{ fault.machine.name }}</a>{% elif fault.equipment %}⚙️ {{ fault.equipment.name }}{% else %}—{% endif %}</p>
-            <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span></p>
+            <p><strong>{{ _('Priority') }}:</strong> <span class="badge badge-{{ fault.priority }}">{{ fault.priority }}</span>
+            {% if sla is defined %}
+            <span style="margin-left:8px;font-size:11px;background:{% if sla.ok == false or sla.expired %}#fdecea{% elif sla.ok %}#eafaf1{% else %}#f5f7fa{% endif %};padding:3px 8px;border-radius:6px">
+                ⏱ {{ sla.label }}
+                {% if sla.reacted_min is not none %}
+                · {{ _('Reaction') }}: {{ sla.reacted_min }} {{ _('min') }}
+                {% else %}
+                · {{ _('Awaiting reaction') }}
+                {% endif %}
+            </span>
+            {% endif %}
+            </p>
             <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ fault.status }}">{{ _(status_msgs.get(fault.status, fault.status)) if status_msgs is defined else fault.status }}</span>
             {% if fault.status == 'rejected' %}
                 <div style="margin-top:4px;font-size:12px;color:#c0392b;background:#fdecea;padding:6px 10px;border-radius:8px">
@@ -328,6 +348,12 @@ function endWorkById(faultId) {
                 {% if fault.technician.worker_profile and fault.technician.worker_profile.specialisatie %}
                 <small>({{ fault.technician.worker_profile.specialisatie }})</small>
                 {% endif %}
+            </p>
+            {% endif %}
+            {% elif fault.assigned_technicians %}
+            <p><strong>{{ _('Lead mechanic') }}:</strong>
+                {% set lead = fault.lead_technician or fault.technician %}
+                {{ lead.display_name if lead else '—' }}
             </p>
             {% endif %}
             {% if fault.accepted_at %}

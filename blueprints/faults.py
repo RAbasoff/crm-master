@@ -114,22 +114,49 @@ def translate_status(status):
     key = STATUS_MSGIDS.get(status)
     return _(key) if key else (STATUS_LABELS.get(status, status))
 
-# Разрешённые переходы. Механик может менять любой статус, КРОМЕ closed.
-# closed — только админ / начальник ТС / главный механик.
+# Строгая цепочка: Новая → Принята → Диагностика → В работе → Тестирование → Устранена → Закрыта
+# Из «В работе» — Пауза / Ожидание / Заказ; после причин — снова «В работе».
 ALLOWED_TRANSITIONS = {
-    'open':          ('accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected'),
-    'accepted':      ('diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected'),
-    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected'),
-    'in_progress':   ('diagnosis', 'paused', 'testing', 'resolved', 'waiting_parts', 'parts_ordered', 'rejected'),
-    'paused':        ('diagnosis', 'in_progress', 'waiting_parts', 'parts_ordered', 'accepted', 'testing', 'resolved', 'rejected'),
-    'waiting_parts': ('parts_ordered', 'in_progress', 'diagnosis', 'paused', 'testing', 'resolved'),
-    'parts_ordered': ('waiting_parts', 'in_progress', 'paused', 'diagnosis', 'testing', 'resolved'),
-    'testing':       ('in_progress', 'diagnosis', 'resolved', 'paused', 'waiting_parts'),
-    'resolved':      ('closed', 'reopened', 'testing', 'in_progress', 'diagnosis', 'paused'),
-    'rejected':      ('reopened', 'accepted', 'diagnosis', 'closed'),
+    'open':          ('accepted',),
+    'accepted':      ('diagnosis', 'paused', 'waiting_parts'),
+    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'rejected'),
+    'in_progress':   ('diagnosis', 'testing', 'paused', 'waiting_parts', 'parts_ordered'),
+    'paused':        ('in_progress', 'waiting_parts', 'parts_ordered', 'rejected'),
+    'waiting_parts': ('parts_ordered', 'in_progress'),
+    'parts_ordered': ('in_progress', 'waiting_parts'),
+    'testing':       ('in_progress', 'resolved', 'diagnosis'),
+    'resolved':      ('closed', 'testing'),
+    'rejected':      ('reopened', 'accepted'),
     'closed':        ('reopened',),
-    'reopened':      ('diagnosis', 'in_progress', 'accepted', 'paused', 'resolved', 'testing', 'rejected'),
+    'reopened':      ('diagnosis', 'accepted', 'in_progress'),
 }
+
+# SLA: реакция (минуты); время допустимой паузы не входит в рабочее время
+SLA_MINUTES = {'critical': 15, 'high': 60, 'normal': 240, 'low': 1440}
+SLA_LABELS = {
+    'critical': 'КРИТИЧЕСКИЙ < 15 мин',
+    'high': 'ВЫСОКИЙ < 1 час',
+    'normal': 'СРЕДНИЙ < 4 часа',
+    'low': 'НИЗКИЙ < 24 часа',
+}
+
+
+def sla_info(f):
+    limit = SLA_MINUTES.get(f.priority or 'normal', 240)
+    created = f.created_at
+    reacted = f.first_response_at or f.accepted_at
+    react_min = None
+    if created and reacted:
+        react_min = round((reacted - created).total_seconds() / 60.0, 1)
+    return {
+        'limit_min': limit,
+        'label': SLA_LABELS.get(f.priority or 'normal', str(limit) + ' min'),
+        'reacted_min': react_min,
+        'ok': (react_min <= limit) if react_min is not None else None,
+        'expired': created is not None and reacted is None and
+                   (now_local() - created).total_seconds() / 60.0 > limit,
+    }
+
 
 # Пауза: статус один, причины — отдельно (для аналитики)
 PAUSE_REASONS = {
@@ -445,6 +472,7 @@ def fault_detail(fault_id):
         FaultWorkSession.started_at.desc()
     ).all()
     total_minutes = sum((s.duration_minutes or 0) for s in sessions if s.ended_at)
+    sla = sla_info(f)
     # Сколько заявка «ждёт» (сумма пауз)
     wait_minutes = 0
     if f.pause_started_at:
@@ -520,6 +548,7 @@ def fault_detail(fault_id):
         active_work_statuses=ACTIVE_WORK_STATUSES, wait_statuses=WAIT_STATUSES,
         timeline=timeline,
         status_msgs=STATUS_MSGIDS, pause_reason_msgs=PAUSE_REASON_MSGIDS,
+        sla=sla, sla_minutes=SLA_MINUTES, sla_labels=SLA_LABELS,
     )
 
 
@@ -626,6 +655,7 @@ def fault_accept(fault_id):
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     f.technician_id = current_user.id
     f.accepted_at = f.accepted_at or now_local()
+    f.first_response_at = f.first_response_at or now_local()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -658,6 +688,11 @@ def fault_assign(fault_id):
                 f.assigned_technicians.append(tech)
                 names.append(tech.display_name or tech.username)
         f.technician_id = int(tech_ids[0])
+        lead_id = safe_int(request.form.get('lead_technician_id') or request.values.get('lead_technician_id'))
+        if lead_id and any(t.id == lead_id for t in f.assigned_technicians):
+            f.lead_technician_id = lead_id
+        else:
+            f.lead_technician_id = int(tech_ids[0])
     if contractor_id:
         f.contractor_id = int(contractor_id)
         c = Contractor.query.get(int(contractor_id))
@@ -836,6 +871,12 @@ def fault_reopen(fault_id):
 @role_required('technician', 'admin', 'director')
 def work_report_new(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
+    # Записи ведёт старший в группе (или админ/начальник)
+    lead_id = f.lead_technician_id or f.technician_id
+    if (not current_user.has_role('admin', 'director')
+            and lead_id and current_user.id != lead_id):
+        flash(_('Only the lead mechanic keeps the work records'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
     if request.method == 'POST':
         wr = WorkReport(
             fault_id=f.id,

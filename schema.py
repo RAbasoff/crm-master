@@ -245,6 +245,8 @@ def ensure_schema():
         ("user.preferred_language", "ALTER TABLE user ADD COLUMN preferred_language VARCHAR(5)"),
         ("gas_cylinder.side", "ALTER TABLE gas_cylinder ADD COLUMN side VARCHAR(10)"),
         ("gas_cylinder.refill_date", "ALTER TABLE gas_cylinder ADD COLUMN refill_date DATE"),
+        ("fault_report.lead_technician_id", "ALTER TABLE fault_report ADD COLUMN lead_technician_id INTEGER REFERENCES user(id)"),
+        ("fault_report.first_response_at", "ALTER TABLE fault_report ADD COLUMN first_response_at DATETIME"),
         ("technical_work_order.approved_by", "ALTER TABLE technical_work_order ADD COLUMN approved_by INTEGER REFERENCES user(id)"),
         ("technical_work_order.approved_at", "ALTER TABLE technical_work_order ADD COLUMN approved_at DATETIME"),
         ("technical_work_order.approval_comment", "ALTER TABLE technical_work_order ADD COLUMN approval_comment TEXT"),
