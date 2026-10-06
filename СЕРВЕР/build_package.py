@@ -15,6 +15,7 @@ OUT = ROOT / 'СЕРВЕР' / 'CRM_Server'
 INCLUDE = [
     'app.py', 'models.py', 'schema.py', 'config.py', 'utils.py',
     'security.py', 'logs.py', 'pdf_utils.py', 'push.py', 'wsgi.py',
+    'license.py',
     'requirements.txt', 'runtime.txt',
     'blueprints', 'templates', 'translations', 'vendor_fpdf',
 ]
@@ -78,6 +79,34 @@ def main():
         '[ -f "$DEST/.env" ] || cp "$DEST/.env.example" "$DEST/.env"\n'
         'pip install -r "$DEST/requirements.txt"\n'
         'echo "Installed to $DEST. Edit .env, point nginx->gunicorn wsgi:app"\n',
+        encoding='utf-8')
+
+    (OUT / 'install.bat').write_text(
+        '@echo off\r\n'
+        'REM ProMaster — install/update code on Windows server (run as Admin)\r\n'
+        'set DEST=C:\\ProMasterServer\r\n'
+        'echo Installing ProMaster to %DEST% ...\r\n'
+        'if not exist "%DEST%" mkdir "%DEST%"\r\n'
+        'if not exist "%DEST%\\instance" mkdir "%DEST%\\instance"\r\n'
+        'if not exist "%DEST%\\static\\uploads" mkdir "%DEST%\\static\\uploads"\r\n'
+        'if not exist "%DEST%\\backups" mkdir "%DEST%\\backups"\r\n'
+        'xcopy /E /Y /I "%~dp0*" "%DEST%"\r\n'
+        'if not exist "%DEST%\\.env" copy "%DEST%\\.env.example" "%DEST%\\.env"\r\n'
+        'pip install -r "%DEST%\\requirements.txt"\r\n'
+        'echo Done. Edit %DEST%\\.env then run: python wsgi.py\r\n'
+        'pause\r\n', encoding='utf-8')
+
+    (OUT / 'README_SERVER.txt').write_text(
+        'ProMaster CRM — Установка на сервер компании\n'
+        '============================================\n'
+        '1. Python 3.11+, nginx (HTTPS).\n'
+        '2. Папка: C:\\ProMasterServer (или install.bat).\n'
+        '3. .env.example -> .env: SECRET_KEY, APP_TIMEZONE, VAPID.\n'
+        '4. Данные: instance\\werkplaats.db, static\\uploads\\, backups\\\n'
+        '5. pip install -r requirements.txt\n'
+        '6. Запуск: python wsgi.py  или  gunicorn wsgi:app --bind 127.0.0.1:8000\n'
+        '7. nginx proxy_pass -> 127.0.0.1:8000, HTTPS обязателен.\n'
+        'Обновление: только код. Не трогать instance, uploads, .env, backups.\n',
         encoding='utf-8')
 
     print('---')

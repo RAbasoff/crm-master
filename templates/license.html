@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProMaster — License</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0f1629;color:#e6edf3;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.card{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:28px;max-width:480px;width:92%}
+h2{margin:0 0 10px;font-size:20px}
+p{color:#8b949e;font-size:13px;line-height:1.5}
+label{font-size:12px;font-weight:600;display:block;margin:10px 0 4px}
+textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;font-family:monospace;font-size:12px}
+button{width:100%;margin-top:14px;padding:12px;border:none;border-radius:10px;background:#5b9cf6;color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+.err{background:#fdecea;color:#c0392b;padding:10px;border-radius:8px;margin:10px 0;font-size:13px}
+.ok{background:#eafaf1;color:#27ae60;padding:10px;border-radius:8px;margin:10px 0;font-size:13px}
+.meta{margin-top:12px;font-size:12px;color:#8b949e}
+</style>
+</head>
+<body>
+<div class="card">
+    <h2>🔑 Требуется лицензия</h2>
+    <p>Введите лицензионный ключ, полученный от A.B.A.S.O.F.F.</p>
+    {% if error %}<div class="err">⛔ {{ error }}</div>{% endif %}
+    {% if ok_msg %}<div class="ok">✅ {{ ok_msg }}</div>{% endif %}
+    <form method="POST" action="/license">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Лицензионный ключ</label>
+        <textarea name="license_key" rows="4" required>{{ license_key or '' }}</textarea>
+        <button type="submit">Активировать</button>
+    </form>
+    {% if payload %}
+    <div class="meta">Клиент: {{ payload.client }} · до {{ payload.expire }} · мест: {{ payload.seats }}</div>
+    {% endif %}
+</div>
+</body>
+</html>

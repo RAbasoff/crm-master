@@ -403,9 +403,42 @@ def get_current_locale():
 
 babel = Babel(app, locale_selector=get_current_locale)
 
+@app.route('/license', methods=['GET', 'POST'])
+def license_page():
+    """Ввод лицензионного ключа (доступно без входа)."""
+    from license import load_license, save_license, parse_license
+    error = ''
+    ok_msg = ''
+    key = load_license()
+    payload = None
+    if request.method == 'POST':
+        key = (request.form.get('license_key') or '').strip()
+        ok, info = parse_license(key)
+        if ok:
+            save_license(key)
+            payload = info
+            ok_msg = _('License activated')
+        else:
+            error = info
+    else:
+        ok, info = parse_license(key)
+        if ok:
+            payload = info
+        else:
+            error = info
+    return render_template('license.html', license_key=key, error=error,
+                           ok_msg=ok_msg, payload=payload)
+
+
 @app.before_request
 def before_request():
     g._req_start = time.time()
+    # Лицензия: без ключа — только /license, /static
+    if request.endpoint not in ('license_page', 'static') and not (request.path or '').startswith('/static'):
+        from license import load_license, parse_license
+        ok, _info = parse_license(load_license())
+        if not ok:
+            return redirect(url_for('license_page'))
     if 'lang' not in session:
         session['lang'] = 'ru'
     g.lang = session.get('lang', 'ru')
