@@ -104,37 +104,44 @@ def check_gas_access():
 
 
 def _auto_archive(now):
-    """Archive empty cylinders at end of month. Runs once per month."""
-    month_key = now.strftime('%Y-%m')
+    """Архив прошлого месяца: пустые баллоны + заказано/получено. Счётчик месяца сбрасывается."""
+    # archive previous month once
+    prev_month = (now.replace(day=1) - timedelta(days=1))
+    month_key = prev_month.strftime('%Y-%m')
     existing = MonthlyArchive.query.filter_by(archive_month=month_key, section='gas_cylinders').first()
     if existing:
-        return  # already archived this month
-
-    empty = GasCylinder.query.filter_by(status='empty').all()
-    if not empty:
         return
 
-    snapshot = []
-    for c in empty:
-        snapshot.append({
-            'id': c.id, 'gas_type': c.gas_type,
-            'cylinder_number': c.cylinder_number, 'barcode': c.barcode,
-            'status': c.status,
-            'received_at': c.received_at.strftime('%Y-%m-%d') if c.received_at else None,
-            'installed_at': c.installed_at.strftime('%Y-%m-%d') if c.installed_at else None,
-            'notes': c.notes or ''
-        })
+    month_start = prev_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_end = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    empty = GasCylinder.query.filter_by(status='empty').all()
+    orders_m = CylinderOrder.query.filter(
+        CylinderOrder.ordered_at >= month_start, CylinderOrder.ordered_at < month_end
+    ).all()
+    received_logs_m = CylinderLog.query.filter(
+        CylinderLog.action.in_(('created', 'received')),
+        CylinderLog.date >= month_start, CylinderLog.date < month_end
+    ).all()
 
+    snapshot = {
+        'empty': [{'number': c.cylinder_number, 'gas': c.gas_type,
+                   'refill': str(c.refill_date or '')} for c in empty],
+        'summary': {
+            'ordered_n2': sum(o.quantity or 0 for o in orders_m if o.gas_type == 'nitrogen'),
+            'ordered_co2': sum(o.quantity or 0 for o in orders_m if o.gas_type == 'co2'),
+            'received_count': len(received_logs_m),
+            'total_on_hand': GasCylinder.query.count(),
+        },
+    }
     archive = MonthlyArchive(
         archive_month=month_key,
         section='gas_cylinders',
         data_json=json.dumps(snapshot, ensure_ascii=False)
     )
     db.session.add(archive)
-    # Keep empty cylinders in stock — identity full+in_use+empty = total
     if not safe_commit():
         return
-    log_audit('auto_archive', 'gas_cylinders', 0, f'{len(empty)} empty cylinders snapshotted for {month_key}')
+    log_audit('auto_archive', 'gas_cylinders', 0, f'Gas archive {month_key}')
 
 
 # ============================================================
@@ -145,11 +152,9 @@ def _auto_archive(now):
 @login_required
 def gas_dashboard():
     """Main gas module view with interactive cylinder visualization"""
-    # Auto-archive empty cylinders on last day of month
+    # Auto-archive previous month (empty cylinders + monthly counters)
     now = datetime.utcnow()
-    tomorrow = now + timedelta(days=1)
-    if tomorrow.month != now.month:
-        _auto_archive(now)
+    _auto_archive(now)
 
     cylinders = GasCylinder.query.order_by(GasCylinder.gas_type, GasCylinder.cylinder_number).all()
     components = GasSystemComponent.query.order_by(
