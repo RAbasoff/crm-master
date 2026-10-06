@@ -56,3 +56,5 @@ EMAIL_CONFIG.txt
 *.key
 secrets/
 credentials*.json
+
+СЕРВЕР/CRM_Server/
