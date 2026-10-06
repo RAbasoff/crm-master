@@ -332,7 +332,10 @@ function endWorkById(faultId) {
             <p><strong>{{ _('Reporter') }}:</strong> {{ fault.reporter_label }}</p>
             <p><strong>{{ _('Created') }}:</strong> {{ fault.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
             {% if fault.assigned_technicians %}
-            <p><strong>{{ _('Assigned technicians') }}:</strong></p>
+            <p><strong>{{ _('Assigned technicians') }}:</strong>
+                {% set lead = fault.lead_technician or fault.technician %}
+                {% if lead %}<span style="margin-left:8px;font-size:11px;background:#e8f5e9;padding:2px 8px;border-radius:6px">⭐ {{ _('Lead mechanic') }}: {{ lead.display_name or lead.username }}</span>{% endif %}
+            </p>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
                 {% for t in fault.assigned_technicians %}
                 <span class="badge badge-technician" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px">
@@ -348,12 +351,6 @@ function endWorkById(faultId) {
                 {% if fault.technician.worker_profile and fault.technician.worker_profile.specialisatie %}
                 <small>({{ fault.technician.worker_profile.specialisatie }})</small>
                 {% endif %}
-            </p>
-            {% endif %}
-            {% elif fault.assigned_technicians %}
-            <p><strong>{{ _('Lead mechanic') }}:</strong>
-                {% set lead = fault.lead_technician or fault.technician %}
-                {{ lead.display_name if lead else '—' }}
             </p>
             {% endif %}
             {% if fault.accepted_at %}
