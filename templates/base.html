@@ -1306,20 +1306,19 @@
     };
     </script>
     
-    <!-- TOOL WEAR WARNING POPUP (shows after user interaction) -->
+    <!-- TOOL WEAR WARNING POPUP — admin / начальник ТС / механики, 3 раза в час -->
+    {% if current_user.has_role('admin', 'director', 'technician') %}
     <script>
     (function() {
-        let toolWarningShown = false;
         function showToolWarning() {
-            if (toolWarningShown) return;
-            toolWarningShown = true;
             fetch('/api/tool-wear/warnings').then(r => r.json()).then(data => {
                 if (!data.warnings || data.warnings.length === 0) return;
-                
+                if (document.getElementById('toolWearWarning')) return;
+
                 const overlay = document.createElement('div');
                 overlay.id = 'toolWearWarning';
                 overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center';
-                
+
                 let list = '';
                 data.warnings.forEach(w => {
                     list += '<div style="padding:10px 16px;background:rgba(255,255,255,0.85);border-radius:8px;margin-bottom:6px;border:2px solid #000">' +
@@ -1328,7 +1327,7 @@
                         '<div style="font-size:12px;color:#222">' + T_base.lastReplaced + ': ' + w.last_replaced + '</div>' +
                         '</div>';
                 });
-                
+
                 overlay.innerHTML = '<div id="toolFlashBox" style="background:#f39c12;padding:40px 50px;border-radius:20px;text-align:center;max-width:500px;box-shadow:0 0 60px rgba(243,156,18,0.8);color:#000">' +
                     '<div style="font-size:64px;margin-bottom:16px">🔪</div>' +
                     '<div style="font-size:26px;font-weight:900;color:#000;margin-bottom:16px">' + T_base.attention + '</div>' +
@@ -1339,38 +1338,36 @@
                     '<button onclick="document.getElementById(\'toolWearWarning\').remove()" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:white;color:#000;border-radius:10px;cursor:pointer">' + T_base.understood + '</button>' +
                     (T_base.canReplace ? '<button onclick="window.location.href=\'/tool-wear\'" style="padding:12px 24px;font-size:15px;font-weight:700;border:3px solid #000;background:#e67e22;color:#000;border-radius:10px;cursor:pointer">' + T_base.replace + '</button>' : '') +
                     '</div></div>';
-                
+
                 document.body.appendChild(overlay);
-                
-                // Blink for 4 seconds (8 cycles × 500ms), text stays black throughout
+
                 const box = document.getElementById('toolFlashBox');
                 let flashCount = 0;
                 const flashInterval = setInterval(() => {
-                    if (flashCount % 2 === 0) {
-                        // Bright flash state
-                        box.style.background = '#f39c12';
-                        box.style.boxShadow = '0 0 80px rgba(243,156,18,1)';
-                    } else {
-                        // Dim state
-                        box.style.background = '#e67e22';
-                        box.style.boxShadow = '0 0 30px rgba(230,126,34,0.4)';
-                    }
+                    box.style.background = (flashCount % 2 === 0) ? '#f39c12' : '#e67e22';
+                    box.style.boxShadow = (flashCount % 2 === 0)
+                        ? '0 0 80px rgba(243,156,18,1)' : '0 0 30px rgba(230,126,34,0.4)';
                     flashCount++;
                     if (flashCount >= 8) {
                         clearInterval(flashInterval);
-                        // Settle on bright orange, stay open
                         box.style.background = '#f39c12';
                         box.style.boxShadow = '0 0 60px rgba(243,156,18,0.8)';
                     }
                 }, 500);
             }).catch(() => {});
         }
-        // Show after first user interaction (click/scroll/touch)
-        ['click','scroll','touchstart'].forEach(evt => {
-            document.addEventListener(evt, showToolWarning, {once: true});
+        // 3 раза в час ≈ каждые 20 минут + сразу после первого действия
+        ['click', 'scroll', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, function onFirst() {
+                showToolWarning();
+                document.removeEventListener(evt, onFirst);
+            }, { once: true, passive: true });
         });
+        setInterval(showToolWarning, 20 * 60 * 1000);
+        setTimeout(showToolWarning, 8000);
     })();
     </script>
+    {% endif %}
 
     <!-- AUTO-LOGOUT: 30 min idle on PC for non-admin users -->
     {% if current_user.is_authenticated and current_user.role != 'admin' %}

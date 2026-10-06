@@ -371,33 +371,22 @@ def check_tool_wear_notifications():
     if not tools:
         return
 
-    # Collect all user IDs that should receive tool_wear notifications
+    # Начальник ТС, администратор и механики
     notify_user_ids = set()
-    for u in User.query.filter_by(is_active_user=True).all():
-        if u.role == 'admin':
-            notify_user_ids.add(u.id)
-            continue
-        has_access = False
-        if u.person_id:
-            person = Verantwoordelijke.query.get(u.person_id)
-            if person and person.group_id:
-                perm = GroupPermission.query.filter_by(group_id=person.group_id, section_key='tool_wear').first()
-                if perm and perm.can_view:
-                    has_access = True
-        if not has_access:
-            if UserSectionAccess.query.filter_by(user_id=u.id, section_key='tool_wear').first():
-                has_access = True
-        if not has_access and u.access_level == 'full':
-            has_access = True
-        if has_access:
-            notify_user_ids.add(u.id)
+    for u in User.query.filter(User.is_active_user == True,
+                               User.role.in_(('admin', 'director', 'technician'))).all():
+        notify_user_ids.add(u.id)
 
     if not notify_user_ids:
         return
 
-    # Pre-fetch existing tool_wear notifications to avoid duplicates
+    # Не дублируем чаще, чем раз в 20 минут (3 раза в час)
+    cutoff = now_local() - timedelta(minutes=20)
     existing_notifs = set()
-    for n in Notification.query.filter_by(type='tool_wear', link='/tool-wear').all():
+    for n in Notification.query.filter(
+        Notification.type == 'tool_wear',
+        Notification.created_at >= cutoff
+    ).all():
         existing_notifs.add(n.user_id)
 
     for t in tools:
