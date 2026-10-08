@@ -679,6 +679,23 @@ class InvoiceItem(db.Model):
 # OPERATIONAL MODELS
 # ============================================================
 
+class MachinePassword(db.Model):
+    """Пароли к станкам/оборудованию (только admin + механики)."""
+    __tablename__ = 'machine_password'
+    id = db.Column(db.Integer, primary_key=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
+    title = db.Column(db.String(200), nullable=False)
+    login = db.Column(db.String(100))
+    password = db.Column(db.String(200), nullable=False)
+    kind = db.Column(db.String(50), default='other')  # wifi, plc, hmi, service, other
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
+    machine = db.relationship('Machine', backref='passwords')
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+
 class GasCylinder(db.Model):
     __tablename__ = 'gas_cylinder'
     id = db.Column(db.Integer, primary_key=True)

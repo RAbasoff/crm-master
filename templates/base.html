@@ -447,6 +447,9 @@
             {% if has_access('machines') %}
             <a href="/machines" class="sb-item {% if request.endpoint == 'machines.machines_list' %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">⚙️</span>{{ _('Machines') }}</a>
             <a href="/machines/scan" class="sb-item {% if request.endpoint == 'machines.machine_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Machines') }}</a>
+            {% if current_user.has_role('admin', 'technician') %}
+            <a href="/machines/passwords" class="sb-item {% if request.endpoint == 'machines.passwords_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔐</span>{{ _('Passwords') }}</a>
+            {% endif %}
             {% endif %}
             {% if has_access('equipment') %}
             <a href="/equipment" class="sb-item {% if request.endpoint == 'equipment.equipment_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Mule Maintenance') }}</a>
