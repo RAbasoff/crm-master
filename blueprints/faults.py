@@ -373,6 +373,23 @@ def fault_new():
                     f.reporter_id = int(rid)
             if rname:
                 f.reporter_name = rname[:200]
+            else:
+                # Имя заявителя: ФИО / display_name, а не роль
+                who = current_user.display_name or current_user.username
+                if not who or who.lower() in ('admin', 'administrator', 'director', 'technicus'):
+                    who = ' '.join(filter(None, [current_user.first_name, current_user.last_name])) or current_user.username
+                f.reporter_name = who
+
+            # Защита от дублей (двойной клик / повторная отправка)
+            recent = FaultReport.query.filter(
+                FaultReport.title == f.title,
+                FaultReport.description == f.description,
+                FaultReport.reporter_id == f.reporter_id,
+                FaultReport.created_at >= now_local() - timedelta(seconds=30),
+            ).first()
+            if recent:
+                flash(_('This fault report was already created'), 'info')
+                return redirect(url_for('faults.fault_detail', fault_id=recent.id))
             db.session.add(f)
             db.session.flush()
 
