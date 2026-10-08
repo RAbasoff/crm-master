@@ -35,12 +35,12 @@
 <div class="card" style="padding:0;overflow:hidden;position:relative">
     <!-- Zoom controls -->
     <div style="position:absolute;top:8px;right:8px;z-index:50;display:flex;gap:4px">
-        <button onclick="zoomIn()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:18px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">+</button>
-        <button onclick="zoomOut()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:18px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">−</button>
+        <button onclick="zoomIn()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">+</button>
+        <button onclick="zoomOut()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">−</button>
         <button onclick="zoomReset()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">1:1</button>
     </div>
     
-    <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;height:85vh">
+    <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;height:calc(100vh - 120px)">
         <!-- Wrapper matches image aspect (1520×1080) so % overlays == % of drawing -->
         <div id="floorPlanWrapper" style="position:relative;transform-origin:0 0;transition:transform 0.15s;width:100%;aspect-ratio:1520/1080;max-width:100%">
             <img src="/static/floor_plan.jpeg" id="floorPlanImg" style="position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none" draggable="false">
@@ -59,8 +59,12 @@
             
             <!-- Sections overlay -->
             {% for s in sections %}
+            {% set sx = (s.floor_x if s.floor_x is not none else 10)|float %}
+            {% set sy = (s.floor_y if s.floor_y is not none else 10)|float %}
+            {% set sw = (s.width if s.width is not none else 20)|float %}
+            {% set sh = (s.height if s.height is not none else 15)|float %}
             <div class="floor-section"
-                 style="left:{{ s.floor_x }}%;top:{{ s.floor_y }}%;width:{{ s.width }}%;height:{{ s.height }}%;border-color:{{ s.color }}"
+                 style="left:{{ '%.2f'|format(sx) }}%;top:{{ '%.2f'|format(sy) }}%;width:{{ '%.2f'|format(sw) }}%;height:{{ '%.2f'|format(sh) }}%;border-color:{{ s.color }}"
                  data-section-id="{{ s.id }}"
                  data-name="{{ s.name }}"
                  data-type="{{ s.section_type }}"
@@ -83,7 +87,7 @@
                  data-id="eq_{{ e.id }}"
                  data-fault-status="loading">
                 <div class="machine-icon-wrap">
-                    <div class="machine-shape" style="width:40px;height:40px;background:linear-gradient(135deg,#e8eaf6,#c5cae9);border:2px solid {% if e.status == 'broken' %}#e74c3c{% elif e.status == 'maintenance' %}#f39c12{% else %}#3f51b5{% endif %};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px">
+                    <div class="machine-shape" style="width:26px;height:26px;background:linear-gradient(135deg,#e8eaf6,#c5cae9);border:2px solid {% if e.status == 'broken' %}#e74c3c{% elif e.status == 'maintenance' %}#f39c12{% else %}#3f51b5{% endif %};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">
                         ⚡
                     </div>
                 </div>
@@ -108,56 +112,56 @@
                 <div class="machine-icon-wrap">
                     {% if m.machine_type and 'CNC' in m.machine_type|upper %}
                     <!-- CNC: rectangle with screen -->
-                    <div class="machine-shape" style="width:48px;height:36px;background:linear-gradient(135deg,#e3f2fd,#bbdefb);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#1565c0{% endif %};border-radius:4px;position:relative">
+                    <div class="machine-shape" style="width:30px;height:22px;background:linear-gradient(135deg,#e3f2fd,#bbdefb);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#1565c0{% endif %};border-radius:4px;position:relative">
                         <div style="position:absolute;top:3px;left:3px;right:3px;height:12px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#1565c0{% endif %};border-radius:2px"></div>
                         <div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#1565c0{% endif %}"></div>
                     </div>
                     
                     {% elif m.machine_type and ('press' in m.machine_type|lower or 'прес' in m.machine_type|lower) %}
                     <!-- Press: tall rectangle -->
-                    <div class="machine-shape" style="width:36px;height:48px;background:linear-gradient(135deg,#fce4ec,#f8bbd0);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#c62828{% endif %};border-radius:4px;position:relative">
+                    <div class="machine-shape" style="width:22px;height:30px;background:linear-gradient(135deg,#fce4ec,#f8bbd0);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#c62828{% endif %};border-radius:4px;position:relative">
                         <div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);width:20px;height:8px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#c62828{% endif %};border-radius:2px"></div>
                         <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:24px;height:12px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#c62828{% endif %};border-radius:2px"></div>
                     </div>
                     
                     {% elif m.machine_type and ('weld' in m.machine_type|lower or 'свар' in m.machine_type|lower) %}
                     <!-- Welding: circle with spark -->
-                    <div class="machine-shape" style="width:44px;height:44px;background:linear-gradient(135deg,#fff3e0,#ffe0b2);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#e65100{% endif %};border-radius:50%;position:relative">
+                    <div class="machine-shape" style="width:28px;height:28px;background:linear-gradient(135deg,#fff3e0,#ffe0b2);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#e65100{% endif %};border-radius:50%;position:relative">
                         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#e65100{% endif %};border-radius:50%"></div>
                         <div style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:6px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#e65100{% endif %}"></div>
                     </div>
                     
                     {% elif m.machine_type and ('drill' in m.machine_type|lower or 'сверл' in m.machine_type|lower) %}
                     <!-- Drill: circle with bit -->
-                    <div class="machine-shape" style="width:44px;height:44px;background:linear-gradient(135deg,#e8eaf6,#c5cae9);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#283593{% endif %};border-radius:50%;position:relative">
+                    <div class="machine-shape" style="width:28px;height:28px;background:linear-gradient(135deg,#e8eaf6,#c5cae9);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#283593{% endif %};border-radius:50%;position:relative">
                         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#283593{% endif %};border-radius:50%"></div>
                         <div style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:4px;height:14px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#283593{% endif %};border-radius:1px"></div>
                     </div>
                     
                     {% elif m.machine_type and ('lathe' in m.machine_type|lower or 'токар' in m.machine_type|lower) %}
                     <!-- Lathe: rectangle with circle -->
-                    <div class="machine-shape" style="width:52px;height:36px;background:linear-gradient(135deg,#e0f2f1,#b2dfdb);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#00695c{% endif %};border-radius:4px;position:relative">
+                    <div class="machine-shape" style="width:32px;height:22px;background:linear-gradient(135deg,#e0f2f1,#b2dfdb);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#00695c{% endif %};border-radius:4px;position:relative">
                         <div style="position:absolute;top:50%;left:12px;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;border:3px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#00695c{% endif %}"></div>
                         <div style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:16px;height:8px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#00695c{% endif %};border-radius:2px"></div>
                     </div>
                     
                     {% elif m.machine_type and ('mill' in m.machine_type|lower or 'фрез' in m.machine_type|lower) %}
                     <!-- Mill: square with spindle -->
-                    <div class="machine-shape" style="width:44px;height:44px;background:linear-gradient(135deg,#f3e5f5,#e1bee7);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#6a1b9a{% endif %};border-radius:6px;position:relative">
+                    <div class="machine-shape" style="width:28px;height:28px;background:linear-gradient(135deg,#f3e5f5,#e1bee7);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#6a1b9a{% endif %};border-radius:6px;position:relative">
                         <div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);width:8px;height:16px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#6a1b9a{% endif %};border-radius:2px"></div>
                         <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:24px;height:8px;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#6a1b9a{% endif %};border-radius:2px"></div>
                     </div>
                     
                     {% elif m.machine_type and ('conveyor' in m.machine_type|lower or 'конвей' in m.machine_type|lower) %}
                     <!-- Conveyor: long rectangle -->
-                    <div class="machine-shape" style="width:60px;height:28px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#2e7d32{% endif %};border-radius:14px;position:relative">
+                    <div class="machine-shape" style="width:36px;height:18px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#2e7d32{% endif %};border-radius:14px;position:relative">
                         <div style="position:absolute;top:50%;left:8px;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#2e7d32{% endif %}"></div>
                         <div style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% else %}#2e7d32{% endif %}"></div>
                     </div>
                     
                     {% else %}
                     <!-- Default: circle with gear -->
-                    <div class="machine-shape" style="width:44px;height:44px;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %};border-radius:50%;position:relative">
+                    <div class="machine-shape" style="width:28px;height:28px;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);border:2px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %};border-radius:50%;position:relative">
                         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;border:3px solid {% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %};border-radius:50%"></div>
                         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:{% if m.status == 'broken' %}#e74c3c{% elif m.status == 'maintenance' %}#f39c12{% elif m.status == 'offline' %}#95a5a6{% else %}#3498db{% endif %}"></div>
                     </div>
@@ -176,7 +180,7 @@
 <div class="card" id="sectionInfo" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <h2 id="sectionName" style="margin:0"></h2>
-        <button onclick="closeSectionInfo()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
+        <button onclick="closeSectionInfo()" style="background:none;border:none;font-size:12px;cursor:pointer;color:#999">✕</button>
     </div>
     <div class="detail-grid">
         <div>
@@ -210,7 +214,7 @@
 <div class="card" id="machineInfo" style="display:none;max-width:500px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <h2 id="machineName" style="margin:0"></h2>
-        <button onclick="closeMachineInfo()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
+        <button onclick="closeMachineInfo()" style="background:none;border:none;font-size:12px;cursor:pointer;color:#999">✕</button>
     </div>
     
     <!-- Status & Info -->
@@ -232,19 +236,19 @@
     <!-- Statistics -->
     <div id="machineStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
         <div style="text-align:center;padding:8px;background:#f0f7ff;border-radius:8px">
-            <div id="statTotal" style="font-size:18px;font-weight:bold;color:#3498db">0</div>
+            <div id="statTotal" style="font-size:12px;font-weight:bold;color:#3498db">0</div>
             <div style="font-size:10px;color:#888">{{ _('Total') }}</div>
         </div>
         <div style="text-align:center;padding:8px;background:#fff5f5;border-radius:8px">
-            <div id="statOpen" style="font-size:18px;font-weight:bold;color:#e74c3c">0</div>
+            <div id="statOpen" style="font-size:12px;font-weight:bold;color:#e74c3c">0</div>
             <div style="font-size:10px;color:#888">{{ _('Open') }}</div>
         </div>
         <div style="text-align:center;padding:8px;background:#f0fff0;border-radius:8px">
-            <div id="statResolved" style="font-size:18px;font-weight:bold;color:#27ae60">0</div>
+            <div id="statResolved" style="font-size:12px;font-weight:bold;color:#27ae60">0</div>
             <div style="font-size:10px;color:#888">{{ _('Resolved') }}</div>
         </div>
         <div style="text-align:center;padding:8px;background:#fff0f0;border-radius:8px">
-            <div id="statCritical" style="font-size:18px;font-weight:bold;color:#e74c3c">0</div>
+            <div id="statCritical" style="font-size:12px;font-weight:bold;color:#e74c3c">0</div>
             <div style="font-size:10px;color:#888">{{ _('Critical') }}</div>
         </div>
     </div>
@@ -274,9 +278,10 @@
         border: 2px dashed;
         border-radius: 6px;
         cursor: pointer;
-        transition: all 0.2s;
         background: rgba(255,255,255,0.12);
         z-index: 5;
+        transition: none;
+        transform: none;
     }
     .floor-section .section-label {
         font-size: 9px !important;
@@ -293,6 +298,8 @@
     }
     .floor-section:hover {
         z-index: 30;
+        border-width: 3px;
+        background: rgba(255,255,255,0.22);
     }
     .map-tip {
         display: none;
