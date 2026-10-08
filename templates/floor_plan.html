@@ -187,99 +187,56 @@
 </div>
 
 <!-- Section Info Panel -->
-<div class="card" id="sectionInfo" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <h2 id="sectionName" style="margin:0"></h2>
-        <button onclick="closeSectionInfo()" style="background:none;border:none;font-size:12px;cursor:pointer;color:#999">✕</button>
-    </div>
-    <div class="detail-grid">
-        <div>
-            <p><strong>{{ _('Type') }}:</strong> <span id="sectionType"></span></p>
-            <p><strong>{{ _('Description') }}:</strong> <span id="sectionDesc"></span></p>
-            <p><strong>{{ _('Responsible') }}:</strong> <span id="sectionResponsible"></span></p>
+<div class="card" id="sectionInfo" style="display:none;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2 id="sectionName" style="margin:0;font-size:15px"></h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;align-items:center">
+            <span><strong>{{ _('Type') }}:</strong> <span id="sectionType"></span></span>
+            <span><strong>{{ _('Responsible') }}:</strong> <span id="sectionResponsible"></span></span>
+            <span><strong>{{ _('Machines') }}:</strong> <span id="sectionMachinesCount"></span></span>
+            <span style="color:#27ae60"><strong>{{ _('Active') }}:</strong> <span id="sectionActiveCount"></span></span>
+            <span style="color:#e74c3c"><strong>{{ _('Broken') }}:</strong> <span id="sectionBrokenCount"></span></span>
+            <span style="color:#666"><span id="sectionDesc"></span></span>
+            {% if current_user.has_role('admin') %}
+            <a id="sectionEditBtn" href="#" class="btn btn-sm btn-primary">{{ _('Edit Section') }}</a>
+            {% endif %}
+            <button onclick="closeSectionInfo()" style="background:none;border:none;font-size:12px;cursor:pointer;color:#999">✕</button>
         </div>
-        <div>
-            <p><strong>{{ _('Total Machines') }}:</strong> <span id="sectionMachinesCount"></span></p>
-            <p><strong>{{ _('Active') }}:</strong> <span id="sectionActiveCount" style="color:#27ae60;font-weight:bold"></span></p>
-            <p><strong>{{ _('Broken') }}:</strong> <span id="sectionBrokenCount" style="color:#e74c3c;font-weight:bold"></span></p>
-        </div>
     </div>
-    <div id="sectionMachinesList" style="margin-top:12px">
-        <h3 style="font-size:14px;margin-bottom:8px">{{ _('Machines in Section') }}:</h3>
-        <div class="table-wrap">
+    <div id="sectionMachinesList" style="margin-top:8px">
+        <div class="table-wrap" style="max-height:180px;overflow:auto">
             <table>
-                <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th>{{ _('Serial') }}</th><th></th></tr>
+                <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th>{{ _('Serial') }}</th></tr>
                 <tbody id="sectionMachinesTable"></tbody>
             </table>
         </div>
     </div>
-    {% if current_user.has_role('admin') %}
-    <div style="margin-top:12px;display:flex;gap:8px">
-        <a id="sectionEditBtn" href="#" class="btn btn-sm btn-primary">{{ _('Edit Section') }}</a>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Machine Info Panel -->
-<div class="card" id="machineInfo" style="display:none;max-width:500px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <h2 id="machineName" style="margin:0"></h2>
-        <button onclick="closeMachineInfo()" style="background:none;border:none;font-size:12px;cursor:pointer;color:#999">✕</button>
-    </div>
-    
-    <!-- Status & Info -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-        <div style="flex:1;min-width:120px">
-            <p style="font-size:12px;color:#888;margin:0">{{ _('Status') }}</p>
+<div class="card" id="machineInfo" style="display:none;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2 id="machineName" style="margin:0;font-size:15px"></h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;align-items:center">
             <span id="machineStatus"></span>
-        </div>
-        <div style="flex:1;min-width:120px">
-            <p style="font-size:12px;color:#888;margin:0">{{ _('Type') }}</p>
-            <p id="machineType" style="margin:2px 0 0;font-weight:600"></p>
-        </div>
-        <div style="flex:1;min-width:120px">
-            <p style="font-size:12px;color:#888;margin:0">{{ _('Section') }}</p>
-            <p id="machineSection" style="margin:2px 0 0;font-weight:600"></p>
-        </div>
-    </div>
-    
-    <!-- Statistics -->
-    <div id="machineStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
-        <div style="text-align:center;padding:8px;background:#f0f7ff;border-radius:8px">
-            <div id="statTotal" style="font-size:12px;font-weight:bold;color:#3498db">0</div>
-            <div style="font-size:10px;color:#888">{{ _('Total') }}</div>
-        </div>
-        <div style="text-align:center;padding:8px;background:#fff5f5;border-radius:8px">
-            <div id="statOpen" style="font-size:12px;font-weight:bold;color:#e74c3c">0</div>
-            <div style="font-size:10px;color:#888">{{ _('Open') }}</div>
-        </div>
-        <div style="text-align:center;padding:8px;background:#f0fff0;border-radius:8px">
-            <div id="statResolved" style="font-size:12px;font-weight:bold;color:#27ae60">0</div>
-            <div style="font-size:10px;color:#888">{{ _('Resolved') }}</div>
-        </div>
-        <div style="text-align:center;padding:8px;background:#fff0f0;border-radius:8px">
-            <div id="statCritical" style="font-size:12px;font-weight:bold;color:#e74c3c">0</div>
-            <div style="font-size:10px;color:#888">{{ _('Critical') }}</div>
+            <span><strong>{{ _('Type') }}:</strong> <span id="machineType"></span></span>
+            <span><strong>{{ _('Section') }}:</strong> <span id="machineSection"></span></span>
+            <div style="display:flex;gap:8px;margin-left:8px">
+                <a id="machineDetailBtn" href="#" class="btn btn-sm btn-primary">{{ _('Details') }}</a>
+                <a id="machineFaultBtn" href="#" class="btn btn-sm btn-warning">⚠️</a>
+                <a id="machineTWOBtn" href="#" class="btn btn-sm" style="background:#9b59b6;color:white">🔧</a>
+                <a id="machineAllFaultsBtn" href="#" class="btn btn-sm" style="background:#eee">{{ _('View All') }}</a>
+            </div>
+            <button onclick="closeMachineInfo()" style="background:none;border:none;font-size:12px;cursor:pointer;color:#999">✕</button>
         </div>
     </div>
-    
-    <!-- Action buttons -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        <a id="machineDetailBtn" href="#" class="btn btn-sm btn-primary">{{ _('Details') }}</a>
-        <a id="machineFaultBtn" href="#" class="btn btn-sm btn-warning">⚠️ {{ _('New Fault') }}</a>
-        <a id="machineTWOBtn" href="#" class="btn btn-sm" style="background:#9b59b6;color:white">🔧 {{ _('New TWO') }}</a>
+    <div id="machineStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11px">
+        <span>⚙️ <b id="statTotal">0</b> {{ _('Total') }}</span>
+        <span style="color:#e74c3c">⚠ <b id="statOpen">0</b> {{ _('Open') }}</span>
+        <span style="color:#27ae60">✓ <b id="statResolved">0</b> {{ _('Resolved') }}</span>
+        <span style="color:#c0392b">🔴 <b id="statCritical">0</b> {{ _('Critical') }}</span>
     </div>
-    
-    <!-- Faults list -->
-    <div style="border-top:1px solid #eee;padding-top:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0;font-size:13px">⚠️ {{ _('Recent Faults') }}</h3>
-            <a id="machineAllFaultsBtn" href="#" style="font-size:11px;color:#3498db">{{ _('View All') }}</a>
-        </div>
-        <div id="machineFaultsList" style="max-height:200px;overflow-y:auto">
-            <p style="color:#888;font-size:12px;text-align:center">{{ _('Loading...') }}</p>
-        </div>
-    </div>
+    <div id="machineFaultsList" style="margin-top:8px;max-height:140px;overflow-y:auto"></div>
 </div>
 
 <style>
