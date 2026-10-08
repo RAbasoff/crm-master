@@ -32,20 +32,22 @@
     <span style="color:#888">{{ _('Click machine for details') }}</span>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;position:relative">
+<div class="card" style="padding:0;overflow:visible;position:relative">
+    <!-- Drawing tools (always visible, outside scroll area) -->
+    <div id="drawTools" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f5f7fa;padding:8px 10px;border-bottom:1px solid #e0e4ea">
+        <button type="button" id="btnDraw" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
+        <input type="color" id="drawColor" value="#2980b9" style="width:36px;height:30px;padding:1px;border:1px solid #ddd;cursor:pointer;border-radius:4px" title="{{ _('Color') }}">
+        <button type="button" class="btn btn-sm" style="background:#27ae60;color:white;padding:6px 12px;font-size:12px" onclick="saveDrawLine()">💾 {{ _('Save') }}</button>
+        <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="undoDrawPoint()">↶</button>
+        <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="clearDraft()">✕</button>
+        <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:6px 12px;font-size:12px" onclick="deleteSelectedLine()">🗑 {{ _('Delete') }}</button>
+        <span style="font-size:11px;color:#888">{{ _('Click map to add points') }}</span>
+    </div>
     <!-- Zoom controls -->
-    <div style="position:absolute;top:8px;right:8px;z-index:50;display:flex;gap:4px">
+    <div style="position:absolute;top:56px;right:8px;z-index:50;display:flex;gap:4px">
         <button onclick="zoomIn()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">+</button>
         <button onclick="zoomOut()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">−</button>
         <button onclick="zoomReset()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">1:1</button>
-    </div>
-    <div id="drawTools" style="position:absolute;top:8px;left:8px;z-index:50;display:flex;gap:4px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,0.92);padding:6px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
-        <button type="button" id="btnDraw" class="btn btn-sm" style="background:#eee;padding:5px 10px;font-size:11px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
-        <input type="color" id="drawColor" value="#2980b9" style="width:32px;height:28px;padding:1px;border:none;cursor:pointer" title="{{ _('Color') }}">
-        <button type="button" class="btn btn-sm" style="background:#27ae60;color:white;padding:5px 10px;font-size:11px" onclick="saveDrawLine()" title="{{ _('Save') }}">💾</button>
-        <button type="button" class="btn btn-sm" style="background:#eee;padding:5px 10px;font-size:11px" onclick="undoDrawPoint()" title="{{ _('Undo') }}">↶</button>
-        <button type="button" class="btn btn-sm" style="background:#eee;padding:5px 10px;font-size:11px" onclick="clearDraft()" title="{{ _('Clear') }}">✕</button>
-        <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:5px 10px;font-size:11px" onclick="deleteSelectedLine()" title="{{ _('Delete') }}">🗑</button>
     </div>
     
     <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;height:calc(100vh - 120px)">
