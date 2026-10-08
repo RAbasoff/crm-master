@@ -1,13 +1,37 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Machines') }} — CRM{% endblock %}
 {% block content %}
+<style>
+    /* Compact machines list — fit window without horizontal scroll */
+    .machines-page .page-header { margin-bottom: 12px; gap: 8px; }
+    .machines-page .page-header h1 { font-size: 20px; }
+    .machines-page .page-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .machines-page .page-actions .btn-sm { padding:5px 10px; font-size:11px; min-height:28px; border-radius:7px; }
+    .machines-page .stats { grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:12px; }
+    .machines-page .stat-card { padding:10px 12px; border-radius:10px; }
+    .machines-page .stat-card .number { font-size:22px; }
+    .machines-page .stat-card .label { font-size:11px; margin-top:2px; }
+    .machines-page .card { margin-bottom:12px; }
+    .machines-table th, .machines-table td { padding:5px 6px; font-size:12px; vertical-align:middle; }
+    .machines-table th { font-size:10px; letter-spacing:0.2px; padding:6px; }
+    .machines-table .m-photo { width:28px; height:28px; object-fit:cover; border-radius:5px; display:block; }
+    .machines-table .m-photo-ph { width:28px; height:28px; background:#eee; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:12px; }
+    .machines-table .m-name { font-weight:600; display:block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .machines-table .m-sub { color:#888; font-size:10px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+    .machines-table .m-cell { max-width:92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+    .machines-table .m-actions { white-space:nowrap; }
+    .machines-table .m-actions .btn-sm { padding:4px 8px; font-size:11px; min-height:26px; border-radius:6px; }
+    @media (max-width: 900px) {
+        .machines-page .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+<div class="machines-page">
 <div class="page-header">
     <h1>⚙️ {{ _('Machines') }}</h1>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="page-actions">
         <a href="/machines/qr/batch" class="btn btn-sm" style="background:#9b59b6;color:white">📱 QR</a>
         <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="openExportModal('xlsx')">📊 Excel</button>
         <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="openExportModal('pdf')">📄 PDF</button>
-        <a href="/machines/qr/batch" class="btn btn-sm" style="background:#9b59b6;color:white">📱 QR</a>
         <a href="/tool-wear" class="btn btn-sm" style="background:#e67e22;color:white">🔪 {{ _('Tool Wear') }}</a>
         {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/report" class="btn btn-sm" style="background:#9b59b6;color:white">📊 {{ _('Report') }}</a>
@@ -24,7 +48,7 @@
 </div>
 
 <!-- Machine Stats -->
-<div class="stats" style="margin-bottom:16px">
+<div class="stats">
     <div class="stat-card" style="border-left:4px solid #27ae60">
         <div class="number">{{ machines|selectattr('status', 'equalto', 'active')|list|length }}</div>
         <div class="label">{{ _('Active') }}</div>
@@ -45,10 +69,9 @@
 
 {% if machines %}
 <div class="card" style="padding:0">
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table class="machines-table">
         <tr>
-            <th style="width:36px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
-            <th style="width:48px">{{ _('ID') }}</th>
+            <th style="width:32px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
             <th></th>
             <th>{{ _('Name') }}</th>
             <th>{{ _('Type') }}</th>
@@ -56,33 +79,35 @@
             <th>{{ _('Location') }}</th>
             <th>{{ _('Responsible') }}</th>
             <th>{{ _('Status') }}</th>
-            <th>{{ _('Faults') }}</th>
+            <th style="width:52px">{{ _('Faults') }}</th>
             <th>{{ _('Actions') }}</th>
         </tr>
         {% for m in machines %}
         <tr>
             <td><input type="checkbox" class="machine-check" value="{{ m.id }}" onchange="updateSelection()"></td>
-            <td style="font-weight:600;color:#888">{{ m.id }}</td>
-            <td>{% if m.photo %}<img src="/static/uploads/{{ m.photo }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{% else %}<div style="width:40px;height:40px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center">⚙️</div>{% endif %}</td>
-            <td><a href="/machines/{{ m.id }}" style="font-weight:600">{{ m.name }}</a></td>
-            <td>{{ m.machine_type or '—' }}</td>
-            <td>{{ m.serial_number or '—' }}</td>
-            <td>{{ m.installation_location or '—' }}</td>
+            <td>{% if m.photo %}<img class="m-photo" src="/static/uploads/{{ m.photo }}" alt="">{% else %}<div class="m-photo-ph">⚙️</div>{% endif %}</td>
             <td>
-                {% if m.responsible_person %}{{ m.responsible_person.naam }}{% endif %}
-                {% if m.responsible_person and m.responsible_user %} | {% endif %}
-                {% if m.responsible_user %}{{ m.responsible_user.display_name or m.responsible_user.username }}{% endif %}
-                {% if not m.responsible_person and not m.responsible_user %}—{% endif %}
+                <a href="/machines/{{ m.id }}" class="m-name" title="{{ m.name }}">{{ m.name }}</a>
+                <span class="m-sub">#{{ m.id }}</span>
+            </td>
+            <td><span class="m-cell" title="{{ m.machine_type or '' }}">{{ m.machine_type or '—' }}</span></td>
+            <td><span class="m-cell" title="{{ m.serial_number or '' }}">{{ m.serial_number or '—' }}</span></td>
+            <td><span class="m-cell" title="{{ m.installation_location or '' }}">{{ m.installation_location or '—' }}</span></td>
+            <td>
+                {% set resp = [] %}
+                {% if m.responsible_person %}{% set _ = resp.append(m.responsible_person.naam) %}{% endif %}
+                {% if m.responsible_user %}{% set _ = resp.append(m.responsible_user.display_name or m.responsible_user.username) %}{% endif %}
+                <span class="m-cell" title="{{ resp|join(' | ') }}">{{ resp|join(' | ') if resp else '—' }}</span>
             </td>
             <td><span class="badge badge-{{ m.status }}">{{ _(m.status) if m.status else _('Active') }}</span></td>
-            <td>
+            <td style="text-align:center">
                 {% if m.fault_reports|length > 0 %}
                 <span style="color:#e74c3c;font-weight:bold">{{ m.fault_reports|length }}</span>
                 {% else %}
                 <span style="color:#27ae60">0</span>
                 {% endif %}
             </td>
-            <td style="white-space:nowrap">
+            <td class="m-actions">
                 <a href="/machines/{{ m.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a>
                 {% if current_user.has_role('admin', 'director') %}
                 <a href="/machines/{{ m.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
@@ -253,4 +278,5 @@ function openBulkStatus() {
 </div>
 
 {% include '_pagination.html' with context %}
+</div>
 {% endblock %}

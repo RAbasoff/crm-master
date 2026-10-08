@@ -1,9 +1,23 @@
 {% extends "base.html" %}
 {% block title %}{{ machine.name }} — CRM{% endblock %}
 {% block content %}
+<style>
+    .machine-page .page-header { margin-bottom:12px; gap:8px; }
+    .machine-page .page-header h1 { font-size:20px; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .machine-page .page-actions { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+    .machine-page .page-actions .btn-sm { padding:5px 10px; font-size:11px; min-height:28px; border-radius:7px; }
+    .machine-page .card { padding:16px; margin-bottom:12px; }
+    .machine-page .detail-grid { gap:14px; }
+    .machine-page table th, .machine-page table td { padding:7px 10px; font-size:12px; }
+    .machine-page table th { font-size:11px; }
+    @media (max-width: 1100px) {
+        .machine-page .page-header h1 { max-width:100%; }
+    }
+</style>
+<div class="machine-page">
 <div class="page-header">
     <h1>⚙️ {{ machine.name }}</h1>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="page-actions">
         {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/{{ machine.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
         {% endif %}
@@ -308,6 +322,7 @@
 <!-- TIMELINE -->
 <div class="card">
   {% include 'machine_timeline_snippet.html' %}
+</div>
 </div>
 
 {% endblock %}
