@@ -59,16 +59,18 @@
             
             <!-- Sections overlay -->
             {% for s in sections %}
-            <div class="floor-section" 
+            <div class="floor-section"
                  style="left:{{ s.floor_x }}%;top:{{ s.floor_y }}%;width:{{ s.width }}%;height:{{ s.height }}%;border-color:{{ s.color }}"
                  data-section-id="{{ s.id }}"
                  data-name="{{ s.name }}"
                  data-type="{{ s.section_type }}"
+                 title="{{ s.name }}{% if s.section_type %} ({{ s.section_type }}){% endif %}"
                  onclick="selectSection({{ s.id }})">
                 <div class="section-label" style="background:{{ s.color }}cc">
                     <span class="section-name">{{ s.name }}</span>
                     <span class="section-count">{{ s.machines|length }} {{ _('machines') }}</span>
                 </div>
+                <div class="map-tip">{{ s.name }}{% if s.section_type %} · {{ s.section_type }}{% endif %}</div>
             </div>
             {% endfor %}
             
@@ -290,9 +292,32 @@
         text-overflow: ellipsis;
     }
     .floor-section:hover {
+        z-index: 30;
+    }
+    .map-tip {
+        display: none;
+        position: absolute;
+        left: 50%;
+        top: -34px;
+        transform: translateX(-50%);
+        background: rgba(15, 22, 41, 0.92);
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 40;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .floor-section:hover {
         background: rgba(255,255,255,0.25);
         transform: scale(1.01);
-        z-index: 15;
+        z-index: 30;
+    }
+    .floor-section:hover .map-tip {
+        display: block;
     }
     .floor-section.selected {
         background: rgba(255,255,255,0.3);
