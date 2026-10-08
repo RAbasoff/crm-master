@@ -56,6 +56,7 @@ def settings_activity():
 @role_required('admin')
 def settings():
     users = User.query.order_by(User.display_name).all()
+    mechanics = User.query.filter_by(role='technician').order_by(User.display_name, User.username).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
     groups = ResponsibleGroup.query.order_by(ResponsibleGroup.name).all()
     responsible = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -99,7 +100,7 @@ def settings():
         else:
             responsible_access[r.id] = []
 
-    return render_template('settings.html', users=users, sections=sections, groups=groups,
+    return render_template('settings.html', users=users, mechanics=mechanics, sections=sections, groups=groups,
         responsible=responsible, responsible_list=responsible_list,
         responsible_access=responsible_access, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,

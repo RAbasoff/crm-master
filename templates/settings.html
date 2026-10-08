@@ -129,6 +129,37 @@
             {% endfor %}
         </table></div>
     </div>
+
+    <!-- Mechanics (system users with role=technician) -->
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0">🔧 {{ _('Mechanics') }} ({{ mechanics|length }})</h2>
+            <a href="/monteurs" class="btn btn-sm" style="background:#e67e22;color:white">{{ _('Access Permissions') }}</a>
+        </div>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Name') }}</th><th>{{ _('Username') }}</th><th>{{ _('Role') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Linked person') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr>
+            {% for u in mechanics %}
+            <tr>
+                <td><strong>{{ u.display_name or u.username }}</strong></td>
+                <td style="color:#888">@{{ u.username }}</td>
+                <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+                <td>{% if u.worker_profile and u.worker_profile.telefoon %}<a href="tel:{{ u.worker_profile.telefoon }}" style="color:#3498db">{{ u.worker_profile.telefoon }}</a>{% else %}—{% endif %}</td>
+                <td>{% if u.person %}<a href="/responsible/{{ u.person.id }}" style="color:#3498db">{{ u.person.naam }}</a>{% else %}<span style="color:#999">—</span>{% endif %}</td>
+                <td>{% if u.is_active_user %}<span style="color:#27ae60">✓</span>{% else %}<span style="color:#e74c3c">✗</span>{% endif %}</td>
+                <td>
+                    <div style="display:flex;gap:4px">
+                        <a href="/users/{{ u.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                        <a href="/monteurs" class="btn btn-sm" style="background:#eee;font-size:11px">🔑</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not mechanics %}
+            <tr><td colspan="7" style="color:#888">{{ _('No mechanics found') }}</td></tr>
+            {% endif %}
+        </table></div>
+        <p style="font-size:11px;color:#888;margin:8px 0 0">{{ _('Mechanics are system users with the technician role. Use Access Permissions to manage their rights.') }}</p>
+    </div>
 </div>
 
 <!-- ==================== TAB: MACHINES ==================== -->
