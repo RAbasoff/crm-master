@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from config import SECTIONS_TREE
-from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog)
+from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog, FloorMapLine)
 from utils import log_audit, role_required, safe_commit
 from sqlalchemy import func, case
 
@@ -238,6 +238,48 @@ def settings_machine_assign_user(machine_id):
             u.assigned_machines.remove(m)
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/map/lines', methods=['GET'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def map_lines_list():
+    lines = FloorMapLine.query.order_by(FloorMapLine.id).all()
+    return jsonify([{
+        'id': ln.id, 'name': ln.name, 'color': ln.color,
+        'points': json.loads(ln.points_json or '[]'),
+    } for ln in lines])
+
+
+@bp.route('/api/map/lines', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def map_line_save():
+    data = request.get_json() or {}
+    pts = data.get('points') or []
+    if not pts or len(pts) < 2:
+        return jsonify({'error': 'Need at least 2 points'}), 400
+    ln = FloorMapLine(
+        name=(data.get('name') or 'Line')[:120],
+        color=data.get('color') or '#2980b9',
+        points_json=json.dumps(pts),
+        created_by=current_user.id,
+    )
+    db.session.add(ln)
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'id': ln.id})
+
+
+@bp.route('/api/map/lines/<int:line_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def map_line_delete(line_id):
+    ln = FloorMapLine.query.get_or_404(line_id)
+    db.session.delete(ln)
+    if not safe_commit():
+        return jsonify({'error': 'Delete failed'}), 500
     return jsonify({'ok': True})
 
 

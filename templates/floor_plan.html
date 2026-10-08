@@ -39,6 +39,14 @@
         <button onclick="zoomOut()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">−</button>
         <button onclick="zoomReset()" style="width:32px;height:32px;border:none;background:white;border-radius:6px;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15)">1:1</button>
     </div>
+    <div id="drawTools" style="position:absolute;top:8px;left:8px;z-index:50;display:flex;gap:4px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,0.92);padding:6px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+        <button type="button" id="btnDraw" class="btn btn-sm" style="background:#eee;padding:5px 10px;font-size:11px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
+        <input type="color" id="drawColor" value="#2980b9" style="width:32px;height:28px;padding:1px;border:none;cursor:pointer" title="{{ _('Color') }}">
+        <button type="button" class="btn btn-sm" style="background:#27ae60;color:white;padding:5px 10px;font-size:11px" onclick="saveDrawLine()" title="{{ _('Save') }}">💾</button>
+        <button type="button" class="btn btn-sm" style="background:#eee;padding:5px 10px;font-size:11px" onclick="undoDrawPoint()" title="{{ _('Undo') }}">↶</button>
+        <button type="button" class="btn btn-sm" style="background:#eee;padding:5px 10px;font-size:11px" onclick="clearDraft()" title="{{ _('Clear') }}">✕</button>
+        <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:5px 10px;font-size:11px" onclick="deleteSelectedLine()" title="{{ _('Delete') }}">🗑</button>
+    </div>
     
     <div id="floorPlanContainer" style="overflow:auto;position:relative;cursor:grab;height:calc(100vh - 120px)">
         <!-- Wrapper matches image aspect (1520×1080) so % overlays == % of drawing -->
@@ -485,6 +493,33 @@
         50% { box-shadow: 0 0 16px rgba(231,76,60,0.9); }
     }
 </style>
+
+
+<script>
+// Draw lines on factory map
+let DRAW_MODE=false, DRAW_PTS=[], SELECTED_LINE=null, FLOOR_LINES=[];
+function toggleDrawMode(){DRAW_MODE=!DRAW_MODE;const b=document.getElementById('btnDraw');b.style.background=DRAW_MODE?'#3498db':'#eee';b.style.color=DRAW_MODE?'#fff':'#333';document.getElementById('floorPlanWrapper').style.cursor=DRAW_MODE?'crosshair':'default';if(!DRAW_MODE){DRAW_PTS=[];redrawLines();}}
+function wrapperPct(e){const r=document.getElementById('floorPlanWrapper').getBoundingClientRect();return{x:Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100))};}
+function undoDrawPoint(){DRAW_PTS.pop();redrawLines();}
+function clearDraft(){DRAW_PTS=[];SELECTED_LINE=null;redrawLines();}
+function redrawLines(){let svg=document.getElementById('floorLinesSvg');if(!svg){const wrap=document.getElementById('floorPlanWrapper');svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.id='floorLinesSvg';svg.setAttribute('width','100%');svg.setAttribute('height','100%');svg.style.cssText='position:absolute;inset:0;z-index:20;pointer-events:none';wrap.appendChild(svg);}
+const color=(document.getElementById('drawColor')||{}).value||'#2980b9';let parts=[];
+FLOOR_LINES.forEach(function(ln){const pts=(ln.points||[]).map(function(p){return (p.x/100*1520)+','+(p.y/100*1080);}).join(' ');if(!pts)return;const sel=SELECTED_LINE===ln.id?' stroke-width="5"':' stroke-width="3"';parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-linecap="round" stroke-linejoin="round"'+sel+' opacity="0.85"/>');});
+if(DRAW_PTS.length){const dp=DRAW_PTS.map(function(p){return (p.x/100*1520)+','+(p.y/100*1080);}).join(' ');parts.push('<polyline points="'+dp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-dasharray="6 4"/>');}
+svg.innerHTML=parts.join('');svg.setAttribute('viewBox','0 0 1520 1080');svg.setAttribute('preserveAspectRatio','none');}
+function saveDrawLine(){if(DRAW_PTS.length<2){alert('Min 2 points');return;}
+csrfFetch('/api/map/lines',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Line',color:(document.getElementById('drawColor')||{}).value,points:DRAW_PTS})}).then(function(r){return r.json();}).then(function(d){if(!d.ok){alert(d.error||'Error');return;}DRAW_PTS=[];loadFloorLines();});}
+function deleteSelectedLine(){if(!SELECTED_LINE){alert('Select a line first');return;}
+csrfFetch('/api/map/lines/'+SELECTED_LINE+'/delete',{method:'POST'}).then(function(){SELECTED_LINE=null;loadFloorLines();});}
+function loadFloorLines(){fetch('/api/map/lines').then(function(r){return r.json();}).then(function(d){FLOOR_LINES=d||[];redrawLines();}).catch(function(){});}
+document.getElementById('floorPlanWrapper').addEventListener('click',function(e){
+if(e.target.closest('.floor-section')||e.target.closest('.machine-marker'))return;
+if(DRAW_MODE){DRAW_PTS.push(wrapperPct(e));redrawLines();return;}
+const p=wrapperPct(e);let best=null,bestD=999;
+FLOOR_LINES.forEach(function(ln){(ln.points||[]).forEach(function(pt){const d=Math.hypot(pt.x-p.x,pt.y-p.y);if(d<bestD){bestD=d;best=ln.id;}});});
+if(best&&bestD<3){SELECTED_LINE=best;redrawLines();}});
+loadFloorLines();
+</script>
 
 <script>
 let scale = 1;

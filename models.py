@@ -679,6 +679,18 @@ class InvoiceItem(db.Model):
 # OPERATIONAL MODELS
 # ============================================================
 
+class FloorMapLine(db.Model):
+    """Линии/разметка на карте цеха (рисование)."""
+    __tablename__ = 'floor_map_line'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), default='Line')
+    color = db.Column(db.String(20), default='#2980b9')
+    points_json = db.Column(db.Text, default='[]')  # [{"x":..%,"y":..%}, ...]
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+
 class MachinePassword(db.Model):
     """Пароли к станкам/оборудованию (только admin + механики)."""
     __tablename__ = 'machine_password'
