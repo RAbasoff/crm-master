@@ -15,9 +15,15 @@
 <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start">
     <!-- Canvas -->
     <div class="card" style="padding:0;overflow:hidden">
-        <div style="background:#1a1a2e;color:#aab;padding:8px 12px;font-size:12px;display:flex;gap:20px">
+        <div style="background:#1a1a2e;color:#aab;padding:8px 12px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
             <span>🖱️ {{ _('Drag to move') }}</span>
             <span>🔲 {{ _('Drag edges/corners to resize') }}</span>
+            <span>🔍 {{ _('Scroll to zoom') }}</span>
+            <span style="margin-left:auto;display:flex;gap:4px">
+                <button type="button" onclick="mapZoomBy(1.2)" style="width:28px;height:24px;border:none;background:#333;color:#fff;border-radius:4px;cursor:pointer">+</button>
+                <button type="button" onclick="mapZoomBy(1/1.2)" style="width:28px;height:24px;border:none;background:#333;color:#fff;border-radius:4px;cursor:pointer">−</button>
+                <button type="button" onclick="mapZoomReset()" style="height:24px;padding:0 8px;border:none;background:#333;color:#fff;border-radius:4px;cursor:pointer;font-size:11px">1:1</button>
+            </span>
         </div>
         <!-- Drawing tools (edit mode only) -->
         <div id="drawTools" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f5f7fa;padding:8px 10px;border-bottom:1px solid #e0e4ea">
@@ -118,18 +124,21 @@
             </div>
             <button onclick="assignMachineToSection()" class="btn btn-primary btn-sm btn-block">{{ _('Assign') }}</button>
         </div>
+    </div>
+</div>
 
-        <!-- Sections list -->
-        <div class="card">
-            <h3 style="margin-bottom:8px">{{ _('Sections') }}</h3>
-            <div id="sectionsList" style="max-height:180px;overflow-y:auto"></div>
-        </div>
+<!-- Lists under the map -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <!-- Sections list -->
+    <div class="card">
+        <h3 style="margin-bottom:8px">🏗️ {{ _('Sections') }}</h3>
+        <div id="sectionsList" style="max-height:220px;overflow-y:auto"></div>
+    </div>
 
-        <!-- Machines list -->
-        <div class="card">
-            <h3 style="margin-bottom:8px">{{ _('Machines') }}</h3>
-            <div id="machinesList" style="max-height:160px;overflow-y:auto"></div>
-        </div>
+    <!-- Machines list -->
+    <div class="card">
+        <h3 style="margin-bottom:8px">⚙️ {{ _('Machines') }}</h3>
+        <div id="machinesList" style="max-height:220px;overflow-y:auto"></div>
     </div>
 </div>
 
@@ -216,6 +225,30 @@ let sections = [], machines = [], sel = null, drag = null;
 const sLay = document.getElementById('sectionsLayer');
 const mLay = document.getElementById('machinesLayer');
 const canvasEl = document.getElementById('canvas');
+const canvasWrapEl = document.getElementById('canvasWrap');
+
+// ---- MAP ZOOM (mouse wheel + buttons) ----
+let mapZoom = 1;
+function applyMapZoom() {
+    // width scale → wrap scrolls; % coordinates of sections/machines stay correct
+    canvasEl.style.width = (mapZoom * 100) + '%';
+    canvasEl.style.minHeight = Math.round(550 * mapZoom) + 'px';
+}
+function mapZoomBy(factor) {
+    mapZoom = Math.max(0.4, Math.min(4, mapZoom * factor));
+    applyMapZoom();
+}
+function mapZoomReset() {
+    mapZoom = 1;
+    applyMapZoom();
+    canvasWrapEl.scrollTop = 0;
+    canvasWrapEl.scrollLeft = 0;
+}
+canvasWrapEl.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    mapZoomBy(factor);
+}, { passive: false });
 
 fetch('/api/map/all').then(r=>r.json()).then(d => { sections=d.sections; machines=d.machines; render(); });
 
