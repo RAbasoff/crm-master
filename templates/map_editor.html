@@ -67,45 +67,83 @@
 
     <!-- Right panel -->
     <div style="display:flex;flex-direction:column;gap:12px">
-        <!-- Section editor -->
+        <!-- Properties: section OR drawn line -->
         <div class="card" id="propsPanel" style="border-left:4px solid #3498db">
-            <h3 style="margin-bottom:12px">{{ _('Section Properties') }}</h3>
-            <div class="form-group">
-                <label>{{ _('Name') }}</label>
-                <input type="text" id="propName" oninput="updateSelected()">
-            </div>
-            <div class="form-group">
-                <label>{{ _('Description') }}</label>
-                <textarea id="propDesc" rows="2" oninput="updateSelected()"></textarea>
-            </div>
-            <div class="form-row">
+            <h3 style="margin-bottom:12px" id="propsTitle">📋 {{ _('Section Properties') }}</h3>
+
+            <!-- SECTION fields -->
+            <div id="propsSection">
                 <div class="form-group">
-                    <label>{{ _('Type') }}</label>
-                    <select id="propType" onchange="updateSelected()">
-                        <option value="workshop">workshop</option>
-                        <option value="storage">storage</option>
-                        <option value="office">office</option>
-                        <option value="utility">utility</option>
-                        <option value="loading">loading</option>
+                    <label>{{ _('Name') }}</label>
+                    <input type="text" id="propName" oninput="updateSelected()">
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Description') }}</label>
+                    <textarea id="propDesc" rows="2" oninput="updateSelected()"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ _('Type') }}</label>
+                        <select id="propType" onchange="updateSelected()">
+                            <option value="workshop">workshop</option>
+                            <option value="storage">storage</option>
+                            <option value="office">office</option>
+                            <option value="utility">utility</option>
+                            <option value="loading">loading</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ _('Color') }}</label>
+                        <input type="color" id="propColor" onchange="updateSelected()" style="width:100%;height:34px;padding:2px;cursor:pointer">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{ _('Responsible persons') }}</label>
+                    <select id="propResponsible" multiple onchange="updateSelected()" size="4" style="height:auto;min-height:80px">
+                        {% for v in verantwoordelijken %}
+                        <option value="{{ v.id }}">{{ v.naam }}{% if v.telefoon %} ({{ v.telefoon }}){% endif %}</option>
+                        {% endfor %}
                     </select>
+                    <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                    <button onclick="deleteSelected()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
+                    <button onclick="deselectAll()" class="btn btn-sm" style="background:#eee">{{ _('Deselect') }}</button>
+                </div>
+            </div>
+
+            <!-- LINE fields -->
+            <div id="propsLine" style="display:none">
+                <div class="form-group">
+                    <label>{{ _('Name') }}</label>
+                    <input type="text" id="lineName" placeholder="{{ _('Line name') }}">
                 </div>
                 <div class="form-group">
-                    <label>{{ _('Color') }}</label>
-                    <input type="color" id="propColor" onchange="updateSelected()" style="width:100%;height:34px;padding:2px;cursor:pointer">
+                    <label>{{ _('Description') }}</label>
+                    <textarea id="lineDesc" rows="3" placeholder="{{ _('Description') }}"></textarea>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>{{ _('Responsible persons') }}</label>
-                <select id="propResponsible" multiple onchange="updateSelected()" size="4" style="height:auto;min-height:80px">
-                    {% for v in verantwoordelijken %}
-                    <option value="{{ v.id }}">{{ v.naam }}{% if v.telefoon %} ({{ v.telefoon }}){% endif %}</option>
-                    {% endfor %}
-                </select>
-                <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
-            </div>
-            <div style="display:flex;gap:6px;margin-top:8px">
-                <button onclick="deleteSelected()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
-                <button onclick="deselectAll()" class="btn btn-sm" style="background:#eee">{{ _('Deselect') }}</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ _('Color') }}</label>
+                        <input type="color" id="lineColor" style="width:100%;height:34px;padding:2px;cursor:pointer">
+                    </div>
+                    <div class="form-group">
+                        <label>{{ _('Width') }}</label>
+                        <select id="lineWidth">
+                            <option value="1">1px</option>
+                            <option value="2">2px</option>
+                            <option value="3">3px</option>
+                            <option value="5">5px</option>
+                            <option value="8">8px</option>
+                            <option value="12">12px</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                    <button onclick="saveSelectedLineMeta()" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
+                    <button onclick="deleteSelectedLine()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
+                    <button onclick="deselectAll()" class="btn btn-sm" style="background:#eee">{{ _('Deselect') }}</button>
+                </div>
             </div>
         </div>
 
@@ -135,7 +173,7 @@
 </div>
 
 <!-- Lists under the map -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px">
     <!-- Sections list -->
     <div class="card">
         <h3 style="margin-bottom:8px">🏗️ {{ _('Sections') }}</h3>
@@ -146,6 +184,12 @@
     <div class="card">
         <h3 style="margin-bottom:8px">⚙️ {{ _('Machines') }}</h3>
         <div id="machinesList" style="max-height:220px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Drawn lines list -->
+    <div class="card">
+        <h3 style="margin-bottom:8px">✏️ {{ _('Drawn lines') }}</h3>
+        <div id="linesList" style="max-height:220px;overflow-y:auto"></div>
     </div>
 </div>
 
@@ -229,6 +273,7 @@ const T = {
 };
 
 let sections = [], machines = [], sel = null, drag = null;
+let SELECTED_LINE = null;
 const sLay = document.getElementById('sectionsLayer');
 const mLay = document.getElementById('machinesLayer');
 const canvasEl = document.getElementById('canvas');
@@ -338,25 +383,54 @@ function updSelectors() {
 }
 
 // ---- SELECTION ----
+function showSectionProps() {
+    document.getElementById('propsPanel').style.display = 'block';
+    document.getElementById('propsTitle').textContent = '📋 {{ _("Section Properties") }}';
+    document.getElementById('propsSection').style.display = 'block';
+    document.getElementById('propsLine').style.display = 'none';
+}
+function showLineProps() {
+    document.getElementById('propsPanel').style.display = 'block';
+    document.getElementById('propsTitle').textContent = '✏️ {{ _("Line Properties") }}';
+    document.getElementById('propsSection').style.display = 'none';
+    document.getElementById('propsLine').style.display = 'block';
+}
 function selectSection(id) {
     sel = id;
+    SELECTED_LINE = null;
     const s = sections.find(s=>s.id===id);
     if (s) {
-        document.getElementById('propsPanel').style.display = 'block';
+        showSectionProps();
         document.getElementById('propName').value = s.name;
         document.getElementById('propDesc').value = s.description||'';
         document.getElementById('propType').value = s.type;
         document.getElementById('propColor').value = s.color;
-        const sel = document.getElementById('propResponsible');
-        for (let opt of sel.options) { opt.selected = (s.responsible_ids||[]).includes(parseInt(opt.value)); }
+        const selEl = document.getElementById('propResponsible');
+        for (let opt of selEl.options) { opt.selected = (s.responsible_ids||[]).includes(parseInt(opt.value)); }
     }
-    renderSections(); renderLists();
+    renderSections(); renderLists(); redrawLines();
+}
+
+function selectLine(id) {
+    SELECTED_LINE = id;
+    sel = null;
+    const ln = FLOOR_LINES.find(x => x.id === id);
+    if (ln) {
+        showLineProps();
+        document.getElementById('lineName').value = ln.name || '';
+        document.getElementById('lineDesc').value = ln.description || '';
+        document.getElementById('lineColor').value = ln.color || '#2980b9';
+        const wSel = document.getElementById('lineWidth');
+        if (wSel) wSel.value = String(ln.width || 3);
+    }
+    renderSections(); renderLists(); redrawLines(); renderLinesList();
 }
 
 function deselectAll() {
     sel = null;
+    SELECTED_LINE = null;
     document.getElementById('propsPanel').style.display = 'none';
-    renderSections(); renderLists();
+    renderSections(); renderLists(); redrawLines(); renderLinesList();
 }
 
 function updateSelected() {
@@ -456,7 +530,7 @@ function stopResize() {
 }
 
 canvasEl.addEventListener('click', e => {
-    if (e.target === canvasEl || e.target.tagName === 'IMG') deselectAll();
+    // обработчик ниже решает, что кликнуть: линия / пусто / секция
 });
 
 // ---- ACTIONS ----
@@ -503,7 +577,7 @@ function toggleMachines() {
 }
 
 // ---- DRAW LINES (edit mode only) ----
-let DRAW_MODE=false, DRAW_PTS=[], SELECTED_LINE=null, FLOOR_LINES=[];
+let DRAW_MODE=false, DRAW_PTS=[], FLOOR_LINES=[];
 function canvasPct(e){
     const r=document.getElementById('canvas').getBoundingClientRect();
     return {
@@ -533,7 +607,13 @@ function exitDrawMode(){
     redrawLines();
 }
 document.addEventListener('keydown', function(e){
-    if(e.key==='Escape' && DRAW_MODE){ exitDrawMode(); }
+    if(e.key==='Escape' && DRAW_MODE){ exitDrawMode(); return; }
+    if((e.key==='Delete'||e.key==='Backspace') && SELECTED_LINE && !DRAW_MODE){
+        const tag=(e.target.tagName||'').toLowerCase();
+        if(tag==='input'||tag==='textarea'||tag==='select') return;
+        e.preventDefault();
+        deleteSelectedLine();
+    }
 });
 function undoDrawPoint(){DRAW_PTS.pop();redrawLines();}
 function clearDraft(){
@@ -561,9 +641,14 @@ function redrawLines(){
         const pts=(ln.points||[]).map(function(p){return p.x+','+p.y;}).join(' ');
         if(!pts)return;
         const w=ln.width||3;
-        const sel=SELECTED_LINE===ln.id?w+2:w;
+        const isSel=SELECTED_LINE===ln.id;
+        const sel=isSel?w+3:w;
+        // белая подложка-обводка у выделенной линии
+        if(isSel){
+            parts.push('<polyline points="'+pts+'" fill="none" stroke="#fff" stroke-width="'+(w+6)+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.85"/>');
+        }
         // vector-effect: толщина в пикселях экрана, не растягивается с viewBox
-        parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+sel+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.9"/>');
+        parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+sel+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.95"'+(isSel?' stroke-dasharray="10 5"':'')+'/>');
         // подпись названия у первой точки
         if(ln.points && ln.points.length && ln.name && ln.name !== 'Line'){
             const p0=ln.points[0];
@@ -593,41 +678,117 @@ function saveDrawLine(){
         })
     }).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){alert(d.error||'Error');return;}
-        DRAW_PTS=[];loadFloorLines();
+        DRAW_PTS=[];
+        loadFloorLines().then(function(){ if(d.id) selectLine(d.id); });
     });
 }
 function saveSelectedLineMeta(){
     if(!SELECTED_LINE){alert('{{ _('Select a line first') }}');return;}
-    const name=((document.getElementById('drawName')||{}).value||'').trim()||'Line';
-    const desc=((document.getElementById('drawDesc')||{}).value||'').trim();
+    const name=((document.getElementById('lineName')||{}).value||'').trim()||'Line';
+    const desc=((document.getElementById('lineDesc')||{}).value||'').trim();
+    const color=(document.getElementById('lineColor')||{}).value||'#2980b9';
+    const width=parseInt((document.getElementById('lineWidth')||{}).value||'3',10);
     csrfFetch('/api/map/lines/'+SELECTED_LINE+'/meta',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-            name:name,
-            description:desc,
-            color:(document.getElementById('drawColor')||{}).value,
-            width:getDrawWidth()
-        })
+        body:JSON.stringify({ name:name, description:desc, color:color, width:width })
     }).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){alert(d.error||'Error');return;}
         loadFloorLines();
     });
 }
 function deleteSelectedLine(){
-    if(!SELECTED_LINE){alert('Select a line first');return;}
+    if(!SELECTED_LINE){alert('{{ _('Select a line first') }}');return;}
+    if(!confirm('{{ _("Delete this line?") }}')) return;
     csrfFetch('/api/map/lines/'+SELECTED_LINE+'/delete',{method:'POST'}).then(function(){
-        SELECTED_LINE=null;loadFloorLines();
+        SELECTED_LINE=null;
+        deselectAll();
+        loadFloorLines();
     });
 }
 function loadFloorLines(){
-    fetch('/api/map/lines').then(function(r){return r.json();}).then(function(d){
-        FLOOR_LINES=d||[];redrawLines();
+    return fetch('/api/map/lines').then(function(r){return r.json();}).then(function(d){
+        FLOOR_LINES=d||[];
+        redrawLines();
+        renderLinesList();
     }).catch(function(){});
 }
 
-// Extend canvas click: draw / select lines
-const _origCanvasClick = canvasEl.onclick;
+function renderLinesList(){
+    const box=document.getElementById('linesList');
+    if(!box) return;
+    if(!FLOOR_LINES.length){
+        box.innerHTML='<div style="color:#888;font-size:12px;padding:8px">{{ _("No drawn lines") }}</div>';
+        return;
+    }
+    box.innerHTML='';
+    FLOOR_LINES.forEach(function(ln){
+        const el=document.createElement('div');
+        el.className='li'+(SELECTED_LINE===ln.id?' act':'');
+        el.style.cursor='pointer';
+        const title=esc(ln.name||'Line');
+        const desc=esc((ln.description||'').slice(0,60));
+        el.innerHTML='<span class="cdot" style="background:'+(ln.color||'#2980b9')+'"></span>'
+            +'<span style="flex:1;min-width:0"><b>'+title+'</b>'
+            +(desc?'<br><small style="color:#888">'+desc+'</small>':'')
+            +'</span>'
+            +'<button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:2px 6px;font-size:10px" data-del="'+ln.id+'">🗑</button>';
+        el.addEventListener('click', function(e){
+            const del=e.target.closest('[data-del]');
+            if(del){
+                e.stopPropagation();
+                const id=parseInt(del.getAttribute('data-del'),10);
+                if(confirm('{{ _("Delete this line?") }}')){
+                    csrfFetch('/api/map/lines/'+id+'/delete',{method:'POST'}).then(function(){
+                        if(SELECTED_LINE===id){ SELECTED_LINE=null; deselectAll(); }
+                        loadFloorLines();
+                    });
+                }
+                return;
+            }
+            selectLine(ln.id);
+        });
+        box.appendChild(el);
+    });
+}
+
+// Расстояние от точки до отрезка (для клика по линии)
+function distToSeg(px,py,x1,y1,x2,y2){
+    const dx=x2-x1, dy=y2-y1;
+    const len2=dx*dx+dy*dy;
+    if(!len2) return Math.hypot(px-x1,py-y1);
+    let t=((px-x1)*dx+(py-y1)*dy)/len2;
+    t=Math.max(0,Math.min(1,t));
+    return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+function hitLine(p){
+    // широкая зона клика: 4% — чтобы тонкую линию было легко поймать
+    const thrX=4.0, thrY=4.0;
+    let best=null,bestD=Infinity;
+    FLOOR_LINES.forEach(function(ln){
+        const pts=ln.points||[];
+        const check=function(d){
+            // нормируем по осям — карта не квадратная
+            const score=d;
+            if(score<bestD && Math.abs(d)<Math.max(thrX,thrY)){ bestD=score; best=ln.id; }
+        };
+        if(pts.length===1){
+            check(Math.hypot(pts[0].x-p.x,pts[0].y-p.y));
+            return;
+        }
+        for(let i=0;i<pts.length-1;i++){
+            check(distToSeg(p.x,p.y,pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y));
+        }
+        // клик по подписи названия (над первой точкой)
+        if(pts.length && ln.name && ln.name!=='Line'){
+            const p0=pts[0];
+            const dLabel=Math.hypot(p0.x-p.x,(p0.y-1.5)-p.y);
+            check(dLabel);
+        }
+    });
+    return best;
+}
+
+// Click: draw / select line / deselect
 canvasEl.addEventListener('click', function(e){
-    if(!DRAW_MODE && e.target.closest('.sec')) return;
     if(DRAW_MODE){
         if(e.target.closest('.sec')||e.target.closest('.mach')) return;
         DRAW_PTS.push(canvasPct(e));
@@ -637,25 +798,17 @@ canvasEl.addEventListener('click', function(e){
     }
     if(e.target.closest('.sec')||e.target.closest('.mach')) return;
     const p=canvasPct(e);
-    let best=null,bestD=999;
-    FLOOR_LINES.forEach(function(ln){
-        (ln.points||[]).forEach(function(pt){
-            const d=Math.hypot(pt.x-p.x,pt.y-p.y);
-            if(d<bestD){bestD=d;best=ln.id;}
-        });
-    });
-    if(best&&bestD<2){
-        SELECTED_LINE=best;
-        const ln=FLOOR_LINES.find(function(x){return x.id===best;});
-        if(ln){
-            const n=document.getElementById('drawName');
-            const d=document.getElementById('drawDesc');
-            if(n) n.value=ln.name||'';
-            if(d) d.value=ln.description||'';
-            const btn=document.getElementById('btnSaveMeta');
-            if(btn) btn.style.display='';
-        }
+    const best=hitLine(p);
+    if(best){
+        selectLine(best);
+    } else {
+        SELECTED_LINE=null;
+        sel=null;
+        document.getElementById('propsPanel').style.display='none';
         redrawLines();
+        renderLinesList();
+        renderSections();
+        renderLists();
     }
 });
 
