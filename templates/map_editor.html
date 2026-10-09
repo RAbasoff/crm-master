@@ -62,11 +62,9 @@
 
     <!-- Right panel -->
     <div style="display:flex;flex-direction:column;gap:12px">
-        <!-- Properties: section OR drawn line -->
+        <!-- Section properties (always when section selected) -->
         <div class="card" id="propsPanel" style="border-left:4px solid #3498db">
-            <h3 style="margin-bottom:12px" id="propsTitle">📋 {{ _('Section Properties') }}</h3>
-
-            <!-- SECTION fields -->
+            <h3 style="margin-bottom:12px">📋 {{ _('Section Properties') }}</h3>
             <div id="propsSection">
                 <div class="form-group">
                     <label>{{ _('Name') }}</label>
@@ -93,7 +91,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>{{ _('Responsible persons') }}</label>
+                    <label>👥 {{ _('Responsible for this workshop') }}</label>
                     <select id="propResponsible" multiple onchange="updateSelected()" size="4" style="height:auto;min-height:80px">
                         {% for v in verantwoordelijken %}
                         <option value="{{ v.id }}">{{ v.naam }}{% if v.telefoon %} ({{ v.telefoon }}){% endif %}</option>
@@ -104,16 +102,19 @@
                 </div>
                 <div class="form-group">
                     <label>⚙️ {{ _('Machines in this section') }}</label>
-                    <div id="propMachinesList" style="max-height:140px;overflow-y:auto;background:#f8f9fa;border-radius:8px;padding:6px"></div>
+                    <div id="propMachinesList" style="max-height:150px;overflow-y:auto;background:#f8f9fa;border-radius:8px;padding:6px"></div>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:8px">
                     <button onclick="deleteSelected()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
                     <button onclick="deselectAll()" class="btn btn-sm" style="background:#eee">{{ _('Deselect') }}</button>
                 </div>
             </div>
+        </div>
 
-            <!-- LINE fields -->
-            <div id="propsLine" style="display:none">
+        <!-- Line properties (when drawing or line selected) — separate card -->
+        <div class="card" id="propsLineCard" style="display:none;border-left:4px solid #e67e22">
+            <h3 style="margin-bottom:12px">✏️ {{ _('Line Properties') }}</h3>
+            <div id="propsLine">
                 <div class="form-group">
                     <label>{{ _('Name') }}</label>
                     <input type="text" id="lineName" placeholder="{{ _('Line name') }}">
@@ -383,21 +384,23 @@ function updSelectors() {
 }
 
 // ---- SELECTION ----
+// Секция и линия — разные карточки, не перекрывают друг друга
 function showSectionProps() {
     document.getElementById('propsPanel').style.display = 'block';
-    document.getElementById('propsTitle').textContent = '📋 {{ _("Section Properties") }}';
-    document.getElementById('propsSection').style.display = 'block';
-    document.getElementById('propsLine').style.display = 'none';
+}
+function hideSectionProps() {
+    document.getElementById('propsPanel').style.display = 'none';
 }
 function showLineProps() {
-    document.getElementById('propsPanel').style.display = 'block';
-    document.getElementById('propsTitle').textContent = '✏️ {{ _("Line Properties") }}';
-    document.getElementById('propsSection').style.display = 'none';
-    document.getElementById('propsLine').style.display = 'block';
+    document.getElementById('propsLineCard').style.display = 'block';
+}
+function hideLineProps() {
+    document.getElementById('propsLineCard').style.display = 'none';
 }
 function selectSection(id) {
     sel = id;
-    SELECTED_LINE = null;
+    // не сбрасываем линию, если рисуем или выбрали линию — обе панели видны
+    if(!DRAW_MODE && !SELECTED_LINE) hideLineProps();
     const s = sections.find(s=>s.id===id);
     if (s) {
         showSectionProps();
@@ -414,7 +417,7 @@ function selectSection(id) {
             const names=[];
             for(const opt of selEl.options){ if(opt.selected) names.push(opt.textContent); }
             respBox.innerHTML = names.length
-                ? '<span style="color:#888">{{ _("Responsible for this workshop") }}: </span><b>'+esc(names.join(', '))+'</b>'
+                ? '<span style="color:#888">{{ _("Responsible") }}: </span><b>'+esc(names.join(', '))+'</b>'
                 : '<span style="color:#888">{{ _("No responsible persons") }}</span>';
         }
 
@@ -441,7 +444,7 @@ function selectSection(id) {
 
 function selectLine(id) {
     SELECTED_LINE = id;
-    sel = null;
+    // секцию не прячем — она остаётся, если выбрана
     const ln = FLOOR_LINES.find(x => x.id === id);
     if (ln) {
         showLineProps();
@@ -457,7 +460,8 @@ function selectLine(id) {
 function deselectAll() {
     sel = null;
     SELECTED_LINE = null;
-    document.getElementById('propsPanel').style.display = 'none';
+    hideSectionProps();
+    hideLineProps();
     renderSections(); renderLists(); redrawLines(); renderLinesList();
 }
 
@@ -891,7 +895,8 @@ canvasEl.addEventListener('click', function(e){
     } else {
         SELECTED_LINE=null;
         sel=null;
-        document.getElementById('propsPanel').style.display='none';
+        hideSectionProps();
+        hideLineProps();
         redrawLines();
         renderLinesList();
         renderSections();
