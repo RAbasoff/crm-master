@@ -44,13 +44,7 @@
             <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="undoDrawPoint()" title="{{ _('Undo point') }}">↶</button>
             <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="clearDraft()" title="{{ _('Clear draft') }}">✕</button>
             <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:6px 12px;font-size:12px" onclick="deleteSelectedLine()">🗑 {{ _('Delete') }}</button>
-            <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Name') }}:
-                <input type="text" id="drawName" placeholder="{{ _('Line name') }}" style="width:120px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
-            </label>
-            <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Description') }}:
-                <input type="text" id="drawDesc" placeholder="{{ _('Description') }}" style="width:160px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
-            </label>
-            <button type="button" id="btnSaveMeta" class="btn btn-sm" style="background:#8e44ad;color:white;padding:6px 12px;font-size:12px;display:none" onclick="saveSelectedLineMeta()">💾 {{ _('Save info') }}</button>
+            <span style="font-size:11px;color:#888">{{ _('Name and description — in the properties panel') }}</span>
         </div>
         <div id="drawHint" style="display:none;background:#fff3cd;color:#856404;padding:8px 12px;font-size:12px;border-bottom:1px solid #ffeaa7">
             ✏️ <b>{{ _('Draw mode is ON') }}</b> — {{ _('click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.') }}
@@ -622,12 +616,20 @@ function canvasPct(e){
 function toggleDrawMode(){
     if(DRAW_MODE){ exitDrawMode(); return; }
     DRAW_MODE=true;
+    SELECTED_LINE=null;
+    sel=null;
     const b=document.getElementById('btnDraw');
     b.style.background='#e67e22'; b.style.color='#fff';
     b.textContent='✏️ {{ _("Drawing…") }}';
     document.getElementById('btnDrawExit').style.display='';
     document.getElementById('drawHint').style.display='block';
     document.getElementById('canvasWrap').style.cursor='crosshair';
+    // одно описание — в панели свойств
+    showLineProps();
+    document.getElementById('lineName').value='';
+    document.getElementById('lineDesc').value='';
+    document.getElementById('lineColor').value=(document.getElementById('drawColor')||{}).value||'#2980b9';
+    document.getElementById('lineWidth').value=String(getDrawWidth());
 }
 function exitDrawMode(){
     DRAW_MODE=false;
@@ -652,8 +654,6 @@ document.addEventListener('keydown', function(e){
 function undoDrawPoint(){DRAW_PTS.pop();redrawLines();}
 function clearDraft(){
     DRAW_PTS=[];SELECTED_LINE=null;redrawLines();
-    const btn=document.getElementById('btnSaveMeta');
-    if(btn) btn.style.display='none';
 }
 function getDrawWidth(){
     const v=parseInt((document.getElementById('drawWidth')||{}).value||'3',10);
@@ -750,14 +750,18 @@ function renderLabels(){
 }
 function saveDrawLine(){
     if(DRAW_PTS.length<2){alert('{{ _('Min 2 points') }}');return;}
-    const name=((document.getElementById('drawName')||{}).value||'').trim()||'Line';
-    const desc=((document.getElementById('drawDesc')||{}).value||'').trim();
+    // Одно имя/описание — только в панели свойств
+    showLineProps();
+    const name=((document.getElementById('lineName')||{}).value||'').trim()||'Line';
+    const desc=((document.getElementById('lineDesc')||{}).value||'').trim();
+    const color=(document.getElementById('lineColor')||{}).value||(document.getElementById('drawColor')||{}).value||'#2980b9';
+    const width=parseInt((document.getElementById('lineWidth')||{}).value||'3',10)||getDrawWidth();
     csrfFetch('/api/map/lines',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
             name:name,
             description:desc,
-            color:(document.getElementById('drawColor')||{}).value,
-            width:getDrawWidth(),
+            color:color,
+            width:width,
             points:DRAW_PTS
         })
     }).then(function(r){return r.json();}).then(function(d){
