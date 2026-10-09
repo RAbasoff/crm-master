@@ -44,6 +44,13 @@
             <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="undoDrawPoint()" title="{{ _('Undo point') }}">↶</button>
             <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="clearDraft()" title="{{ _('Clear draft') }}">✕</button>
             <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:6px 12px;font-size:12px" onclick="deleteSelectedLine()">🗑 {{ _('Delete') }}</button>
+            <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Name') }}:
+                <input type="text" id="drawName" placeholder="{{ _('Line name') }}" style="width:120px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
+            </label>
+            <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Description') }}:
+                <input type="text" id="drawDesc" placeholder="{{ _('Description') }}" style="width:160px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
+            </label>
+            <button type="button" id="btnSaveMeta" class="btn btn-sm" style="background:#8e44ad;color:white;padding:6px 12px;font-size:12px;display:none" onclick="saveSelectedLineMeta()">💾 {{ _('Save info') }}</button>
         </div>
         <div id="drawHint" style="display:none;background:#fff3cd;color:#856404;padding:8px 12px;font-size:12px;border-bottom:1px solid #ffeaa7">
             ✏️ <b>{{ _('Draw mode is ON') }}</b> — {{ _('click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.') }}
@@ -529,7 +536,11 @@ document.addEventListener('keydown', function(e){
     if(e.key==='Escape' && DRAW_MODE){ exitDrawMode(); }
 });
 function undoDrawPoint(){DRAW_PTS.pop();redrawLines();}
-function clearDraft(){DRAW_PTS=[];SELECTED_LINE=null;redrawLines();}
+function clearDraft(){
+    DRAW_PTS=[];SELECTED_LINE=null;redrawLines();
+    const btn=document.getElementById('btnSaveMeta');
+    if(btn) btn.style.display='none';
+}
 function getDrawWidth(){
     const v=parseInt((document.getElementById('drawWidth')||{}).value||'3',10);
     return Math.max(1, Math.min(v||3, 20));
@@ -553,6 +564,12 @@ function redrawLines(){
         const sel=SELECTED_LINE===ln.id?w+2:w;
         // vector-effect: толщина в пикселях экрана, не растягивается с viewBox
         parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+sel+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.9"/>');
+        // подпись названия у первой точки
+        if(ln.points && ln.points.length && ln.name && ln.name !== 'Line'){
+            const p0=ln.points[0];
+            const txt=String(ln.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+            parts.push('<text x="'+p0.x+'" y="'+(p0.y-1.5)+'" font-size="2.2" fill="'+ln.color+'" font-weight="700" text-anchor="middle" style="paint-order:stroke;stroke:#fff;stroke-width:0.6;stroke-linejoin:round">'+txt+'</text>');
+        }
     });
     if(DRAW_PTS.length){
         const dp=DRAW_PTS.map(function(p){return p.x+','+p.y;}).join(' ');
@@ -564,9 +581,12 @@ function redrawLines(){
 }
 function saveDrawLine(){
     if(DRAW_PTS.length<2){alert('{{ _('Min 2 points') }}');return;}
+    const name=((document.getElementById('drawName')||{}).value||'').trim()||'Line';
+    const desc=((document.getElementById('drawDesc')||{}).value||'').trim();
     csrfFetch('/api/map/lines',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-            name:'Line',
+            name:name,
+            description:desc,
             color:(document.getElementById('drawColor')||{}).value,
             width:getDrawWidth(),
             points:DRAW_PTS
@@ -574,6 +594,22 @@ function saveDrawLine(){
     }).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){alert(d.error||'Error');return;}
         DRAW_PTS=[];loadFloorLines();
+    });
+}
+function saveSelectedLineMeta(){
+    if(!SELECTED_LINE){alert('{{ _('Select a line first') }}');return;}
+    const name=((document.getElementById('drawName')||{}).value||'').trim()||'Line';
+    const desc=((document.getElementById('drawDesc')||{}).value||'').trim();
+    csrfFetch('/api/map/lines/'+SELECTED_LINE+'/meta',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            name:name,
+            description:desc,
+            color:(document.getElementById('drawColor')||{}).value,
+            width:getDrawWidth()
+        })
+    }).then(function(r){return r.json();}).then(function(d){
+        if(!d.ok){alert(d.error||'Error');return;}
+        loadFloorLines();
     });
 }
 function deleteSelectedLine(){
@@ -608,7 +644,19 @@ canvasEl.addEventListener('click', function(e){
             if(d<bestD){bestD=d;best=ln.id;}
         });
     });
-    if(best&&bestD<2){SELECTED_LINE=best;redrawLines();}
+    if(best&&bestD<2){
+        SELECTED_LINE=best;
+        const ln=FLOOR_LINES.find(function(x){return x.id===best;});
+        if(ln){
+            const n=document.getElementById('drawName');
+            const d=document.getElementById('drawDesc');
+            if(n) n.value=ln.name||'';
+            if(d) d.value=ln.description||'';
+            const btn=document.getElementById('btnSaveMeta');
+            if(btn) btn.style.display='';
+        }
+        redrawLines();
+    }
 });
 
 loadFloorLines();

@@ -684,6 +684,7 @@ class FloorMapLine(db.Model):
     __tablename__ = 'floor_map_line'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), default='Line')
+    description = db.Column(db.Text, default='')
     color = db.Column(db.String(20), default='#2980b9')
     width = db.Column(db.Integer, default=3)  # толщина линии в пикселях
     points_json = db.Column(db.Text, default='[]')  # [{"x":..%,"y":..%}, ...]

@@ -248,8 +248,8 @@ def settings_machine_assign_user(machine_id):
 def map_lines_list():
     lines = FloorMapLine.query.order_by(FloorMapLine.id).all()
     return jsonify([{
-        'id': ln.id, 'name': ln.name, 'color': ln.color,
-        'width': ln.width or 3,
+        'id': ln.id, 'name': ln.name, 'description': ln.description or '',
+        'color': ln.color, 'width': ln.width or 3,
         'points': json.loads(ln.points_json or '[]'),
     } for ln in lines])
 
@@ -269,6 +269,7 @@ def map_line_save():
     width = max(1, min(width, 20))
     ln = FloorMapLine(
         name=(data.get('name') or 'Line')[:120],
+        description=(data.get('description') or '')[:2000],
         color=data.get('color') or '#2980b9',
         width=width,
         points_json=json.dumps(pts),
@@ -278,6 +279,29 @@ def map_line_save():
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True, 'id': ln.id})
+
+
+@bp.route('/api/map/lines/<int:line_id>/meta', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def map_line_meta(line_id):
+    """Update name/description/color/width of a drawn line."""
+    ln = FloorMapLine.query.get_or_404(line_id)
+    data = request.get_json() or {}
+    if 'name' in data:
+        ln.name = (data.get('name') or 'Line')[:120]
+    if 'description' in data:
+        ln.description = (data.get('description') or '')[:2000]
+    if 'color' in data and data.get('color'):
+        ln.color = data['color'][:20]
+    if 'width' in data:
+        try:
+            ln.width = max(1, min(int(data.get('width') or 3), 20))
+        except (TypeError, ValueError):
+            pass
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'id': ln.id, 'name': ln.name, 'description': ln.description or ''})
 
 
 @bp.route('/api/map/lines/<int:line_id>/delete', methods=['POST'])
