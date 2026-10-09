@@ -29,12 +29,16 @@ def gen_two_number():
 @login_required
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
 def two_list():
-    if current_user.has_role('admin', 'director'):
+    if current_user.has_role('admin', 'director', 'technician'):
         orders = TechnicalWorkOrder.query.order_by(TechnicalWorkOrder.created_at.desc()).all()
-    elif current_user.has_role('technician'):
+    elif getattr(current_user, 'role', '') in ('user', 'responsible') or hasattr(current_user, '_person'):
+        # Цеховой ответственный: смотрит TWO (без создания)
         orders = TechnicalWorkOrder.query.order_by(TechnicalWorkOrder.created_at.desc()).all()
     else:
-        orders = TechnicalWorkOrder.query.filter_by(created_by=current_user.id).order_by(TechnicalWorkOrder.created_at.desc()).all()
+        try:
+            orders = TechnicalWorkOrder.query.filter_by(created_by=current_user.id).order_by(TechnicalWorkOrder.created_at.desc()).all()
+        except Exception:
+            orders = []
 
     # Группировка по году → месяцу (planned_date, иначе created_at).
     # Пустые месяцы не попадают в список.

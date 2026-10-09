@@ -155,3 +155,38 @@ def enforce_mechanic_access():
             flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
             return redirect(url_for('index'))
     return None
+
+
+# ── Цеховые ответственные (Bartek, Hqshem, Pablo, Safa…) ─────────
+# Видят только: SToringen, TWO, Communicatie + карта своих участков.
+
+FLOOR_ALLOWED_PREFIXES = (
+    'faults.', 'two.', 'messages.', 'chat.', 'floor_plan',
+    'index', 'change_password', 'logout', 'set_language',
+    'static', 'profile', 'notifications.', 'mobile.',
+)
+
+FLOOR_ALLOWED_PATHS = (
+    '/faults', '/two', '/messages', '/chat', '/floor',
+    '/profile', '/change-password', '/logout', '/notifications',
+    '/set-language', '/mobile',
+)
+
+
+def enforce_floor_access():
+    """Запрет модулей, которых нет в узком меню цехового пользователя."""
+    if not current_user.is_authenticated:
+        return None
+    if not is_floor_user(current_user):
+        return None
+    endpoint = getattr(request, 'endpoint', None) or ''
+    path = getattr(request, 'path', '') or ''
+    if endpoint and any(endpoint.startswith(p) or endpoint == p.rstrip('.') for p in FLOOR_ALLOWED_PREFIXES):
+        return None
+    if path == '/' or path.startswith('/static'):
+        return None
+    for p in FLOOR_ALLOWED_PATHS:
+        if path == p or path.startswith(p + '/'):
+            return None
+    flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+    return redirect(url_for('floor_plan'))

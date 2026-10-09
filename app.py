@@ -38,7 +38,7 @@ from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    check_tool_wear_notifications, safe_commit, add_work_report,
                    safe_int, safe_float, safe_date, find_pdf_font, ensure_fpdf,
                    is_user_at_work, user_schedule_restricted)
-from security import enforce_mechanic_access, is_mechanic, is_floor_user
+from security import enforce_mechanic_access, is_mechanic, is_floor_user, enforce_floor_access
 
 # ============================================================
 # APP CONFIG
@@ -465,6 +465,9 @@ def before_request():
         denied = enforce_mechanic_access()
         if denied is not None:
             return denied
+        denied = enforce_floor_access()
+        if denied is not None:
+            return denied
 
     # Доступ механиков только в рабочие часы по графику
     # (не действует, если администратор смотрит от имени пользователя)
@@ -578,7 +581,8 @@ def inject_section_access():
             pass
         try:
             from blueprints.chat import get_unread_count
-            chat_unread = get_unread_count(current_user.id)
+            if isinstance(getattr(current_user, 'id', None), int):
+                chat_unread = get_unread_count(current_user.id)
         except Exception:
             pass
 

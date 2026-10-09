@@ -342,7 +342,13 @@ def faults_list():
             (FaultReport.status == 'open')
         ).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     else:
-        pagination = base.filter_by(reporter_id=current_user.id).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+        # Обычный пользователь / ответственный: свои заявки
+        uid = current_user.id
+        if not isinstance(uid, int):
+            person_id = getattr(current_user, 'person_id', None)
+            linked = User.query.filter_by(person_id=person_id).first() if person_id else None
+            uid = linked.id if linked else -1
+        pagination = base.filter_by(reporter_id=uid).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     faults = pagination.items
     return render_template('faults.html', faults=faults, pagination=pagination)
 
@@ -363,8 +369,13 @@ def fault_new():
                 priority=request.form.get('priority', 'normal'),
                 machine_id=int(machine_id) if machine_id else None,
                 equipment_id=int(equipment_id) if equipment_id else None,
-                reporter_id=current_user.id
+                reporter_id=current_user.id if isinstance(current_user.id, int) else None
             )
+            # ResponsibleAuth (id «r_N») → связанный User
+            if f.reporter_id is None:
+                person_id = getattr(current_user, 'person_id', None)
+                linked = User.query.filter_by(person_id=person_id).first() if person_id else None
+                f.reporter_id = linked.id if linked else None
             # Actual reporter: selected user, or free-text name (someone without an account)
             rid = (request.form.get('reporter_id') or '').strip()
             rname = (request.form.get('reporter_name') or '').strip()
@@ -477,6 +488,16 @@ def fault_new():
 @login_required
 def fault_detail(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
+    # Цеховой пользователь — только свои заявки
+    if not current_user.has_role('admin', 'director', 'technician'):
+        uid = current_user.id if isinstance(current_user.id, int) else None
+        if uid is None:
+            person_id = getattr(current_user, 'person_id', None)
+            linked = User.query.filter_by(person_id=person_id).first() if person_id else None
+            uid = linked.id if linked else -1
+        if f.reporter_id != uid:
+            flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+            return redirect(url_for('faults.faults_list'))
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     contractors = Contractor.query.filter_by(is_active=True).order_by(Contractor.company_name).all()
     my_session = FaultWorkSession.query.filter_by(
