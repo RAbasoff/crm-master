@@ -462,7 +462,8 @@ function redrawLines(){
     FLOOR_LINES.forEach(function(ln){
         const pts=(ln.points||[]).map(function(p){return (p.x/100*1520)+','+(p.y/100*1080);}).join(' ');
         if(!pts)return;
-        parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" opacity="0.85"/>');
+        const w=ln.width||3;
+        parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.9"/>');
     });
     svg.innerHTML=parts.join('');
     svg.setAttribute('viewBox','0 0 1520 1080');

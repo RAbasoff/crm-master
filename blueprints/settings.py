@@ -249,6 +249,7 @@ def map_lines_list():
     lines = FloorMapLine.query.order_by(FloorMapLine.id).all()
     return jsonify([{
         'id': ln.id, 'name': ln.name, 'color': ln.color,
+        'width': ln.width or 3,
         'points': json.loads(ln.points_json or '[]'),
     } for ln in lines])
 
@@ -261,9 +262,15 @@ def map_line_save():
     pts = data.get('points') or []
     if not pts or len(pts) < 2:
         return jsonify({'error': 'Need at least 2 points'}), 400
+    try:
+        width = int(data.get('width') or 3)
+    except (TypeError, ValueError):
+        width = 3
+    width = max(1, min(width, 20))
     ln = FloorMapLine(
         name=(data.get('name') or 'Line')[:120],
         color=data.get('color') or '#2980b9',
+        width=width,
         points_json=json.dumps(pts),
         created_by=current_user.id,
     )

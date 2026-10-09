@@ -136,16 +136,21 @@
                             {% for ev in day_events %}
                             {% set is_done = ev.done if ev.done is defined else False %}
                             {% set ev_status = ev.status if ev.status is defined else '' %}
-                            <div class="cal-event" draggable="{% if not is_done and current_user.has_role('admin','director','technician') %}true{% else %}false{% endif %}" data-type="{{ ev.type }}" data-plan-id="{{ ev.plan_id or '' }}" data-part-id="{{ ev.part_id or '' }}" data-machine-id="{{ ev.machine_id or '' }}" data-equipment-id="{{ ev.equipment_id or '' }}" data-mro-id="{{ ev.mro_id or '' }}" data-record-id="{{ ev.record_id or '' }}" data-date="{{ ev.date.strftime('%Y-%m-%d') }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px;{% if not is_done and current_user.has_role('admin','director','technician') %}cursor:grab{% endif %}">
+                            {# Правильные ссылки: plan → план, equipment → /assets (Equipment), equipment_mro → /equipment (MRO), иначе машина #}
                             {% if ev.type == 'plan' and ev.plan_id %}
-                            <a href="/maintenance-plans/{{ ev.plan_id }}" draggable="false"
+                                {% set ev_href = '/maintenance-plans/' ~ ev.plan_id %}
                             {% elif ev.type == 'equipment' and ev.equipment_id %}
-                            <a href="/equipment/{{ ev.equipment_id }}" draggable="false"
+                                {% set ev_href = '/assets/' ~ ev.equipment_id %}
+                            {% elif ev.type == 'equipment_mro' and ev.mro_id %}
+                                {% set ev_href = '/equipment/' ~ ev.mro_id %}
                             {% elif ev.machine_id %}
-                            <a href="/machines/{{ ev.machine_id }}" draggable="false"
+                                {% set ev_href = '/machines/' ~ ev.machine_id %}
                             {% else %}
-                            <a href="#" draggable="false"
-                            {% endif %} style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %}">
+                                {% set ev_href = '#' %}
+                            {% endif %}
+                            <div class="cal-event" draggable="{% if not is_done and current_user.has_role('admin','director','technician') %}true{% else %}false{% endif %}" data-type="{{ ev.type }}" data-plan-id="{{ ev.plan_id or '' }}" data-part-id="{{ ev.part_id or '' }}" data-machine-id="{{ ev.machine_id or '' }}" data-equipment-id="{{ ev.equipment_id or '' }}" data-mro-id="{{ ev.mro_id or '' }}" data-record-id="{{ ev.record_id or '' }}" data-date="{{ ev.date.strftime('%Y-%m-%d') }}" data-title="{{ ev.machine }}: {{ ev.part }}" data-part-name="{{ ev.part }}" data-machine-name="{{ ev.machine }}" data-category="{{ ev.category or '' }}" data-done="{{ '1' if is_done else '' }}" data-overdue="{{ '1' if ev.overdue else '' }}" data-href="{{ ev_href }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px;{% if not is_done and current_user.has_role('admin','director','technician') %}cursor:grab{% endif %}">
+                            <a href="{{ ev_href }}" draggable="false" class="ev-link"
+                            style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;text-decoration:none;color:{% if is_done %}white{% elif ev.date < today and not ev.overdue %}#444{% else %}white{% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev_status == 'in_progress' %}#f39c12{% elif ev.overdue %}#c0392b{% elif ev.type == 'replacement' %}#e67e22{% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}#f39c12{% elif ev.type == 'plan' %}#9b59b6{% elif ev.type == 'equipment' or ev.type == 'equipment_mro' %}#16a085{% else %}#3498db{% endif %}" title="{{ ev.machine }}: {{ ev.part }} ({{ ev.type }}){% if is_done %} [DONE]{% endif %} — {{ _('Click to view') }}">
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}{% if request.args.get('debug') %} [{{ ev.done }}]{% endif %}
                             </a>
                             {% if not is_done and current_user.has_role('admin', 'director', 'technician') %}
@@ -211,15 +216,27 @@
         <tr><th>{{ _('Date') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Part') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th></th></tr>
         {% for ev in events %}
         {% set is_done = ev.done if ev.done is defined else False %}
+        {% if ev.type == 'plan' and ev.plan_id %}
+            {% set ev_href = '/maintenance-plans/' ~ ev.plan_id %}
+        {% elif ev.type == 'equipment' and ev.equipment_id %}
+            {% set ev_href = '/assets/' ~ ev.equipment_id %}
+        {% elif ev.type == 'equipment_mro' and ev.mro_id %}
+            {% set ev_href = '/equipment/' ~ ev.mro_id %}
+        {% elif ev.machine_id %}
+            {% set ev_href = '/machines/' ~ ev.machine_id %}
+        {% else %}
+            {% set ev_href = '#' %}
+        {% endif %}
         <tr{% if is_done %} style="background:#eafaf1"{% endif %}>
             <td style="white-space:nowrap">{{ ev.date.strftime('%d-%m-%Y') }}</td>
             <td>{% if ev.machine_id %}<a href="/machines/{{ ev.machine_id }}">{{ ev.machine }}</a>{% else %}{{ ev.machine }}{% endif %}</td>
-            <td>{{ ev.part }}{% if is_done %} ✅{% endif %}</td>
+            <td>{% if ev_href != '#' %}<a href="{{ ev_href }}">{{ ev.part }}</a>{% else %}{{ ev.part }}{% endif %}{% if is_done %} ✅{% endif %}</td>
             <td>
                 {% if ev.type == 'replacement' %}🔄 {{ _('Replacement') }}
                 {% elif ev.type == 'maintenance' or ev.type == 'machine_maintenance' %}🔧 {{ _('Maintenance') }}
                 {% elif ev.type == 'equipment' %}🔌 {{ _('Equipment Service') }}
                 {% elif ev.type == 'equipment_mro' %}🔧 MRO
+                {% elif ev.type == 'plan' %}📋 {{ _('Plan') }}
                 {% else %}⚙️ {{ ev.category }}{% endif %}
             </td>
             <td>
@@ -235,7 +252,10 @@
                     <span class="badge badge-ok">{{ _('Scheduled') }}</span>
                 {% endif %}
             </td>
-            <td>
+            <td style="white-space:nowrap">
+                {% if ev_href != '#' %}
+                <a href="{{ ev_href }}" class="btn btn-sm" style="background:#3498db;color:white;padding:2px 6px;font-size:11px">👁 {{ _('View') }}</a>
+                {% endif %}
                 {% if not is_done and current_user.has_role('admin', 'director', 'technician') %}
                 <form method="POST" action="/maintenance-calendar/complete" style="display:inline;margin:0" onsubmit="return confirm('{{ _('Mark as completed?') }}')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -440,5 +460,80 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+</script>
+
+<!-- Event detail modal -->
+<div id="evModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;padding:22px;width:380px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+        <h3 id="evModalTitle" style="margin:0 0 12px;font-size:16px"></h3>
+        <div id="evModalBody" style="font-size:13px;line-height:1.7;color:#333"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+            <button onclick="closeEvModal()" class="btn btn-sm" style="background:#eee">{{ _('Close') }}</button>
+            <a id="evModalLink" href="#" class="btn btn-sm btn-primary" style="text-decoration:none">{{ _('Open') }}</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEvModal(info) {
+    document.getElementById('evModalTitle').textContent = info.title || '';
+    var rows = [
+        ['📅 {{ _("Date") }}', info.date || ''],
+        ['🏭 {{ _("Machine") }}', info.machine || '—'],
+        ['⚙️ {{ _("Object") }}', info.part || '—'],
+        ['📋 {{ _("Type") }}', info.typeLabel || info.type || ''],
+        ['📂 {{ _("Category") }}', info.category || '—'],
+        ['✅ {{ _("Status") }}', info.statusLabel || '']
+    ];
+    document.getElementById('evModalBody').innerHTML = rows.map(function(r) {
+        return '<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #f0f0f0"><span style="min-width:110px;color:#888">' + r[0] + '</span><span style="font-weight:600;flex:1">' + r[1] + '</span></div>';
+    }).join('');
+    var link = document.getElementById('evModalLink');
+    if (info.href && info.href !== '#') {
+        link.href = info.href;
+        link.style.display = '';
+    } else {
+        link.style.display = 'none';
+    }
+    document.getElementById('evModal').style.display = 'flex';
+}
+function closeEvModal() {
+    document.getElementById('evModal').style.display = 'none';
+}
+
+// Просмотр события: клик по карточке — модалка; клик по ссылке — переход
+(function() {
+    var typeLabels = {
+        'plan': '📋 {{ _("Plan") }}',
+        'replacement': '🔄 {{ _("Replacement") }}',
+        'maintenance': '🔧 {{ _("Maintenance") }}',
+        'machine_maintenance': '🔧 {{ _("Machine Maintenance") }}',
+        'equipment': '🔌 {{ _("Equipment Service") }}',
+        'equipment_mro': '🔧 MRO'
+    };
+    document.querySelectorAll('.cal-event').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            if (e.target.closest('button') || e.target.closest('form')) return;
+            var isLink = e.target.closest('a');
+            if (isLink && isLink.getAttribute('href') && isLink.getAttribute('href') !== '#') {
+                return;
+            }
+            e.preventDefault();
+            var done = el.dataset.done === '1';
+            var overdue = el.dataset.overdue === '1';
+            openEvModal({
+                title: el.dataset.title || '',
+                date: el.dataset.date || '',
+                machine: el.dataset.machineName || '',
+                part: el.dataset.partName || '',
+                type: el.dataset.type || '',
+                typeLabel: typeLabels[el.dataset.type] || el.dataset.type || '',
+                category: el.dataset.category || '',
+                statusLabel: done ? '✅ {{ _("Completed") }}' : (overdue ? '⚠️ {{ _("Overdue") }}' : '📅 {{ _("Scheduled") }}'),
+                href: el.dataset.href || '#'
+            });
+        });
+    });
+})();
 </script>
 {% endblock %}

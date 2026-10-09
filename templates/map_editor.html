@@ -22,12 +22,25 @@
         <!-- Drawing tools (edit mode only) -->
         <div id="drawTools" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f5f7fa;padding:8px 10px;border-bottom:1px solid #e0e4ea">
             <button type="button" id="btnDraw" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
+            <button type="button" id="btnDrawExit" class="btn btn-sm" style="background:#27ae60;color:white;padding:6px 12px;font-size:12px;display:none" onclick="exitDrawMode()">✅ {{ _('Done drawing') }} (Esc)</button>
+            <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Width') }}:
+                <select id="drawWidth" style="padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
+                    <option value="1">1px</option>
+                    <option value="2">2px</option>
+                    <option value="3" selected>3px</option>
+                    <option value="5">5px</option>
+                    <option value="8">8px</option>
+                    <option value="12">12px</option>
+                </select>
+            </label>
             <input type="color" id="drawColor" value="#2980b9" style="width:36px;height:30px;padding:1px;border:1px solid #ddd;cursor:pointer;border-radius:4px" title="{{ _('Color') }}">
             <button type="button" class="btn btn-sm" style="background:#27ae60;color:white;padding:6px 12px;font-size:12px" onclick="saveDrawLine()">💾 {{ _('Save') }}</button>
-            <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="undoDrawPoint()">↶</button>
-            <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="clearDraft()">✕</button>
+            <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="undoDrawPoint()" title="{{ _('Undo point') }}">↶</button>
+            <button type="button" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="clearDraft()" title="{{ _('Clear draft') }}">✕</button>
             <button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:6px 12px;font-size:12px" onclick="deleteSelectedLine()">🗑 {{ _('Delete') }}</button>
-            <span style="font-size:11px;color:#888">{{ _('Click map to add points') }}</span>
+        </div>
+        <div id="drawHint" style="display:none;background:#fff3cd;color:#856404;padding:8px 12px;font-size:12px;border-bottom:1px solid #ffeaa7">
+            ✏️ <b>{{ _('Draw mode is ON') }}</b> — {{ _('click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.') }}
         </div>
         <div id="canvasWrap" style="position:relative;overflow:auto;background:#e8ecf1;max-height:65vh">
             <div id="canvas" style="position:relative;width:100%;min-height:550px">
@@ -459,15 +472,35 @@ function canvasPct(e){
     };
 }
 function toggleDrawMode(){
-    DRAW_MODE=!DRAW_MODE;
+    if(DRAW_MODE){ exitDrawMode(); return; }
+    DRAW_MODE=true;
     const b=document.getElementById('btnDraw');
-    b.style.background=DRAW_MODE?'#3498db':'#eee';
-    b.style.color=DRAW_MODE?'#fff':'#333';
-    document.getElementById('canvasWrap').style.cursor=DRAW_MODE?'crosshair':'default';
-    if(!DRAW_MODE){DRAW_PTS=[];redrawLines();}
+    b.style.background='#e67e22'; b.style.color='#fff';
+    b.textContent='✏️ {{ _("Drawing…") }}';
+    document.getElementById('btnDrawExit').style.display='';
+    document.getElementById('drawHint').style.display='block';
+    document.getElementById('canvasWrap').style.cursor='crosshair';
 }
+function exitDrawMode(){
+    DRAW_MODE=false;
+    DRAW_PTS=[];
+    const b=document.getElementById('btnDraw');
+    b.style.background='#eee'; b.style.color='#333';
+    b.textContent='✏️ {{ _("Draw line") }}';
+    document.getElementById('btnDrawExit').style.display='none';
+    document.getElementById('drawHint').style.display='none';
+    document.getElementById('canvasWrap').style.cursor='default';
+    redrawLines();
+}
+document.addEventListener('keydown', function(e){
+    if(e.key==='Escape' && DRAW_MODE){ exitDrawMode(); }
+});
 function undoDrawPoint(){DRAW_PTS.pop();redrawLines();}
 function clearDraft(){DRAW_PTS=[];SELECTED_LINE=null;redrawLines();}
+function getDrawWidth(){
+    const v=parseInt((document.getElementById('drawWidth')||{}).value||'3',10);
+    return Math.max(1, Math.min(v||3, 20));
+}
 function redrawLines(){
     let svg=document.getElementById('linesLayer').querySelector('svg');
     if(!svg){
@@ -478,25 +511,33 @@ function redrawLines(){
         document.getElementById('linesLayer').appendChild(svg);
     }
     const color=(document.getElementById('drawColor')||{}).value||'#2980b9';
+    const draftW=getDrawWidth();
     const parts=[];
     FLOOR_LINES.forEach(function(ln){
         const pts=(ln.points||[]).map(function(p){return p.x+','+p.y;}).join(' ');
         if(!pts)return;
-        const sel=SELECTED_LINE===ln.id?' stroke-width="5"':' stroke-width="3"';
-        parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-linecap="round" stroke-linejoin="round"'+sel+' opacity="0.85"/>');
+        const w=ln.width||3;
+        const sel=SELECTED_LINE===ln.id?w+2:w;
+        // vector-effect: толщина в пикселях экрана, не растягивается с viewBox
+        parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+sel+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.9"/>');
     });
     if(DRAW_PTS.length){
         const dp=DRAW_PTS.map(function(p){return p.x+','+p.y;}).join(' ');
-        parts.push('<polyline points="'+dp+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-dasharray="6 4"/>');
+        parts.push('<polyline points="'+dp+'" fill="none" stroke="'+color+'" stroke-width="'+draftW+'" stroke-dasharray="6 4" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>');
     }
     svg.innerHTML=parts.join('');
     svg.setAttribute('viewBox','0 0 100 100');
     svg.setAttribute('preserveAspectRatio','none');
 }
 function saveDrawLine(){
-    if(DRAW_PTS.length<2){alert('Min 2 points');return;}
+    if(DRAW_PTS.length<2){alert('{{ _('Min 2 points') }}');return;}
     csrfFetch('/api/map/lines',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:'Line',color:(document.getElementById('drawColor')||{}).value,points:DRAW_PTS})
+        body:JSON.stringify({
+            name:'Line',
+            color:(document.getElementById('drawColor')||{}).value,
+            width:getDrawWidth(),
+            points:DRAW_PTS
+        })
     }).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){alert(d.error||'Error');return;}
         DRAW_PTS=[];loadFloorLines();
