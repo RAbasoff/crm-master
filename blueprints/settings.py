@@ -250,6 +250,7 @@ def map_lines_list():
     return jsonify([{
         'id': ln.id, 'name': ln.name, 'description': ln.description or '',
         'color': ln.color, 'width': ln.width or 3,
+        'label_x': ln.label_x, 'label_y': ln.label_y,
         'points': json.loads(ln.points_json or '[]'),
     } for ln in lines])
 
@@ -285,7 +286,7 @@ def map_line_save():
 @login_required
 @role_required('admin', 'director', 'technician')
 def map_line_meta(line_id):
-    """Update name/description/color/width of a drawn line."""
+    """Update name/description/color/width/label position of a drawn line."""
     ln = FloorMapLine.query.get_or_404(line_id)
     data = request.get_json() or {}
     if 'name' in data:
@@ -299,9 +300,23 @@ def map_line_meta(line_id):
             ln.width = max(1, min(int(data.get('width') or 3), 20))
         except (TypeError, ValueError):
             pass
+    if 'label_x' in data or 'label_y' in data:
+        try:
+            if data.get('label_x') is None or data.get('label_y') is None:
+                ln.label_x = None
+                ln.label_y = None
+            else:
+                ln.label_x = float(data['label_x'])
+                ln.label_y = float(data['label_y'])
+        except (TypeError, ValueError):
+            pass
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
-    return jsonify({'ok': True, 'id': ln.id, 'name': ln.name, 'description': ln.description or ''})
+    return jsonify({
+        'ok': True, 'id': ln.id, 'name': ln.name,
+        'description': ln.description or '',
+        'label_x': ln.label_x, 'label_y': ln.label_y,
+    })
 
 
 @bp.route('/api/map/lines/<int:line_id>/delete', methods=['POST'])

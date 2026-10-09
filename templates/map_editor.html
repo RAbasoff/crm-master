@@ -59,6 +59,7 @@
             <div id="canvas" style="position:relative;width:100%;min-height:550px">
                 <img src="/static/floor_plan.jpeg" style="display:block;width:100%;height:auto;opacity:0.3;pointer-events:none;user-select:none" draggable="false">
                 <div id="linesLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:5"></div>
+                <div id="labelsLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:15"></div>
                 <div id="sectionsLayer" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
                 <div id="machinesLayer" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
             </div>
@@ -105,6 +106,11 @@
                         {% endfor %}
                     </select>
                     <small style="color:#888;font-size:12px">{{ _('Hold Ctrl to select multiple') }}</small>
+                    <div id="propRespList" style="margin-top:6px;font-size:12px"></div>
+                </div>
+                <div class="form-group">
+                    <label>⚙️ {{ _('Machines in this section') }}</label>
+                    <div id="propMachinesList" style="max-height:140px;overflow-y:auto;background:#f8f9fa;border-radius:8px;padding:6px"></div>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:8px">
                     <button onclick="deleteSelected()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
@@ -407,8 +413,36 @@ function selectSection(id) {
         document.getElementById('propColor').value = s.color;
         const selEl = document.getElementById('propResponsible');
         for (let opt of selEl.options) { opt.selected = (s.responsible_ids||[]).includes(parseInt(opt.value)); }
+
+        // Ответственные за цех
+        const respBox=document.getElementById('propRespList');
+        if(respBox){
+            const names=[];
+            for(const opt of selEl.options){ if(opt.selected) names.push(opt.textContent); }
+            respBox.innerHTML = names.length
+                ? '<span style="color:#888">{{ _("Responsible for this workshop") }}: </span><b>'+esc(names.join(', '))+'</b>'
+                : '<span style="color:#888">{{ _("No responsible persons") }}</span>';
+        }
+
+        // Машины в цехе
+        const mBox=document.getElementById('propMachinesList');
+        if(mBox){
+            const inSec=machines.filter(function(m){return m.section_id===id;});
+            if(!inSec.length){
+                mBox.innerHTML='<div style="color:#888;font-size:11px;padding:4px">{{ _("No machines in this section") }}</div>';
+            } else {
+                mBox.innerHTML=inSec.map(function(m){
+                    const st=m.status||'ok';
+                    const col=st==='broken'?'#e74c3c':st==='maintenance'?'#f39c12':st==='offline'?'#95a5a6':'#27ae60';
+                    return '<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:12px">'
+                        +'<span style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0"></span>'
+                        +'<a href="/machines/'+m.id+'" style="flex:1;color:#3498db;text-decoration:none">'+esc(m.name)+'</a>'
+                        +'<span style="color:#888;font-size:10px">'+esc(m.type||'')+'</span></div>';
+                }).join('');
+            }
+        }
     }
-    renderSections(); renderLists(); redrawLines();
+    renderSections(); renderLists(); redrawLines(); renderLinesList();
 }
 
 function selectLine(id) {
@@ -643,18 +677,10 @@ function redrawLines(){
         const w=ln.width||3;
         const isSel=SELECTED_LINE===ln.id;
         const sel=isSel?w+3:w;
-        // белая подложка-обводка у выделенной линии
         if(isSel){
             parts.push('<polyline points="'+pts+'" fill="none" stroke="#fff" stroke-width="'+(w+6)+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.85"/>');
         }
-        // vector-effect: толщина в пикселях экрана, не растягивается с viewBox
         parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+sel+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.95"'+(isSel?' stroke-dasharray="10 5"':'')+'/>');
-        // подпись названия у первой точки
-        if(ln.points && ln.points.length && ln.name && ln.name !== 'Line'){
-            const p0=ln.points[0];
-            const txt=String(ln.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-            parts.push('<text x="'+p0.x+'" y="'+(p0.y-1.5)+'" font-size="2.2" fill="'+ln.color+'" font-weight="700" text-anchor="middle" style="paint-order:stroke;stroke:#fff;stroke-width:0.6;stroke-linejoin:round">'+txt+'</text>');
-        }
     });
     if(DRAW_PTS.length){
         const dp=DRAW_PTS.map(function(p){return p.x+','+p.y;}).join(' ');
@@ -663,6 +689,64 @@ function redrawLines(){
     svg.innerHTML=parts.join('');
     svg.setAttribute('viewBox','0 0 100 100');
     svg.setAttribute('preserveAspectRatio','none');
+    renderLabels();
+}
+
+// Подписи (надписи) — HTML, можно перетаскивать
+function labelPos(ln){
+    if(ln.label_x!=null && ln.label_y!=null) return {x:ln.label_x, y:ln.label_y};
+    const p0=(ln.points&&ln.points[0])||{x:50,y:50};
+    return {x:p0.x, y:Math.max(2, p0.y-3)};
+}
+function renderLabels(){
+    const lay=document.getElementById('labelsLayer');
+    if(!lay) return;
+    lay.innerHTML='';
+    FLOOR_LINES.forEach(function(ln){
+        if(!ln.name || ln.name==='Line') return;
+        const pos=labelPos(ln);
+        const el=document.createElement('div');
+        el.dataset.lineId=ln.id;
+        el.textContent=ln.name;
+        el.style.cssText='position:absolute;left:'+pos.x+'%;top:'+pos.y+'%;transform:translate(-50%,-100%);'
+            +'pointer-events:auto;cursor:move;user-select:none;'
+            +'background:rgba(255,255,255,0.92);color:'+(ln.color||'#2980b9')+';'
+            +'font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;'
+            +'border:1.5px solid '+(ln.color||'#2980b9')+';white-space:nowrap;'
+            +(SELECTED_LINE===ln.id?'box-shadow:0 0 0 3px rgba(52,152,219,0.55);':'');
+        el.title=ln.description||ln.name;
+        el.addEventListener('mousedown', function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            selectLine(ln.id);
+            const r=document.getElementById('canvas').getBoundingClientRect();
+            const start={x:e.clientX, y:e.clientY, lx:labelPos(ln).x, ly:labelPos(ln).y};
+            function onMove(ev){
+                const dx=(ev.clientX-start.x)/r.width*100;
+                const dy=(ev.clientY-start.y)/r.height*100;
+                const nx=Math.max(0,Math.min(100,start.lx+dx));
+                const ny=Math.max(0,Math.min(100,start.ly+dy));
+                el.style.left=nx+'%';
+                el.style.top=ny+'%';
+                const item=FLOOR_LINES.find(x=>x.id===ln.id);
+                if(item){ item.label_x=nx; item.label_y=ny; }
+            }
+            function onUp(){
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                const item=FLOOR_LINES.find(x=>x.id===ln.id);
+                if(item){
+                    csrfFetch('/api/map/lines/'+ln.id+'/meta',{
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({label_x:item.label_x, label_y:item.label_y})
+                    }).then(function(){ renderLabels(); });
+                }
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+        lay.appendChild(el);
+    });
 }
 function saveDrawLine(){
     if(DRAW_PTS.length<2){alert('{{ _('Min 2 points') }}');return;}
@@ -777,11 +861,10 @@ function hitLine(p){
         for(let i=0;i<pts.length-1;i++){
             check(distToSeg(p.x,p.y,pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y));
         }
-        // клик по подписи названия (над первой точкой)
+        // клик по подписи названия
         if(pts.length && ln.name && ln.name!=='Line'){
-            const p0=pts[0];
-            const dLabel=Math.hypot(p0.x-p.x,(p0.y-1.5)-p.y);
-            check(dLabel);
+            const lp=labelPos(ln);
+            check(Math.hypot(lp.x-p.x,lp.y-p.y));
         }
     });
     return best;

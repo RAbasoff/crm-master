@@ -465,9 +465,11 @@ function redrawLines(){
         const w=ln.width||3;
         parts.push('<polyline points="'+pts+'" fill="none" stroke="'+ln.color+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.9"/>');
         if(ln.points && ln.points.length && ln.name && ln.name !== 'Line'){
-            const p0=ln.points[0];
+            let lx, ly;
+            if(ln.label_x!=null && ln.label_y!=null){ lx=ln.label_x; ly=ln.label_y; }
+            else { lx=ln.points[0].x; ly=Math.max(2, ln.points[0].y-3); }
             const txt=String(ln.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-            const tx=(p0.x/100*1520), ty=(p0.y/100*1080)-12;
+            const tx=(lx/100*1520), ty=(ly/100*1080);
             parts.push('<text x="'+tx+'" y="'+ty+'" font-size="18" fill="'+ln.color+'" font-weight="700" text-anchor="middle" style="paint-order:stroke;stroke:#fff;stroke-width:4;stroke-linejoin:round">'+txt+'</text>');
         }
     });

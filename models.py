@@ -688,6 +688,8 @@ class FloorMapLine(db.Model):
     color = db.Column(db.String(20), default='#2980b9')
     width = db.Column(db.Integer, default=3)  # толщина линии в пикселях
     points_json = db.Column(db.Text, default='[]')  # [{"x":..%,"y":..%}, ...]
+    label_x = db.Column(db.Float)  # позиция подписи, % (None = у первой точки)
+    label_y = db.Column(db.Float)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=now_local)
     creator = db.relationship('User', foreign_keys=[created_by])
