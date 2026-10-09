@@ -38,7 +38,7 @@ from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    check_tool_wear_notifications, safe_commit, add_work_report,
                    safe_int, safe_float, safe_date, find_pdf_font, ensure_fpdf,
                    is_user_at_work, user_schedule_restricted)
-from security import enforce_mechanic_access, is_mechanic
+from security import enforce_mechanic_access, is_mechanic, is_floor_user
 
 # ============================================================
 # APP CONFIG
@@ -550,6 +550,9 @@ def inject_section_access():
     def has_access(section_key, action='view'):
         if not current_user.is_authenticated:
             return False
+        # Цеховые ответственные: только SToringen / TWO / Communicatie + карта
+        if is_floor_user():
+            return section_key in ('faults', 'two', 'messages', 'floor', 'chat')
         return user_has_section_access(section_key, action)
 
     # Reminder count for sidebar badge
@@ -584,7 +587,8 @@ def inject_section_access():
                 impersonate_admin=db.session.get(User, session['impersonate_admin_id']) if session.get('impersonate_admin_id') else None,
                 is_admin=(current_user.is_authenticated and current_user.has_role('admin') and not session.get('impersonate_admin_id')),
                 is_mechanic=is_mechanic(),
-                can_view_analytics=(current_user.is_authenticated and (current_user.has_role('admin', 'director') or not is_mechanic())),
+                is_floor_user=is_floor_user(),
+                can_view_analytics=(current_user.is_authenticated and (current_user.has_role('admin', 'director') or not is_mechanic()) and not is_floor_user()),
                 all_users_list=User.query.filter(User.is_active_user == True).order_by(User.username).all() if (current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id'))) else [])
 
 
@@ -1104,10 +1108,29 @@ def floor_plan():
         machines = Machine.query.all()
         sections = FactorySection.query.all()
     else:
-        machines = current_user.assigned_machines
+        # Обычный пользователь / ответственный: свои машины + участки персоны
+        machines = list(current_user.assigned_machines) if current_user.assigned_machines else []
         section_ids = list(set(m.section_id for m in machines if m.section_id))
-        sections = FactorySection.query.filter(FactorySection.id.in_(section_ids)).all() if section_ids else []
-    is_filtered = hasattr(current_user, '_person') and current_user.role == 'responsible'
+        person = getattr(current_user, 'person', None)
+        if person is not None:
+            sections = list(person.resp_sections)
+            section_ids = list(set(section_ids + [s.id for s in sections]))
+            if person.access_level == 'full':
+                machines = Machine.query.all()
+            else:
+                extra = Machine.query.filter(
+                    (Machine.responsible_person_id == person.id) |
+                    (Machine.section_id.in_(section_ids) if section_ids else False)
+                ).all()
+                seen = {m.id for m in machines}
+                for m in extra:
+                    if m.id not in seen:
+                        machines.append(m)
+        else:
+            sections = FactorySection.query.filter(FactorySection.id.in_(section_ids)).all() if section_ids else []
+    is_filtered = (hasattr(current_user, '_person') and current_user.role == 'responsible') or (
+        getattr(current_user, 'person_id', None) and current_user.role in ('user', 'responsible')
+    )
     # Also show equipment on floor plan
     from models import Equipment
     if current_user.has_role('admin', 'director', 'technician'):

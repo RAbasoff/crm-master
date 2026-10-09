@@ -107,6 +107,25 @@ def is_mechanic(user=None):
     return bool(u and getattr(u, 'is_authenticated', False) and getattr(u, 'role', '') == 'technician')
 
 
+def is_floor_user(user=None):
+    """Ответственный «цеховой» пользователь (Bartek, Hqshem, Pablo, Safa…).
+
+    Видит только: SToringen, TWO, Communicatie + карта своих участков.
+    """
+    u = user or current_user
+    if not (u and getattr(u, 'is_authenticated', False)):
+        return False
+    if getattr(u, 'role', '') in ('admin', 'director', 'technician'):
+        return False
+    # ResponsibleAuth (person login) — всегда узкое меню
+    if hasattr(u, '_person'):
+        return True
+    # User с ролью user / responsible и доступом floor
+    if getattr(u, 'role', '') in ('user', 'responsible') and getattr(u, 'access_level', '') in ('floor', 'limited', 'partial'):
+        return True
+    return False
+
+
 def is_privileged(user=None):
     """Админ / начальник ТС / главный механик (в будущем)."""
     u = user or current_user

@@ -27,7 +27,7 @@ def gen_two_number():
 
 @bp.route('/two')
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'director', 'technician', 'user', 'responsible')
 def two_list():
     if current_user.has_role('admin', 'director'):
         orders = TechnicalWorkOrder.query.order_by(TechnicalWorkOrder.created_at.desc()).all()
@@ -374,7 +374,7 @@ def suggest_available_dates(worker_id, from_date, count=5):
 
 @bp.route('/two/<int:two_id>')
 @login_required
-@role_required('admin', 'director', 'technician')
+@role_required('admin', 'director', 'technician', 'user', 'responsible')
 def two_detail(two_id):
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     return render_template('two_detail.html', two=two)

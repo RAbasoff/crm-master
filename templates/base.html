@@ -430,6 +430,14 @@
             <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span> <span style="font-size:10px;opacity:0.75;font-weight:600;letter-spacing:0">{{ _('Version') }} 2.12.1</span></div>
         </div>
         <nav class="sidebar-nav">
+            {% if is_floor_user %}
+            {# Узкое меню ответственных: SToringen / TWO / Communicatie + карта #}
+            <a href="/floor" class="sb-item {% if request.endpoint == 'floor_plan' %}active{% endif %}"><span class="sb-icon">🏭</span>{{ _('Floor Plan') }}</a>
+            <a href="/faults" class="sb-item {% if 'fault' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚠️</span>{{ _('Faults') }}</a>
+            <a href="/two" class="sb-item {% if 'two' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📝</span>TWO</a>
+            <a href="/chat/" class="sb-item {% if 'chat' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">💬</span>{{ _('Chat') }}</a>
+            <a href="/messages" class="sb-item {% if 'message' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">✉️</span>{{ _('Messages') }}</a>
+            {% else %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Production') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
             <a href="/" class="sb-item {% if request.endpoint == 'index' %}active{% endif %}"><span class="sb-icon">🏠</span>{{ _('Dashboard') }}</a>
@@ -597,6 +605,7 @@
             {% endif %}
             <a href="/qr/scan" class="sb-item {% if 'qr' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📷</span>QR</a>
             </div>
+            {% endif %}
             {% endif %}
         </nav>
         <div class="sidebar-footer">
