@@ -65,14 +65,59 @@ def maintenance_calendar():
     for log in part_logs:
         logs_by_part.setdefault(log.part_id, []).append(log)
 
+    def _log_date(log):
+        return log.date.date() if hasattr(log.date, 'date') else log.date
+
+    def _is_part_done(p, logs, due, ltype):
+        """Done if a matching completion log exists on/before the due date."""
+        acts = ('replacement', 'replaced') if ltype == 'replacement' else ('maintenance', 'maint', 'replaced')
+        for log in logs:
+            if log.action not in acts or not log.date:
+                continue
+            ld = _log_date(log)
+            if ld == due:
+                return True
+            # completed early in this cycle (interval reschedules next_*)
+            if p.last_replacement and ltype == 'replacement' and p.last_replacement <= ld < due:
+                return True
+            if p.last_maintenance and ltype == 'maintenance' and p.last_maintenance <= ld < due:
+                return True
+        return False
+
+    def _add_done_from_date(events, seen, date, ltype, p, record_id=None):
+        """Force a green done event at a date (never lose the record)."""
+        if not date or not (month_start <= date < month_end):
+            return
+        key = (p.id, ltype, date)
+        if key in seen:
+            return
+        # mark existing planned event as done instead of duplicating
+        for e in events:
+            if e.get('part_id') == p.id and e.get('type') == ltype and e.get('date') == date:
+                e['done'] = True
+                e['overdue'] = False
+                return
+        seen.add(key)
+        events.append({
+            'date': date,
+            'type': ltype,
+            'part': p.name,
+            'machine': p.machine.name,
+            'machine_id': p.machine_id,
+            'part_id': p.id,
+            'category': p.category,
+            'overdue': False,
+            'done': True,
+            'plan_id': None,
+            'equipment_id': None,
+            'mro_id': None,
+            'record_id': record_id
+        })
+
+    done_seen = set()
     for p in parts:
         if p.next_replacement and month_start <= p.next_replacement < month_end:
-            # Check if replacement was done (has log entry after due date)
-            done = False
-            for log in logs_by_part.get(p.id, []):
-                if log.action in ('replacement', 'replaced') and log.date and log.date.date() >= p.next_replacement:
-                    done = True
-                    break
+            done = _is_part_done(p, logs_by_part.get(p.id, []), p.next_replacement, 'replacement')
             events.append({
                 'date': p.next_replacement,
                 'type': 'replacement',
@@ -89,12 +134,7 @@ def maintenance_calendar():
                 'record_id': None
             })
         if p.next_maintenance and month_start <= p.next_maintenance < month_end:
-            # Check if maintenance was done
-            done = False
-            for log in logs_by_part.get(p.id, []):
-                if log.action in ('maintenance', 'replaced') and log.date and log.date.date() >= p.next_maintenance:
-                    done = True
-                    break
+            done = _is_part_done(p, logs_by_part.get(p.id, []), p.next_maintenance, 'maintenance')
             events.append({
                 'date': p.next_maintenance,
                 'type': 'maintenance',
@@ -110,49 +150,29 @@ def maintenance_calendar():
                 'mro_id': None,
                 'record_id': None
             })
-        # Выполненные работы из журнала — чтобы запись оставалась в календаре (зелёной)
+        # Выполненные работы из журнала — запись остаётся в календаре (зелёной)
         for log in logs_by_part.get(p.id, []):
             if not log.date:
                 continue
-            ld = log.date.date() if hasattr(log.date, 'date') else log.date
-            if not (month_start <= ld < month_end):
-                continue
+            ld = _log_date(log)
             if log.action in ('replacement', 'replaced'):
                 ltype = 'replacement'
             elif log.action in ('maintenance', 'maint'):
                 ltype = 'maintenance'
             else:
                 continue
-            # пропускаем, если уже есть плановое событие на эту дату
-            skip = False
-            for e in events:
-                if e.get('part_id') == p.id and e.get('type') == ltype and e.get('date') == ld:
-                    skip = True
-                    break
-            if skip:
-                continue
-            events.append({
-                'date': ld,
-                'type': ltype,
-                'part': p.name,
-                'machine': p.machine.name,
-                'machine_id': p.machine_id,
-                'part_id': p.id,
-                'category': p.category,
-                'overdue': False,
-                'done': True,
-                'plan_id': None,
-                'equipment_id': None,
-                'mro_id': None,
-                'record_id': None
-            })
+            _add_done_from_date(events, done_seen, ld, ltype, p)
+        # last_replacement / last_maintenance — страховка от «исчезновения»
+        if p.last_replacement:
+            _add_done_from_date(events, done_seen, p.last_replacement, 'replacement', p)
+        if p.last_maintenance:
+            _add_done_from_date(events, done_seen, p.last_maintenance, 'maintenance', p)
         # Check maintenance records (from batch-fetched data)
         for mr in maint_by_machine.get(p.machine_id, []):
             if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
-                # Check if this maintenance was done (has a follow-up record)
                 done = False
                 for log in logs_by_part.get(p.id, []):
-                    if log.date and log.date.date() >= mr.next_maintenance.date():
+                    if log.date and _log_date(log) >= mr.next_maintenance.date():
                         done = True
                         break
                 if mr.date_performed and mr.date_performed.date() >= mr.next_maintenance.date():
@@ -172,6 +192,27 @@ def maintenance_calendar():
                     'mro_id': None,
                     'record_id': mr.id
                 })
+            # выполненное ТО по журналу работ — остаётся зелёным
+            if mr.date_performed:
+                pd = mr.date_performed.date() if hasattr(mr.date_performed, 'date') else mr.date_performed
+                if month_start <= pd < month_end:
+                    skip = any(e.get('type') == 'machine_maintenance' and e.get('record_id') == mr.id and e.get('date') == pd for e in events)
+                    if not skip:
+                        events.append({
+                            'date': pd,
+                            'type': 'machine_maintenance',
+                            'part': mr.description[:40],
+                            'machine': p.machine.name,
+                            'machine_id': p.machine_id,
+                            'part_id': None,
+                            'category': mr.maintenance_type,
+                            'overdue': False,
+                            'done': True,
+                            'plan_id': None,
+                            'equipment_id': None,
+                            'mro_id': None,
+                            'record_id': mr.id
+                        })
     
     # Add maintenance plans
     if current_user.has_role('admin', 'director', 'technician'):
@@ -216,12 +257,13 @@ def maintenance_calendar():
                     break
                 if d >= month_start and d != pl.planned_start:
                     # Check if this specific occurrence was completed
-                    occ_done = False
+                    occ_done = pl.status in ('completed',)
                     for mr in maint_by_machine.get(pl.machine_id, []):
-                        if mr.next_maintenance and mr.next_maintenance.date() == d:
+                        if mr.date_performed and mr.date_performed.date() == d:
                             occ_done = True
                             break
-                        if mr.date_performed and mr.date_performed.date() == d:
+                        # заполнено при отметке «выполнено» на эту дату
+                        if mr.next_maintenance and mr.next_maintenance.date() == d and mr.date_performed:
                             occ_done = True
                             break
                     events.append({
@@ -294,6 +336,24 @@ def maintenance_calendar():
                 'mro_id': None,
                 'record_id': None
             })
+        # выполненное ТО оборудования — остаётся в календаре зелёным
+        if eq.last_service_date and month_start <= eq.last_service_date < month_end:
+            if not any(e.get('equipment_id') == eq.id and e.get('date') == eq.last_service_date for e in events):
+                events.append({
+                    'date': eq.last_service_date,
+                    'type': 'equipment',
+                    'part': eq.name[:40],
+                    'machine': eq.equipment_type or eq.name[:20],
+                    'machine_id': None,
+                    'equipment_id': eq.id,
+                    'part_id': None,
+                    'category': eq.category or 'service',
+                    'overdue': False,
+                    'done': True,
+                    'plan_id': None,
+                    'mro_id': None,
+                    'record_id': None
+                })
 
     # Add EquipmentMaintenance (MRO) records with next_date
     mro_q = EquipmentMaintenance.query.filter(EquipmentMaintenance.next_date.isnot(None))
@@ -369,7 +429,11 @@ def maintenance_calendar_complete():
             plan = MaintenancePlan.query.get(int(plan_id))
             if plan:
                 event_date = request.form.get('date')
-                event_dt = datetime.strptime(event_date, '%Y-%m-%d') if event_date else datetime.utcnow()
+                try:
+                    event_dt = datetime.strptime(event_date, '%Y-%m-%d') if event_date else datetime.utcnow()
+                except ValueError:
+                    event_dt = datetime.utcnow()
+                ev_d = event_dt.date() if hasattr(event_dt, 'date') else event_dt
                 if plan.recurrence and plan.recurrence != 'none':
                     # Recurring plan — mark only THIS occurrence as done
                     mr = MaintenanceRecord(
@@ -378,26 +442,45 @@ def maintenance_calendar_complete():
                         description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
                         performed_by=current_user.id,
                         date_performed=event_dt,
-                        next_maintenance=None,
+                        next_maintenance=event_dt,
                         cost=0
                     )
                     db.session.add(mr)
+                    # также в журнал — чтобы событие осталось зелёным в календаре
+                    first_part = MachinePart.query.filter_by(machine_id=plan.machine_id).first()
+                    if first_part:
+                        db.session.add(PartMaintenanceLog(
+                            part_id=first_part.id,
+                            action='maintenance',
+                            description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                            performed_by=current_user.id,
+                            date=event_dt
+                        ))
                     db.session.commit()
                     flash(_('Occurrence marked as completed'), 'success')
                 else:
                     # Non-recurring plan — mark whole plan done
                     plan.status = 'completed'
-                    plan.actual_end = event_dt.date()
+                    plan.actual_end = ev_d
                     mr = MaintenanceRecord(
                         machine_id=plan.machine_id,
                         maintenance_type=plan.maintenance_type,
                         description=f'{plan.title} — completed by {current_user.display_name or current_user.username}',
                         performed_by=current_user.id,
                         date_performed=event_dt,
-                        next_maintenance=None,
+                        next_maintenance=event_dt,
                         cost=0
                     )
                     db.session.add(mr)
+                    first_part = MachinePart.query.filter_by(machine_id=plan.machine_id).first()
+                    if first_part:
+                        db.session.add(PartMaintenanceLog(
+                            part_id=first_part.id,
+                            action='maintenance',
+                            description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                            performed_by=current_user.id,
+                            date=event_dt
+                        ))
                     db.session.commit()
                     flash(_('Plan marked as completed'), 'success')
             else:
@@ -420,20 +503,18 @@ def maintenance_calendar_complete():
                     date=datetime.combine(ev_d, datetime.min.time())
                 )
                 db.session.add(log)
-                today_d = datetime.utcnow().date()
+                # Дату события НЕ сдвигаем в «сегодня» — иначе запись исчезает из месяца.
+                # next_* = дата события + интервал (планирование), само событие остаётся зелёным.
                 if action == 'replacement':
-                    part.last_replacement = today_d
-                    # Следующая дата по интервалу; без интервала — оставляем
-                    # текущую дату, чтобы в календаре запись была зелёной (✅),
-                    # а не исчезала при отметке «выполнено».
+                    part.last_replacement = ev_d
                     if part.replacement_interval_days:
-                        part.next_replacement = today_d + timedelta(days=part.replacement_interval_days)
+                        part.next_replacement = ev_d + timedelta(days=part.replacement_interval_days)
                 else:
-                    part.last_maintenance = today_d
+                    part.last_maintenance = ev_d
                     if part.maintenance_interval_days:
-                        part.next_maintenance = today_d + timedelta(days=part.maintenance_interval_days)
+                        part.next_maintenance = ev_d + timedelta(days=part.maintenance_interval_days)
                     elif part.replacement_interval_days:
-                        part.next_maintenance = today_d + timedelta(days=part.replacement_interval_days)
+                        part.next_maintenance = ev_d + timedelta(days=part.replacement_interval_days)
                 part.status = 'ok'
                 db.session.commit()
                 flash(_('%(type)s marked as completed', type=action), 'success')
