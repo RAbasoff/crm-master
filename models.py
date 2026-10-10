@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import Numeric
 import os as _os
 
@@ -291,6 +291,9 @@ class MaintenancePlan(db.Model):
     status = db.Column(db.String(20), default='planned')
     planned_start = db.Column(db.Date, nullable=False)
     planned_end = db.Column(db.Date)
+    # Коридор (окно) выполнения ТО: начало = planned_start, конец = planned_end
+    # Если planned_end пуст — окно 4 дня от planned_start (переносится drag/resize)
+    window_days = db.Column(db.Integer, default=4)
     actual_start = db.Column(db.Date)
     actual_end = db.Column(db.Date)
     is_external = db.Column(db.Boolean, default=False)
@@ -311,6 +314,31 @@ class MaintenancePlan(db.Model):
     machine = db.relationship('Machine', backref='maintenance_plans')
     worker = db.relationship('Monteur', backref='maintenance_plans')
     creator = db.relationship('User', foreign_keys=[created_by])
+
+    def window_end_date(self):
+        """Конец окна ТО: planned_end или planned_start + window_days - 1."""
+        if self.planned_end:
+            return self.planned_end
+        days = (self.window_days or 4) - 1
+        return self.planned_start + timedelta(days=max(days, 0))
+
+
+class WorkEvent(db.Model):
+    """События «Календаря текущих работ»: работы, совещания, перемещения, важные даты."""
+    __tablename__ = 'work_event'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    event_kind = db.Column(db.String(30), default='work')  # work/meeting/move/important
+    date_start = db.Column(db.Date, nullable=False)
+    date_end = db.Column(db.Date)  # если многодневное
+    all_day = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def end_date(self):
+        return self.date_end or self.date_start
 
 class MaintenanceSchedule(db.Model):
     """Per-machine/equipment maintenance schedule template. Generator creates MaintenancePlan entries from these."""
