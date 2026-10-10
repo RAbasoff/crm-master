@@ -155,9 +155,13 @@
                                 <span style="font-weight:600">{{ ev.machine[:6] }}</span> {{ ev.part[:10] }}{% if is_done %} ✅{% endif %}
                             </a>
                             {% if ev.type == 'plan' and ev.plan_id and not is_done and current_user.has_role('admin','director','technician') %}
-                            <button type="button" draggable="false" onclick="openPeriodModal({{ ev.plan_id }}, '{{ ev.window_start or ev.date.strftime('%Y-%m-%d') }}', '{{ ev.window_end or ev.date.strftime('%Y-%m-%d') }}', '{{ ev.machine }}: {{ ev.part }}')"
+                            <button type="button" class="ev-period-btn" draggable="false"
+                                    data-plan-id="{{ ev.plan_id }}"
+                                    data-start="{{ ev.window_start or ev.date.strftime('%Y-%m-%d') }}"
+                                    data-end="{{ ev.window_end or ev.date.strftime('%Y-%m-%d') }}"
+                                    data-label="{{ ev.machine }}: {{ ev.part }}"
                                     style="background:#fff3cd;border:none;border-radius:3px;font-size:10px;padding:2px 4px;cursor:pointer" title="{{ _('Period from/to') }}">📅</button>
-                            <span class="ev-resize" draggable="true" data-plan-id="{{ ev.plan_id }}" data-window-start="{{ ev.window_start or ev.date.strftime('%Y-%m-%d') }}"
+                            <span class="ev-resize" draggable="false" data-plan-id="{{ ev.plan_id }}" data-window-start="{{ ev.window_start or ev.date.strftime('%Y-%m-%d') }}"
                                   title="{{ _('Drag to stretch period') }}"
                                   style="width:8px;cursor:ew-resize;background:#ffe082;border-radius:2px;flex-shrink:0;align-self:stretch"></span>
                             {% endif %}
@@ -399,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Period modal: window from/to ──
 var _periodPlanId = null;
 function openPeriodModal(planId, start, end, title) {
-    _periodPlanId = planId;
+    _periodPlanId = parseInt(planId, 10);
     document.getElementById('periodTitle').textContent = title || '';
     document.getElementById('periodStart').value = start || '';
     document.getElementById('periodEnd').value = end || start || '';
@@ -410,19 +414,31 @@ function closePeriodModal() {
     _periodPlanId = null;
 }
 function savePeriod() {
-    if (!_periodPlanId) return;
+    if (!_periodPlanId) { alert('No plan'); return; }
     var ws = document.getElementById('periodStart').value;
     var we = document.getElementById('periodEnd').value;
     if (!ws || !we) { alert('{{ _("Please set From and To") }}'); return; }
-    csrfFetch('/maintenance-calendar/window', {
+    var fd = new FormData();
+    fd.append('csrf_token', '{{ csrf_token() }}');
+    fd.append('plan_id', _periodPlanId);
+    fd.append('window_start', ws);
+    fd.append('window_end', we);
+    fetch('/maintenance-calendar/window', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({plan_id: _periodPlanId, window_start: ws, window_end: we})
+        body: fd
     }).then(function(r){ return r.json(); }).then(function(d){
-        if (d.ok) { location.reload(); }
-        else { alert(d.error || 'Error'); }
+        if (d && d.ok) { location.reload(); }
+        else { alert((d && d.error) || 'Error'); }
     }).catch(function(e){ alert(e.message); });
 }
+// Делегированный клик по 📅 — без inline JS (кавычки в названиях ломали код)
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest && e.target.closest('.ev-period-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openPeriodModal(btn.dataset.planId, btn.dataset.start, btn.dataset.end, btn.dataset.label || '');
+});
 
 // ── DRAG & DROP ──
     var draggedEvent = null;
@@ -470,10 +486,14 @@ function savePeriod() {
             var we = cell.dataset.date;
             if (we < ws) { var t = ws; ws = we; we = t; }
             endResizeMode();
-            csrfFetch('/maintenance-calendar/window', {
+            var fd = new FormData();
+            fd.append('csrf_token', '{{ csrf_token() }}');
+            fd.append('plan_id', planId);
+            fd.append('window_start', ws);
+            fd.append('window_end', we);
+            fetch('/maintenance-calendar/window', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({plan_id: planId, window_start: ws, window_end: we})
+                body: fd
             }).then(function(r){ return r.json(); }).then(function(d){
                 if (d && d.ok) location.reload();
                 else alert((d && d.error) || 'Error');

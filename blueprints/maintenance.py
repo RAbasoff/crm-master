@@ -825,8 +825,8 @@ def maintenance_calendar_move():
 @login_required
 @role_required('admin', 'director', 'technician')
 def maintenance_calendar_window():
-    """Растянуть/сжать окно ТО (planned_start .. planned_end)."""
-    data = request.get_json() or {}
+    """Растянуть/сжать окно ТО (planned_start .. planned_end). JSON или form."""
+    data = request.get_json(silent=True) or request.form
     plan_id = data.get('plan_id')
     if not plan_id:
         return jsonify({'error': 'No plan'}), 400
