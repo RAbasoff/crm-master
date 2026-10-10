@@ -439,6 +439,12 @@ document.addEventListener('click', function(e) {
     e.stopPropagation();
     openPeriodModal(btn.dataset.planId, btn.dataset.start, btn.dataset.end, btn.dataset.label || '');
 });
+// Глобально — для кнопок в модалке (иначе inline onclick их не найдёт)
+window.openPeriodModal = openPeriodModal;
+window.closePeriodModal = closePeriodModal;
+window.savePeriod = savePeriod;
+document.getElementById('btnPeriodCancel').addEventListener('click', closePeriodModal);
+document.getElementById('btnPeriodSave').addEventListener('click', savePeriod);
 
 // ── DRAG & DROP ──
     var draggedEvent = null;
@@ -589,8 +595,8 @@ document.addEventListener('click', function(e) {
             <input type="date" id="periodEnd" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-            <button onclick="closePeriodModal()" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</button>
-            <button onclick="savePeriod()" class="btn btn-sm btn-primary">{{ _('Save') }}</button>
+            <button type="button" id="btnPeriodCancel" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</button>
+            <button type="button" id="btnPeriodSave" class="btn btn-sm btn-primary">{{ _('Save') }}</button>
         </div>
     </div>
 </div>
