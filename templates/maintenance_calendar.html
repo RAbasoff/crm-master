@@ -480,24 +480,27 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Period editor (TO window from/to) -->
+<!-- Period editor (TO window from/to) — обычный form, без JS -->
 <div id="periodModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
-    <div style="background:white;border-radius:14px;padding:22px;width:360px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+    <form method="POST" action="/maintenance-calendar/window" style="background:white;border-radius:14px;padding:22px;width:360px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="plan_id" id="periodPlanId" value="">
+        <input type="hidden" name="month" value="{{ month }}">
         <h3 style="margin:0 0 6px;font-size:16px">📅 {{ _('TO period') }}</h3>
         <p id="periodTitle" style="margin:0 0 14px;font-size:13px;color:#666"></p>
         <div class="form-group" style="margin-bottom:12px">
-            <label style="font-size:12px;font-weight:600">{{ _('From') }}</label>
-            <input type="date" id="periodStart" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <label style="font-size:12px;font-weight:600">{{ _('From') }} *</label>
+            <input type="date" name="window_start" id="periodStart" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
         </div>
         <div class="form-group" style="margin-bottom:16px">
-            <label style="font-size:12px;font-weight:600">{{ _('To') }}</label>
-            <input type="date" id="periodEnd" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <label style="font-size:12px;font-weight:600">{{ _('To') }} *</label>
+            <input type="date" name="window_end" id="periodEnd" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
             <button type="button" id="btnPeriodCancel" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</button>
-            <button type="button" id="btnPeriodSave" class="btn btn-sm btn-primary">{{ _('Save') }}</button>
+            <button type="submit" id="btnPeriodSave" class="btn btn-sm btn-primary">{{ _('Save') }}</button>
         </div>
-    </div>
+    </form>
 </div>
 
 <!-- Event detail modal -->
@@ -576,56 +579,28 @@ function closeEvModal() {
 </script>
 
 <script>
-// ── Период ТО и растягивание — ВСЕГДА в глобальной области ──
 (function () {
-    var _periodPlanId = null;
-    function openPeriodModal(planId, start, end, title) {
-        _periodPlanId = parseInt(planId, 10);
+    window.openPeriodModal = function (planId, start, end, title) {
+        document.getElementById('periodPlanId').value = planId || '';
         document.getElementById('periodTitle').textContent = title || '';
         document.getElementById('periodStart').value = start || '';
         document.getElementById('periodEnd').value = end || start || '';
         document.getElementById('periodModal').style.display = 'flex';
-    }
-    function closePeriodModal() {
+    };
+    window.closePeriodModal = function () {
         document.getElementById('periodModal').style.display = 'none';
-        _periodPlanId = null;
-    }
-    function savePeriod() {
-        if (!_periodPlanId) { alert('No plan id'); return; }
-        var ws = document.getElementById('periodStart').value;
-        var we = document.getElementById('periodEnd').value;
-        if (!ws || !we) { alert('{{ _("Please set From and To") }}'); return; }
-        var fd = new FormData();
-        fd.append('csrf_token', '{{ csrf_token() }}');
-        fd.append('plan_id', String(_periodPlanId));
-        fd.append('window_start', ws);
-        fd.append('window_end', we);
-        fetch('/maintenance-calendar/window', { method: 'POST', body: fd })
-            .then(function (r) { return r.text(); })
-            .then(function (t) {
-                var d = {};
-                try { d = JSON.parse(t); } catch (e) { alert('Server error: ' + t.slice(0, 180)); return; }
-                if (d.ok) location.reload();
-                else alert(d.error || 'Save error');
-            })
-            .catch(function (e) { alert('Save failed: ' + e.message); });
-    }
-    window.openPeriodModal = openPeriodModal;
-    window.closePeriodModal = closePeriodModal;
-    window.savePeriod = savePeriod;
-
-    document.getElementById('btnPeriodCancel').onclick = closePeriodModal;
-    document.getElementById('btnPeriodSave').onclick = savePeriod;
-
+    };
+    var cancelBtn = document.getElementById('btnPeriodCancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', function () {
+        document.getElementById('periodModal').style.display = 'none';
+    });
     document.addEventListener('click', function (e) {
         var btn = e.target.closest && e.target.closest('.ev-period-btn');
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
-        openPeriodModal(btn.dataset.planId, btn.dataset.start, btn.dataset.end, btn.dataset.label || '');
+        window.openPeriodModal(btn.dataset.planId, btn.dataset.start, btn.dataset.end, btn.dataset.label || '');
     });
-
-    // Растягивание: mousedown на жёлтом крае → mouseup на дне календаря
     var resizePlan = null;
     function endResize() {
         resizePlan = null;
@@ -658,19 +633,22 @@ function closeEvModal() {
         var we = cell.dataset.date;
         if (we < ws) { var t = ws; ws = we; we = t; }
         endResize();
-        var fd = new FormData();
-        fd.append('csrf_token', '{{ csrf_token() }}');
-        fd.append('plan_id', String(planId));
-        fd.append('window_start', ws);
-        fd.append('window_end', we);
-        fetch('/maintenance-calendar/window', { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                if (d && d.ok) location.reload();
-                else alert((d && d.error) || 'Stretch error');
-            })
-            .catch(function (e) { alert('Stretch failed: ' + e.message); });
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/maintenance-calendar/window';
+        function add(n, v) {
+            var i = document.createElement('input');
+            i.type = 'hidden'; i.name = n; i.value = v; form.appendChild(i);
+        }
+        add('csrf_token', '{{ csrf_token() }}');
+        add('plan_id', String(planId));
+        add('window_start', ws);
+        add('window_end', we);
+        add('month', '{{ month }}');
+        document.body.appendChild(form);
+        form.submit();
     });
 })();
 </script>
+
 {% endblock %}

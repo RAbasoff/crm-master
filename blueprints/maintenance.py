@@ -825,29 +825,49 @@ def maintenance_calendar_move():
 @login_required
 @role_required('admin', 'director', 'technician')
 def maintenance_calendar_window():
-    """Растянуть/сжать окно ТО (planned_start .. planned_end). JSON или form."""
+    """Растянуть/сжать окно ТО. Принимает form (или JSON) и возвращает редирект."""
     data = request.get_json(silent=True) or request.form
     plan_id = data.get('plan_id')
+    wants_json = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if not plan_id:
-        return jsonify({'error': 'No plan'}), 400
+        if wants_json:
+            return jsonify({'error': 'No plan'}), 400
+        flash(_('Plan not found'), 'error')
+        return redirect(url_for('maintenance.maintenance_calendar'))
     p = MaintenancePlan.query.get(int(plan_id))
     if not p:
-        return jsonify({'error': 'Plan not found'}), 404
+        if wants_json:
+            return jsonify({'error': 'Plan not found'}), 404
+        flash(_('Plan not found'), 'error')
+        return redirect(url_for('maintenance.maintenance_calendar'))
     try:
         ws = datetime.strptime(data.get('window_start') or '', '%Y-%m-%d').date()
         we = datetime.strptime(data.get('window_end') or '', '%Y-%m-%d').date()
     except ValueError:
-        return jsonify({'error': 'Invalid dates'}), 400
+        if wants_json:
+            return jsonify({'error': 'Invalid dates'}), 400
+        flash(_('Invalid dates'), 'error')
+        return redirect(url_for('maintenance.maintenance_calendar'))
     if we < ws:
         ws, we = we, ws
     if (we - ws).days > 60:
-        return jsonify({'error': 'Window too long'}), 400
+        if wants_json:
+            return jsonify({'error': 'Window too long'}), 400
+        flash(_('Window too long'), 'error')
+        return redirect(url_for('maintenance.maintenance_calendar'))
     p.planned_start = ws
     p.planned_end = we
     p.window_days = (we - ws).days + 1
     if not safe_commit():
-        return jsonify({'error': 'Save failed'}), 500
-    return jsonify({'ok': True, 'window_start': ws.isoformat(), 'window_end': we.isoformat()})
+        if wants_json:
+            return jsonify({'error': 'Save failed'}), 500
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('maintenance.maintenance_calendar'))
+    if wants_json:
+        return jsonify({'ok': True, 'window_start': ws.isoformat(), 'window_end': we.isoformat()})
+    flash(_('Period saved'), 'success')
+    month = data.get('month') or ws.strftime('%Y-%m')
+    return redirect(url_for('maintenance.maintenance_calendar', month=month))
 
 
 # ── Календарь текущих работ (не ТО) ─────────────────────────────
