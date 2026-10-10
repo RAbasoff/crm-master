@@ -1351,6 +1351,8 @@ def run_data_migrations():
             'Bartek':  ('User', 'floor'),
             'Pablo':   ('Logistiek - Oktopus', 'floor'),
             'Hashem':  ('User', 'floor'),
+            'Hqshem':  ('User', 'floor'),
+            'Safa':    ('User', 'floor'),
             'Paulina': ('Logistiek - Oktopus', 'floor'),
         }
 
@@ -1528,6 +1530,62 @@ def run_data_migrations():
             for section in extra_sections:
                 if section not in existing_usa:
                     db.session.add(UserSectionAccess(user_id=director_user.id, section_key=section))
+
+        # 7f. Ensure floor persons have User accounts (switch-user + login)
+        floor_names = ['Bartek', 'Hashem', 'Hqshem', 'Safa', 'Pablo', 'Paulina']
+        for pname in floor_names:
+            person = Verantwoordelijke.query.filter_by(naam=pname).first()
+            if not person:
+                # try case-insensitive
+                person = Verantwoordelijke.query.filter(
+                    func.lower(Verantwoordelijke.naam) == pname.lower()
+                ).first()
+            if not person:
+                print(f"Data migration: person '{pname}' not found, skip user create")
+                continue
+            user = User.query.filter_by(person_id=person.id).first()
+            if not user:
+                # try by username
+                uname0 = pname.lower()
+                user = User.query.filter(func.lower(User.username) == uname0).first()
+            if not user:
+                uname = pname.lower()
+                base = uname
+                n = 1
+                while User.query.filter_by(username=uname).first():
+                    uname = f"{base}{n}"
+                    n += 1
+                user = User(
+                    username=uname,
+                    display_name=pname,
+                    role='user',
+                    access_level=person.access_level or 'floor',
+                    person_id=person.id,
+                    is_active_user=True,
+                )
+                # временный пароль = логин; пользователь сменит
+                user.set_password(uname)
+                user.force_change_password = False
+                db.session.add(user)
+                db.session.flush()
+                print(f"Data migration: created floor user '{uname}' for person '{pname}'")
+            else:
+                changed = False
+                if user.person_id != person.id:
+                    user.person_id = person.id
+                    changed = True
+                if not user.is_active_user:
+                    user.is_active_user = True
+                    changed = True
+                if not user.display_name:
+                    user.display_name = pname
+                    changed = True
+                if user.role in (None, '', 'responsible'):
+                    user.role = 'user'
+                    changed = True
+                if changed:
+                    print(f"Data migration: activated/linked floor user '{user.username}' -> '{pname}'")
+        safe_commit()
 
         # Mark migration as done
         db.session.add(UserSectionAccess(user_id=0, section_key=marker_key))

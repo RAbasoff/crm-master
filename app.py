@@ -593,7 +593,7 @@ def inject_section_access():
                 is_mechanic=is_mechanic(),
                 is_floor_user=is_floor_user(),
                 can_view_analytics=(current_user.is_authenticated and (current_user.has_role('admin', 'director') or not is_mechanic()) and not is_floor_user()),
-                all_users_list=User.query.filter(User.is_active_user == True).order_by(User.username).all() if (current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id'))) else [])
+                all_users_list=User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all() if (current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id'))) else [])
 
 
 @app.after_request

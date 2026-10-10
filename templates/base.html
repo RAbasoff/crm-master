@@ -650,7 +650,7 @@
                     <option value="">👤 {{ _('Switch user') }}…</option>
                     {% for u in all_users_list %}
                     {% if u.id != current_user.id %}
-                    <option value="{{ u.id }}">{{ u.display_name or u.username }} ({{ u.role }})</option>
+                    <option value="{{ u.id }}">{{ u.display_name or u.username }} · {{ u.role }}</option>
                     {% endif %}
                     {% endfor %}
                 </select>
