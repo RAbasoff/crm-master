@@ -23,6 +23,7 @@
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
         <a href="/maintenance-plans" class="btn btn-sm" style="background:#9b59b6;color:white">📋 {{ _('Plans') }}</a>
+        <a href="/works-calendar" class="btn btn-sm" style="background:#16a085;color:white">📆 {{ _('Current Works') }}</a>
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/maintenance-plans/new" class="btn btn-sm" style="background:#27ae60;color:white">+ {{ _('New Plan') }}</a>
         {% endif %}

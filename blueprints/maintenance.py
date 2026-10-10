@@ -14,7 +14,7 @@ import io
 
 from models import (db, MaintenancePlan, MaintenanceSchedule, MaintenanceRecord, MaintenancePhoto,
                     MachinePart, PartMaintenanceLog, Machine, Monteur, FactorySection, User,
-                    Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem)
+                    Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem, WorkEvent)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    create_notification, log_audit, log_system, save_uploaded_file,
                    find_pdf_font, ensure_fpdf)
@@ -240,10 +240,12 @@ def maintenance_calendar():
                 'machine_id': pl.machine_id,
                 'part_id': None,
                 'category': pl.maintenance_type,
-                'overdue': pl.planned_start < today and not done,
+                'overdue': pl.window_end_date() < today and not done,
                 'plan_id': pl.id,
                 'status': 'completed' if done else pl.status,
                 'done': done,
+                'window_start': pl.planned_start.isoformat() if pl.planned_start else None,
+                'window_end': pl.window_end_date().isoformat() if pl.planned_start else None,
                 'equipment_id': None,
                 'mro_id': None,
                 'record_id': None
@@ -274,10 +276,12 @@ def maintenance_calendar():
                         'machine_id': pl.machine_id,
                         'part_id': None,
                         'category': pl.maintenance_type,
-                        'overdue': d < today and not occ_done,
+                        'overdue': (d + timedelta(days=3)) < today and not occ_done,
                         'plan_id': pl.id,
                         'status': 'completed' if occ_done else pl.status,
                         'done': occ_done,
+                        'window_start': d.isoformat(),
+                        'window_end': (d + timedelta(days=3)).isoformat(),
                         'equipment_id': None,
                         'mro_id': None,
                         'record_id': None
@@ -745,10 +749,16 @@ def maintenance_calendar_move():
         if ev_type == 'plan' and plan_id:
             p = MaintenancePlan.query.get(int(plan_id))
             if p:
+                # Перенос всего окна ТО (длина сохраняется)
+                span = (p.planned_end - p.planned_start).days if p.planned_end else max((p.window_days or 4) - 1, 0)
                 p.planned_start = new_date
+                p.planned_end = new_date + timedelta(days=span)
+                p.window_days = span + 1
                 if not safe_commit():
                     return jsonify({'error': 'Save failed'}), 500
-                return jsonify({'ok': True, 'new_date': new_date_str})
+                return jsonify({'ok': True, 'new_date': new_date_str,
+                                'window_start': p.planned_start.isoformat(),
+                                'window_end': p.planned_end.isoformat()})
 
         elif ev_type in ('replacement', 'maintenance'):
             part_id = request.form.get('part_id')
@@ -810,7 +820,125 @@ def maintenance_calendar_move():
         db.session.rollback()
         return jsonify({'error': str(e)[:100]}), 500
 
-@bp.route('/maintenance-calendar/export')
+
+@bp.route('/maintenance-calendar/window', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def maintenance_calendar_window():
+    """Растянуть/сжать окно ТО (planned_start .. planned_end)."""
+    data = request.get_json() or {}
+    plan_id = data.get('plan_id')
+    if not plan_id:
+        return jsonify({'error': 'No plan'}), 400
+    p = MaintenancePlan.query.get(int(plan_id))
+    if not p:
+        return jsonify({'error': 'Plan not found'}), 404
+    try:
+        ws = datetime.strptime(data.get('window_start') or '', '%Y-%m-%d').date()
+        we = datetime.strptime(data.get('window_end') or '', '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid dates'}), 400
+    if we < ws:
+        ws, we = we, ws
+    if (we - ws).days > 60:
+        return jsonify({'error': 'Window too long'}), 400
+    p.planned_start = ws
+    p.planned_end = we
+    p.window_days = (we - ws).days + 1
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True, 'window_start': ws.isoformat(), 'window_end': we.isoformat()})
+
+
+# ── Календарь текущих работ (не ТО) ─────────────────────────────
+
+@bp.route('/works-calendar')
+@login_required
+@role_required('admin', 'director', 'technician', 'user', 'responsible')
+def works_calendar():
+    today = datetime.utcnow().date()
+    month = request.args.get('month', today.strftime('%Y-%m'))
+    year, mon = map(int, month.split('-'))
+    month_start = datetime(year, mon, 1).date()
+    month_end = datetime(year + 1, 1, 1).date() if mon == 12 else datetime(year, mon + 1, 1).date()
+    events = WorkEvent.query.filter(
+        WorkEvent.date_start < month_end,
+        db.or_(WorkEvent.date_end.is_(None), WorkEvent.date_end >= month_start)
+    ).order_by(WorkEvent.date_start).all()
+    prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
+    next_month = month_end.strftime('%Y-%m')
+    return render_template(
+        'works_calendar.html',
+        events=events, month=month, month_start=month_start, month_end=month_end,
+        today=today, prev_month=prev_month, next_month=next_month, timedelta=timedelta,
+    )
+
+
+@bp.route('/works-calendar/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def works_calendar_new():
+    if request.method == 'POST':
+        title = (request.form.get('title') or '').strip()
+        if not title:
+            flash(_('Title is required'), 'error')
+            return redirect(url_for('maintenance.works_calendar_new'))
+        ev = WorkEvent(
+            title=title,
+            description=request.form.get('description', ''),
+            event_kind=request.form.get('event_kind', 'work'),
+            date_start=safe_date(request.form.get('date_start')),
+            date_end=safe_date(request.form.get('date_end')),
+            created_by=current_user.id if isinstance(current_user.id, int) else None,
+        )
+        if not ev.date_start:
+            flash(_('Date is required'), 'error')
+            return redirect(url_for('maintenance.works_calendar_new'))
+        db.session.add(ev)
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+        else:
+            flash(_('Event created'), 'success')
+        return redirect(url_for('maintenance.works_calendar', month=ev.date_start.strftime('%Y-%m')))
+    return render_template('work_event_form.html', event=None)
+
+
+@bp.route('/works-calendar/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def works_calendar_edit(event_id):
+    ev = WorkEvent.query.get_or_404(event_id)
+    if request.method == 'POST':
+        ev.title = (request.form.get('title') or ev.title).strip()
+        ev.description = request.form.get('description', '')
+        ev.event_kind = request.form.get('event_kind', ev.event_kind)
+        ds = safe_date(request.form.get('date_start'))
+        de = safe_date(request.form.get('date_end'))
+        if ds:
+            ev.date_start = ds
+        ev.date_end = de
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+        else:
+            flash(_('Event updated'), 'success')
+        return redirect(url_for('maintenance.works_calendar', month=ev.date_start.strftime('%Y-%m')))
+    return render_template('work_event_form.html', event=ev)
+
+
+@bp.route('/works-calendar/<int:event_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def works_calendar_delete(event_id):
+    ev = WorkEvent.query.get_or_404(event_id)
+    month = ev.date_start.strftime('%Y-%m')
+    db.session.delete(ev)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        flash(_('Event deleted'), 'success')
+    return redirect(url_for('maintenance.works_calendar', month=month))
+
+
 @login_required
 def maintenance_calendar_export():
     import io

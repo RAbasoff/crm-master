@@ -132,6 +132,27 @@ def is_privileged(user=None):
     return bool(u and getattr(u, 'is_authenticated', False) and u.has_role('admin', 'director'))
 
 
+def is_head_of_ts(user=None):
+    """Начальник технической службы — Ruslan Abasoff. Только он и админ закрывают/переоткрывают."""
+    u = user or current_user
+    if not (u and getattr(u, 'is_authenticated', False)):
+        return False
+    if u.has_role('admin'):
+        return True
+    name = ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
+    if 'ruslan' in name or 'abasoff' in name or 'абасов' in name or 'руслан' in name:
+        return True
+    # системный аккаунт director = начальник ТС
+    if getattr(u, 'username', '') == 'director':
+        return True
+    return False
+
+
+def can_close_or_reopen(user=None):
+    """Закрыть / переоткрыть заявку или TWO — только админ или начальник ТС."""
+    return is_head_of_ts(user)
+
+
 def mechanic_denied_endpoint(endpoint):
     """True, если механику нельзя на этот endpoint."""
     if not endpoint:

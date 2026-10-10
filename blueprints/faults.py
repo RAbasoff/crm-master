@@ -212,14 +212,13 @@ def _end_open_work_sessions(user_id, fault_id, note=''):
 def _role_can_set_status(user, new_status):
     """Кто может выставить статус.
 
-    RESOLVED — механик после ремонта.
-    CLOSED — только админ / главный механик / начальник ТС (admin, director).
+    RESOLVED — механик / директор (отметить выполнение).
+    CLOSED / REOPENED — только админ или начальник ТС (Ruslan Abasoff).
     """
-    if new_status == 'closed':
-        return user.has_role('admin', 'director')
-    if new_status == 'reopened':
-        return user.has_role('admin', 'director', 'technician')
-    # остальные рабочие переходы — механик / админ
+    from security import is_head_of_ts
+    if new_status in ('closed', 'reopened'):
+        return is_head_of_ts(user)
+    # остальные рабочие переходы — механик / админ / директор
     return user.has_role('admin', 'director', 'technician')
 
 
@@ -240,8 +239,9 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
 
     if not allow_illegal and new_status != old_status:
         allowed = ALLOWED_TRANSITIONS.get(old_status, ())
-        # Начальство может закрыть заявку из любого статуса (кроме уже закрытой)
-        if new_status == 'closed' and user.has_role('admin', 'director'):
+        # Только начальник ТС / админ может закрыть или переоткрыть из любого статуса
+        from security import is_head_of_ts
+        if new_status in ('closed', 'reopened') and is_head_of_ts(user):
             pass
         elif new_status not in allowed:
             return False, _('Transition not allowed: {} → {}').format(
@@ -577,8 +577,10 @@ def fault_detail(fault_id):
         })
     timeline.sort(key=lambda t: (t['at'] or datetime.min))
 
+    from security import is_head_of_ts
     return render_template(
         'fault_detail.html', fault=f, technicians=technicians, contractors=contractors,
+        can_close=is_head_of_ts(current_user),
         my_session=my_session, open_session=open_session,
         work_sessions=sessions, total_work_minutes=total_minutes,
         pause_reasons=PAUSE_REASONS, allowed_next=allowed_next,

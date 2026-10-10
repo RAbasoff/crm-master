@@ -74,7 +74,9 @@
             <td>
                 <div style="display:flex;gap:4px">
                     <a href="/two/{{ o.id }}/print" class="btn btn-sm" style="background:#eee;padding:4px 8px" target="_blank">🖨️</a>
+                    {% if current_user.has_role('admin') %}
                     <a href="/two/{{ o.id }}/edit" class="btn btn-sm btn-primary" style="padding:4px 8px">✏️</a>
+                    {% endif %}
                 </div>
             </td>
         </tr>
@@ -107,6 +109,21 @@ function toggleMonth(header) {
     body.style.display = collapsed ? '' : 'none';
     icon.textContent = collapsed ? '▼' : '▶';
 }
+// Прошлые месяцы свёрнуты, текущий — открыт
+(function () {
+    const now = new Date();
+    const curM = String(now.getMonth() + 1).padStart(2, '0');
+    document.querySelectorAll('.two-month-group').forEach(g => {
+        const m = g.getAttribute('data-month') || '';
+        const body = g.querySelector('.two-month-body');
+        const icon = g.querySelector('.two-toggle-icon');
+        const isCurrent = m === curM || m === String(now.getMonth() + 1);
+        if (!isCurrent && body) {
+            body.style.display = 'none';
+            if (icon) icon.textContent = '▶';
+        }
+    });
+})();
 function toggleMergeBtn() {
     const checked = document.querySelectorAll('.two-check:checked').length;
     document.getElementById('merge-btn').style.display = checked >= 2 ? 'inline-block' : 'none';

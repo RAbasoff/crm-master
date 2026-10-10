@@ -21,7 +21,7 @@
     <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/static/apple-startup-iphone-se.png">
 
     <link rel="icon" href="/static/icon-192.png" type="image/png">
-    <title>{% block title %}A.B.A.S.O.F.F. - ProMaster {{ _('Version') }} 2.12.1{% endblock %}</title>
+    <title>{% block title %}A.B.A.S.O.F.F. - ProMaster {{ _('Version') }} 2.13.0{% endblock %}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html { font-size: 16px; }
@@ -427,7 +427,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header" style="display:flex;align-items:center;gap:10px">
             <img src="/static/logo.jpeg" alt="ProMaster" style="width:36px;height:36px;object-fit:contain;border-radius:8px">
-            <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span> <span style="font-size:10px;opacity:0.75;font-weight:600;letter-spacing:0">{{ _('Version') }} 2.12.1</span></div>
+            <div class="logo">A.B.A.S.O.F.F. <span>ProMaster</span> <span style="font-size:10px;opacity:0.75;font-weight:600;letter-spacing:0">{{ _('Version') }} 2.13.0</span></div>
         </div>
         <nav class="sidebar-nav">
             {% if is_floor_user %}
@@ -506,6 +506,7 @@
             <a href="/maintenance-calendar" class="sb-item {% if 'maintenance_calendar' in (request.endpoint or '') %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">📅</span>{{ _('Maint. Calendar') }}</a>
             <a href="/maintenance-schedule" class="sb-item {% if 'maintenance_schedule' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">⚙️</span>{{ _('Maint. Schedule') }}</a>
             <a href="/maintenance-plans" class="sb-item {% if 'maintenance_plan' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📋</span>{{ _('Maint. Plans') }}</a>
+            <a href="/works-calendar" class="sb-item {% if 'works_calendar' in (request.endpoint or '') or 'work_event' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📆</span>{{ _('Current Works') }}</a>
             </div>
             {% endif %}
             {% if has_access('equipment') %}

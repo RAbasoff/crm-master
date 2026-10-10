@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261008
+SCHEMA_VERSION = 20261010
 
 
 def _schema_log(msg):
@@ -289,6 +289,18 @@ def ensure_schema():
         ("floor_map_line.description", "ALTER TABLE floor_map_line ADD COLUMN description TEXT DEFAULT ''"),
         ("floor_map_line.label_x", "ALTER TABLE floor_map_line ADD COLUMN label_x REAL"),
         ("floor_map_line.label_y", "ALTER TABLE floor_map_line ADD COLUMN label_y REAL"),
+        ("maintenance_plan.window_days", "ALTER TABLE maintenance_plan ADD COLUMN window_days INTEGER DEFAULT 4"),
+        ("work_event", """CREATE TABLE IF NOT EXISTS work_event (
+            id INTEGER PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            description TEXT,
+            event_kind VARCHAR(30) DEFAULT 'work',
+            date_start DATE NOT NULL,
+            date_end DATE,
+            all_day BOOLEAN DEFAULT 1,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME
+        )"""),
         ("technical_work_order.approved_by", "ALTER TABLE technical_work_order ADD COLUMN approved_by INTEGER REFERENCES user(id)"),
         ("technical_work_order.approved_at", "ALTER TABLE technical_work_order ADD COLUMN approved_at DATETIME"),
         ("technical_work_order.approval_comment", "ALTER TABLE technical_work_order ADD COLUMN approval_comment TEXT"),
@@ -1655,5 +1667,54 @@ def ensure_floor_users():
     except Exception as e:
         db.session.rollback()
         print(f"ensure_floor_users error: {e}")
+
+
+def ensure_head_of_ts():
+    """Ruslan Abasoff = начальник техслужбы (display_name)."""
+    try:
+        from models import db, User, Verantwoordelijke
+        from sqlalchemy import func
+    except Exception as e:
+        print(f"ensure_head_of_ts import: {e}")
+        return
+    try:
+        for uname in ('director', 'ruslan', 'abasoff', 'ruslan.abasoff'):
+            u = User.query.filter(func.lower(User.username) == uname).first()
+            if u and u.display_name not in ('Ruslan Abasoff', 'Руслан Абасов'):
+                u.display_name = 'Ruslan Abasoff'
+                print(f"ensure_head_of_ts: display_name -> Ruslan Abasoff ({u.username})")
+        person = Verantwoordelijke.query.filter(
+            func.lower(Verantwoordelijke.naam).in_(['ruslan abasoff', 'abasoff', 'directeur', 'ruслан'])
+        ).first()
+        if person and person.naam != 'Ruslan Abasoff':
+            # не переименовываем person — только если это director-персона
+            pass
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"ensure_head_of_ts error: {e}")
+
+
+def ensure_plan_windows():
+    """Окно выполнения ТО: planned_end = planned_start + 3 дня (если не задано)."""
+    try:
+        from models import db, MaintenancePlan
+        from datetime import timedelta
+    except Exception as e:
+        print(f"ensure_plan_windows import: {e}")
+        return
+    try:
+        n = 0
+        for p in MaintenancePlan.query.filter(MaintenancePlan.planned_end.is_(None)).all():
+            if p.planned_start:
+                p.planned_end = p.planned_start + timedelta(days=3)
+                p.window_days = 4
+                n += 1
+        if n:
+            db.session.commit()
+            print(f"ensure_plan_windows: set window on {n} plans")
+    except Exception as e:
+        db.session.rollback()
+        print(f"ensure_plan_windows error: {e}")
 
 

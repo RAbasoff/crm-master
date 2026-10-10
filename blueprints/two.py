@@ -513,6 +513,11 @@ def two_add_signature(two_id):
 @login_required
 @role_required('admin', 'director', 'technician')
 def two_edit(two_id):
+    # Директор НЕ редактирует TWO — только создать/просмотреть
+    from security import is_head_of_ts
+    if not is_head_of_ts(current_user):
+        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        return redirect(url_for('two.two_detail', two_id=two_id))
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     from utils import acquire_lock, release_lock
     if request.method == 'POST':

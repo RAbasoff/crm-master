@@ -25,7 +25,7 @@
                 {% endif %}
                 {% endfor %}
                 {# Закрыть — только админ / главный механик / начальник ТС #}
-                {% if current_user.has_role('admin', 'director') and fault.status not in ['closed'] %}
+                {% if can_close and fault.status not in ['closed'] %}
                 <option value="closed" style="background:#fff3e0;color:#e65100;font-weight:700">🔒 {{ _(status_msgs.get('closed', 'closed')) if status_msgs is defined else 'Closed' }}</option>
                 {% endif %}
             </select>
@@ -40,9 +40,9 @@
         {% if fault.status not in ['closed', 'resolved', 'paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') %}
         <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="openPauseModal('paused')">⏸ {{ _('Pause') }}</button>
         {% endif %}
-        {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
+        {% if fault.status not in ['closed'] and can_close %}
         <button type="button" class="btn btn-sm" style="background:#e67e22;color:white;font-weight:700"
-                title="{{ _('Only admin / head of technical service / head mechanic') }}"
+                title="{{ _('Only admin / head of technical service') }}"
                 onclick="openCloseModal()">🔒 {{ _('Close Fault') }}</button>
         {% endif %}
         {% if fault.status == 'resolved' and current_user.has_role('technician') %}
@@ -50,7 +50,7 @@
             ✅ {{ _('Resolved') }} — {{ _('Awaiting close by head') }}
         </span>
         {% endif %}
-        {% if fault.status in ['closed', 'resolved'] and current_user.has_role('admin', 'director') %}
+        {% if fault.status in ['closed', 'resolved'] and can_close %}
         <button type="button" class="btn btn-sm" style="background:#9b59b6;color:white" onclick="openReopenModal()">🔄 {{ _('Reopen') }}</button>
         {% endif %}
         <a href="/messages/new?fault_id={{ fault.id }}" class="btn btn-sm btn-primary">💬 {{ _('Send Message') }}</a>

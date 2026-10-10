@@ -269,8 +269,10 @@ with app.app_context():
     run_migrations()
     run_data_migrations()
     try:
-        from schema import ensure_floor_users
+        from schema import ensure_floor_users, ensure_plan_windows, ensure_head_of_ts
         ensure_floor_users()
+        ensure_plan_windows()
+        ensure_head_of_ts()
     except Exception as _fu_err:
         print(f'ensure_floor_users skip: {_fu_err}')
     try:
@@ -1283,9 +1285,44 @@ def _weekday_only(d):
 @app.route('/')
 @login_required
 def index():
+    from security import is_floor_user
     # Responsible persons go directly to floor plan
     if hasattr(current_user, '_person') and current_user.role == 'responsible':
         return redirect(url_for('floor_plan'))
+
+    # ── Дашборд цехового USER: только свои заявки/TWO, без склада ──
+    if is_floor_user():
+        uid = current_user.id if isinstance(current_user.id, int) else None
+        if uid is None:
+            person_id = getattr(current_user, 'person_id', None)
+            linked = User.query.filter_by(person_id=person_id).first() if person_id else None
+            uid = linked.id if linked else -1
+        my_faults = FaultReport.query.filter_by(reporter_id=uid)
+        f_stats = {
+            'submitted': my_faults.count(),
+            'in_progress': my_faults.filter(FaultReport.status.in_(['accepted', 'diagnosis', 'in_progress', 'parts_ordered', 'waiting_parts'])).count(),
+            'paused': my_faults.filter(FaultReport.status.in_(['paused', 'reopened'])).count(),
+            'done': my_faults.filter(FaultReport.status == 'resolved').count(),
+            'closed': my_faults.filter(FaultReport.status == 'closed').count(),
+            'active': my_faults.filter(FaultReport.status.in_(['open', 'accepted', 'diagnosis', 'in_progress', 'parts_ordered', 'waiting_parts', 'paused', 'reopened', 'resolved'])).count(),
+        }
+        my_twos = TechnicalWorkOrder.query.filter_by(created_by=uid).all()
+        two_active = [t for t in my_twos if t.status not in ('completed', 'cancelled')]
+        my_machines = list(current_user.assigned_machines) if current_user.assigned_machines else []
+        person = getattr(current_user, 'person', None)
+        if person is not None:
+            for s in person.resp_sections:
+                for m in (s.machines or []):
+                    if m not in my_machines:
+                        my_machines.append(m)
+        return render_template(
+            'index.html', now=now_local(),
+            stats={'opdrachten_actief': 0, 'faults_active': f_stats['active'], 'opdrachten_vandaag': 0, 'voorraad_laag': 0},
+            dashboard_stats={}, recent_orders=[], low_stock=[],
+            recent_faults=my_faults.order_by(FaultReport.created_at.desc()).limit(8).all(),
+            users=[], floor_stats=f_stats, floor_twos=two_active[:8], floor_machines=my_machines[:12],
+            two_active_count=len(two_active),
+        )
 
     # Aggregate stats in one query (C2)
     today_start = now_local().date()

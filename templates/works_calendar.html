@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Current Works Calendar') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📆 {{ _('Current Works Calendar') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a href="/maintenance-calendar" class="btn btn-sm" style="background:#9b59b6;color:white">🔧 {{ _('Maintenance Calendar') }}</a>
+        <a href="/works-calendar?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
+        <span style="font-weight:700;min-width:120px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
+        <a href="/works-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
+        <a href="/works-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/works-calendar/new" class="btn btn-sm btn-primary">+ {{ _('New Event') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Works, meetings, moves, important events — not maintenance (TO).') }}</p>
+
+{% if events %}
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Title') }}</th><th>{{ _('Type') }}</th><th>{{ _('Description') }}</th><th></th></tr>
+        {% for e in events %}
+        <tr>
+            <td style="white-space:nowrap">
+                {{ e.date_start.strftime('%d-%m-%Y') }}
+                {% if e.date_end and e.date_end != e.date_start %} — {{ e.date_end.strftime('%d-%m-%Y') }}{% endif %}
+            </td>
+            <td><strong>{{ e.title }}</strong></td>
+            <td>
+                {% if e.event_kind == 'meeting' %}🤝 {{ _('Meeting') }}
+                {% elif e.event_kind == 'move' %}🚚 {{ _('Move') }}
+                {% elif e.event_kind == 'important' %}⭐ {{ _('Important') }}
+                {% else %}🔧 {{ _('Work') }}{% endif %}
+            </td>
+            <td style="font-size:12px;color:#666">{{ (e.description or '')[:80] }}</td>
+            <td style="white-space:nowrap">
+                {% if current_user.has_role('admin', 'director', 'technician') %}
+                <a href="/works-calendar/{{ e.id }}/edit" class="btn btn-sm" style="background:#eee">✏️</a>
+                <form method="POST" action="/works-calendar/{{ e.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }}?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">🗑</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% else %}
+<div class="card">
+    <p style="text-align:center;color:#888;padding:30px">{{ _('No events this month') }}</p>
+</div>
+{% endif %}
+{% endblock %}
