@@ -164,18 +164,23 @@ FLOOR_ALLOWED_PREFIXES = (
     'faults.', 'two.', 'messages.', 'chat.', 'floor_plan',
     'index', 'change_password', 'logout', 'set_language',
     'static', 'profile', 'notifications.', 'mobile.',
+    'switch_back', 'switch_user',
 )
 
 FLOOR_ALLOWED_PATHS = (
     '/faults', '/two', '/messages', '/chat', '/floor',
     '/profile', '/change-password', '/logout', '/notifications',
-    '/set-language', '/mobile',
+    '/set-language', '/mobile', '/switch-back', '/switch-user',
 )
 
 
 def enforce_floor_access():
     """Запрет модулей, которых нет в узком меню цехового пользователя."""
     if not current_user.is_authenticated:
+        return None
+    # Админ «под пользователем» — всегда может вернуться
+    from flask import session
+    if session.get('impersonate_admin_id'):
         return None
     if not is_floor_user(current_user):
         return None

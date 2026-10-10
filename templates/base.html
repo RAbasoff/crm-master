@@ -437,6 +437,9 @@
             <a href="/two" class="sb-item {% if 'two' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📝</span>TWO</a>
             <a href="/chat/" class="sb-item {% if 'chat' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">💬</span>{{ _('Chat') }}</a>
             <a href="/messages" class="sb-item {% if 'message' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">✉️</span>{{ _('Messages') }}</a>
+            {% if impersonate_admin_id %}
+            <a href="/switch-back" class="sb-item" style="color:#ffb74d;font-weight:700"><span class="sb-icon">↩</span>{{ _('Back to admin') }}</a>
+            {% endif %}
             {% else %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Production') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
