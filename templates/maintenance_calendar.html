@@ -434,16 +434,60 @@ function savePeriod() {
         el.addEventListener('dragstart', function(e) { e.preventDefault(); e.stopPropagation(); });
     });
 
-    // Растягивание окна ТО за правый край
+    // ── Растягивание окна ТО мышкой (mousedown, не HTML5-drag) ──
+    var resizePlan = null;
+    function endResizeMode() {
+        resizePlan = null;
+        document.querySelectorAll('.cal-drop').forEach(function(td) { td.style.outline = ''; });
+        document.body.style.cursor = '';
+    }
     document.querySelectorAll('.ev-resize').forEach(function(h) {
-        h.addEventListener('dragstart', function(e) {
-            resizePlan = {id: h.dataset.planId, start: h.dataset.windowStart};
-            draggedEvent = null;
+        h.addEventListener('mousedown', function(e) {
+            e.preventDefault();
             e.stopPropagation();
-            try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'resize'); } catch (err) {}
+            var host = h.closest('.cal-event');
+            if (host) host.setAttribute('draggable', 'false');
+            resizePlan = {
+                id: parseInt(h.dataset.planId, 10),
+                start: h.dataset.windowStart || h.closest('.cal-event').dataset.date
+            };
+            document.body.style.cursor = 'ew-resize';
         });
-        h.addEventListener('dragend', function() { resizePlan = null; });
     });
+    document.querySelectorAll('.cal-drop').forEach(function(cell) {
+        cell.addEventListener('mousemove', function(e) {
+            if (!resizePlan) return;
+            e.preventDefault();
+            document.querySelectorAll('.cal-drop').forEach(function(td) { td.style.outline = ''; });
+            cell.style.outline = '2px solid #f39c12';
+        });
+        cell.addEventListener('mouseup', function(e) {
+            if (!resizePlan) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var planId = resizePlan.id;
+            var ws = resizePlan.start || cell.dataset.date;
+            var we = cell.dataset.date;
+            if (we < ws) { var t = ws; ws = we; we = t; }
+            endResizeMode();
+            csrfFetch('/maintenance-calendar/window', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({plan_id: planId, window_start: ws, window_end: we})
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d && d.ok) location.reload();
+                else alert((d && d.error) || 'Error');
+            }).catch(function(err){ alert(err.message); });
+        });
+    });
+    document.addEventListener('mouseup', function() {
+        if (resizePlan) {
+            // отпустили мимо ячейки — просто выходим из режима
+            endResizeMode();
+        }
+    });
+
+    // Растягивание окна ТО за правый край (HTML5 fallback не нужен)
 
     document.querySelectorAll('.cal-event[draggable="true"]').forEach(function(el) {
         el.addEventListener('dragstart', function(e) {
@@ -477,22 +521,6 @@ function savePeriod() {
             cell.style.outline = '';
             var newDate = cell.dataset.date;
             if (!newDate) return;
-
-            // Растягивание окна ТО
-            if (resizePlan && resizePlan.id) {
-                var ws = resizePlan.start || newDate;
-                if (newDate < ws) { var t = ws; ws = newDate; newDate = t; }
-                csrfFetch('/maintenance-calendar/window', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({plan_id: parseInt(resizePlan.id), window_start: ws, window_end: newDate})
-                }).then(function(r){ return r.json(); }).then(function(d){
-                    if (d.ok) location.reload();
-                    else alert(d.error || 'Error');
-                }).catch(function(err){ alert(err.message); });
-                resizePlan = null;
-                return;
-            }
 
             if (!draggedEvent) return;
             var oldDate = draggedEvent.dataset.date;
