@@ -400,51 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ── Period modal: window from/to ──
-var _periodPlanId = null;
-function openPeriodModal(planId, start, end, title) {
-    _periodPlanId = parseInt(planId, 10);
-    document.getElementById('periodTitle').textContent = title || '';
-    document.getElementById('periodStart').value = start || '';
-    document.getElementById('periodEnd').value = end || start || '';
-    document.getElementById('periodModal').style.display = 'flex';
-}
-function closePeriodModal() {
-    document.getElementById('periodModal').style.display = 'none';
-    _periodPlanId = null;
-}
-function savePeriod() {
-    if (!_periodPlanId) { alert('No plan'); return; }
-    var ws = document.getElementById('periodStart').value;
-    var we = document.getElementById('periodEnd').value;
-    if (!ws || !we) { alert('{{ _("Please set From and To") }}'); return; }
-    var fd = new FormData();
-    fd.append('csrf_token', '{{ csrf_token() }}');
-    fd.append('plan_id', _periodPlanId);
-    fd.append('window_start', ws);
-    fd.append('window_end', we);
-    fetch('/maintenance-calendar/window', {
-        method: 'POST',
-        body: fd
-    }).then(function(r){ return r.json(); }).then(function(d){
-        if (d && d.ok) { location.reload(); }
-        else { alert((d && d.error) || 'Error'); }
-    }).catch(function(e){ alert(e.message); });
-}
-// Делегированный клик по 📅 — без inline JS (кавычки в названиях ломали код)
-document.addEventListener('click', function(e) {
-    var btn = e.target.closest && e.target.closest('.ev-period-btn');
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    openPeriodModal(btn.dataset.planId, btn.dataset.start, btn.dataset.end, btn.dataset.label || '');
-});
-// Глобально — для кнопок в модалке (иначе inline onclick их не найдёт)
-window.openPeriodModal = openPeriodModal;
-window.closePeriodModal = closePeriodModal;
-window.savePeriod = savePeriod;
-document.getElementById('btnPeriodCancel').addEventListener('click', closePeriodModal);
-document.getElementById('btnPeriodSave').addEventListener('click', savePeriod);
+    // ── Period modal (объявлены глобально ниже, в конце файла) ──
 
 // ── DRAG & DROP ──
     var draggedEvent = null;
@@ -456,64 +412,7 @@ document.getElementById('btnPeriodSave').addEventListener('click', savePeriod);
         el.addEventListener('dragstart', function(e) { e.preventDefault(); e.stopPropagation(); });
     });
 
-    // ── Растягивание окна ТО мышкой (mousedown, не HTML5-drag) ──
-    var resizePlan = null;
-    function endResizeMode() {
-        resizePlan = null;
-        document.querySelectorAll('.cal-drop').forEach(function(td) { td.style.outline = ''; });
-        document.body.style.cursor = '';
-    }
-    document.querySelectorAll('.ev-resize').forEach(function(h) {
-        h.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var host = h.closest('.cal-event');
-            if (host) host.setAttribute('draggable', 'false');
-            resizePlan = {
-                id: parseInt(h.dataset.planId, 10),
-                start: h.dataset.windowStart || h.closest('.cal-event').dataset.date
-            };
-            document.body.style.cursor = 'ew-resize';
-        });
-    });
-    document.querySelectorAll('.cal-drop').forEach(function(cell) {
-        cell.addEventListener('mousemove', function(e) {
-            if (!resizePlan) return;
-            e.preventDefault();
-            document.querySelectorAll('.cal-drop').forEach(function(td) { td.style.outline = ''; });
-            cell.style.outline = '2px solid #f39c12';
-        });
-        cell.addEventListener('mouseup', function(e) {
-            if (!resizePlan) return;
-            e.preventDefault();
-            e.stopPropagation();
-            var planId = resizePlan.id;
-            var ws = resizePlan.start || cell.dataset.date;
-            var we = cell.dataset.date;
-            if (we < ws) { var t = ws; ws = we; we = t; }
-            endResizeMode();
-            var fd = new FormData();
-            fd.append('csrf_token', '{{ csrf_token() }}');
-            fd.append('plan_id', planId);
-            fd.append('window_start', ws);
-            fd.append('window_end', we);
-            fetch('/maintenance-calendar/window', {
-                method: 'POST',
-                body: fd
-            }).then(function(r){ return r.json(); }).then(function(d){
-                if (d && d.ok) location.reload();
-                else alert((d && d.error) || 'Error');
-            }).catch(function(err){ alert(err.message); });
-        });
-    });
-    document.addEventListener('mouseup', function() {
-        if (resizePlan) {
-            // отпустили мимо ячейки — просто выходим из режима
-            endResizeMode();
-        }
-    });
-
-    // Растягивание окна ТО за правый край (HTML5 fallback не нужен)
+    // ── Растягивание окна ТО — обработчики в конце файла (глобально) ──
 
     document.querySelectorAll('.cal-event[draggable="true"]').forEach(function(el) {
         el.addEventListener('dragstart', function(e) {
@@ -672,6 +571,105 @@ function closeEvModal() {
                 href: el.dataset.href || '#'
             });
         });
+    });
+})();
+</script>
+
+<script>
+// ── Период ТО и растягивание — ВСЕГДА в глобальной области ──
+(function () {
+    var _periodPlanId = null;
+    function openPeriodModal(planId, start, end, title) {
+        _periodPlanId = parseInt(planId, 10);
+        document.getElementById('periodTitle').textContent = title || '';
+        document.getElementById('periodStart').value = start || '';
+        document.getElementById('periodEnd').value = end || start || '';
+        document.getElementById('periodModal').style.display = 'flex';
+    }
+    function closePeriodModal() {
+        document.getElementById('periodModal').style.display = 'none';
+        _periodPlanId = null;
+    }
+    function savePeriod() {
+        if (!_periodPlanId) { alert('No plan id'); return; }
+        var ws = document.getElementById('periodStart').value;
+        var we = document.getElementById('periodEnd').value;
+        if (!ws || !we) { alert('{{ _("Please set From and To") }}'); return; }
+        var fd = new FormData();
+        fd.append('csrf_token', '{{ csrf_token() }}');
+        fd.append('plan_id', String(_periodPlanId));
+        fd.append('window_start', ws);
+        fd.append('window_end', we);
+        fetch('/maintenance-calendar/window', { method: 'POST', body: fd })
+            .then(function (r) { return r.text(); })
+            .then(function (t) {
+                var d = {};
+                try { d = JSON.parse(t); } catch (e) { alert('Server error: ' + t.slice(0, 180)); return; }
+                if (d.ok) location.reload();
+                else alert(d.error || 'Save error');
+            })
+            .catch(function (e) { alert('Save failed: ' + e.message); });
+    }
+    window.openPeriodModal = openPeriodModal;
+    window.closePeriodModal = closePeriodModal;
+    window.savePeriod = savePeriod;
+
+    document.getElementById('btnPeriodCancel').onclick = closePeriodModal;
+    document.getElementById('btnPeriodSave').onclick = savePeriod;
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('.ev-period-btn');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openPeriodModal(btn.dataset.planId, btn.dataset.start, btn.dataset.end, btn.dataset.label || '');
+    });
+
+    // Растягивание: mousedown на жёлтом крае → mouseup на дне календаря
+    var resizePlan = null;
+    function endResize() {
+        resizePlan = null;
+        document.querySelectorAll('.cal-drop').forEach(function (td) { td.style.outline = ''; });
+        document.body.style.cursor = '';
+    }
+    document.addEventListener('mousedown', function (e) {
+        var h = e.target.closest && e.target.closest('.ev-resize');
+        if (!h) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var host = h.closest('.cal-event');
+        if (host) host.setAttribute('draggable', 'false');
+        resizePlan = { id: parseInt(h.dataset.planId, 10), start: h.dataset.windowStart };
+        document.body.style.cursor = 'ew-resize';
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (!resizePlan) return;
+        var cell = e.target.closest && e.target.closest('.cal-drop');
+        document.querySelectorAll('.cal-drop').forEach(function (td) { td.style.outline = ''; });
+        if (cell) cell.style.outline = '2px solid #f39c12';
+    });
+    document.addEventListener('mouseup', function (e) {
+        if (!resizePlan) return;
+        var cell = e.target.closest && e.target.closest('.cal-drop');
+        if (!cell) { endResize(); return; }
+        e.preventDefault();
+        var planId = resizePlan.id;
+        var ws = resizePlan.start || cell.dataset.date;
+        var we = cell.dataset.date;
+        if (we < ws) { var t = ws; ws = we; we = t; }
+        endResize();
+        var fd = new FormData();
+        fd.append('csrf_token', '{{ csrf_token() }}');
+        fd.append('plan_id', String(planId));
+        fd.append('window_start', ws);
+        fd.append('window_end', we);
+        fetch('/maintenance-calendar/window', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d && d.ok) location.reload();
+                else alert((d && d.error) || 'Stretch error');
+            })
+            .catch(function (e) { alert('Stretch failed: ' + e.message); });
     });
 })();
 </script>
