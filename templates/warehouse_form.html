@@ -123,6 +123,13 @@
 let formScanner = null;
 let ocrStream = null;
 
+function toggleConsumableFields() {
+    const sel = document.getElementById('consumableType');
+    const card = sel ? sel.closest('.card') : null;
+    if (!card) return;
+    card.style.opacity = sel.value ? '1' : '0.55';
+}
+
 // === BARCODE SCANNER ===
 function toggleScanMode(mode) {
     if (mode === 'barcode') {

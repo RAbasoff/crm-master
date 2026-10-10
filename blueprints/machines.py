@@ -331,32 +331,45 @@ def machine_parts(machine_id):
     return render_template('machine_parts.html', machine=m, parts=parts)
 
 
+def _part_form_ctx(m, p=None):
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
+    return render_template('part_form.html', machine=m, part=p, users=users)
+
+
+@bp.route('/<int:machine_id>/parts/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'technician')
+def machine_new_part(machine_id):
+    m = Machine.query.get_or_404(machine_id)
+    if request.method == 'POST':
+        p = MachinePart(
+            machine_id=m.id,
+            name=request.form.get('name', '').strip() or 'Part',
+            part_number=request.form.get('part_number', ''),
+            description=request.form.get('description', ''),
+            category=request.form.get('category', 'mechanical'),
+            status=request.form.get('status', 'ok'),
+            installed_date=safe_date(request.form.get('installed_date')),
+            replacement_interval_days=safe_int(request.form.get('replacement_interval_days')) or None,
+            maintenance_interval_days=safe_int(request.form.get('maintenance_interval_days')) or None,
+            responsible_user_id=safe_int(request.form.get('responsible_user_id')) or None,
+            notes=request.form.get('notes', ''),
+        )
+        db.session.add(p)
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return _part_form_ctx(m)
+        flash(_('Part added'), 'success')
+        return redirect(url_for('machines.machine_parts', machine_id=m.id))
+    return _part_form_ctx(m)
+
+
 @bp.route('/<int:machine_id>/parts/add', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
 def machine_add_part(machine_id):
-    m = Machine.query.get_or_404(machine_id)
-    p = MachinePart(
-        machine_id=m.id,
-        name=request.form['name'],
-        description=request.form.get('description', ''),
-        category=request.form.get('category', ''),
-        quantity=safe_float(request.form.get('quantity'), 1),
-        min_quantity=safe_float(request.form.get('min_quantity'), 0),
-        cost=safe_float(request.form.get('cost'), 0),
-        supplier=request.form.get('supplier', ''),
-        supplier_part_number=request.form.get('supplier_part_number', ''),
-        location=request.form.get('location', ''),
-        replacement_interval=safe_int(request.form.get('replacement_interval')) or None,
-        last_replacement=safe_date(request.form.get('last_replacement')),
-        next_replacement=safe_date(request.form.get('next_replacement'))
-    )
-    db.session.add(p)
-    if not safe_commit():
-        flash(_('Save failed. Please try again.'), 'error')
-    else:
-        flash(_('Part added'), 'success')
-    return redirect(url_for('machines.machine_parts', machine_id=m.id))
+    """Legacy POST endpoint — same as parts/new."""
+    return machine_new_part(machine_id)
 
 
 @bp.route('/<int:machine_id>/parts/<int:part_id>/edit', methods=['GET', 'POST'])
@@ -366,24 +379,22 @@ def machine_edit_part(machine_id, part_id):
     m = Machine.query.get_or_404(machine_id)
     p = MachinePart.query.get_or_404(part_id)
     if request.method == 'POST':
-        p.name = request.form['name']
+        p.name = request.form.get('name', '').strip() or p.name
+        p.part_number = request.form.get('part_number', '')
         p.description = request.form.get('description', '')
-        p.category = request.form.get('category', '')
-        p.quantity = safe_float(request.form.get('quantity'), 1)
-        p.min_quantity = safe_float(request.form.get('min_quantity'), 0)
-        p.cost = safe_float(request.form.get('cost'), 0)
-        p.supplier = request.form.get('supplier', '')
-        p.supplier_part_number = request.form.get('supplier_part_number', '')
-        p.location = request.form.get('location', '')
-        p.replacement_interval = safe_int(request.form.get('replacement_interval')) or None
-        p.last_replacement = safe_date(request.form.get('last_replacement'))
-        p.next_replacement = safe_date(request.form.get('next_replacement'))
+        p.category = request.form.get('category', p.category)
+        p.status = request.form.get('status', p.status)
+        p.installed_date = safe_date(request.form.get('installed_date'))
+        p.replacement_interval_days = safe_int(request.form.get('replacement_interval_days')) or None
+        p.maintenance_interval_days = safe_int(request.form.get('maintenance_interval_days')) or None
+        p.responsible_user_id = safe_int(request.form.get('responsible_user_id')) or None
+        p.notes = request.form.get('notes', '')
         if not safe_commit():
             flash(_('Save failed. Please try again.'), 'error')
         else:
             flash(_('Part updated'), 'success')
         return redirect(url_for('machines.machine_parts', machine_id=m.id))
-    return render_template('machine_part_form.html', machine=m, part=p)
+    return _part_form_ctx(m, p)
 
 
 @bp.route('/<int:machine_id>/parts/<int:part_id>/delete', methods=['POST'])

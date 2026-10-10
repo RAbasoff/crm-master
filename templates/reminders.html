@@ -127,7 +127,7 @@
             <div style="font-size:12px;font-weight:700;color:#e74c3c">{{ (c.next_replacement - today).days }} {{ _('days') }}</div>
             <div style="font-size:10px;color:#888">{{ c.next_replacement.strftime('%d-%m-%Y') }}</div>
         </div>
-        <a href="/warehouse/{{ c.id }}" style="font-size:16px;text-decoration:none">📋</a>
+        <a href="/warehouse/{{ c.id }}/edit" style="font-size:16px;text-decoration:none">📋</a>
     </div>
     {% endfor %}
 </div>
@@ -162,7 +162,7 @@
             <div style="font-size:12px;font-weight:700;color:{% if (c.next_replacement - today).days <= 3 %}#e74c3c{% elif (c.next_replacement - today).days <= 7 %}#f39c12{% else %}#27ae60{% endif %}">{{ (c.next_replacement - today).days }} {{ _('days') }}</div>
             <div style="font-size:10px;color:#888">{{ c.next_replacement.strftime('%d-%m-%Y') }}</div>
         </div>
-        <a href="/warehouse/{{ c.id }}" style="font-size:16px;text-decoration:none">📋</a>
+        <a href="/warehouse/{{ c.id }}/edit" style="font-size:16px;text-decoration:none">📋</a>
     </div>
     {% endfor %}
 </div>
@@ -183,7 +183,7 @@
             <div style="font-size:12px;font-weight:700;color:#e74c3c">{{ item.hoeveelheid }} {{ item.eenheid or '' }}</div>
             <div style="font-size:10px;color:#888">min: {{ item.minimum }}</div>
         </div>
-        <a href="/warehouse/{{ item.id }}" style="font-size:16px;text-decoration:none">📋</a>
+        <a href="/warehouse/{{ item.id }}/edit" style="font-size:16px;text-decoration:none">📋</a>
     </div>
     {% endfor %}
 </div>
