@@ -1597,3 +1597,63 @@ def run_data_migrations():
         print(f"Data migration error: {e}")
 
 
+def ensure_floor_users():
+    """Гарантированно создаёт/активирует учётки цеховых (Bartek, Hashem…).
+
+    Вызывается КАЖДЫЙ старт — идемпотентно, не зависит от маркера миграций.
+    """
+    try:
+        from models import db, User, Verantwoordelijke
+        from sqlalchemy import func
+    except Exception as e:
+        print(f"ensure_floor_users import: {e}")
+        return
+    floor_names = ['Bartek', 'Hashem', 'Hqshem', 'Safa', 'Pablo', 'Paulina']
+    try:
+        for pname in floor_names:
+            person = Verantwoordelijke.query.filter(
+                func.lower(Verantwoordelijke.naam) == pname.lower()
+            ).first()
+            user = User.query.filter_by(person_id=person.id).first() if person else None
+            if not user and person:
+                user = User.query.filter(func.lower(User.username) == pname.lower()).first()
+            if not user:
+                if not person:
+                    print(f"ensure_floor_users: person '{pname}' not found")
+                    continue
+                uname = pname.lower()
+                base, n = uname, 1
+                while User.query.filter_by(username=uname).first():
+                    uname = f"{base}{n}"
+                    n += 1
+                user = User(
+                    username=uname, display_name=pname, role='user',
+                    access_level=person.access_level or 'floor',
+                    person_id=person.id, is_active_user=True,
+                )
+                user.set_password(uname)
+                db.session.add(user)
+                db.session.flush()
+                print(f"ensure_floor_users: created '{uname}' for '{pname}'")
+            else:
+                changed = False
+                if person and user.person_id != person.id:
+                    user.person_id = person.id
+                    changed = True
+                if not user.is_active_user:
+                    user.is_active_user = True
+                    changed = True
+                if not user.display_name:
+                    user.display_name = pname
+                    changed = True
+                if user.role in (None, '', 'responsible'):
+                    user.role = 'user'
+                    changed = True
+                if changed:
+                    print(f"ensure_floor_users: fixed '{user.username}' -> '{pname}'")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"ensure_floor_users error: {e}")
+
+

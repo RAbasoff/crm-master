@@ -269,6 +269,11 @@ with app.app_context():
     run_migrations()
     run_data_migrations()
     try:
+        from schema import ensure_floor_users
+        ensure_floor_users()
+    except Exception as _fu_err:
+        print(f'ensure_floor_users skip: {_fu_err}')
+    try:
         from utils import _migrations_already_applied, _stamp_migrations_applied
         if not _migrations_already_applied():
             _stamp_migrations_applied()
