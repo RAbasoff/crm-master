@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from config import SECTIONS_LIST
+from sqlalchemy import func
 from models import (db, FactorySection, GroupPermission, Machine, MaintenancePlan, Monteur, Opdracht, ResponsibleGroup, User, Verantwoordelijke)
 from utils import log_audit, role_required, safe_commit, safe_int
 
@@ -266,19 +267,22 @@ def responsible_quick_edit(resp_id):
     c.internal_phone = request.form.get('internal_phone', '').strip()
     c.work_phone = request.form.get('work_phone', '').strip()
     c.email = request.form.get('email', '').strip()
-    # Update username (skip if unchanged)
-    new_username = request.form.get('username', '').strip() or None
-    old_username = c.username or None
-    if new_username != old_username:
-        if new_username:
-            existing_v = Verantwoordelijke.query.filter_by(username=new_username).first()
-            if existing_v and existing_v.id != c.id:
-                flash(_('Username already taken by') + f': {existing_v.naam}', 'error')
-                return redirect(url_for('responsible.responsible_list'))
-            existing_u = User.query.filter_by(username=new_username).first()
-            if existing_u:
-                flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
-                return redirect(url_for('responsible.responsible_list'))
+    # Update username (skip if unchanged / empty; case-insensitive)
+    new_username = (request.form.get('username') or '').strip()
+    old_username = (c.username or '').strip()
+    if new_username and new_username.lower() != old_username.lower():
+        existing_v = Verantwoordelijke.query.filter(
+            func.lower(Verantwoordelijke.username) == new_username.lower()
+        ).first()
+        if existing_v and existing_v.id != c.id:
+            flash(_('Username already taken by') + f': {existing_v.naam}', 'error')
+            return redirect(url_for('responsible.responsible_list'))
+        existing_u = User.query.filter(
+            func.lower(User.username) == new_username.lower()
+        ).first()
+        if existing_u:
+            flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
+            return redirect(url_for('responsible.responsible_list'))
         c.username = new_username
     # Update access level
     if request.form.get('access_level'):
@@ -370,19 +374,22 @@ def responsible_edit(resp_id):
         c.internal_phone = request.form.get('internal_phone', '')
         c.work_phone = request.form.get('work_phone', '')
         c.email = request.form.get('email', '')
-        # Update username
-        new_username = request.form.get('username', '').strip() or None
-        old_username = c.username or None
-        if new_username != old_username:
-            if new_username:
-                existing_v = Verantwoordelijke.query.filter_by(username=new_username).first()
-                if existing_v and existing_v.id != c.id:
-                    flash(_('Username already taken by') + f': {existing_v.naam}', 'error')
-                    return redirect(url_for('responsible.responsible_edit', resp_id=c.id))
-                existing_u = User.query.filter_by(username=new_username).first()
-                if existing_u:
-                    flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
-                    return redirect(url_for('responsible.responsible_edit', resp_id=c.id))
+        # Update username (skip if unchanged / empty; case-insensitive)
+        new_username = (request.form.get('username') or '').strip()
+        old_username = (c.username or '').strip()
+        if new_username and new_username.lower() != old_username.lower():
+            existing_v = Verantwoordelijke.query.filter(
+                func.lower(Verantwoordelijke.username) == new_username.lower()
+            ).first()
+            if existing_v and existing_v.id != c.id:
+                flash(_('Username already taken by') + f': {existing_v.naam}', 'error')
+                return redirect(url_for('responsible.responsible_edit', resp_id=c.id))
+            existing_u = User.query.filter(
+                func.lower(User.username) == new_username.lower()
+            ).first()
+            if existing_u:
+                flash(_('Username already taken by user') + f': {existing_u.display_name or existing_u.username} ({existing_u.role})', 'error')
+                return redirect(url_for('responsible.responsible_edit', resp_id=c.id))
             c.username = new_username
         c.group_id = safe_int(request.form.get('group_id')) or None
         c.access_level = request.form.get('access_level', c.access_level or 'floor')
