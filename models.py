@@ -332,6 +332,8 @@ class WorkEvent(db.Model):
     event_kind = db.Column(db.String(30), default='work')  # work/meeting/move/important
     date_start = db.Column(db.Date, nullable=False)
     date_end = db.Column(db.Date)  # если многодневное
+    # Периодичность: none/daily/weekly/biweekly/monthly
+    recurrence = db.Column(db.String(20), default='none')
     all_day = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=now_local)
@@ -339,6 +341,34 @@ class WorkEvent(db.Model):
 
     def end_date(self):
         return self.date_end or self.date_start
+
+    def expand_occurrences(self, month_start, month_end, limit=400):
+        """Виртуальные повторения в интервале [month_start, month_end)."""
+        rec = (self.recurrence or 'none').lower()
+        if rec in ('none', '', 'no'):
+            if month_start <= self.date_start < month_end:
+                yield self.date_start, self.end_date()
+            return
+        d = self.date_start
+        span = (self.end_date() - self.date_start).days
+        n = 0
+        while n < limit and d < month_end:
+            if d >= month_start:
+                yield d, d + timedelta(days=span)
+            if rec == 'daily':
+                d += timedelta(days=1)
+            elif rec == 'weekly':
+                d += timedelta(weeks=1)
+            elif rec == 'biweekly':
+                d += timedelta(weeks=2)
+            elif rec == 'monthly':
+                try:
+                    d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1)
+                except ValueError:
+                    d = d.replace(year=d.year + (1 if d.month == 12 else 0), month=(d.month % 12) + 1, day=28)
+            else:
+                break
+            n += 1
 
 class MaintenanceSchedule(db.Model):
     """Per-machine/equipment maintenance schedule template. Generator creates MaintenancePlan entries from these."""

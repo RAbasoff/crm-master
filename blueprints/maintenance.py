@@ -881,15 +881,37 @@ def works_calendar():
     year, mon = map(int, month.split('-'))
     month_start = datetime(year, mon, 1).date()
     month_end = datetime(year + 1, 1, 1).date() if mon == 12 else datetime(year, mon + 1, 1).date()
-    events = WorkEvent.query.filter(
-        WorkEvent.date_start < month_end,
-        db.or_(WorkEvent.date_end.is_(None), WorkEvent.date_end >= month_start)
-    ).order_by(WorkEvent.date_start).all()
+    base = WorkEvent.query.filter(WorkEvent.date_start < month_end).order_by(WorkEvent.date_start).all()
+    # Разложить повторения по дням месяца
+    day_map = {}
+    for ev in base:
+        for ds, de in ev.expand_occurrences(month_start, month_end):
+            item = {
+                'id': ev.id, 'title': ev.title, 'description': ev.description or '',
+                'kind': ev.event_kind or 'work', 'date_start': ds, 'date_end': de,
+                'recurrence': ev.recurrence or 'none', 'is_recurring': (ev.recurrence or 'none') != 'none',
+            }
+            # показывать на всех днях интервала
+            d = ds
+            while d <= de and d < month_end:
+                if d >= month_start:
+                    day_map.setdefault(d, []).append(item)
+                d += timedelta(days=1)
+    events = []
+    for d in sorted(day_map.keys()):
+        for item in day_map[d]:
+            row = dict(item)
+            row['date'] = d
+            row['is_first'] = (d == item['date_start'])
+            events.append(row)
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
     next_month = month_end.strftime('%Y-%m')
+    days_in_month = (month_end - month_start).days
     return render_template(
         'works_calendar.html',
-        events=events, month=month, month_start=month_start, month_end=month_end,
+        events=events, day_map=day_map, month=month,
+        month_start=month_start, month_end=month_end,
+        days_in_month=days_in_month,
         today=today, prev_month=prev_month, next_month=next_month, timedelta=timedelta,
     )
 
@@ -909,6 +931,7 @@ def works_calendar_new():
             event_kind=request.form.get('event_kind', 'work'),
             date_start=safe_date(request.form.get('date_start')),
             date_end=safe_date(request.form.get('date_end')),
+            recurrence=request.form.get('recurrence', 'none') or 'none',
             created_by=current_user.id if isinstance(current_user.id, int) else None,
         )
         if not ev.date_start:
@@ -932,6 +955,8 @@ def works_calendar_edit(event_id):
         ev.title = (request.form.get('title') or ev.title).strip()
         ev.description = request.form.get('description', '')
         ev.event_kind = request.form.get('event_kind', ev.event_kind)
+        if request.form.get('recurrence'):
+            ev.recurrence = request.form.get('recurrence') or 'none'
         ds = safe_date(request.form.get('date_start'))
         de = safe_date(request.form.get('date_end'))
         if ds:

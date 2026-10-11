@@ -30,6 +30,16 @@
             </select>
         </div>
         <div class="form-group">
+            <label>{{ _('Recurrence') }}</label>
+            <select name="recurrence">
+                <option value="none" {% if not event or event.recurrence in (None, 'none') %}selected{% endif %}>{{ _('No repeat') }}</option>
+                <option value="daily" {% if event and event.recurrence == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                <option value="weekly" {% if event and event.recurrence == 'weekly' %}selected{% endif %}>{{ _('Weekly') }}</option>
+                <option value="biweekly" {% if event and event.recurrence == 'biweekly' %}selected{% endif %}>{{ _('Every 2 weeks') }}</option>
+                <option value="monthly" {% if event and event.recurrence == 'monthly' %}selected{% endif %}>{{ _('Monthly') }}</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label>{{ _('Description') }}</label>
             <textarea name="description" rows="3">{{ event.description if event else '' }}</textarea>
         </div>

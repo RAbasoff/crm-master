@@ -1,6 +1,23 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Current Works Calendar') }} — ProMaster{% endblock %}
 {% block content %}
+<style>
+    .works-cal { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb }
+    .works-cal th { background:#1a1a2e; color:#fff; font-size:11px; font-weight:600; padding:8px 4px; text-align:center }
+    .works-cal th.we { background:#3d1a1a; color:#ff8a80 }
+    .works-cal td { vertical-align:top; height:88px; padding:4px 5px; border:1px solid #eef0f3; background:#fff }
+    .works-cal td.we { background:#fff7f7 }
+    .works-cal td.today { background:#e8f4fd }
+    .works-cal td.empty { background:#fafbfc }
+    .dn { font-size:11px; font-weight:700; color:#556; margin-bottom:3px }
+    .wev { font-size:10px; padding:3px 5px; border-radius:4px; margin-bottom:2px; color:#fff; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer }
+    .wev.work { background:#3498db }
+    .wev.meeting { background:#9b59b6 }
+    .wev.move { background:#e67e22 }
+    .wev.important { background:#c0392b }
+    .wev.cont { opacity:.55; border-radius:2px; height:10px; padding:0 }
+</style>
+
 <div class="page-header">
     <h1>📆 {{ _('Current Works Calendar') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -15,13 +32,68 @@
     </div>
 </div>
 
-<p style="font-size:12px;color:#888;margin-bottom:12px">{{ _('Works, meetings, moves, important events — not maintenance (TO).') }}</p>
+<p style="font-size:12px;color:#888;margin-bottom:10px">
+    {{ _('Works, meetings, moves, important events — not maintenance (TO).') }}
+    · 🔁 {{ _('Daily / Weekly / Every 2 weeks / Monthly') }}
+</p>
 
-{% if events %}
-<div class="card" style="padding:0">
+<table class="works-cal">
+    <thead>
+        <tr>
+            <th class="we">{{ _('Mon') }}</th>
+            <th>{{ _('Tue') }}</th>
+            <th>{{ _('Wed') }}</th>
+            <th>{{ _('Thu') }}</th>
+            <th>{{ _('Fri') }}</th>
+            <th class="we">{{ _('Sat') }}</th>
+            <th class="we">{{ _('Sun') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set start_weekday = month_start.weekday() %}
+        {% set ns = namespace(day=1, started=false) %}
+        {% for week in range(6) %}
+        {% if ns.day <= days_in_month %}
+        <tr>
+            {% for dow in range(7) %}
+                {% if not ns.started and dow == start_weekday %}
+                    {% set ns.started = true %}
+                {% endif %}
+                {% if ns.started and ns.day <= days_in_month %}
+                    {% set cell_date = month_start + timedelta(days=ns.day - 1) %}
+                    {% set day_s = cell_date.strftime('%Y-%m-%d') %}
+                    {% set day_events = day_map.get(cell_date, []) %}
+                    <td class="{% if dow >= 5 %}we{% endif %}{% if cell_date == today %} today{% endif %}">
+                        <div class="dn">{{ ns.day }}{% if cell_date == today %} · {{ _('Today') }}{% endif %}</div>
+                        {% for e in day_events %}
+                            {% if e.is_first %}
+                            <div class="wev {{ e.kind }}" title="{{ e.title }}{% if e.recurrence and e.recurrence != 'none' %} 🔁{% endif %}"
+                                 {% if current_user.has_role('admin','director','technician') %}onclick="location.href='/works-calendar/{{ e.id }}/edit'"{% endif %}>
+                                {{ e.title }}{% if e.recurrence and e.recurrence != 'none' %} 🔁{% endif %}
+                            </div>
+                            {% else %}
+                            <div class="wev {{ e.kind }} cont" title="{{ e.title }}"></div>
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                    {% set ns.day = ns.day + 1 %}
+                {% else %}
+                    <td class="empty"></td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="card" style="margin-top:16px">
+    <h2 style="margin:0 0 10px;font-size:14px">📋 {{ _('This month') }} ({{ events|selectattr('is_first')|list|length }})</h2>
+    {% set firsts = events|selectattr('is_first')|list %}
+    {% if firsts %}
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Date') }}</th><th>{{ _('Title') }}</th><th>{{ _('Type') }}</th><th>{{ _('Description') }}</th><th></th></tr>
-        {% for e in events %}
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Title') }}</th><th>{{ _('Type') }}</th><th>{{ _('Repeat') }}</th><th></th></tr>
+        {% for e in firsts %}
         <tr>
             <td style="white-space:nowrap">
                 {{ e.date_start.strftime('%d-%m-%Y') }}
@@ -29,12 +101,18 @@
             </td>
             <td><strong>{{ e.title }}</strong></td>
             <td>
-                {% if e.event_kind == 'meeting' %}🤝 {{ _('Meeting') }}
-                {% elif e.event_kind == 'move' %}🚚 {{ _('Move') }}
-                {% elif e.event_kind == 'important' %}⭐ {{ _('Important') }}
+                {% if e.kind == 'meeting' %}🤝 {{ _('Meeting') }}
+                {% elif e.kind == 'move' %}🚚 {{ _('Move') }}
+                {% elif e.kind == 'important' %}⭐ {{ _('Important') }}
                 {% else %}🔧 {{ _('Work') }}{% endif %}
             </td>
-            <td style="font-size:12px;color:#666">{{ (e.description or '')[:80] }}</td>
+            <td>
+                {% if e.recurrence == 'daily' %}🔁 {{ _('Daily') }}
+                {% elif e.recurrence == 'weekly' %}🔁 {{ _('Weekly') }}
+                {% elif e.recurrence == 'biweekly' %}🔁 {{ _('Every 2 weeks') }}
+                {% elif e.recurrence == 'monthly' %}🔁 {{ _('Monthly') }}
+                {% else %}—{% endif %}
+            </td>
             <td style="white-space:nowrap">
                 {% if current_user.has_role('admin', 'director', 'technician') %}
                 <a href="/works-calendar/{{ e.id }}/edit" class="btn btn-sm" style="background:#eee">✏️</a>
@@ -47,10 +125,8 @@
         </tr>
         {% endfor %}
     </table></div>
+    {% else %}
+    <p style="text-align:center;color:#888;padding:20px">{{ _('No events this month') }}</p>
+    {% endif %}
 </div>
-{% else %}
-<div class="card">
-    <p style="text-align:center;color:#888;padding:30px">{{ _('No events this month') }}</p>
-</div>
-{% endif %}
 {% endblock %}
