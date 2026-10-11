@@ -386,13 +386,27 @@ def api_map_delete_section():
 @login_required
 @role_required('admin')
 def api_map_save_machine_pos():
-    data = request.get_json()
+    data = request.get_json() or {}
     m = Machine.query.get_or_404(data.get('machine_id') or data.get('id'))
-    m.floor_x = data.get('floor_x') or data.get('x')
-    m.floor_y = data.get('floor_y') or data.get('y')
+    # 0.0 — валидная координата, не «пусто»
+    try:
+        if data.get('floor_x') is not None:
+            m.floor_x = float(data['floor_x'])
+        elif data.get('x') is not None:
+            m.floor_x = float(data['x'])
+        if data.get('floor_y') is not None:
+            m.floor_y = float(data['floor_y'])
+        elif data.get('y') is not None:
+            m.floor_y = float(data['y'])
+        if data.get('marker_size') is not None:
+            m.marker_size = max(12, min(int(float(data['marker_size'])), 200))
+        if data.get('marker_shape') in ('circle', 'square', 'rectangle', 'hexagon', 'diamond'):
+            m.marker_shape = data['marker_shape']
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Bad coordinates'}), 400
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
-    return jsonify({'ok': True})
+    return jsonify({'ok': True, 'x': m.floor_x, 'y': m.floor_y, 'size': m.marker_size})
 
 
 @bp.route('/api/map/assign-machine', methods=['POST'])
@@ -424,6 +438,7 @@ def api_map_all():
         machines.append({
             'id': m.id, 'name': m.name, 'status': m.status,
             'type': m.machine_type or '', 'serial': m.serial_number or '',
-            'x': m.floor_x, 'y': m.floor_y, 'section_id': m.section_id
+            'x': m.floor_x, 'y': m.floor_y, 'section_id': m.section_id,
+            'marker_size': m.marker_size or 30,
         })
     return jsonify({'sections': sections, 'machines': machines})
