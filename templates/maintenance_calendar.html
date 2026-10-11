@@ -154,11 +154,13 @@
                                 {% set ev_href = '#' %}
                             {% endif %}
                             {% if is_cont %}
-                            {# Продолжение полосы окна ТО #}
-                            <div class="cal-event" data-plan-id="{{ ev.plan_id or '' }}" data-date="{{ day_s }}" data-window-start="{{ ev.window_start or '' }}" data-window-end="{{ ev.window_end or '' }}" style="display:flex;align-items:center;margin-bottom:2px;height:18px">
-                                <a href="{{ ev_href }}" draggable="false" class="ev-link" style="flex:1;display:block;height:16px;border-radius:2px;background:{% if is_done %}#27ae60{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %};opacity:.9" title="{{ ev.machine }}: {{ ev.part }} · {{ ev.window_start }} → {{ ev.window_end }}"></a>
+                            {# Продолжение полосы окна ТО — с подписью #}
+                            <div class="cal-event" data-plan-id="{{ ev.plan_id or '' }}" data-date="{{ day_s }}" data-window-start="{{ ev.window_start or '' }}" data-window-end="{{ ev.window_end or '' }}" style="display:flex;align-items:center;gap:2px;margin-bottom:2px">
+                                <a href="{{ ev_href }}" draggable="false" class="ev-link" style="flex:1;display:block;font-size:9px;padding:2px 4px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:{% if is_done %}#27ae60{% elif ev.overdue %}#c0392b{% else %}#9b59b6{% endif %};opacity:.92" title="{{ ev.machine }}: {{ ev.part }} · {{ ev.window_start }} → {{ ev.window_end }}">
+                                    {{ ev.machine[:6] }} {{ ev.part[:12] }}
+                                </a>
                                 {% if ev.type == 'plan' and ev.plan_id and not is_done %}
-                                <span class="ev-resize" data-plan-id="{{ ev.plan_id }}" data-window-start="{{ ev.window_start }}" title="{{ _('Drag to stretch') }}" style="width:8px;cursor:ew-resize;background:#ffe082;border-radius:2px;flex-shrink:0;height:16px"></span>
+                                <span class="ev-resize" data-plan-id="{{ ev.plan_id }}" data-window-start="{{ ev.window_start }}" title="{{ _('Drag to stretch') }}" style="width:8px;cursor:ew-resize;background:#ffe082;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:16px"></span>
                                 {% endif %}
                             </div>
                             {% else %}

@@ -15,7 +15,7 @@
     .wev.meeting { background:#9b59b6 }
     .wev.move { background:#e67e22 }
     .wev.important { background:#c0392b }
-    .wev.cont { opacity:.55; border-radius:2px; height:10px; padding:0 }
+    .wev.cont { opacity:.85; border-radius:4px; height:auto; padding:3px 5px }
 </style>
 
 <div class="page-header">
@@ -72,7 +72,9 @@
                                 {{ e.title }}{% if e.recurrence and e.recurrence != 'none' %} 🔁{% endif %}
                             </div>
                             {% else %}
-                            <div class="wev {{ e.kind }} cont" title="{{ e.title }}"></div>
+                            <div class="wev {{ e.kind }} cont" title="{{ e.title }} ({{ day_s }})">
+                                {{ e.title }}
+                            </div>
                             {% endif %}
                         {% endfor %}
                     </td>
