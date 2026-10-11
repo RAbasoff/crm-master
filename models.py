@@ -343,17 +343,19 @@ class WorkEvent(db.Model):
         return self.date_end or self.date_start
 
     def expand_occurrences(self, month_start, month_end, limit=400):
-        """Виртуальные повторения в интервале [month_start, month_end)."""
+        """Виртуальные повторения в интервале [month_start, month_end). Выходные пропускаем."""
         rec = (self.recurrence or 'none').lower()
+        def _workday(d):
+            return d.weekday() < 5  # пн–пт
         if rec in ('none', '', 'no'):
-            if month_start <= self.date_start < month_end:
+            if month_start <= self.date_start < month_end and _workday(self.date_start):
                 yield self.date_start, self.end_date()
             return
         d = self.date_start
         span = (self.end_date() - self.date_start).days
         n = 0
         while n < limit and d < month_end:
-            if d >= month_start:
+            if d >= month_start and _workday(d):
                 yield d, d + timedelta(days=span)
             if rec == 'daily':
                 d += timedelta(days=1)

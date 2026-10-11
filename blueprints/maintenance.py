@@ -891,10 +891,10 @@ def works_calendar():
                 'kind': ev.event_kind or 'work', 'date_start': ds, 'date_end': de,
                 'recurrence': ev.recurrence or 'none', 'is_recurring': (ev.recurrence or 'none') != 'none',
             }
-            # показывать на всех днях интервала
+            # показывать на всех днях интервала, кроме сб/вс
             d = ds
             while d <= de and d < month_end:
-                if d >= month_start:
+                if d >= month_start and d.weekday() < 5:
                     day_map.setdefault(d, []).append(item)
                 d += timedelta(days=1)
     events = []
@@ -937,6 +937,12 @@ def works_calendar_new():
         if not ev.date_start:
             flash(_('Date is required'), 'error')
             return redirect(url_for('maintenance.works_calendar_new'))
+        # Работы не ставим на выходные — перенос на понедельник
+        while ev.date_start.weekday() >= 5:
+            ev.date_start += timedelta(days=1)
+        if ev.date_end:
+            while ev.date_end.weekday() >= 5:
+                ev.date_end += timedelta(days=1)
         db.session.add(ev)
         if not safe_commit():
             flash(_('Save failed'), 'error')
