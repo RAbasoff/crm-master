@@ -28,6 +28,7 @@
         <!-- Drawing tools (edit mode only) -->
         <div id="drawTools" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f5f7fa;padding:8px 10px;border-bottom:1px solid #e0e4ea">
             <button type="button" id="btnDraw" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
+            <button type="button" id="btnDrawSection" class="btn btn-sm" style="background:#3498db;color:white;padding:6px 12px;font-size:12px" onclick="toggleSectionDraw()">🏗️ {{ _('Draw section') }}</button>
             <button type="button" id="btnDrawExit" class="btn btn-sm" style="background:#27ae60;color:white;padding:6px 12px;font-size:12px;display:none" onclick="exitDrawMode()">✅ {{ _('Done drawing') }} (Esc)</button>
             <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Width') }}:
                 <select id="drawWidth" style="padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
@@ -47,7 +48,7 @@
             <span style="font-size:11px;color:#888">{{ _('Name and description — in the properties panel') }}</span>
         </div>
         <div id="drawHint" style="display:none;background:#fff3cd;color:#856404;padding:8px 12px;font-size:12px;border-bottom:1px solid #ffeaa7">
-            ✏️ <b>{{ _('Draw mode is ON') }}</b> — {{ _('click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.') }}
+            ✏️ <b id="drawHintText">{{ _('Draw mode is ON') }}</b> — <span id="drawHintHelp">{{ _('click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.') }}</span>
         </div>
         <div id="canvasWrap" style="position:relative;overflow:auto;background:#e8ecf1;max-height:65vh">
             <div id="canvas" style="position:relative;width:100%;min-height:550px">
@@ -140,8 +141,9 @@
                         </select>
                     </div>
                 </div>
-                <div style="display:flex;gap:6px;margin-top:8px">
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
                     <button onclick="saveSelectedLineMeta()" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
+                    <button onclick="convertLineToSection()" class="btn btn-sm" style="background:#3498db;color:white">🏗️ {{ _('Make section') }}</button>
                     <button onclick="deleteSelectedLine()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
                     <button onclick="deselectAll()" class="btn btn-sm" style="background:#eee">{{ _('Deselect') }}</button>
                 </div>
@@ -610,6 +612,53 @@ function toggleMachines() {
 
 // ---- DRAW LINES (edit mode only) ----
 let DRAW_MODE=false, DRAW_PTS=[], FLOOR_LINES=[];
+let SECTION_DRAW=false, SEC_START=null, SEC_BOX=null;
+
+function toggleSectionDraw(){
+    if(SECTION_DRAW){ exitDrawMode(); return; }
+    exitDrawMode();
+    SECTION_DRAW=true;
+    const b=document.getElementById('btnDrawSection');
+    b.style.background='#e67e22';
+    document.getElementById('btnDrawExit').style.display='';
+    document.getElementById('drawHint').style.display='block';
+    document.getElementById('drawHintText').textContent='🏗️ {{ _("Section draw mode") }}';
+    document.getElementById('drawHintHelp').textContent='{{ _("Drag a rectangle on the map to create a workshop section. Esc to exit.") }}';
+    document.getElementById('canvasWrap').style.cursor='crosshair';
+    showSectionProps();
+}
+
+function convertLineToSection(){
+    if(!SELECTED_LINE){ alert('{{ _("Select a line first") }}'); return; }
+    const ln=FLOOR_LINES.find(function(x){return x.id===SELECTED_LINE;});
+    if(!ln || !ln.points || !ln.points.length){ alert('{{ _("No geometry") }}'); return; }
+    let minX=100,minY=100,maxX=0,maxY=0;
+    ln.points.forEach(function(p){
+        if(p.x<minX)minX=p.x; if(p.y<minY)minY=p.y;
+        if(p.x>maxX)maxX=p.x; if(p.y>maxY)maxY=p.y;
+    });
+    // немного увеличим рамку
+    minX=Math.max(0,minX-1); minY=Math.max(0,minY-1);
+    maxX=Math.min(100,maxX+1); maxY=Math.min(100,maxY+1);
+    const w=Math.max(5,maxX-minX), h=Math.max(5,maxY-minY);
+    const name=(document.getElementById('lineName')||{}).value||ln.name||'{{ _("New Section") }}';
+    const desc=(document.getElementById('lineDesc')||{}).value||ln.description||'';
+    csrfFetch('/api/map/save-section',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:name,description:desc,section_type:'workshop',color:ln.color||'#3498db',x:minX,y:minY,w:w,h:h,responsible_ids:[]})
+    }).then(function(r){return r.json();}).then(function(d){
+        if(!d.ok){ alert(d.error||'Error'); return; }
+        // исходную линию удаляем, чтобы не дублировать
+        csrfFetch('/api/map/lines/'+ln.id+'/delete',{method:'POST'}).then(function(){
+            loadFloorLines();
+            fetch('/api/map/all').then(function(r){return r.json();}).then(function(all){
+                sections=all.sections||[];
+                machines=all.machines||[];
+                render();
+                selectSection(d.id);
+            });
+        });
+    });
+}
 function canvasPct(e){
     const r=document.getElementById('canvas').getBoundingClientRect();
     return {
@@ -619,6 +668,7 @@ function canvasPct(e){
 }
 function toggleDrawMode(){
     if(DRAW_MODE){ exitDrawMode(); return; }
+    exitDrawMode();
     DRAW_MODE=true;
     SELECTED_LINE=null;
     sel=null;
@@ -627,8 +677,9 @@ function toggleDrawMode(){
     b.textContent='✏️ {{ _("Drawing…") }}';
     document.getElementById('btnDrawExit').style.display='';
     document.getElementById('drawHint').style.display='block';
+    document.getElementById('drawHintText').textContent='✏️ {{ _("Draw mode is ON") }}';
+    document.getElementById('drawHintHelp').textContent='{{ _("click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.") }}';
     document.getElementById('canvasWrap').style.cursor='crosshair';
-    // одно описание — в панели свойств
     showLineProps();
     document.getElementById('lineName').value='';
     document.getElementById('lineDesc').value='';
@@ -637,17 +688,22 @@ function toggleDrawMode(){
 }
 function exitDrawMode(){
     DRAW_MODE=false;
+    SECTION_DRAW=false;
+    SEC_START=null;
+    if(SEC_BOX){ SEC_BOX.remove(); SEC_BOX=null; }
     DRAW_PTS=[];
     const b=document.getElementById('btnDraw');
     b.style.background='#eee'; b.style.color='#333';
     b.textContent='✏️ {{ _("Draw line") }}';
+    const sb=document.getElementById('btnDrawSection');
+    if(sb){ sb.style.background='#3498db'; }
     document.getElementById('btnDrawExit').style.display='none';
     document.getElementById('drawHint').style.display='none';
     document.getElementById('canvasWrap').style.cursor='default';
     redrawLines();
 }
 document.addEventListener('keydown', function(e){
-    if(e.key==='Escape' && DRAW_MODE){ exitDrawMode(); return; }
+    if(e.key==='Escape' && (DRAW_MODE||SECTION_DRAW)){ exitDrawMode(); return; }
     if((e.key==='Delete'||e.key==='Backspace') && SELECTED_LINE && !DRAW_MODE){
         const tag=(e.target.tagName||'').toLowerCase();
         if(tag==='input'||tag==='textarea'||tag==='select') return;
@@ -822,8 +878,16 @@ function renderLinesList(){
             +'<span style="flex:1;min-width:0"><b>'+title+'</b>'
             +(desc?'<br><small style="color:#888">'+desc+'</small>':'')
             +'</span>'
+            +'<button type="button" class="btn btn-sm" style="background:#3498db;color:white;padding:2px 6px;font-size:10px" data-sec="'+ln.id+'" title="{{ _('Make section') }}">🏗️</button>'
             +'<button type="button" class="btn btn-sm" style="background:#e74c3c;color:white;padding:2px 6px;font-size:10px" data-del="'+ln.id+'">🗑</button>';
         el.addEventListener('click', function(e){
+            const sec=e.target.closest('[data-sec]');
+            if(sec){
+                e.stopPropagation();
+                SELECTED_LINE=parseInt(sec.getAttribute('data-sec'),10);
+                convertLineToSection();
+                return;
+            }
             const del=e.target.closest('[data-del]');
             if(del){
                 e.stopPropagation();
@@ -880,6 +944,7 @@ function hitLine(p){
 
 // Click: draw / select line / deselect
 canvasEl.addEventListener('click', function(e){
+    if(SECTION_DRAW){ e.stopPropagation(); return; }
     if(DRAW_MODE){
         if(e.target.closest('.sec')||e.target.closest('.mach')) return;
         DRAW_PTS.push(canvasPct(e));
@@ -903,6 +968,52 @@ canvasEl.addEventListener('click', function(e){
         renderLists();
     }
 });
+
+// Прямоугольник «Новый цех» мышкой
+(function(){
+    const wrap = document.getElementById('canvasWrap');
+    const cv = document.getElementById('canvas');
+    wrap.addEventListener('mousedown', function(e){
+        if(!SECTION_DRAW) return;
+        e.preventDefault();
+        SEC_START = canvasPct(e);
+        if(SEC_BOX) SEC_BOX.remove();
+        SEC_BOX = document.createElement('div');
+        SEC_BOX.style.cssText='position:absolute;border:2px dashed #3498db;background:rgba(52,152,219,0.15);z-index:80;pointer-events:none;border-radius:8px';
+        cv.appendChild(SEC_BOX);
+    });
+    wrap.addEventListener('mousemove', function(e){
+        if(!SECTION_DRAW || !SEC_START || !SEC_BOX) return;
+        const p = canvasPct(e);
+        const x=Math.min(SEC_START.x,p.x), y=Math.min(SEC_START.y,p.y);
+        const w=Math.abs(p.x-SEC_START.x), h=Math.abs(p.y-SEC_START.y);
+        SEC_BOX.style.left=x+'%'; SEC_BOX.style.top=y+'%';
+        SEC_BOX.style.width=w+'%'; SEC_BOX.style.height=h+'%';
+    });
+    wrap.addEventListener('mouseup', function(e){
+        if(!SECTION_DRAW || !SEC_START) return;
+        const p = canvasPct(e);
+        const x=Math.min(SEC_START.x,p.x), y=Math.min(SEC_START.y,p.y);
+        const w=Math.abs(p.x-SEC_START.x), h=Math.abs(p.y-SEC_START.y);
+        SEC_START=null;
+        if(SEC_BOX){ SEC_BOX.remove(); SEC_BOX=null; }
+        if(w<3 || h<3) return; // слишком маленький — игнор
+        const name=(document.getElementById('propName')||{}).value||'{{ _("New Section") }}';
+        const desc=(document.getElementById('propDesc')||{}).value||'';
+        const color=(document.getElementById('propColor')||{}).value||'#3498db';
+        csrfFetch('/api/map/save-section',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({name:name,description:desc,section_type:'workshop',color:color,x:x,y:y,w:w,h:h,responsible_ids:[]})
+        }).then(function(r){return r.json();}).then(function(d){
+            if(!d.ok){ alert(d.error||'Error'); return; }
+            fetch('/api/map/all').then(function(r){return r.json();}).then(function(all){
+                sections=all.sections||[];
+                machines=all.machines||[];
+                render();
+                selectSection(d.id);
+            });
+        });
+    });
+})();
 
 loadFloorLines();
 </script>
