@@ -890,6 +890,7 @@ def works_calendar():
                 'id': ev.id, 'title': ev.title, 'description': ev.description or '',
                 'kind': ev.event_kind or 'work', 'date_start': ds, 'date_end': de,
                 'recurrence': ev.recurrence or 'none', 'is_recurring': (ev.recurrence or 'none') != 'none',
+                'priority': ev.priority or 'normal', 'color': ev.color or '',
             }
             # показывать на всех днях интервала, кроме сб/вс
             d = ds
@@ -929,6 +930,8 @@ def works_calendar_new():
             title=title,
             description=request.form.get('description', ''),
             event_kind=request.form.get('event_kind', 'work'),
+            priority=request.form.get('priority', 'normal') or 'normal',
+            color=request.form.get('color', '') or '',
             date_start=safe_date(request.form.get('date_start')),
             date_end=safe_date(request.form.get('date_end')),
             recurrence=request.form.get('recurrence', 'none') or 'none',
@@ -961,6 +964,10 @@ def works_calendar_edit(event_id):
         ev.title = (request.form.get('title') or ev.title).strip()
         ev.description = request.form.get('description', '')
         ev.event_kind = request.form.get('event_kind', ev.event_kind)
+        if request.form.get('priority'):
+            ev.priority = request.form.get('priority') or 'normal'
+        if 'color' in request.form:
+            ev.color = request.form.get('color', '') or ''
         if request.form.get('recurrence'):
             ev.recurrence = request.form.get('recurrence') or 'none'
         ds = safe_date(request.form.get('date_start'))

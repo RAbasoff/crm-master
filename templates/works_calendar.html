@@ -66,14 +66,18 @@
                     <td class="{% if dow >= 5 %}we{% endif %}{% if cell_date == today %} today{% endif %}">
                         <div class="dn">{{ ns.day }}{% if cell_date == today %} · {{ _('Today') }}{% endif %}</div>
                         {% for e in day_events %}
+                            {% set pr_icon = '🔴' if e.priority == 'critical' else ('❗' if e.priority == 'high' else ('·' if e.priority == 'low' else '')) %}
+                            {% set bar_bg = e.color if e.color else '' %}
                             {% if e.is_first %}
                             <div class="wev {{ e.kind }}" title="{{ e.title }}{% if e.recurrence and e.recurrence != 'none' %} 🔁{% endif %}"
+                                 style="{% if bar_bg %}background:{{ bar_bg }} !important{% endif %}"
                                  {% if current_user.has_role('admin','director','technician') %}onclick="location.href='/works-calendar/{{ e.id }}/edit'"{% endif %}>
-                                {{ e.title }}{% if e.recurrence and e.recurrence != 'none' %} 🔁{% endif %}
+                                {% if pr_icon %}{{ pr_icon }} {% endif %}{{ e.title }}{% if e.recurrence and e.recurrence != 'none' %} 🔁{% endif %}
                             </div>
                             {% else %}
-                            <div class="wev {{ e.kind }} cont" title="{{ e.title }} ({{ day_s }})">
-                                {{ e.title }}
+                            <div class="wev {{ e.kind }} cont" title="{{ e.title }} ({{ day_s }})"
+                                 style="{% if bar_bg %}background:{{ bar_bg }} !important{% endif %}">
+                                {% if pr_icon %}{{ pr_icon }} {% endif %}{{ e.title }}
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -94,19 +98,28 @@
     {% set firsts = events|selectattr('is_first')|list %}
     {% if firsts %}
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Date') }}</th><th>{{ _('Title') }}</th><th>{{ _('Type') }}</th><th>{{ _('Repeat') }}</th><th></th></tr>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Title') }}</th><th>{{ _('Type') }}</th><th>{{ _('Importance') }}</th><th>{{ _('Repeat') }}</th><th></th></tr>
         {% for e in firsts %}
         <tr>
             <td style="white-space:nowrap">
                 {{ e.date_start.strftime('%d-%m-%Y') }}
                 {% if e.date_end and e.date_end != e.date_start %} — {{ e.date_end.strftime('%d-%m-%Y') }}{% endif %}
             </td>
-            <td><strong>{{ e.title }}</strong></td>
+            <td>
+                {% if e.color %}<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:{{ e.color }};margin-right:6px"></span>{% endif %}
+                <strong>{{ e.title }}</strong>
+            </td>
             <td>
                 {% if e.kind == 'meeting' %}🤝 {{ _('Meeting') }}
                 {% elif e.kind == 'move' %}🚚 {{ _('Move') }}
                 {% elif e.kind == 'important' %}⭐ {{ _('Important') }}
                 {% else %}🔧 {{ _('Work') }}{% endif %}
+            </td>
+            <td>
+                {% if e.priority == 'critical' %}🔴 {{ _('Critical') }}
+                {% elif e.priority == 'high' %}❗ {{ _('High') }}
+                {% elif e.priority == 'low' %}{{ _('Low') }}
+                {% else %}{{ _('Normal') }}{% endif %}
             </td>
             <td>
                 {% if e.recurrence == 'daily' %}🔁 {{ _('Daily') }}

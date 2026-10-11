@@ -29,6 +29,21 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Importance') }}</label>
+                <select name="priority">
+                    <option value="low" {% if event and event.priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                    <option value="normal" {% if not event or event.priority in (None, 'normal') %}selected{% endif %}>{{ _('Normal') }}</option>
+                    <option value="high" {% if event and event.priority == 'high' %}selected{% endif %}❗ {{ _('High') }}</option>
+                    <option value="critical" {% if event and event.priority == 'critical' %}selected{% endif %}🔴 {{ _('Critical') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Color') }}</label>
+                <input type="color" name="color" value="{{ event.color if event and event.color else '#3498db' }}" style="width:100%;height:36px;padding:2px;cursor:pointer">
+            </div>
+        </div>
         <div class="form-group">
             <label>{{ _('Recurrence') }}</label>
             <select name="recurrence">

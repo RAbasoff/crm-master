@@ -330,6 +330,9 @@ class WorkEvent(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     event_kind = db.Column(db.String(30), default='work')  # work/meeting/move/important
+    # Важность: low / normal / high / critical
+    priority = db.Column(db.String(20), default='normal')
+    color = db.Column(db.String(20), default='')  # пусто = цвет по типу
     date_start = db.Column(db.Date, nullable=False)
     date_end = db.Column(db.Date)  # если многодневное
     # Периодичность: none/daily/weekly/biweekly/monthly
