@@ -60,6 +60,99 @@
 {% endif %}
 
 <!-- Main Stats -->
+{% if is_floor_user %}
+<div class="stats">
+    <div class="stat-card {% if floor_stats.active > 0 %}warn{% else %}ok{% endif %}" style="border-left:4px solid {% if floor_stats.active > 0 %}#e74c3c{% else %}#27ae60{% endif %}">
+        <div class="stat-icon">⚠️</div>
+        <div class="number">{{ floor_stats.active }}</div>
+        <div class="label">{{ _('Active Faults') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #3498db">
+        <div class="stat-icon">📥</div>
+        <div class="number">{{ floor_stats.submitted }}</div>
+        <div class="label">{{ _('Submitted') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #f39c12">
+        <div class="stat-icon">🔧</div>
+        <div class="number">{{ floor_stats.in_progress }}</div>
+        <div class="label">{{ _('In Progress') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #9b59b6">
+        <div class="stat-icon">⏸</div>
+        <div class="number">{{ floor_stats.paused }}</div>
+        <div class="label">{{ _('Paused') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #27ae60">
+        <div class="stat-icon">✅</div>
+        <div class="number">{{ floor_stats.done }}</div>
+        <div class="label">{{ _('Resolved') }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #7f8c8d">
+        <div class="stat-icon">🔒</div>
+        <div class="number">{{ floor_stats.closed }}</div>
+        <div class="label">{{ _('Closed') }}</div>
+    </div>
+</div>
+
+<!-- Quick Actions — USER -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+    <a href="/faults/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <span style="font-size:28px">⚠️</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('New Fault') }}</span>
+    </a>
+    <a href="/two" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <span style="font-size:28px">📝</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">TWO</span>
+    </a>
+    <a href="/floor" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <span style="font-size:28px">🏭</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('Floor Plan') }}</span>
+    </a>
+    <a href="/messages/new" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <span style="font-size:28px">💬</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('New Message') }}</span>
+    </a>
+    <a href="/machines" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:white;border-radius:14px;border:1px solid #e8ecf1;text-decoration:none;color:#333;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <span style="font-size:28px">⚙️</span>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ _('Machines') }}</span>
+    </a>
+</div>
+
+<!-- Мои заявки / TWO / машины -->
+{% if floor_twos %}
+<div class="card">
+    <h2 style="margin:0 0 10px;font-size:14px">📝 {{ _('Active TWO') }} ({{ floor_twos|length }})</h2>
+    {% for t in floor_twos %}
+    <div style="padding:6px 8px;border-bottom:1px solid #f0f2f5;font-size:12px">
+        <a href="/two/{{ t.id }}">{{ t.number }}</a> — {{ (t.description or '')[:60] }}
+        <span class="badge badge-{{ t.status }}" style="font-size:10px">{{ t.status }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if floor_machines %}
+<div class="card">
+    <h2 style="margin:0 0 10px;font-size:14px">⚙️ {{ _('My Machines') }} ({{ floor_machines|length }})</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+        {% for m in floor_machines %}
+        <a href="/machines/{{ m.id }}" style="padding:6px 10px;background:#f0f7ff;border-radius:8px;font-size:12px;text-decoration:none;color:#333">⚙️ {{ m.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% if recent_faults %}
+<div class="card">
+    <h2 style="margin:0 0 10px;font-size:14px">⚠️ {{ _('My Faults') }}</h2>
+    {% for f in recent_faults %}
+    <div style="padding:6px 8px;border-bottom:1px solid #f0f2f5;font-size:12px">
+        <a href="/faults/{{ f.id }}">#{{ f.id }}</a> {{ (f.title or '')[:50] }}
+        <span class="badge badge-{{ f.status }}" style="font-size:10px">{{ f.status }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
 <div class="stats">
     <div class="stat-card" style="border-left:4px solid #5b9cf6">
         <div class="stat-accent" style="background:#5b9cf6"></div>
@@ -114,6 +207,7 @@
         <span style="font-size:12px;font-weight:600;text-align:center">{{ _('Warehouse') }}</span>
     </a>
 </div>
+{% endif %}
 
 <!-- Fault & Machine Statistics -->
 {% if current_user.has_role('admin', 'director') %}
@@ -249,6 +343,7 @@
 {% endif %}
 {% endif %}
 
+{% if not is_floor_user %}
 <!-- Two column layout -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" class="dashboard-grid">
     
@@ -311,6 +406,7 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 
 <!-- Users Management (Admin only) -->
 {% if current_user.has_role('admin') %}
@@ -339,7 +435,7 @@
 {% endif %}
 
 <!-- Low Stock Alert -->
-{% if low_stock %}
+{% if low_stock and not is_floor_user %}
 <div class="card" style="border-left:4px solid #e74c3c;margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h2 style="margin:0;font-size:15px;color:#e74c3c">📦 {{ _('Low Stock Alert') }}</h2>
