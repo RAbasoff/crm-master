@@ -1624,6 +1624,19 @@ def ensure_floor_users():
     except Exception as e:
         print(f"ensure_floor_users import: {e}")
         return
+    try:
+        from sqlalchemy import or_
+        bad = Verantwoordelijke.query.filter(
+            or_(Verantwoordelijke.username == 'None', Verantwoordelijke.username == 'none',
+                Verantwoordelijke.username == 'NULL', Verantwoordelijke.username == '')
+        ).all()
+        for p in bad:
+            p.username = None
+            print(f"ensure_floor_users: cleared bad username for '{p.naam}'")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"ensure_floor_users bad-username: {e}")
     floor_names = ['Bartek', 'Hashem', 'Hqshem', 'Safa', 'Pablo', 'Paulina']
     try:
         for pname in floor_names:
