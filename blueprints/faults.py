@@ -118,17 +118,18 @@ def translate_status(status):
 # Из «В работе» — Пауза / Ожидание / Заказ; после причин — снова «В работе».
 ALLOWED_TRANSITIONS = {
     'open':          ('accepted',),
-    'accepted':      ('diagnosis', 'paused', 'waiting_parts'),
+    # «Диагностика» не выбирается для новых переходов — только уже существующие заявки
+    'accepted':      ('in_progress', 'paused', 'waiting_parts'),
     'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'rejected'),
-    'in_progress':   ('diagnosis', 'testing', 'paused', 'waiting_parts', 'parts_ordered'),
+    'in_progress':   ('testing', 'paused', 'waiting_parts', 'parts_ordered', 'resolved'),
     'paused':        ('in_progress', 'waiting_parts', 'parts_ordered', 'rejected'),
     'waiting_parts': ('parts_ordered', 'in_progress'),
     'parts_ordered': ('in_progress', 'waiting_parts'),
-    'testing':       ('in_progress', 'resolved', 'diagnosis'),
+    'testing':       ('in_progress', 'resolved'),
     'resolved':      ('closed', 'testing'),
     'rejected':      ('reopened', 'accepted'),
     'closed':        ('reopened',),
-    'reopened':      ('diagnosis', 'accepted', 'in_progress'),
+    'reopened':      ('accepted', 'in_progress'),
 }
 
 # SLA: реакция (минуты); время допустимой паузы не входит в рабочее время

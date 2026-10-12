@@ -19,7 +19,7 @@
         <div style="position:relative;display:inline-block">
             <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
-                {% for st in ['accepted', 'diagnosis', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected', 'reopened'] %}
+                {% for st in ['accepted', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected', 'reopened'] %}
                 {% if st != fault.status %}
                 <option value="{{ st }}" style="background:white;color:#333">{{ _(status_msgs.get(st, st)) if status_msgs is defined else st }}</option>
                 {% endif %}
