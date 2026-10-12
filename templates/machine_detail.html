@@ -70,9 +70,9 @@
                     <div style="margin-top:4px">
                         <strong>{{ _('Gases used') }}:</strong>
                         {% set gases = [] %}
-                        {% if machine.gas_natural %}{% set _ = gases.append('🔥 ' + _('Natural gas')) %}{% endif %}
-                        {% if machine.gas_nitrogen %}{% set _ = gases.append('🧪 ' + _('Nitrogen') + ' (N₂)') %}{% endif %}
-                        {% if machine.gas_co2 %}{% set _ = gases.append('💨 ' + _('Carbon dioxide') + ' (CO₂)') %}{% endif %}
+                        {% if machine.gas_natural %}{% set _ignored = gases.append('🔥 ' + _('Natural gas')) %}{% endif %}
+                        {% if machine.gas_nitrogen %}{% set _ignored = gases.append('🧪 ' + _('Nitrogen') + ' (N₂)') %}{% endif %}
+                        {% if machine.gas_co2 %}{% set _ignored = gases.append('💨 ' + _('Carbon dioxide') + ' (CO₂)') %}{% endif %}
                         {% if gases %}{{ gases | join(' · ') }}{% else %}—{% endif %}
                     </div>
                     {% if machine.gas_natural or machine.gas_usage_m3h is not none %}
