@@ -189,6 +189,12 @@ def backup_database(force=False):
     (startup is cheap; login/settings can force a fresh snapshot).
     """
     import shutil
+    # Ежедневная синхронизация времени программы с часами сервера
+    try:
+        from models import sync_app_time
+        sync_app_time()
+    except Exception as _t_err:
+        print(f'TIME SYNC skip: {_t_err}')
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
@@ -275,6 +281,11 @@ with app.app_context():
         ensure_head_of_ts()
     except Exception as _fu_err:
         print(f'ensure_floor_users skip: {_fu_err}')
+    try:
+        from models import sync_app_time
+        sync_app_time()
+    except Exception as _t_err:
+        print(f'TIME SYNC skip: {_t_err}')
     try:
         from utils import _migrations_already_applied, _stamp_migrations_applied
         if not _migrations_already_applied():
@@ -1554,6 +1565,11 @@ def automation_check():
     today = now_local().date()
     soon = today + timedelta(days=14)
     results = {'maintenance': 0, 'low_stock': 0, 'contracts': 0, 'cylinders': 0}
+    try:
+        from models import sync_app_time
+        sync_app_time()
+    except Exception:
+        pass
 
     # Check maintenance due
     parts = MachinePart.query.filter(MachinePart.next_replacement <= soon).all()

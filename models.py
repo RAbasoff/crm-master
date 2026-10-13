@@ -20,6 +20,32 @@ def now_local():
     except Exception:
         return datetime.now()
 
+
+def sync_app_time():
+    """Ежедневная синхронизация времени программы с часами компьютера/сервера.
+
+    Чинит APP_TIMEZONE, пишет в лог UTC / локальное / смещение.
+    """
+    import time
+    tz = _os.environ.get('APP_TIMEZONE') or 'Europe/Brussels'
+    _os.environ['APP_TIMEZONE'] = tz
+    utc = datetime.utcnow()
+    try:
+        from zoneinfo import ZoneInfo
+        loc = datetime.now(ZoneInfo(tz)).replace(tzinfo=None)
+    except Exception:
+        loc = datetime.now()
+        tz = 'system'
+    offset = (loc.date() - utc.date()).days * 24 + (loc.hour - utc.hour)
+    msg = f'TIME SYNC: tz={tz} utc={utc:%Y-%m-%d %H:%M:%S} local={loc:%Y-%m-%d %H:%M:%S} offset_h≈{offset}'
+    print(msg)
+    try:
+        from utils import log_system
+        log_system('INFO', 'time', msg, source='sync_app_time')
+    except Exception:
+        pass
+    return {'tz': tz, 'utc': utc, 'local': loc, 'offset_hours': offset}
+
 # ============================================================
 # ASSOCIATION TABLES
 # ============================================================
