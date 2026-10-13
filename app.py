@@ -1317,8 +1317,10 @@ def index():
                         my_machines.append(m)
         # Качество газа — видно всем с допуском
         gas_quality = None
+        show_gas_quality = False
         try:
             from models import GasQualityCheck
+            show_gas_quality = bool(current_user.has_role('admin', 'director', 'technician') or user_has_section_access('gas'))
             gq = GasQualityCheck.query.order_by(GasQualityCheck.check_time.desc()).first()
             if gq:
                 gas_quality = {
@@ -1338,7 +1340,7 @@ def index():
             dashboard_stats={}, recent_orders=[], low_stock=[],
             recent_faults=my_faults.order_by(FaultReport.created_at.desc()).limit(8).all(),
             users=[], floor_stats=f_stats, floor_twos=two_active[:8], floor_machines=my_machines[:12],
-            two_active_count=len(two_active), gas_quality=gas_quality,
+            two_active_count=len(two_active), gas_quality=gas_quality, show_gas_quality=show_gas_quality,
         )
 
     # Aggregate stats in one query (C2)
@@ -1379,8 +1381,10 @@ def index():
 
     # Качество газа — для админа / директора / механиков / с допуском
     gas_quality = None
+    show_gas_quality = False
     try:
         if current_user.has_role('admin', 'director', 'technician') or user_has_section_access('gas'):
+            show_gas_quality = True
             from models import GasQualityCheck
             gq = GasQualityCheck.query.order_by(GasQualityCheck.check_time.desc()).first()
             if gq:
@@ -1395,6 +1399,7 @@ def index():
                 }
     except Exception:
         gas_quality = None
+        show_gas_quality = current_user.has_role('admin', 'director', 'technician')
 
     # Dashboard statistics for admin/director
     dashboard_stats = {}
@@ -1482,7 +1487,7 @@ def index():
         ]
 
     return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
-                           gas_quality=gas_quality,
+                           gas_quality=gas_quality, show_gas_quality=show_gas_quality,
                            today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())
 
 # ============================================================
