@@ -1335,7 +1335,7 @@ def index():
             gq = GasQualityCheck.query.order_by(GasQualityCheck.check_time.desc()).first()
             if gq:
                 gas_quality = {
-                    'ok': gq.is_ok(),
+                    'ok': gq.is_ok(), 'o2_ok': gq.o2_ok(), 'co2_ok': gq.co2_ok(),
                     'date': gq.check_date.strftime('%d-%m-%Y'),
                     'time': gq.check_time.strftime('%H:%M'),
                     'o2': gq.o2_percent,
@@ -1400,7 +1400,7 @@ def index():
             gq = GasQualityCheck.query.order_by(GasQualityCheck.check_time.desc()).first()
             if gq:
                 gas_quality = {
-                    'ok': gq.is_ok(),
+                    'ok': gq.is_ok(), 'o2_ok': gq.o2_ok(), 'co2_ok': gq.co2_ok(),
                     'date': gq.check_date.strftime('%d-%m-%Y'),
                     'time': gq.check_time.strftime('%H:%M'),
                     'o2': gq.o2_percent,

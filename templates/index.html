@@ -69,8 +69,8 @@
             {% if gas_quality %}
             <div style="font-size:15px;font-weight:700">
                 {{ gas_quality.date }} {{ gas_quality.time }}
-                · O₂ <b style="color:{% if gas_quality.o2 is not none and 19.5 <= gas_quality.o2|float <= 23.5 %}#27ae60{% else %}#e74c3c{% endif %}">{{ gas_quality.o2 }}%</b>
-                · CO₂ <b style="color:{% if gas_quality.co2 is not none and gas_quality.co2|float <= 0.5 %}#27ae60{% else %}#e74c3c{% endif %}">{{ gas_quality.co2 }}%</b>
+                · O₂ <b style="color:{% if gas_quality.o2_ok %}#27ae60{% else %}#e74c3c{% endif %}">{{ gas_quality.o2 }}%</b>
+                · CO₂ <b style="color:{% if gas_quality.co2_ok %}#27ae60{% else %}#e74c3c{% endif %}">{{ gas_quality.co2 }}%</b>
             </div>
             <div style="font-size:11px;color:#666">{{ gas_quality.sampler }}</div>
             {% else %}

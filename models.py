@@ -883,15 +883,23 @@ class GasQualityCheck(db.Model):
     sampler = db.relationship('User', foreign_keys=[sampled_by_id])
     creator = db.relationship('User', foreign_keys=[created_by])
 
-    def is_ok(self):
+    def o2_ok(self):
         try:
             o2 = float(self.o2_percent) if self.o2_percent is not None else None
+        except (TypeError, ValueError):
+            return False
+        return o2 is not None and 0.0 <= o2 <= 1.9
+
+    def co2_ok(self):
+        try:
             co2 = float(self.co2_percent) if self.co2_percent is not None else None
         except (TypeError, ValueError):
             return False
-        if o2 is None or co2 is None:
-            return False
-        return 19.5 <= o2 <= 23.5 and co2 <= 0.5
+        return co2 is not None and co2 >= 26.1
+
+    def is_ok(self):
+        """Норма: O₂ 0.00–1.90%, CO₂ ≥ 26.1% (модифицированная атмосфера)."""
+        return self.o2_ok() and self.co2_ok()
 
 class CylinderOrder(db.Model):
     __tablename__ = 'cylinder_order'
