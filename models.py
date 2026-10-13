@@ -840,6 +840,33 @@ class CylinderLog(db.Model):
     notes = db.Column(db.Text)
     performer = db.relationship('User', foreign_keys=[performed_by])
 
+
+class GasQualityCheck(db.Model):
+    """Контроль качества газа: замер O₂ / CO₂ + фото прибора."""
+    __tablename__ = 'gas_quality_check'
+    id = db.Column(db.Integer, primary_key=True)
+    check_date = db.Column(db.Date, nullable=False, default=now_local)
+    check_time = db.Column(db.DateTime, nullable=False, default=now_local)
+    sampled_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    o2_percent = db.Column(db.Numeric(5, 2))
+    co2_percent = db.Column(db.Numeric(5, 2))
+    photo = db.Column(db.String(300))
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    sampler = db.relationship('User', foreign_keys=[sampled_by_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def is_ok(self):
+        try:
+            o2 = float(self.o2_percent) if self.o2_percent is not None else None
+            co2 = float(self.co2_percent) if self.co2_percent is not None else None
+        except (TypeError, ValueError):
+            return False
+        if o2 is None or co2 is None:
+            return False
+        return 19.5 <= o2 <= 23.5 and co2 <= 0.5
+
 class CylinderOrder(db.Model):
     __tablename__ = 'cylinder_order'
     id = db.Column(db.Integer, primary_key=True)

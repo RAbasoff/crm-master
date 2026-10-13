@@ -185,13 +185,14 @@ FLOOR_ALLOWED_PREFIXES = (
     'faults.', 'two.', 'messages.', 'chat.', 'floor_plan',
     'index', 'change_password', 'logout', 'set_language',
     'static', 'profile', 'notifications.', 'mobile.',
-    'switch_back', 'switch_user',
+    'switch_back', 'switch_user', 'gas.gas_quality',
 )
 
 FLOOR_ALLOWED_PATHS = (
     '/faults', '/two', '/messages', '/chat', '/floor',
     '/profile', '/change-password', '/logout', '/notifications',
     '/set-language', '/mobile', '/switch-back', '/switch-user',
+    '/gas/quality',
 )
 
 

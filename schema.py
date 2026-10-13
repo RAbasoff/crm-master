@@ -23,7 +23,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261010
+SCHEMA_VERSION = 20261012
 
 
 def _schema_log(msg):
@@ -305,6 +305,18 @@ def ensure_schema():
         ("work_event.recurrence", "ALTER TABLE work_event ADD COLUMN recurrence VARCHAR(20) DEFAULT 'none'"),
         ("work_event.priority", "ALTER TABLE work_event ADD COLUMN priority VARCHAR(20) DEFAULT 'normal'"),
         ("work_event.color", "ALTER TABLE work_event ADD COLUMN color VARCHAR(20) DEFAULT ''"),
+        ("gas_quality_check", """CREATE TABLE IF NOT EXISTS gas_quality_check (
+            id INTEGER PRIMARY KEY,
+            check_date DATE NOT NULL,
+            check_time DATETIME NOT NULL,
+            sampled_by_id INTEGER REFERENCES user(id),
+            o2_percent NUMERIC(5,2),
+            co2_percent NUMERIC(5,2),
+            photo VARCHAR(300),
+            notes TEXT,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME
+        )"""),
         ("technical_work_order.approved_by", "ALTER TABLE technical_work_order ADD COLUMN approved_by INTEGER REFERENCES user(id)"),
         ("technical_work_order.approved_at", "ALTER TABLE technical_work_order ADD COLUMN approved_at DATETIME"),
         ("technical_work_order.approval_comment", "ALTER TABLE technical_work_order ADD COLUMN approval_comment TEXT"),

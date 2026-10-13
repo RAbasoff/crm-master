@@ -1315,13 +1315,30 @@ def index():
                 for m in (s.machines or []):
                     if m not in my_machines:
                         my_machines.append(m)
+        # Качество газа — видно всем с допуском
+        gas_quality = None
+        try:
+            from models import GasQualityCheck
+            gq = GasQualityCheck.query.order_by(GasQualityCheck.check_time.desc()).first()
+            if gq:
+                gas_quality = {
+                    'ok': gq.is_ok(),
+                    'date': gq.check_date.strftime('%d-%m-%Y'),
+                    'time': gq.check_time.strftime('%H:%M'),
+                    'o2': gq.o2_percent,
+                    'co2': gq.co2_percent,
+                    'sampler': (gq.sampler.display_name or gq.sampler.username) if gq.sampler else '—',
+                    'photo': gq.photo,
+                }
+        except Exception:
+            gas_quality = None
         return render_template(
             'index.html', now=now_local(),
             stats={'opdrachten_actief': 0, 'faults_active': f_stats['active'], 'opdrachten_vandaag': 0, 'voorraad_laag': 0},
             dashboard_stats={}, recent_orders=[], low_stock=[],
             recent_faults=my_faults.order_by(FaultReport.created_at.desc()).limit(8).all(),
             users=[], floor_stats=f_stats, floor_twos=two_active[:8], floor_machines=my_machines[:12],
-            two_active_count=len(two_active),
+            two_active_count=len(two_active), gas_quality=gas_quality,
         )
 
     # Aggregate stats in one query (C2)
@@ -1359,7 +1376,26 @@ def index():
         recent_faults = FaultReport.query.filter_by(reporter_id=current_user.id).order_by(FaultReport.created_at.desc()).limit(5).all()
     
     users = User.query.order_by(User.id).all() if current_user.has_role('admin') else []
-    
+
+    # Качество газа — для админа / директора / механиков / с допуском
+    gas_quality = None
+    try:
+        if current_user.has_role('admin', 'director', 'technician') or user_has_section_access('gas'):
+            from models import GasQualityCheck
+            gq = GasQualityCheck.query.order_by(GasQualityCheck.check_time.desc()).first()
+            if gq:
+                gas_quality = {
+                    'ok': gq.is_ok(),
+                    'date': gq.check_date.strftime('%d-%m-%Y'),
+                    'time': gq.check_time.strftime('%H:%M'),
+                    'o2': gq.o2_percent,
+                    'co2': gq.co2_percent,
+                    'sampler': (gq.sampler.display_name or gq.sampler.username) if gq.sampler else '—',
+                    'photo': gq.photo,
+                }
+    except Exception:
+        gas_quality = None
+
     # Dashboard statistics for admin/director
     dashboard_stats = {}
     if current_user.has_role('admin', 'director'):
@@ -1446,6 +1482,7 @@ def index():
         ]
 
     return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
+                           gas_quality=gas_quality,
                            today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())
 
 # ============================================================

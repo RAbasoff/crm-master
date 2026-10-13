@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gas Quality Control') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🧪 {{ _('Gas Quality Control') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a href="/gas" class="btn btn-sm" style="background:#e74c3c;color:white">{{ _('Gas System') }}</a>
+        <a href="/gas/quality?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
+        <span style="font-weight:700;min-width:120px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
+        <a href="/gas/quality?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
+        {% if current_user.has_role('admin', 'director', 'technician') %}
+        <a href="/gas/quality/new" class="btn btn-sm btn-primary">+ {{ _('New Measurement') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if last %}
+<div class="card" style="border-left:4px solid {% if last.is_ok() %}#27ae60{% else %}#e74c3c{% endif %};margin-bottom:16px">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        <div style="font-size:22px">{% if last.is_ok() %}✅{% else %}⚠️{% endif %}</div>
+        <div>
+            <div style="font-size:12px;color:#888">{{ _('Last measurement') }}</div>
+            <div style="font-size:16px;font-weight:700">
+                {{ last.check_date.strftime('%d-%m-%Y') }} {{ last.check_time.strftime('%H:%M') }}
+                · O₂ <b style="color:{% if last.o2_percent is not none and 19.5 <= last.o2_percent|float <= 23.5 %}#27ae60{% else %}#e74c3c{% endif %}">{{ last.o2_percent }}%</b>
+                · CO₂ <b style="color:{% if last.co2_percent is not none and last.co2_percent|float <= 0.5 %}#27ae60{% else %}#e74c3c{% endif %}">{{ last.co2_percent }}%</b>
+            </div>
+            <div style="font-size:12px;color:#666">
+                {{ _('Sampled by') }}: {{ last.sampler.display_name or last.sampler.username if last.sampler else '—' }}
+            </div>
+        </div>
+        {% if last.photo %}
+        <a href="/static/uploads/{{ last.photo }}" target="_blank" style="margin-left:auto">
+            <img src="/static/uploads/{{ last.photo }}" style="height:64px;border-radius:8px;border:1px solid #ddd" alt="device">
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<p style="font-size:12px;color:#888;margin-bottom:10px">
+    {{ _('Daily measurements. Norm: O₂ 19.5–23.5%, CO₂ ≤ 0.5%.') }}
+    · {{ _('Today') }}: <b>{{ today_checks|length }}</b>
+</p>
+
+{% if checks %}
+<div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Time') }}</th><th>{{ _('Sampled by') }}</th><th>O₂ %</th><th>CO₂ %</th><th>{{ _('Status') }}</th><th>{{ _('Photo') }}</th><th></th></tr>
+        {% for c in checks %}
+        <tr>
+            <td style="white-space:nowrap">{{ c.check_date.strftime('%d-%m-%Y') }}</td>
+            <td style="white-space:nowrap">{{ c.check_time.strftime('%H:%M') }}</td>
+            <td>{{ c.sampler.display_name or c.sampler.username if c.sampler else '—' }}</td>
+            <td style="font-weight:700;color:{% if c.o2_percent is not none and 19.5 <= c.o2_percent|float <= 23.5 %}#27ae60{% else %}#e74c3c{% endif %}">{{ c.o2_percent }}%</td>
+            <td style="font-weight:700;color:{% if c.co2_percent is not none and c.co2_percent|float <= 0.5 %}#27ae60{% else %}#e74c3c{% endif %}">{{ c.co2_percent }}%</td>
+            <td>{% if c.is_ok() %}<span class="badge badge-ok">OK</span>{% else %}<span class="badge badge-critical">{{ _('Out of norm') }}</span>{% endif %}</td>
+            <td>{% if c.photo %}<a href="/static/uploads/{{ c.photo }}" target="_blank">📷</a>{% else %}—{% endif %}</td>
+            <td>
+                {% if current_user.has_role('admin', 'director') %}
+                <form method="POST" action="/gas/quality/{{ c.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }}?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white;padding:2px 6px">🗑</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% else %}
+<div class="card"><p style="text-align:center;color:#888;padding:24px">{{ _('No measurements this month') }}</p></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ _('New Measurement') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🧪 {{ _('New Measurement') }}</h1>
+    <a href="/gas/quality" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+<div class="card" style="max-width:560px">
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Date') }}</label>
+                <input type="date" name="check_date" value="{{ now.strftime('%Y-%m-%d') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ _('Time') }}</label>
+                <input type="text" value="{{ now.strftime('%H:%M') }}" disabled>
+                <small style="color:#888">{{ _('Filled automatically') }}</small>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Sampled by') }} ({{ _('mechanic') }})</label>
+            <select name="sampled_by_id">
+                <option value="">{{ _('Select') }}…</option>
+                {% for u in mechanics %}
+                <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>O₂ % *</label>
+                <input type="number" name="o2_percent" step="0.01" min="0" max="100" required placeholder="20.9">
+            </div>
+            <div class="form-group">
+                <label>CO₂ % *</label>
+                <input type="number" name="co2_percent" step="0.01" min="0" max="100" required placeholder="0.04">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>📷 {{ _('Photo of device screen') }}</label>
+            <input type="file" name="photo" accept="image/*" capture="environment">
+        </div>
+        <div class="form-group">
+            <label>{{ _('Notes') }}</label>
+            <textarea name="notes" rows="2"></textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="/gas/quality" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
