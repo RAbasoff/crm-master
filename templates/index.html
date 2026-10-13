@@ -77,7 +77,7 @@
             <div style="font-size:14px;font-weight:600;color:#e74c3c">{{ _('No measurements yet') }}</div>
             {% endif %}
         </div>
-        {% if current_user.has_role('admin', 'director', 'technician') %}
+        {% if current_user.has_role('admin', 'technician') or (current_user.username == 'director') %}
         <a href="/gas/quality/new" class="btn btn-sm" style="background:#27ae60;color:white">+ {{ _('New Measurement') }}</a>
         {% endif %}
         <a href="/gas/quality" class="btn btn-sm" style="background:#e74c3c;color:white">{{ _('Gas Quality') }}</a>

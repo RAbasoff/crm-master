@@ -1260,6 +1260,10 @@ def gas_quality_list():
 @login_required
 @role_required('admin', 'director', 'technician')
 def gas_quality_new():
+    from security import is_head_of_ts
+    if not (current_user.has_role('admin', 'technician') or is_head_of_ts(current_user)):
+        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        return redirect(url_for('gas.gas_quality_list'))
     if request.method == 'POST':
         try:
             o2 = float(request.form.get('o2_percent') or '')

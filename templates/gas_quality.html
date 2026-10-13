@@ -8,7 +8,7 @@
         <a href="/gas/quality?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
         <span style="font-weight:700;min-width:120px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
         <a href="/gas/quality?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
-        {% if current_user.has_role('admin', 'director', 'technician') %}
+        {% if current_user.has_role('admin', 'technician') or (current_user.username == 'director') %}
         <a href="/gas/quality/new" class="btn btn-sm btn-primary">+ {{ _('New Measurement') }}</a>
         {% endif %}
     </div>
