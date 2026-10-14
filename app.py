@@ -195,6 +195,7 @@ def backup_database(force=False):
         sync_app_time()
     except Exception as _t_err:
         print(f'TIME SYNC skip: {_t_err}')
+    os.environ['APP_TIMEZONE'] = 'Europe/Brussels'
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
@@ -286,6 +287,7 @@ with app.app_context():
         sync_app_time()
     except Exception as _t_err:
         print(f'TIME SYNC skip: {_t_err}')
+    os.environ['APP_TIMEZONE'] = 'Europe/Brussels'
     try:
         from utils import _migrations_already_applied, _stamp_migrations_applied
         if not _migrations_already_applied():
@@ -486,6 +488,13 @@ def before_request():
         denied = enforce_floor_access()
         if denied is not None:
             return denied
+        # Ежедневная синхронизация времени (после 00:00 по Брюсселю)
+        try:
+            from models import time_needs_sync, sync_app_time
+            if time_needs_sync():
+                sync_app_time()
+        except Exception:
+            pass
 
     # Доступ механиков только в рабочие часы по графику
     # (не действует, если администратор смотрит от имени пользователя)

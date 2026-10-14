@@ -12,7 +12,7 @@
         <select onchange="location.href='/schedule/monthly?year={{ year }}&month={{ month }}&user='+this.value" style="padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px">
             <option value="">{{ _('All monteurs') }}</option>
             {% for u in all_users %}
-            {% set uname = (u.worker_profile.naam if u.worker_profile and u.worker_profile.naam else (u.display_name or u.username)) %}
+            {% set uname = (u.display_name or u.username or (u.worker_profile.naam if u.worker_profile else '') or '?') %}
             <option value="{{ u.id }}" {% if filter_user == u.id|string %}selected{% endif %}>{{ uname }}</option>
             {% endfor %}
         </select>
@@ -65,7 +65,7 @@
             {% set sched = user_schedules.get(u.id) %}
             <tr>
                 <td style="position:sticky;left:0;background:white;z-index:1;padding:3px 4px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #eee">
-                    {% set uname = (u.worker_profile.naam if u.worker_profile and u.worker_profile.naam else (u.display_name or u.username)) %}
+                    {% set uname = (u.display_name or u.username or (u.worker_profile.naam if u.worker_profile else '') or '?') %}
                     {{ uname }}
                     {% if sched %}<br><span style="color:#27ae60;font-size:8px">{{ sched.shift_start }}-{{ sched.shift_end }}</span>{% endif %}
                     <span onclick="deleteUserShifts({{ u.id }},'{{ uname }}')" style="float:right;cursor:pointer;color:#e74c3c;font-size:10px;opacity:0.5" title="{{ _('Delete shifts') }}">🗑️</span>

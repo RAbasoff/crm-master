@@ -40,7 +40,11 @@
         </div>
         <div class="form-group">
             <label>📷 {{ _('Photo of device screen') }}</label>
-            <input type="file" name="photo" accept="image/*" capture="environment">
+            <input type="file" name="photo" accept="image/*" id="gqPhoto">
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <button type="button" class="btn btn-sm" style="background:#eee" onclick="document.getElementById('gqPhoto').setAttribute('capture','environment');document.getElementById('gqPhoto').click()">📷 {{ _('Camera') }}</button>
+                <button type="button" class="btn btn-sm" style="background:#eee" onclick="document.getElementById('gqPhoto').removeAttribute('capture');document.getElementById('gqPhoto').click()">🖼 {{ _('Gallery') }}</button>
+            </div>
         </div>
         <div class="form-group">
             <label>{{ _('Notes') }}</label>

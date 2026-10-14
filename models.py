@@ -21,13 +21,19 @@ def now_local():
         return datetime.now()
 
 
-def sync_app_time():
-    """Ежедневная синхронизация времени программы с часами компьютера/сервера.
+_TIME_SYNC = {'date': None}
 
-    Чинит APP_TIMEZONE, пишет в лог UTC / локальное / смещение.
-    """
-    import time
-    tz = _os.environ.get('APP_TIMEZONE') or 'Europe/Brussels'
+def time_needs_sync():
+    try:
+        from zoneinfo import ZoneInfo
+        today = datetime.now(ZoneInfo('Europe/Brussels')).date()
+    except Exception:
+        today = datetime.now().date()
+    return _TIME_SYNC.get('date') != today
+
+def sync_app_time():
+    """Синхронизация времени программы (Europe/Brussels) с часами сервера."""
+    tz = 'Europe/Brussels'
     _os.environ['APP_TIMEZONE'] = tz
     utc = datetime.utcnow()
     try:
@@ -44,6 +50,7 @@ def sync_app_time():
         log_system('INFO', 'time', msg, source='sync_app_time')
     except Exception:
         pass
+    _TIME_SYNC['date'] = loc.date()
     return {'tz': tz, 'utc': utc, 'local': loc, 'offset_hours': offset}
 
 # ============================================================
