@@ -1385,20 +1385,25 @@
     </script>
     {% endif %}
 
-    <!-- TODAY TO REMINDER — admin / начальник ТС / механики, 1 раз в день -->
+    <!-- TODAY TO REMINDER — admin / начальник ТС / механики, 4 раза за рабочий день -->
     {% if current_user.has_role('admin', 'director', 'technician') %}
     <script>
     (function() {
+        const MAX_SHOW = 4;
+        function todayKey() { return new Date().toISOString().slice(0, 10); }
+        function shownCount() {
+            try { return parseInt(localStorage.getItem('to_reminder_cnt_' + todayKey()) || '0', 10) || 0; }
+            catch (e) { return 0; }
+        }
+        function bumpCount() {
+            try { localStorage.setItem('to_reminder_cnt_' + todayKey(), String(shownCount() + 1)); } catch (e) {}
+        }
         function showTodayTO() {
-            const todayKey = new Date().toISOString().slice(0, 10);
-            if (localStorage.getItem('to_reminder_' + todayKey)) return;
+            if (shownCount() >= MAX_SHOW) return;
             fetch('/api/maintenance/today').then(r => r.json()).then(items => {
-                if (!items || items.length === 0) {
-                    localStorage.setItem('to_reminder_' + todayKey, '1');
-                    return;
-                }
+                if (!items || items.length === 0) return;
                 if (document.getElementById('todayTOWarning')) return;
-                localStorage.setItem('to_reminder_' + todayKey, '1');
+                bumpCount();
 
                 const overlay = document.createElement('div');
                 overlay.id = 'todayTOWarning';
@@ -1433,7 +1438,9 @@
                 }, 500);
             }).catch(() => {});
         }
+        // Старт через 2.5 с + каждые 2 часа (≈4 раза за рабочий день)
         setTimeout(showTodayTO, 2500);
+        setInterval(showTodayTO, 2 * 60 * 60 * 1000);
     })();
     </script>
     {% endif %}
