@@ -1426,6 +1426,53 @@ def api_maintenance_plans():
             })
     return jsonify(result)
 
+@bp.route('/api/maintenance/today')
+@login_required
+@role_required('admin', 'director', 'technician')
+def api_maintenance_today():
+    """ТО на сегодня — для напоминания при входе (как смена ножей)."""
+    today = now_local().date()
+    items = []
+
+    # Планы ТО, окно которых включает сегодня
+    plans = MaintenancePlan.query.all()
+    for pl in plans:
+        if pl.status == 'completed' or not pl.planned_start:
+            continue
+        we = pl.window_end_date()
+        if pl.planned_start <= today <= we:
+            items.append({
+                'kind': 'plan',
+                'machine': pl.machine.name if pl.machine else '—',
+                'machine_id': pl.machine_id,
+                'title': pl.title,
+                'window': f"{pl.planned_start.strftime('%d-%m')} – {we.strftime('%d-%m')}",
+                'type': pl.maintenance_type or 'preventive',
+            })
+
+    # Детали: замена / ТО сегодня
+    for p in MachinePart.query.all():
+        if p.machine is None:
+            continue
+        if p.next_replacement == today:
+            items.append({'kind': 'replacement', 'machine': p.machine.name, 'machine_id': p.machine_id,
+                          'title': p.name, 'window': today.strftime('%d-%m'), 'type': 'replacement'})
+        if p.next_maintenance == today:
+            items.append({'kind': 'maintenance', 'machine': p.machine.name, 'machine_id': p.machine_id,
+                          'title': p.name, 'window': today.strftime('%d-%m'), 'type': 'maintenance'})
+
+    # Оборудование
+    try:
+        from models import Equipment
+        for eq in Equipment.query.filter(Equipment.next_service_date == today).all():
+            items.append({'kind': 'equipment', 'machine': eq.name, 'machine_id': None,
+                          'title': eq.equipment_type or eq.name, 'window': today.strftime('%d-%m'), 'type': 'service'})
+    except Exception:
+        pass
+
+    return jsonify(items)
+
+
 @bp.route('/api/maintenance/reminders')
 @login_required
 def api_maintenance_reminders():
