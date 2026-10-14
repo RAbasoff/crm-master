@@ -134,12 +134,13 @@ ALLOWED_TRANSITIONS = {
 
 # SLA: реакция (минуты); время допустимой паузы не входит в рабочее время
 SLA_MINUTES = {'critical': 15, 'high': 60, 'normal': 240, 'low': 1440}
-SLA_LABELS = {
-    'critical': 'КРИТИЧЕСКИЙ < 15 мин',
-    'high': 'ВЫСОКИЙ < 1 час',
-    'normal': 'СРЕДНИЙ < 4 часа',
-    'low': 'НИЗКИЙ < 24 часа',
+SLA_MSGIDS = {
+    'critical': 'Critical < 15 min',
+    'high': 'High < 1 hour',
+    'normal': 'Normal < 4 hours',
+    'low': 'Low < 24 hours',
 }
+SLA_LABELS = SLA_MSGIDS
 
 
 def sla_info(f):
@@ -149,9 +150,10 @@ def sla_info(f):
     react_min = None
     if created and reacted:
         react_min = round((reacted - created).total_seconds() / 60.0, 1)
+    key = f.priority or 'normal'
     return {
         'limit_min': limit,
-        'label': SLA_LABELS.get(f.priority or 'normal', str(limit) + ' min'),
+        'label': _(SLA_MSGIDS.get(key, str(limit) + ' min')),
         'reacted_min': react_min,
         'ok': (react_min <= limit) if react_min is not None else None,
         'expired': created is not None and reacted is None and
@@ -290,7 +292,7 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
         if old_status in WAIT_STATUSES or f.pause_reason:
             # фиксируем причину в истории
             if f.pause_reason and not reason:
-                reason = f"{_('Pause reason')}: {PAUSE_REASONS.get(f.pause_reason, f.pause_reason)}"
+                reason = f"{_('Pause reason')}: {translate_pause_reason(f.pause_reason)}"
         f.pause_reason = None
         f.pause_comment = None
         f.pause_started_at = None
@@ -351,7 +353,7 @@ def faults_list():
             uid = linked.id if linked else -1
         pagination = base.filter_by(reporter_id=uid).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     faults = pagination.items
-    return render_template('faults.html', faults=faults, pagination=pagination)
+    return render_template('faults.html', faults=faults, pagination=pagination, status_msgs=STATUS_MSGIDS)
 
 
 @bp.route('/new', methods=['GET', 'POST'])
@@ -458,7 +460,7 @@ def fault_new():
                     )
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
-            add_work_report(f'⚠️ Новая поломка: {f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
+            add_work_report(f"{_('New fault')}: {f.title} — {target} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})")
 
             if f.priority == 'critical':
                 from app import send_email
@@ -467,12 +469,12 @@ def fault_new():
                     if admin.email:
                         send_email(
                             admin.email,
-                            f'🔴 КРИТИЧЕСКАЯ ЗАЯВКА: {f.title}',
-                            f'<h2>Критическая заявка #{f.id}</h2>'
-                            f'<p><strong>Станок/Оборудование:</strong> {target}</p>'
-                            f'<p><strong>Заявитель:</strong> {who}</p>'
-                            f'<p><strong>Описание:</strong> {f.description[:200]}</p>'
-                            f'<p><a href="https://rabasoff.pythonanywhere.com/faults/{f.id}">Открыть заявку</a></p>'
+                            f"{_('Critical fault')}: {f.title}",
+                            f"<h2>{_('Critical fault')} #{f.id}</h2>"
+                            f"<p><strong>{_('Machine / Equipment')}:</strong> {target}</p>"
+                            f"<p><strong>{_('Reporter')}:</strong> {who}</p>"
+                            f"<p><strong>{_('Description')}:</strong> {f.description[:200]}</p>"
+                            f"<p><a href=\"https://rabasoff.pythonanywhere.com/faults/{f.id}\">{_('View')}</a></p>"
                         )
 
             flash(_('Fault report created'), 'success')
@@ -552,7 +554,7 @@ def fault_detail(fault_id):
                 'user': s.user,
             })
     for h in f.status_history:
-        label = STATUS_LABELS.get(h.new_status, h.new_status)
+        label = translate_status(h.new_status)
         kind = h.new_status
         if h.new_status == 'resolved':
             kind = 'resolved'
@@ -641,7 +643,7 @@ def fault_work_start(fault_id):
 
     log_audit('work_start', 'fault', f.id,
               f'{f.title} — {current_user.display_name or current_user.username}')
-    add_work_report(f'▶️ Начаты работы по поломке #{f.id}: {f.title} ({current_user.display_name or current_user.username})')
+    add_work_report(f"{_('Work started')}: #{f.id} {f.title} ({current_user.display_name or current_user.username})")
     if request.is_json:
         return jsonify({
             'ok': True, 'session_id': sess.id,
@@ -682,7 +684,7 @@ def fault_work_end(fault_id):
 
     log_audit('work_end', 'fault', f.id,
               f'{f.title} — {minutes} мин ({current_user.display_name or current_user.username})')
-    add_work_report(f'⏹ Окончены работы по поломке #{f.id}: {f.title} ({minutes} мин)')
+    add_work_report(f"{_('Work finished')}: #{f.id} {f.title} ({minutes} {_('min')})")
     flash(_('Work finished') + f' — {minutes} ' + _('min'), 'success')
     if request.is_json:
         return jsonify({'ok': True, 'duration_minutes': minutes, 'session_id': sess.id})
@@ -824,7 +826,7 @@ def fault_status_change(fault_id):
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     log_audit('status_change', 'fault', f.id, f'{old_status} → {new_status}')
-    add_work_report(f'🔄 Поломка #{f.id} "{f.title}": статус {old_status} → {new_status}')
+    add_work_report(f"#{f.id} {f.title}: {translate_status(old_status)} → {translate_status(new_status)}")
     return jsonify({'ok': True, 'old': old_status, 'new': new_status})
 
 
@@ -861,7 +863,7 @@ def fault_close(fault_id):
         url_for('faults.fault_detail', fault_id=f.id)
     )
     log_audit('close', 'fault', f.id, close_notes)
-    add_work_report(f'🔒 Поломка #{f.id} "{f.title}" закрыта. {close_notes}')
+    add_work_report(f"#{f.id} {f.title} — {_('Closed')}. {close_notes}")
     flash(_('Fault report closed'), 'success')
     if request.is_json:
         return jsonify({'ok': True})
@@ -904,7 +906,7 @@ def fault_reopen(fault_id):
         url_for('faults.fault_detail', fault_id=f.id)
     )
     log_audit('reopen', 'fault', f.id, f'{old_status} → reopened: {reason} ({reopen_date})')
-    add_work_report(f'🔓 Поломка #{f.id} "{f.title}" переоткрыта. Причина: {reason}')
+    add_work_report(f"#{f.id} {f.title} — {_('Reopened')}. {_('Reason')}: {reason}")
     if request.is_json:
         return jsonify({'ok': True})
     flash(_('Fault reopened'), 'success')
@@ -969,7 +971,7 @@ def work_report_new(fault_id):
             return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
         log_audit('create', 'work_report', wr.id, f'Отчёт по поломке #{f.id}: {f.title} ({wr.time_spent_hours}ч)')
-        add_work_report(f'📝 Отчёт о работе по поломке #{f.id}: {f.title} ({wr.time_spent_hours}ч)')
+        add_work_report(f"{_('Work report')}: #{f.id} {f.title} ({wr.time_spent_hours}h)")
         flash(_('Work report created'), 'success')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
