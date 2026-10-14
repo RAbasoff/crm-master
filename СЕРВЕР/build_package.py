@@ -15,6 +15,7 @@ OUT = ROOT / 'СЕРВЕР' / 'CRM_Server'
 INCLUDE = [
     'app.py', 'models.py', 'schema.py', 'config.py', 'utils.py',
     'security.py', 'logs.py', 'pdf_utils.py', 'push.py', 'wsgi.py',
+    'run_server.py',
     'license.py',
     'requirements.txt', 'runtime.txt',
     'blueprints', 'templates', 'translations', 'vendor_fpdf',
