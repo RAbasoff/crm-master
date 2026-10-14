@@ -383,7 +383,7 @@ def fault_new():
                 who = ' '.join(filter(None, [getattr(current_user, 'first_name', ''), getattr(current_user, 'last_name', '')])) or current_user.username
             f.reporter_name = who
             from security import is_head_of_ts
-            if current_user.has_role('admin') or is_head_of_ts(current_user):
+            if current_user.has_role('admin', 'technician') or is_head_of_ts(current_user):
                 rid = (request.form.get('reporter_id') or '').strip()
                 rname = (request.form.get('reporter_name') or '').strip()
                 if rid and rid.isdigit() and User.query.get(int(rid)):

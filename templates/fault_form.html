@@ -51,14 +51,14 @@
         <div class="form-row">
             <div class="form-group">
                 <label>{{ _('Reporter') }}</label>
-                {% if current_user.has_role('admin') or (current_user.username == 'director') %}
+                {% if current_user.has_role('admin', 'technician') or (current_user.username == 'director') %}
                 <select name="reporter_id" id="reporterSelect" onchange="onReporterChange()">
                     {% for u in users %}
                     <option value="{{ u.id }}" {% if u.id == current_user.id %}selected{% endif %}>{{ u.display_name or u.username }}</option>
                     {% endfor %}
                     <option value="other">{{ _('Other person') }}…</option>
                 </select>
-                <small style="color:#888">{{ _('Admin / head of TS: submit for anyone') }}</small>
+                <small style="color:#888">{{ _('Mechanics / admin / head of TS: can submit for anyone') }}</small>
                 <div class="form-group" id="reporterNameGroup" style="display:none;margin-top:8px">
                     <label>{{ _('Reporter name') }}</label>
                     <input type="text" name="reporter_name" id="reporterNameInput" placeholder="{{ _('Name of the person who reported') }}" maxlength="200">
