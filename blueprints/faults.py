@@ -71,11 +71,15 @@ def status_history_report():
 # open=open/NEW, diagnosis, in_progress, paused, waiting_parts,
 # parts_ordered, testing, resolved, rejected, closed.
 # reopened — только как переход из resolved/closed/rejected.
+# Свободный порядок статусов (без диагностики). Диагностика — только для старых заявок.
 FAULT_STATUSES = (
-    'open', 'accepted', 'diagnosis', 'in_progress', 'paused',
+    'open', 'accepted', 'in_progress', 'paused',
     'waiting_parts', 'parts_ordered', 'testing', 'resolved', 'rejected',
     'closed', 'reopened',
 )
+# «Диагностика» остаётся в словарях для отображения старых заявок
+LEGACY_STATUSES = ('diagnosis',)
+ALL_WORK_STATUSES = FAULT_STATUSES
 
 STATUS_LABELS = {
     'open': 'Новая',
@@ -116,21 +120,13 @@ def translate_status(status):
 
 # Строгая цепочка: Новая → Принята → Диагностика → В работе → Тестирование → Устранена → Закрыта
 # Из «В работе» — Пауза / Ожидание / Заказ; после причин — снова «В работе».
+# Статусы можно менять в любом порядке (кроме diagnosis — старые только для показа)
 ALLOWED_TRANSITIONS = {
-    'open':          ('accepted',),
-    # «Диагностика» не выбирается для новых переходов — только уже существующие заявки
-    'accepted':      ('in_progress', 'paused', 'waiting_parts'),
-    'diagnosis':     ('in_progress', 'paused', 'waiting_parts', 'rejected'),
-    'in_progress':   ('testing', 'paused', 'waiting_parts', 'parts_ordered', 'resolved'),
-    'paused':        ('in_progress', 'waiting_parts', 'parts_ordered', 'rejected'),
-    'waiting_parts': ('parts_ordered', 'in_progress'),
-    'parts_ordered': ('in_progress', 'waiting_parts'),
-    'testing':       ('in_progress', 'resolved'),
-    'resolved':      ('closed', 'testing'),
-    'rejected':      ('reopened', 'accepted'),
-    'closed':        ('reopened',),
-    'reopened':      ('accepted', 'in_progress'),
+    s: tuple(x for x in FAULT_STATUSES if x != s)
+    for s in FAULT_STATUSES
 }
+# старые статусы → любые новые
+ALLOWED_TRANSITIONS['diagnosis'] = FAULT_STATUSES
 
 # SLA: реакция (минуты); время допустимой паузы не входит в рабочее время
 SLA_MINUTES = {'critical': 15, 'high': 60, 'normal': 240, 'low': 1440}
