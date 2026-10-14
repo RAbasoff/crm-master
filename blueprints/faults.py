@@ -377,20 +377,24 @@ def fault_new():
                 person_id = getattr(current_user, 'person_id', None)
                 linked = User.query.filter_by(person_id=person_id).first() if person_id else None
                 f.reporter_id = linked.id if linked else None
-            # Actual reporter: selected user, or free-text name (someone without an account)
-            rid = (request.form.get('reporter_id') or '').strip()
-            rname = (request.form.get('reporter_name') or '').strip()
-            if rid and rid.isdigit() and int(rid) != current_user.id:
-                if User.query.get(int(rid)):
+            # Заявка от текущего; админ / начальник ТС — от любого
+            who = current_user.display_name or current_user.username
+            if not who or who.lower() in ('admin', 'administrator', 'director', 'technicus'):
+                who = ' '.join(filter(None, [getattr(current_user, 'first_name', ''), getattr(current_user, 'last_name', '')])) or current_user.username
+            f.reporter_name = who
+            from security import is_head_of_ts
+            if current_user.has_role('admin') or is_head_of_ts(current_user):
+                rid = (request.form.get('reporter_id') or '').strip()
+                rname = (request.form.get('reporter_name') or '').strip()
+                if rid and rid.isdigit() and User.query.get(int(rid)):
                     f.reporter_id = int(rid)
-            if rname:
-                f.reporter_name = rname[:200]
-            else:
-                # Имя заявителя: ФИО / display_name, а не роль
-                who = current_user.display_name or current_user.username
-                if not who or who.lower() in ('admin', 'administrator', 'director', 'technicus'):
-                    who = ' '.join(filter(None, [current_user.first_name, current_user.last_name])) or current_user.username
-                f.reporter_name = who
+                    ru = User.query.get(int(rid))
+                    if ru:
+                        who = ru.display_name or ru.username
+                if rname:
+                    f.reporter_name = rname[:200]
+                elif rid == 'other':
+                    f.reporter_name = who
 
             # Защита от дублей (двойной клик / повторная отправка)
             recent = FaultReport.query.filter(

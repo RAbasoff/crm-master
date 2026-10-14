@@ -51,17 +51,22 @@
         <div class="form-row">
             <div class="form-group">
                 <label>{{ _('Reporter') }}</label>
+                {% if current_user.has_role('admin') or (current_user.username == 'director') %}
                 <select name="reporter_id" id="reporterSelect" onchange="onReporterChange()">
                     {% for u in users %}
-                    <option value="{{ u.id }}" {% if u.id == current_user.id %}selected{% endif %}>{{ u.name }}</option>
+                    <option value="{{ u.id }}" {% if u.id == current_user.id %}selected{% endif %}>{{ u.display_name or u.username }}</option>
                     {% endfor %}
                     <option value="other">{{ _('Other person') }}…</option>
                 </select>
-                <small style="color:#888">{{ _('Who reported the fault') }}</small>
-            </div>
-            <div class="form-group" id="reporterNameGroup" style="display:none">
-                <label>{{ _('Reporter name') }}</label>
-                <input type="text" name="reporter_name" id="reporterNameInput" placeholder="{{ _('Name of the person who reported') }}" maxlength="200">
+                <small style="color:#888">{{ _('Admin / head of TS: submit for anyone') }}</small>
+                <div class="form-group" id="reporterNameGroup" style="display:none;margin-top:8px">
+                    <label>{{ _('Reporter name') }}</label>
+                    <input type="text" name="reporter_name" id="reporterNameInput" placeholder="{{ _('Name of the person who reported') }}" maxlength="200">
+                </div>
+                {% else %}
+                <input type="text" value="{{ current_user.display_name or current_user.username }}" disabled style="background:#f5f7fa">
+                <small style="color:#888">{{ _('Submitted as current user') }}</small>
+                {% endif %}
             </div>
         </div>
 
@@ -248,7 +253,8 @@ function onReporterChange() {
     const sel = document.getElementById('reporterSelect');
     const group = document.getElementById('reporterNameGroup');
     const input = document.getElementById('reporterNameInput');
-    if (sel && sel.value === 'other') {
+    if (!sel || !group) return;
+    if (sel.value === 'other') {
         group.style.display = '';
         if (input) input.required = true;
     } else {
