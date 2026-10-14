@@ -122,10 +122,16 @@ document.querySelector('[name=target]').addEventListener('change', function() {
             {% if first.target_type == 'equipment' %}⚡
             {% elif first.target_type == 'custom' %}📌
             {% else %}🔧{% endif %}
-            {% if first.target_type == 'machine' and first.machine_id %}
-                {% for m in machines %}{% if m.id == first.machine_id %}{{ m.name }}{% endif %}{% endfor %}
-            {% elif first.target_type == 'equipment' and first.equipment_id %}
-                {% for e in equipment_list %}{% if e.id == first.equipment_id %}{{ e.name }}{% endif %}{% endfor %}
+            {% if first.target_type == 'equipment' and first.equipment_id %}
+                {% set eq_name = none %}
+                {% for e in equipment_list %}{% if e.id == first.equipment_id %}{% set eq_name = e.name %}{% endif %}{% endfor %}
+                {{ eq_name or first.target_name or 'Equipment' }}
+            {% elif first.machine %}
+                {{ first.machine.name }}
+            {% elif first.machine_id %}
+                {% set mname = none %}
+                {% for m in machines %}{% if m.id == first.machine_id %}{% set mname = m.name %}{% endif %}{% endfor %}
+                {{ mname or ('Machine #' ~ first.machine_id) }}
             {% else %}
                 {{ first.target_name or 'Unknown' }}
             {% endif %}
