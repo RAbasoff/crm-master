@@ -1198,6 +1198,7 @@ def skip_weekend(d):
 def maintenance_plan_new():
     if request.method == 'POST':
         targets = request.form.getlist('target_ids')
+        title = (request.form.get('title') or '').strip() or 'ТО'
         try:
             planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
         except (ValueError, KeyError):
@@ -1206,12 +1207,19 @@ def maintenance_plan_new():
         if not targets:
             flash(_('Select machine / equipment'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_new'))
-        # Skip weekends — move to Monday
         original = planned_start
         planned_start = skip_weekend(planned_start)
         if planned_start != original:
             flash(_('Date moved from weekend to Monday: {}').format(planned_start.strftime('%d-%m-%Y')), 'info')
+        planned_end = safe_date(request.form.get('planned_end'))
+        if planned_end:
+            planned_end = planned_end.date()
+        else:
+            planned_end = planned_start + timedelta(days=3)
+        create_two = request.form.get('create_two') == 'yes'
+        worker_id = safe_int(request.form.get('worker_id')) or None
         created = 0
+        last_p = None
         for tid in targets:
             machine_id = None
             equipment_id = None
@@ -1222,73 +1230,69 @@ def maintenance_plan_new():
             else:
                 continue
             p = MaintenancePlan(
-            machine_id=machine_id,
-            equipment_id=equipment_id,
-            title=request.form['title'],
-            description=request.form.get('description', ''),
-            maintenance_type=request.form.get('maintenance_type', 'preventive'),
-            status=request.form.get('status', 'planned'),
-            planned_start=planned_start,
-            planned_end=(d := safe_date(request.form.get('planned_end'))) and d.date() or None,
-            is_external='is_external' in request.form,
-            company_name=request.form.get('company_name', ''),
-            company_contact=request.form.get('company_contact', ''),
-            company_person=request.form.get('company_person', ''),
-            worker_id=safe_int(request.form.get('worker_id')) or None,
-            parts_used=request.form.get('parts_used', '[]'),
-            cost=safe_float(request.form.get('cost'), 0),
-            report=request.form.get('report', ''),
-            next_maintenance=(d := safe_date(request.form.get('next_maintenance'))) and d.date() or None,
-            recurrence=request.form.get('recurrence', '') or None,
-            notes=request.form.get('notes', ''),
-            created_by=current_user.id
-        )
-        if 'offer_file' in request.files and request.files['offer_file'].filename:
-            fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
-            if fn:
-                p.offer_file = fn
-        if 'work_act_file' in request.files and request.files['work_act_file'].filename:
-            fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
-            if fn:
-                p.work_act_file = fn
+                machine_id=machine_id,
+                equipment_id=equipment_id,
+                title=title,
+                description=request.form.get('description', ''),
+                maintenance_type=request.form.get('maintenance_type', 'preventive'),
+                status=request.form.get('status', 'planned'),
+                planned_start=planned_start,
+                planned_end=planned_end,
+                window_days=(planned_end - planned_start).days + 1,
+                is_external='is_external' in request.form,
+                company_name=request.form.get('company_name', ''),
+                company_contact=request.form.get('company_contact', ''),
+                company_person=request.form.get('company_person', ''),
+                worker_id=worker_id,
+                parts_used=request.form.get('parts_used', '[]'),
+                cost=safe_float(request.form.get('cost'), 0),
+                report=request.form.get('report', ''),
+                next_maintenance=(d := safe_date(request.form.get('next_maintenance'))) and d.date() or None,
+                recurrence=request.form.get('recurrence', '') or None,
+                notes=request.form.get('notes', ''),
+                created_by=current_user.id if isinstance(current_user.id, int) else None
+            )
+            if 'offer_file' in request.files and request.files['offer_file'].filename:
+                fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
+                if fn:
+                    p.offer_file = fn
+            if 'work_act_file' in request.files and request.files['work_act_file'].filename:
+                fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
+                if fn:
+                    p.work_act_file = fn
             db.session.add(p)
             created += 1
+            last_p = p
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_new'))
-        
-        # Check if TWO should be created
-        create_two = request.form.get('create_two') == 'yes'
-        worker_id = safe_int(request.form.get('worker_id')) or None
-        
-        if create_two and worker_id:
-            # Create TWO from maintenance plan
-            from blueprints.two import gen_two_number
-            two = TechnicalWorkOrder(
-                number=gen_two_number(),
-                machine_id=p.machine_id,
-                description=f'ТО: {p.title}\n{p.description}',
-                planned_date=p.planned_start,
-                status='assigned',
-                created_by=current_user.id
-            )
-            db.session.add(two)
-            db.session.flush()
-            # Assign worker
-            worker = Monteur.query.get(worker_id)
-            if worker:
-                two.workers.append(worker)
-            if not safe_commit():
-                flash(_('Save failed'), 'error')
-                return redirect(url_for('maintenance.maintenance_plan_new'))
-            log_audit('create', 'two_from_plan', two.id, f'{two.number} from plan {p.id}')
-            flash(_('Maintenance plan created with TWO') + f': {two.number}', 'success')
-        else:
-            flash(_('Maintenance plan created'), 'success')
-        
-        return redirect(url_for('maintenance.maintenance_plan_detail', plan_id=p.id))
+        if last_p is None:
+            flash(_('No valid targets'), 'error')
+            return redirect(url_for('maintenance.maintenance_plan_new'))
+        if create_two and worker_id and last_p.machine_id:
+            try:
+                from blueprints.two import gen_two_number
+                two = TechnicalWorkOrder(
+                    number=gen_two_number(),
+                    machine_id=last_p.machine_id,
+                    description=f'{last_p.title}\n{last_p.description or ""}',
+                    planned_date=last_p.planned_start,
+                    status='assigned',
+                    created_by=current_user.id if isinstance(current_user.id, int) else None
+                )
+                db.session.add(two)
+                db.session.flush()
+                worker = Monteur.query.get(worker_id)
+                if worker:
+                    two.workers.append(worker)
+                safe_commit()
+            except Exception:
+                pass
+        flash(_('Created %(n)d plans', n=created) if created != 1 else _('Plan created'), 'success')
+        return redirect(url_for('maintenance.maintenance_plans_list'))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
+    from models import Equipment
     return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all())
 
 @bp.route('/maintenance-plans/<int:plan_id>')
