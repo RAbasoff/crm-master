@@ -20,6 +20,7 @@ def safe_commit(retries=3, delay=0.5):
                 _time.sleep(delay * (attempt + 1))
             else:
                 db.session.rollback()
+                print(f"SAFE_COMMIT FAILED: {type(e).__name__}: {e}")
                 return False
     return False
 
@@ -290,6 +291,7 @@ def ensure_schema():
         ("floor_map_line.label_x", "ALTER TABLE floor_map_line ADD COLUMN label_x REAL"),
         ("floor_map_line.label_y", "ALTER TABLE floor_map_line ADD COLUMN label_y REAL"),
         ("maintenance_plan.window_days", "ALTER TABLE maintenance_plan ADD COLUMN window_days INTEGER DEFAULT 4"),
+        ("maintenance_plan.equipment_id", "ALTER TABLE maintenance_plan ADD COLUMN equipment_id INTEGER"),
         ("work_event", """CREATE TABLE IF NOT EXISTS work_event (
             id INTEGER PRIMARY KEY,
             title VARCHAR(200) NOT NULL,
@@ -1733,6 +1735,36 @@ def ensure_plan_windows():
         print(f"ensure_plan_windows import: {e}")
         return
     try:
+        # machine_id может быть NULL (планы по «другому оборудованию»)
+        conn = db.engine.raw_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("PRAGMA table_info(maintenance_plan)")
+            nm = [r for r in cur.fetchall() if r[1] == 'machine_id']
+            if nm and nm[0][3]:
+                cur.execute("PRAGMA foreign_keys=off")
+                cur.execute('''CREATE TABLE IF NOT EXISTS maintenance_plan_nn (
+                    id INTEGER PRIMARY KEY, machine_id INTEGER, title VARCHAR(200) NOT NULL,
+                    description TEXT, maintenance_type VARCHAR(50), status VARCHAR(20),
+                    planned_start DATE NOT NULL, planned_end DATE, actual_start DATE, actual_end DATE,
+                    is_external BOOLEAN, company_name VARCHAR(200), company_contact VARCHAR(200),
+                    company_person VARCHAR(200), offer_file VARCHAR(300), worker_id INTEGER,
+                    parts_used TEXT, cost FLOAT, report TEXT, work_act_file VARCHAR(300),
+                    next_maintenance DATE, notes TEXT, created_by INTEGER, created_at DATETIME,
+                    recurrence_type VARCHAR(20), recurrence_end DATE,
+                    responsible_user_id INTEGER, responsible_person_id INTEGER,
+                    recurrence VARCHAR(20), window_days INTEGER DEFAULT 4, equipment_id INTEGER)''')
+                cur.execute("PRAGMA table_info(maintenance_plan)")
+                cols = [r[1] for r in cur.fetchall()]
+                collist = ','.join(cols)
+                cur.execute(f'INSERT OR IGNORE INTO maintenance_plan_nn ({collist}) SELECT {collist} FROM maintenance_plan')
+                cur.execute('DROP TABLE IF EXISTS maintenance_plan')
+                cur.execute('ALTER TABLE maintenance_plan_nn RENAME TO maintenance_plan')
+                cur.execute('PRAGMA foreign_keys=on')
+                conn.commit()
+                print('ensure_plan_windows: machine_id now nullable')
+        finally:
+            conn.close()
         n = 0
         for p in MaintenancePlan.query.filter(MaintenancePlan.planned_end.is_(None)).all():
             if p.planned_start:

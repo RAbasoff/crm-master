@@ -4,6 +4,7 @@
 <h1>{{ _('Edit plan') + ': ' + plan.title if plan else _('New maintenance plan') }}</h1>
 <div class="card">
     <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
                 <label>{{ _('Machine / Equipment') }} * ({{ _('multiple') }})</label>
@@ -15,7 +16,7 @@
                     </optgroup>
                     <optgroup label="🔌 {{ _('Other equipment') }}">
                     {% for e in equipment_list %}
-                    <option value="e{{ e.id }}">{{ e.name }}{% if e.equipment_type %} ({{ e.equipment_type }}){% endif %}</option>
+                    <option value="e{{ e.id }}" {% if plan and plan.equipment_id == e.id %}selected{% endif %}>{{ e.name }}{% if e.equipment_type %} ({{ e.equipment_type }}){% endif %}</option>
                     {% endfor %}
                     </optgroup>
                 </select>

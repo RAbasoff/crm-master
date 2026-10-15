@@ -1192,6 +1192,16 @@ def skip_weekend(d):
         return d + timedelta(days=1)
     return d
 
+
+def _parse_target_id(tid):
+    """Parse 'm12' / 'e3' → ('machine'|'equipment', id) or (None, None)."""
+    tid = (tid or '').strip()
+    if tid.startswith('m') and tid[1:].isdigit():
+        return 'machine', int(tid[1:])
+    if tid.startswith('e') and tid[1:].isdigit():
+        return 'equipment', int(tid[1:])
+    return None, None
+
 @bp.route('/maintenance-plans/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
@@ -1221,12 +1231,11 @@ def maintenance_plan_new():
         created = 0
         last_p = None
         for tid in targets:
-            machine_id = None
-            equipment_id = None
-            if tid.startswith('m') and tid[1:].isdigit():
-                machine_id = int(tid[1:])
-            elif tid.startswith('e') and tid[1:].isdigit():
-                equipment_id = int(tid[1:])
+            kind, target_id = _parse_target_id(tid)
+            if kind == 'machine':
+                machine_id, equipment_id = target_id, None
+            elif kind == 'equipment':
+                machine_id, equipment_id = None, target_id
             else:
                 continue
             p = MaintenancePlan(
@@ -1308,16 +1317,28 @@ def maintenance_plan_edit(plan_id):
     p = MaintenancePlan.query.get_or_404(plan_id)
     if request.method == 'POST':
         try:
-            p.machine_id = int(request.form['machine_id'])
+            targets = request.form.getlist('target_ids')
+            if not targets and request.form.get('machine_id'):
+                targets = [f"m{request.form.get('machine_id')}"]
+            kind, target_id = _parse_target_id(targets[0]) if targets else (None, None)
+            if kind is None:
+                raise ValueError('no target')
+            if kind == 'machine':
+                p.machine_id, p.equipment_id = target_id, None
+            else:
+                p.machine_id, p.equipment_id = None, target_id
             p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, IndexError):
             flash(_('Invalid machine or date'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_edit', plan_id=p.id))
         p.title = request.form['title']
         p.description = request.form.get('description', '')
         p.maintenance_type = request.form.get('maintenance_type', p.maintenance_type)
+        old_status = p.status
         p.status = request.form.get('status', p.status)
         p.planned_end = (d := safe_date(request.form.get('planned_end'))) and d.date() or None
+        if p.planned_end and p.planned_start:
+            p.window_days = (p.planned_end - p.planned_start).days + 1
         p.actual_start = (d := safe_date(request.form.get('actual_start'))) and d.date() or None
         p.actual_end = (d := safe_date(request.form.get('actual_end'))) and d.date() or None
         p.is_external = 'is_external' in request.form
@@ -1329,7 +1350,6 @@ def maintenance_plan_edit(plan_id):
         p.cost = safe_float(request.form.get('cost'), 0)
         p.report = request.form.get('report', '')
         p.next_maintenance = (d := safe_date(request.form.get('next_maintenance'))) and d.date() or None
-        old_status = p.status
         p.recurrence = request.form.get('recurrence', '') or None
         p.notes = request.form.get('notes', '')
         if 'offer_file' in request.files and request.files['offer_file'].filename:
@@ -1378,6 +1398,7 @@ def maintenance_plan_edit(plan_id):
             if new_date:
                 new_plan = MaintenancePlan(
                     machine_id=p.machine_id,
+                    equipment_id=p.equipment_id,
                     title=p.title,
                     description=p.description,
                     maintenance_type=p.maintenance_type,
