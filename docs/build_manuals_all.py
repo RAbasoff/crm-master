@@ -285,7 +285,7 @@ CONTENT = {
     ('bullet', 'Администратор сбрасывает пароль в «Пользователях».'),
   ]),
  ],
- 'end': u'— Конец руководства —\nProMaster 2.12 · A.B.A.S.O.F.F.',
+ 'end': u'— Конец руководства —\nProMaster 2.13.1 · A.B.A.S.O.F.F.',
 },
 
 'en': {
@@ -443,7 +443,7 @@ CONTENT = {
     ('bullet', 'Admin resets the password under Users.'),
   ]),
  ],
- 'end': u'— End of manual —\nProMaster 2.12 · A.B.A.S.O.F.F.',
+ 'end': u'— End of manual —\nProMaster 2.13.1 · A.B.A.S.O.F.F.',
 },
 
 'nl': {
@@ -601,7 +601,7 @@ CONTENT = {
     ('bullet', 'Admin reset het wachtwoord bij Gebruikers.'),
   ]),
  ],
- 'end': u'— Einde handleiding —\nProMaster 2.12 · A.B.A.S.O.F.F.',
+ 'end': u'— Einde handleiding —\nProMaster 2.13.1 · A.B.A.S.O.F.F.',
 },
 
 'pl': {
@@ -759,7 +759,7 @@ CONTENT = {
     ('bullet', 'Administrator resetuje hasło w Użytkownikach.'),
   ]),
  ],
- 'end': u'— Koniec instrukcji —\nProMaster 2.12 · A.B.A.S.O.F.F.',
+ 'end': u'— Koniec instrukcji —\nProMaster 2.13.1 · A.B.A.S.O.F.F.',
 },
 }
 
@@ -788,7 +788,7 @@ def build(lang, data):
     pdf.ln(12)
     pdf.set_text_color(40, 40, 40)
     pdf.set_font('DejaVu', '', 11)
-    pdf.cell(W, 8, 'ProMaster 2.12', align='C', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(W, 8, 'ProMaster 2.13.1', align='C', new_x='LMARGIN', new_y='NEXT')
     pdf.cell(W, 8, 'A.B.A.S.O.F.F. ProMaster', align='C', new_x='LMARGIN', new_y='NEXT')
     pdf.ln(16)
     pdf.set_font('DejaVu', '', 9)
