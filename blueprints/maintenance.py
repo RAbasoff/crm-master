@@ -22,6 +22,19 @@ from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
 bp = Blueprint('maintenance', __name__)
 
 
+def _target_name(obj):
+    """Безопасное имя цели ТО: станок, иначе оборудование, иначе «—»."""
+    m = getattr(obj, 'machine', None)
+    if m is not None and getattr(m, 'name', None):
+        return m.name
+    eq_id = getattr(obj, 'equipment_id', None)
+    if eq_id:
+        eq = Equipment.query.get(eq_id)
+        if eq and eq.name:
+            return eq.name
+    return '—'
+
+
 @bp.route('/maintenance-calendar')
 @login_required
 def maintenance_calendar():
@@ -102,7 +115,7 @@ def maintenance_calendar():
             'date': date,
             'type': ltype,
             'part': p.name,
-            'machine': p.machine.name,
+            'machine': p.machine.name if p.machine else _target_name(p),
             'machine_id': p.machine_id,
             'part_id': p.id,
             'category': p.category,
@@ -122,7 +135,7 @@ def maintenance_calendar():
                 'date': p.next_replacement,
                 'type': 'replacement',
                 'part': p.name,
-                'machine': p.machine.name,
+                'machine': p.machine.name if p.machine else _target_name(p),
                 'machine_id': p.machine_id,
                 'part_id': p.id,
                 'category': p.category,
@@ -139,7 +152,7 @@ def maintenance_calendar():
                 'date': p.next_maintenance,
                 'type': 'maintenance',
                 'part': p.name,
-                'machine': p.machine.name,
+                'machine': p.machine.name if p.machine else _target_name(p),
                 'machine_id': p.machine_id,
                 'part_id': p.id,
                 'category': p.category,
@@ -181,7 +194,7 @@ def maintenance_calendar():
                     'date': mr.next_maintenance.date(),
                     'type': 'machine_maintenance',
                     'part': mr.description[:40],
-                    'machine': p.machine.name,
+                    'machine': p.machine.name if p.machine else _target_name(p),
                     'machine_id': p.machine_id,
                     'part_id': None,
                     'category': mr.maintenance_type,
@@ -202,7 +215,7 @@ def maintenance_calendar():
                             'date': pd,
                             'type': 'machine_maintenance',
                             'part': mr.description[:40],
-                            'machine': p.machine.name,
+                            'machine': p.machine.name if p.machine else _target_name(p),
                             'machine_id': p.machine_id,
                             'part_id': None,
                             'category': mr.maintenance_type,
@@ -236,7 +249,7 @@ def maintenance_calendar():
                 'date': pl.planned_start,
                 'type': 'plan',
                 'part': pl.title[:40],
-                'machine': pl.machine.name,
+                'machine': _target_name(pl),
                 'machine_id': pl.machine_id,
                 'part_id': None,
                 'category': pl.maintenance_type,
@@ -272,7 +285,7 @@ def maintenance_calendar():
                         'date': d,
                         'type': 'plan',
                         'part': pl.title[:40],
-                        'machine': pl.machine.name,
+                        'machine': _target_name(pl),
                         'machine_id': pl.machine_id,
                         'part_id': None,
                         'category': pl.maintenance_type,
@@ -391,7 +404,7 @@ def maintenance_calendar():
                 PartMaintenanceLog.date >= datetime.combine(p.next_replacement, datetime.min.time())
             ).first()
             if not done_after:
-                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category, 'plan_id': None, 'equipment_id': None, 'mro_id': None, 'record_id': None})
+                overdue.append({'date': p.next_replacement, 'type': 'replacement', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category, 'plan_id': None, 'equipment_id': None, 'mro_id': None, 'record_id': None})
         if p.next_maintenance and p.next_maintenance < today:
             done_after = PartMaintenanceLog.query.filter(
                 PartMaintenanceLog.part_id == p.id,
@@ -399,7 +412,7 @@ def maintenance_calendar():
                 PartMaintenanceLog.date >= datetime.combine(p.next_maintenance, datetime.min.time())
             ).first()
             if not done_after:
-                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category, 'plan_id': None, 'equipment_id': None, 'mro_id': None, 'record_id': None})
+                overdue.append({'date': p.next_maintenance, 'type': 'maintenance', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id, 'part_id': p.id, 'category': p.category, 'plan_id': None, 'equipment_id': None, 'mro_id': None, 'record_id': None})
     
     # Navigation
     prev_month = (month_start - timedelta(days=1)).strftime('%Y-%m')
@@ -1020,12 +1033,12 @@ def maintenance_calendar_export():
     events = []
     for p in parts:
         if p.next_replacement and month_start <= p.next_replacement < month_end:
-            events.append({'date': p.next_replacement, 'type': 'Replacement', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'overdue': p.next_replacement < today})
+            events.append({'date': p.next_replacement, 'type': 'Replacement', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id, 'overdue': p.next_replacement < today})
         if p.next_maintenance and month_start <= p.next_maintenance < month_end:
-            events.append({'date': p.next_maintenance, 'type': 'Maintenance', 'part': p.name, 'machine': p.machine.name, 'machine_id': p.machine_id, 'overdue': p.next_maintenance < today})
+            events.append({'date': p.next_maintenance, 'type': 'Maintenance', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id, 'overdue': p.next_maintenance < today})
         for mr in MaintenanceRecord.query.filter_by(machine_id=p.machine_id).all():
             if mr.next_maintenance and month_start <= mr.next_maintenance.date() < month_end:
-                events.append({'date': mr.next_maintenance.date(), 'type': 'Machine Maintenance', 'part': mr.description[:40], 'machine': p.machine.name, 'machine_id': p.machine_id, 'overdue': mr.next_maintenance.date() < today})
+                events.append({'date': mr.next_maintenance.date(), 'type': 'Machine Maintenance', 'part': mr.description[:40], 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id, 'overdue': mr.next_maintenance.date() < today})
 
     if current_user.has_role('admin', 'director', 'technician'):
         plans = MaintenancePlan.query.all()
@@ -1036,7 +1049,7 @@ def maintenance_calendar_export():
         if not pl.planned_start:
             continue
         if month_start <= pl.planned_start < month_end:
-            events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'machine_id': pl.machine_id, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
+            events.append({'date': pl.planned_start, 'type': 'Plan', 'part': pl.title[:40], 'machine': _target_name(pl), 'machine_id': pl.machine_id, 'overdue': pl.planned_start < today and pl.status not in ('completed', 'cancelled'), 'status': pl.status})
         if pl.recurrence and pl.recurrence != 'none' and pl.status not in ('completed', 'cancelled'):
             d = pl.planned_start
             limit = month_end + timedelta(days=1)
@@ -1044,7 +1057,7 @@ def maintenance_calendar_export():
                 if d >= limit:
                     break
                 if d >= month_start and d != pl.planned_start:
-                    events.append({'date': d, 'type': 'Plan', 'part': pl.title[:40], 'machine': pl.machine.name, 'machine_id': pl.machine_id, 'overdue': d < today, 'status': pl.status})
+                    events.append({'date': d, 'type': 'Plan', 'part': pl.title[:40], 'machine': _target_name(pl), 'machine_id': pl.machine_id, 'overdue': d < today, 'status': pl.status})
                 if pl.recurrence == 'daily':
                     d += timedelta(days=1)
                 elif pl.recurrence == 'weekly':
@@ -1456,7 +1469,7 @@ def api_maintenance_plans():
     for p in plans:
         if p.planned_start and month_start <= p.planned_start < month_end:
             result.append({
-                'id': p.id, 'title': p.title, 'machine': p.machine.name,
+                'id': p.id, 'title': p.title, 'machine': p.machine.name if p.machine else _target_name(p),
                 'machine_id': p.machine_id, 'type': p.maintenance_type,
                 'status': p.status, 'start': p.planned_start.isoformat(),
                 'end': p.planned_end.isoformat() if p.planned_end else None,
@@ -1483,7 +1496,7 @@ def api_maintenance_today():
         if pl.planned_start <= today <= we:
             items.append({
                 'kind': 'plan',
-                'machine': pl.machine.name if pl.machine else '—',
+                'machine': _target_name(pl) if pl.machine else '—',
                 'machine_id': pl.machine_id,
                 'title': pl.title,
                 'window': f"{pl.planned_start.strftime('%d-%m')} – {we.strftime('%d-%m')}",
@@ -1495,10 +1508,10 @@ def api_maintenance_today():
         if p.machine is None:
             continue
         if p.next_replacement == today:
-            items.append({'kind': 'replacement', 'machine': p.machine.name, 'machine_id': p.machine_id,
+            items.append({'kind': 'replacement', 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id,
                           'title': p.name, 'window': today.strftime('%d-%m'), 'type': 'replacement'})
         if p.next_maintenance == today:
-            items.append({'kind': 'maintenance', 'machine': p.machine.name, 'machine_id': p.machine_id,
+            items.append({'kind': 'maintenance', 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id,
                           'title': p.name, 'window': today.strftime('%d-%m'), 'type': 'maintenance'})
 
     # Оборудование
@@ -1535,7 +1548,7 @@ def api_maintenance_reminders():
         if p.next_replacement and p.next_replacement <= soon:
             days_left = (p.next_replacement - today).days
             reminders.append({
-                'type': 'replacement', 'part': p.name, 'machine': p.machine.name,
+                'type': 'replacement', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p),
                 'machine_id': p.machine_id, 'part_id': p.id,
                 'date': p.next_replacement.isoformat(),
                 'days_left': days_left, 'overdue': days_left < 0
@@ -1543,7 +1556,7 @@ def api_maintenance_reminders():
         if p.next_maintenance and p.next_maintenance <= soon:
             days_left = (p.next_maintenance - today).days
             reminders.append({
-                'type': 'maintenance', 'part': p.name, 'machine': p.machine.name,
+                'type': 'maintenance', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p),
                 'machine_id': p.machine_id, 'part_id': p.id,
                 'date': p.next_maintenance.isoformat(),
                 'days_left': days_left, 'overdue': days_left < 0

@@ -31,7 +31,7 @@
             {% for p in plans if p.status != 'completed' %}
             <tr>
                 <td><a href="/maintenance-plans/{{ p.id }}">{{ p.title }}</a></td>
-                <td><a href="/machines/{{ p.machine_id }}">{{ p.machine.name }}</a></td>
+                <td>{% if p.machine %}<a href="/machines/{{ p.machine_id }}">{{ p.machine.name }}</a>{% elif p.equipment_id %}⚙️ {{ p.equipment.name if p.equipment else ('Equipment #' ~ p.equipment_id) }}{% else %}—{% endif %}</td>
                 <td><span class="badge badge-{{ p.maintenance_type }}">{{ p.maintenance_type }}</span></td>
                 <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
                 <td>{{ p.planned_start.strftime('%d-%m-%Y') }}</td>
@@ -47,7 +47,7 @@
             {% for p in plans if p.status == 'completed' %}
             <tr style="background:#eef7f0">
                 <td><a href="/maintenance-plans/{{ p.id }}" style="color:#7fad90">{{ p.title }}</a></td>
-                <td><a href="/machines/{{ p.machine_id }}" style="color:#7fad90">{{ p.machine.name }}</a></td>
+                <td>{% if p.machine %}<a href="/machines/{{ p.machine_id }}" style="color:#7fad90">{{ p.machine.name }}</a>{% elif p.equipment_id %}⚙️ {{ p.equipment.name if p.equipment else ('Equipment #' ~ p.equipment_id) }}{% else %}—{% endif %}</td>
                 <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ p.maintenance_type }}</span></td>
                 <td><span class="badge" style="background:#d5e8d4;color:#6a9b6a">{{ p.status }}</span></td>
                 <td style="color:#8aa88e">{{ p.planned_start.strftime('%d-%m-%Y') }}</td>

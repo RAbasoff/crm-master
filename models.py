@@ -348,6 +348,8 @@ class MaintenancePlan(db.Model):
     machine = db.relationship('Machine', backref='maintenance_plans')
     worker = db.relationship('Monteur', backref='maintenance_plans')
     creator = db.relationship('User', foreign_keys=[created_by])
+    equipment = db.relationship('Equipment', foreign_keys=[equipment_id],
+                                primaryjoin='MaintenancePlan.equipment_id == Equipment.id')
 
     def window_end_date(self):
         """Конец окна ТО: planned_end или planned_start + window_days - 1."""

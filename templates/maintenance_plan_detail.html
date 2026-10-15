@@ -14,7 +14,11 @@
 <div class="detail-grid">
     <div class="card">
         <h2>{{ _('General info') }}</h2>
-        <p><strong>{{ _('Machine') }}:</strong> <a href="/machines/{{ plan.machine_id }}">{{ plan.machine.name }}</a></p>
+        <p><strong>{{ _('Machine / Equipment') }}:</strong>
+            {% if plan.machine %}<a href="/machines/{{ plan.machine_id }}">{{ plan.machine.name }}</a>
+            {% elif plan.equipment_id %}⚙️ {{ plan.equipment.name if plan.equipment else ('Equipment #' ~ plan.equipment_id) }}
+            {% else %}—{% endif %}
+        </p>
         <p><strong>{{ _('Type') }}:</strong> <span class="badge badge-{{ plan.maintenance_type }}">{{ plan.maintenance_type }}</span></p>
         <p><strong>{{ _('Status') }}:</strong> <span class="badge badge-{{ plan.status }}">{{ plan.status }}</span></p>
         <p><strong>{{ _('Cost') }}:</strong> €{{ "%.2f"|format(plan.cost) }}</p>
@@ -73,12 +77,16 @@
 <div class="card" style="margin-top:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h2 style="margin:0">🔧 {{ _('Technical Work Orders') }}</h2>
+        {% if plan.machine_id %}
         <a href="/two/new?machine={{ plan.machine_id }}&description={{ plan.title|urlencode }}" class="btn btn-sm btn-primary">+ {{ _('Create TWO') }}</a>
+        {% endif %}
     </div>
     {% set linked_twos = [] %}
+    {% if plan.machine %}
     {% for two in plan.machine.work_orders if two.description and plan.title in two.description %}
         {% if linked_twos.append(two) %}{% endif %}
     {% endfor %}
+    {% endif %}
     {% if linked_twos %}
     <div class="table-wrap"><table>
         <tr><th>{{ _('Number') }}</th><th>{{ _('Status') }}</th><th>{{ _('Workers') }}</th><th>{{ _('Planned') }}</th><th>{{ _('Actions') }}</th></tr>
