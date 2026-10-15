@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 import os
 import io
 
-from models import (db, MaintenancePlan, MaintenanceSchedule, MaintenanceRecord, MaintenancePhoto,
+from models import (db, now_local, MaintenancePlan, MaintenanceSchedule, MaintenanceRecord, MaintenancePhoto,
                     MachinePart, PartMaintenanceLog, Machine, Monteur, FactorySection, User,
                     Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem, WorkEvent)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
