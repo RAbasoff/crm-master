@@ -378,7 +378,7 @@ function endWorkById(faultId) {
     <h2>{{ _('Photos') }}</h2>
     <div class="photo-grid">
         {% for p in fault.photos %}
-        <img src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="window.open(this.src)">
+        <img class="photo-fit" src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="window.open(this.src)" style="cursor:pointer">
         {% endfor %}
     </div>
 </div>

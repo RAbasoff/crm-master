@@ -32,7 +32,7 @@
     <!-- Фото и статус -->
     <div class="card">
         {% if eq.photo %}
-        <img src="/static/uploads/{{ eq.photo }}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:12px">
+        <img class="photo-fit" src="/static/uploads/{{ eq.photo }}" alt="" style="margin-bottom:12px">
         {% endif %}
         <div style="display:flex;gap:12px;flex-wrap:wrap">
             <div><span style="color:#888;font-size:12px">{{ _('Status') }}</span><br><span class="badge badge-{% if eq.status=='active' %}active{% elif eq.status=='broken' %}critical{% elif eq.status=='maintenance' %}high{% else %}open{% endif %}" style="font-size:13px">{{ eq.status }}</span></div>

@@ -196,7 +196,7 @@
             <label>{{ _('Photo') }}</label>
             <input type="file" name="photo" accept="image/*">
             {% if machine and machine.photo %}
-            <div style="margin-top:8px"><img src="/static/uploads/{{ machine.photo }}" style="max-height:100px;border-radius:8px"></div>
+            <div style="margin-top:8px"><img class="photo-sq" src="/static/uploads/{{ machine.photo }}" alt=""></div>
             {% endif %}
         </div>
 

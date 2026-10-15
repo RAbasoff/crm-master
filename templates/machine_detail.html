@@ -45,7 +45,7 @@
         <div>
             {% if machine.photo %}
             <div style="text-align:center;margin-bottom:16px;background:#f8f9fa;border-radius:12px;padding:8px">
-                <img src="/static/uploads/{{ machine.photo }}" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:8px;display:block;margin:0 auto">
+                <img class="photo-fit" src="/static/uploads/{{ machine.photo }}" alt="">
             </div>
             {% endif %}
             <h2>{{ _('General Info') }}</h2>
