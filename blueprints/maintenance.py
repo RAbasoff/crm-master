@@ -1197,19 +1197,33 @@ def skip_weekend(d):
 @role_required('admin', 'director', 'technician')
 def maintenance_plan_new():
     if request.method == 'POST':
+        targets = request.form.getlist('target_ids')
         try:
-            machine_id = int(request.form['machine_id'])
             planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
         except (ValueError, KeyError):
-            flash(_('Invalid machine or date'), 'error')
+            flash(_('Invalid date'), 'error')
+            return redirect(url_for('maintenance.maintenance_plan_new'))
+        if not targets:
+            flash(_('Select machine / equipment'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_new'))
         # Skip weekends — move to Monday
         original = planned_start
         planned_start = skip_weekend(planned_start)
         if planned_start != original:
             flash(_('Date moved from weekend to Monday: {}').format(planned_start.strftime('%d-%m-%Y')), 'info')
-        p = MaintenancePlan(
+        created = 0
+        for tid in targets:
+            machine_id = None
+            equipment_id = None
+            if tid.startswith('m') and tid[1:].isdigit():
+                machine_id = int(tid[1:])
+            elif tid.startswith('e') and tid[1:].isdigit():
+                equipment_id = int(tid[1:])
+            else:
+                continue
+            p = MaintenancePlan(
             machine_id=machine_id,
+            equipment_id=equipment_id,
             title=request.form['title'],
             description=request.form.get('description', ''),
             maintenance_type=request.form.get('maintenance_type', 'preventive'),
@@ -1237,7 +1251,8 @@ def maintenance_plan_new():
             fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
             if fn:
                 p.work_act_file = fn
-        db.session.add(p)
+            db.session.add(p)
+            created += 1
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_new'))
@@ -1274,7 +1289,7 @@ def maintenance_plan_new():
         return redirect(url_for('maintenance.maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers)
+    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all())
 
 @bp.route('/maintenance-plans/<int:plan_id>')
 @login_required
@@ -1380,7 +1395,7 @@ def maintenance_plan_edit(plan_id):
         return redirect(url_for('maintenance.maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers)
+    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all())
 
 @bp.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])
 @login_required

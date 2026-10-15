@@ -6,13 +6,20 @@
     <form method="POST" enctype="multipart/form-data">
         <div class="form-row">
             <div class="form-group">
-                <label>{{ _('Machine') }} *</label>
-                <select name="machine_id" required>
-                    <option value="">{{ _('Select machine') }}</option>
+                <label>{{ _('Machine / Equipment') }} * ({{ _('multiple') }})</label>
+                <select name="target_ids" id="targetIds" multiple size="6" required style="width:100%;min-height:120px">
+                    <optgroup label="⚙️ {{ _('Machines') }}">
                     {% for m in machines %}
-                    <option value="{{ m.id }}" {% if plan and plan.machine_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.serial_number %} ({{ m.serial_number }}){% endif %}</option>
+                    <option value="m{{ m.id }}" {% if plan and plan.machine_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.serial_number %} ({{ m.serial_number }}){% endif %}</option>
                     {% endfor %}
+                    </optgroup>
+                    <optgroup label="🔌 {{ _('Other equipment') }}">
+                    {% for e in equipment_list %}
+                    <option value="e{{ e.id }}">{{ e.name }}{% if e.equipment_type %} ({{ e.equipment_type }}){% endif %}</option>
+                    {% endfor %}
+                    </optgroup>
                 </select>
+                <small style="color:#888">{{ _('Hold Ctrl to select several machines / equipment') }}</small>
             </div>
             <div class="form-group">
                 <label>{{ _('Maintenance Type') }}</label>

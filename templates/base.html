@@ -1401,25 +1401,42 @@
     </script>
     {% endif %}
 
-    <!-- TODAY TO REMINDER — admin / начальник ТС / механики, 4 раза за рабочий день -->
+    <!-- TODAY TO REMINDER — при входе + 3 раза за день (не чаще 1 раза в 2 часа) -->
     {% if current_user.has_role('admin', 'director', 'technician') %}
     <script>
     (function() {
         const MAX_SHOW = 4;
+        const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 часа
         function todayKey() { return new Date().toISOString().slice(0, 10); }
-        function shownCount() {
+        function getCount() {
             try { return parseInt(localStorage.getItem('to_reminder_cnt_' + todayKey()) || '0', 10) || 0; }
             catch (e) { return 0; }
         }
         function bumpCount() {
-            try { localStorage.setItem('to_reminder_cnt_' + todayKey(), String(shownCount() + 1)); } catch (e) {}
+            try { localStorage.setItem('to_reminder_cnt_' + todayKey(), String(getCount() + 1)); } catch (e) {}
+        }
+        function lastShown() {
+            try { return parseInt(localStorage.getItem('to_reminder_last') || '0', 10) || 0; }
+            catch (e) { return 0; }
+        }
+        function markShown() {
+            try {
+                localStorage.setItem('to_reminder_last', String(Date.now()));
+                bumpCount();
+            } catch (e) {}
+        }
+        function canShow() {
+            if (getCount() >= MAX_SHOW) return false;
+            if (Date.now() - lastShown() < COOLDOWN_MS) return false;
+            return true;
         }
         function showTodayTO() {
-            if (shownCount() >= MAX_SHOW) return;
+            if (!canShow()) return;
+            if (document.getElementById('todayTOWarning')) return;
             fetch('/api/maintenance/today').then(r => r.json()).then(items => {
                 if (!items || items.length === 0) return;
                 if (document.getElementById('todayTOWarning')) return;
-                bumpCount();
+                markShown();
 
                 const overlay = document.createElement('div');
                 overlay.id = 'todayTOWarning';
@@ -1434,29 +1451,22 @@
                         '</div>';
                 });
 
-                overlay.innerHTML = '<div id="toFlashBox" style="background:#5b9cf6;padding:32px 40px;border-radius:18px;text-align:center;max-width:520px;box-shadow:0 0 50px rgba(91,156,246,0.7);color:#000">' +
-                    '<div style="font-size:52px;margin-bottom:12px">🔧</div>' +
-                    '<div style="font-size:22px;font-weight:900;color:#fff;margin-bottom:10px">{{ _("Maintenance today") }}</div>' +
-                    '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:14px">{{ _("These machines need TO today") }}</div>' +
+                overlay.innerHTML = '<div id="toFlashBox" style="background:#5b9cf6;padding:28px 36px;border-radius:18px;text-align:center;max-width:520px;box-shadow:0 0 50px rgba(91,156,246,0.7);color:#000">' +
+                    '<div style="font-size:48px;margin-bottom:10px">🔧</div>' +
+                    '<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:8px">{{ _("Maintenance today") }}</div>' +
+                    '<div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:12px">{{ _("Maintenance today") }} · ОН</div>' +
                     list +
-                    '<div style="display:flex;gap:10px;justify-content:center;margin-top:16px">' +
-                    '<button onclick="document.getElementById(\'todayTOWarning\').remove()" style="padding:11px 22px;font-size:14px;font-weight:700;border:3px solid #000;background:#fff;color:#000;border-radius:10px;cursor:pointer">{{ _("Understood") }}</button>' +
-                    '<button onclick="window.location.href=\'/maintenance-calendar\'" style="padding:11px 22px;font-size:14px;font-weight:700;border:3px solid #000;background:#5b9cf6;color:#fff;border-radius:10px;cursor:pointer">{{ _("Open calendar") }}</button>' +
+                    '<div style="display:flex;gap:10px;justify-content:center;margin-top:14px">' +
+                    '<button onclick="document.getElementById(\'todayTOWarning\').remove()" style="padding:10px 20px;font-size:13px;font-weight:700;border:3px solid #000;background:#fff;color:#000;border-radius:10px;cursor:pointer">{{ _("Understood") }}</button>' +
+                    '<button onclick="window.location.href=\'/maintenance-calendar\'" style="padding:10px 20px;font-size:13px;font-weight:700;border:3px solid #000;background:#5b9cf6;color:#fff;border-radius:10px;cursor:pointer">{{ _("Open calendar") }}</button>' +
                     '</div></div>';
 
                 document.body.appendChild(overlay);
-                const box = document.getElementById('toFlashBox');
-                let n = 0;
-                const iv = setInterval(() => {
-                    box.style.boxShadow = (n % 2 === 0) ? '0 0 70px rgba(91,156,246,1)' : '0 0 25px rgba(91,156,246,0.5)';
-                    n++;
-                    if (n >= 6) clearInterval(iv);
-                }, 500);
             }).catch(() => {});
         }
-        // Старт через 2.5 с + каждые 2 часа (≈4 раза за рабочий день)
+        // При входе (через 2.5 с) + каждые 2 часа, не больше 4 раз в день
         setTimeout(showTodayTO, 2500);
-        setInterval(showTodayTO, 2 * 60 * 60 * 1000);
+        setInterval(showTodayTO, COOLDOWN_MS);
     })();
     </script>
     {% endif %}

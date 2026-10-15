@@ -317,7 +317,8 @@ class MaintenancePhoto(db.Model):
 class MaintenancePlan(db.Model):
     __tablename__ = 'maintenance_plan'
     id = db.Column(db.Integer, primary_key=True)
-    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=False)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=True)
+    equipment_id = db.Column(db.Integer, nullable=True)  # другое оборудование
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     maintenance_type = db.Column(db.String(50), default='preventive')
