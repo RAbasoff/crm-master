@@ -6485,3 +6485,12 @@ msgstr "— Выберите тип —"
 
 msgid "— not set —"
 msgstr "— не задано —"
+
+msgid "Session ended due to inactivity. Please log in again."
+msgstr "Сессия завершена из-за бездействия. Войдите снова."
+
+msgid "The application is available only during your working hours"
+msgstr "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+
+msgid "Access denied. Insufficient rights."
+msgstr "ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ."

@@ -6347,3 +6347,12 @@ msgstr "— Select type —"
 
 msgid "— not set —"
 msgstr "— not set —"
+
+msgid "Session ended due to inactivity. Please log in again."
+msgstr "Session ended due to inactivity. Please log in again."
+
+msgid "The application is available only during your working hours"
+msgstr "The application is available only during your working hours"
+
+msgid "Access denied. Insufficient rights."
+msgstr "Access denied. Insufficient rights."

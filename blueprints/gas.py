@@ -100,7 +100,7 @@ def check_gas_access():
         return redirect(url_for('login'))
     from utils import user_has_section_access
     if not user_has_section_access('gas'):
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect(url_for('index'))
 
 
@@ -1262,7 +1262,7 @@ def gas_quality_list():
 def gas_quality_new():
     from security import is_head_of_ts
     if not (current_user.has_role('admin', 'technician') or is_head_of_ts(current_user)):
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect(url_for('gas.gas_quality_list'))
     if request.method == 'POST':
         try:

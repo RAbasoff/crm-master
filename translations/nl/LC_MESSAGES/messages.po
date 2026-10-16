@@ -6208,3 +6208,12 @@ msgstr "— Kies type —"
 
 msgid "— not set —"
 msgstr "— niet ingesteld —"
+
+msgid "Session ended due to inactivity. Please log in again."
+msgstr "Sessie beëindigd door inactiviteit. Log opnieuw in."
+
+msgid "The application is available only during your working hours"
+msgstr "De applicatie is alleen beschikbaar tijdens uw werktijden"
+
+msgid "Access denied. Insufficient rights."
+msgstr "Toegang geweigerd. Onvoldoende rechten."

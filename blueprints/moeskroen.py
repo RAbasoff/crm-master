@@ -42,7 +42,7 @@ def check_moeskroen_access():
     if not current_user.is_authenticated:
         return redirect(url_for('login'))
     if not current_user.has_role('admin', 'director'):
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect(url_for('index'))
 
 

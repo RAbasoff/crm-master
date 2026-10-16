@@ -20,7 +20,7 @@ def role_required(*roles):
             if not current_user.is_authenticated:
                 return redirect(url_for('login'))
             if not current_user.has_role(*roles):
-                flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+                flash(_('Access denied. Insufficient rights.'), 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
         return decorated_function
@@ -77,7 +77,7 @@ def section_access_required(section_key, action='view'):
             if not current_user.is_authenticated:
                 return redirect(url_for('login'))
             if not user_has_section_access(section_key, action):
-                flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+                flash(_('Access denied. Insufficient rights.'), 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
         return decorated_function
@@ -169,11 +169,11 @@ def enforce_mechanic_access():
     endpoint = getattr(request, 'endpoint', None) or ''
     path = getattr(request, 'path', '') or ''
     if mechanic_denied_endpoint(endpoint):
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect(url_for('index'))
     for p in MECHANIC_DENIED_PATHS:
         if path == p or path.startswith(p + '/'):
-            flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+            flash(_('Access denied. Insufficient rights.'), 'error')
             return redirect(url_for('index'))
     return None
 
@@ -215,5 +215,5 @@ def enforce_floor_access():
     for p in FLOOR_ALLOWED_PATHS:
         if path == p or path.startswith(p + '/'):
             return None
-    flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+    flash(_('Access denied. Insufficient rights.'), 'error')
     return redirect(url_for('floor_plan'))

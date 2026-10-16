@@ -6191,3 +6191,12 @@ msgstr "— Wybierz typ —"
 
 msgid "— not set —"
 msgstr "— nie ustawiono —"
+
+msgid "Session ended due to inactivity. Please log in again."
+msgstr "Sesja zakończona z powodu bezczynności. Zaloguj się ponownie."
+
+msgid "The application is available only during your working hours"
+msgstr "Aplikacja dostępna tylko w godzinach pracy"
+
+msgid "Access denied. Insufficient rights."
+msgstr "Brak dostępu. Niewystarczające uprawnienia."

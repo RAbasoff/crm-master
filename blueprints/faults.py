@@ -499,7 +499,7 @@ def fault_detail(fault_id):
             linked = User.query.filter_by(person_id=person_id).first() if person_id else None
             uid = linked.id if linked else -1
         if f.reporter_id != uid:
-            flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+            flash(_('Access denied. Insufficient rights.'), 'error')
             return redirect(url_for('faults.faults_list'))
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     contractors = Contractor.query.filter_by(is_active=True).order_by(Contractor.company_name).all()

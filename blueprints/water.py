@@ -39,7 +39,7 @@ def check_water_access():
         return redirect(url_for('login'))
     from utils import user_has_section_access
     if not user_has_section_access('water'):
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect(url_for('index'))
 
 

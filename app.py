@@ -530,7 +530,7 @@ def before_request():
             last = session.get('last_activity')
             if last is not None and (now_ts - last) > 600:
                 session.clear()
-                flash(_('Сессия завершена из-за бездействия. Войдите снова.'), 'error')
+                flash(_('Session ended due to inactivity. Please log in again.'), 'error')
                 return redirect(url_for('login'))
             session['last_activity'] = now_ts
 
@@ -655,12 +655,15 @@ def offline_queue_response(response):
         if client_id and response.status_code < 400:
             try:
                 body = response.get_data(as_text=True)
-                remember_mutation(
-                    client_id, request.path, request.method,
-                    request.headers.get('X-Offline-Temp-Number'),
-                    request.headers.get('X-Offline-Title'),
-                    'done', body,
-                )
+                # Do not overwrite an already-stored outcome (duplicate replay).
+                existing = find_mutation(client_id)
+                if not (existing and existing.result_json):
+                    remember_mutation(
+                        client_id, request.path, request.method,
+                        request.headers.get('X-Offline-Temp-Number'),
+                        request.headers.get('X-Offline-Title'),
+                        'done', body,
+                    )
             except Exception:
                 pass
         return response
@@ -701,12 +704,14 @@ def offline_queue_response(response):
         payload = {'ok': ok, 'error': error, 'redirect': location, 'flashes': flash_list, 'number': number}
         client_id = request.headers.get('X-Offline-Client-Id')
         if client_id and ok:
-            remember_mutation(
-                client_id, request.path, request.method,
-                request.headers.get('X-Offline-Temp-Number'),
-                request.headers.get('X-Offline-Title'),
-                'done', json.dumps(payload, ensure_ascii=False),
-            )
+            existing = find_mutation(client_id)
+            if not (existing and existing.result_json):
+                remember_mutation(
+                    client_id, request.path, request.method,
+                    request.headers.get('X-Offline-Temp-Number'),
+                    request.headers.get('X-Offline-Title'),
+                    'done', json.dumps(payload, ensure_ascii=False),
+                )
         resp = jsonify(payload)
         resp.status_code = 200
         return resp
@@ -724,12 +729,14 @@ def offline_queue_response(response):
         }
         client_id = request.headers.get('X-Offline-Client-Id')
         if client_id and payload['ok']:
-            remember_mutation(
-                client_id, request.path, request.method,
-                request.headers.get('X-Offline-Temp-Number'),
-                request.headers.get('X-Offline-Title'),
-                'done', json.dumps(payload, ensure_ascii=False),
-            )
+            existing = find_mutation(client_id)
+            if not (existing and existing.result_json):
+                remember_mutation(
+                    client_id, request.path, request.method,
+                    request.headers.get('X-Offline-Temp-Number'),
+                    request.headers.get('X-Offline-Title'),
+                    'done', json.dumps(payload, ensure_ascii=False),
+                )
         return jsonify(payload)
 
     payload = {'ok': False, 'error': f'http_{response.status_code}', 'status': response.status_code, 'flashes': flash_list}
@@ -902,7 +909,7 @@ def login():
                     return redirect(url_for('change_password'))
                 # Блокировка вне рабочих часов (механики)
                 if user_schedule_restricted(user) and not is_user_at_work(user):
-                    flash(_('ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА'), 'error')
+                    flash(_('The application is available only during your working hours'), 'error')
                     return redirect(url_for('work_hours_block'))
                 import time as _time
                 session['last_activity'] = _time.time()
@@ -989,7 +996,7 @@ def switch_user(user_id):
         return redirect(url_for('switch_back'))
 
     if not current_user.has_role('admin'):
-        flash(_('ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ.'), 'error')
+        flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect(url_for('index'))
 
     target = db.session.get(User, user_id)
