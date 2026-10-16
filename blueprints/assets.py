@@ -58,7 +58,8 @@ def assets_new():
             material=request.form.get('material', ''),
             color=request.form.get('color', ''),
             purchase_date=(d := safe_date(request.form.get('purchase_date'))) and d.date() or None,
-            purchase_price=safe_float(request.form.get('purchase_price')) or None,
+            purchase_price=(safe_float(request.form.get('purchase_price'), 0)
+                            if (request.form.get('purchase_price') or '').strip() else None),
             currency=request.form.get('currency', 'EUR'),
             supplier=request.form.get('supplier', ''),
             invoice_number=request.form.get('invoice_number', ''),
@@ -144,7 +145,8 @@ def assets_edit(eq_id):
         eq.material = request.form.get('material', '')
         eq.color = request.form.get('color', '')
         eq.purchase_date = (d := safe_date(request.form.get('purchase_date'))) and d.date() or None
-        eq.purchase_price = safe_float(request.form.get('purchase_price')) or None
+        _pp = request.form.get('purchase_price')
+        eq.purchase_price = safe_float(_pp, 0) if (_pp or '').strip() else None
         eq.currency = request.form.get('currency', 'EUR')
         eq.supplier = request.form.get('supplier', '')
         eq.invoice_number = request.form.get('invoice_number', '')

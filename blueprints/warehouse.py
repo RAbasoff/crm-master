@@ -486,7 +486,8 @@ def warehouse_price_add(item_id):
         supplier_name=request.form.get('supplier_name', ''),
         price=price,
         delivery_days=safe_int(request.form.get('delivery_days')) or None,
-        min_order=safe_float(request.form.get('min_order')) or None,
+        min_order=(safe_float(request.form.get('min_order'), 0)
+                   if (request.form.get('min_order') or '').strip() else None),
         notes=request.form.get('notes', '')
     )
     db.session.add(p)

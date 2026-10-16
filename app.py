@@ -423,6 +423,21 @@ def get_current_locale():
 
 babel = Babel(app, locale_selector=get_current_locale)
 
+
+@app.template_global('tr')
+def tr_safe(s):
+    """Безопасный перевод: без printf-форматирования Jinja _().
+
+    Jinja `_()` делает `result % variables` и падает на '%' в тексте
+    (например «готово на 50%»). Babel-gettext формат не применяет.
+    """
+    if not s:
+        return ''
+    try:
+        return _(str(s))
+    except Exception:
+        return str(s)
+
 @app.route('/license', methods=['GET', 'POST'])
 def license_page():
     """Ввод лицензионного ключа (доступно без входа)."""
