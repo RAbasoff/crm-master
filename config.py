@@ -1,7 +1,7 @@
 import os, secrets
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = '2.13.1'
+APP_VERSION = '2.13.2'
 
 def _get_secret_key():
     # Prefer env var (production: set SECRET_KEY on the server / PA)
