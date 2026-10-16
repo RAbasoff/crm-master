@@ -6335,3 +6335,15 @@ msgstr "Work scheduled for another date"
 #: fault-status
 msgid "Other reason"
 msgstr "Other reason"
+
+msgid "Chemical"
+msgstr "Chemical"
+
+msgid "Packaging"
+msgstr "Packaging"
+
+msgid "— Select type —"
+msgstr "— Select type —"
+
+msgid "— not set —"
+msgstr "— not set —"

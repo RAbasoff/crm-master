@@ -6473,3 +6473,15 @@ msgstr "Работа запланирована на другую дату"
 #: fault-status
 msgid "Other reason"
 msgstr "Другая причина"
+
+msgid "Chemical"
+msgstr "Химия"
+
+msgid "Packaging"
+msgstr "Упаковка"
+
+msgid "— Select type —"
+msgstr "— Выберите тип —"
+
+msgid "— not set —"
+msgstr "— не задано —"

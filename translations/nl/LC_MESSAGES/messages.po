@@ -6196,3 +6196,15 @@ msgstr "Werk gepland op andere datum"
 #: fault-status
 msgid "Other reason"
 msgstr "Andere reden"
+
+msgid "Chemical"
+msgstr "Chemisch"
+
+msgid "Packaging"
+msgstr "Verpakking"
+
+msgid "— Select type —"
+msgstr "— Kies type —"
+
+msgid "— not set —"
+msgstr "— niet ingesteld —"

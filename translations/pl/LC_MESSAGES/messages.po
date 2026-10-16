@@ -6179,3 +6179,15 @@ msgstr "Praca zaplanowana na inny termin"
 #: fault-status
 msgid "Other reason"
 msgstr "Inny powód"
+
+msgid "Chemical"
+msgstr "Chemia"
+
+msgid "Packaging"
+msgstr "Opakowanie"
+
+msgid "— Select type —"
+msgstr "— Wybierz typ —"
+
+msgid "— not set —"
+msgstr "— nie ustawiono —"

@@ -71,10 +71,31 @@
         {% for i in items %}
         <tr class="wh-row" data-name="{{ i.naam|lower }}">
             <td><input type="checkbox" class="qr-check" data-id="{{ i.id }}" data-name="{{ i.naam }}" data-spn="{{ i.supplier_part_number or '' }}"></td>
-            <td>{{ i.naam }}{% if i.consumable_type %} <span style="font-size:10px;background:#e8f5e9;padding:1px 4px;border-radius:3px">{{ i.consumable_type }}</span>{% endif %}</td>
+            <td>{{ i.naam }}</td>
             <td style="font-size:11px;color:#888">{{ i.supplier_part_number or '—' }}</td>
             <td>{{ i.categorie or '—' }}</td>
-            <td class="hide-mobile" style="font-size:11px">{% if i.consumable_subtype %}{{ i.consumable_subtype }}{% elif i.volume %}{{ i.volume }}{% else %}—{% endif %}</td>
+            <td class="hide-mobile" style="font-size:11px">
+                {% set type_labels = {
+                    'part': '⚙️ ' + _('Spare part'),
+                    'consumable': '📦 ' + _('Consumable'),
+                    'tool': '🔧 ' + _('Tool'),
+                    'material': '🧵 ' + _('Material'),
+                    'chemical': '🧪 ' + _('Chemical'),
+                    'electrical': '⚡ ' + _('Electrical'),
+                    'filter': '🔧 ' + _('Filter'),
+                    'oil': '🛢️ ' + _('Oil'),
+                    'grease': '🧴 ' + _('Grease'),
+                    'coolant': '💧 ' + _('Coolant'),
+                    'packaging': '📦 ' + _('Packaging'),
+                    'other': '📋 ' + _('Other')
+                } %}
+                {% if i.consumable_type %}
+                    <span style="background:#e8f5e9;padding:2px 6px;border-radius:4px">{{ type_labels.get(i.consumable_type, i.consumable_type) }}</span>
+                    {% if i.consumable_subtype %}<div style="color:#888;margin-top:2px">{{ i.consumable_subtype }}</div>{% endif %}
+                {% else %}
+                    <span style="color:#e74c3c" title="{{ _('Not set') }}">{{ _('— not set —') }}</span>
+                {% endif %}
+            </td>
             <td class="hide-mobile">{% if i.group %}<a href="/warehouse?group={{ i.group.id }}" style="color:#3498db">{{ i.group.name }}</a>{% elif i.contractor %}<span style="color:#e67e22">📦 {{ i.contractor.company_name }}</span>{% else %}—{% endif %}</td>
             <td class="hide-mobile">{% if i.locatie %}📍 {{ i.locatie }}{% else %}—{% endif %}</td>
             <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">
