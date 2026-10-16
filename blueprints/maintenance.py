@@ -1010,6 +1010,7 @@ def works_calendar_delete(event_id):
     return redirect(url_for('maintenance.works_calendar', month=month))
 
 
+@bp.route('/maintenance-calendar/export')
 @login_required
 def maintenance_calendar_export():
     import io

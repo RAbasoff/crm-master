@@ -206,6 +206,9 @@ def reports_export():
     date_from = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
     date_to = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
     user_id = request.args.get('user_id', '')
+    section_id = request.args.get('section_id', '')
+    import io
+    from flask import send_file
     
     d_from = safe_date(date_from) or (datetime.utcnow() - timedelta(days=30))
     d_to = (safe_date(date_to) or datetime.utcnow()) + timedelta(days=1)
@@ -297,7 +300,7 @@ def reports_export():
             headers={'Content-Disposition': f'attachment;filename={filename}.csv'})
     
     # === EXCEL ===
-    elif format_type == 'excel':
+    elif format_type in ('excel', 'xlsx'):
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         wb = Workbook()
@@ -389,44 +392,80 @@ def reports_export():
     
     # === PDF ===
     elif format_type == 'pdf':
-        # Generate HTML table for PDF
-        html = f'''<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-body {{ font-family: Arial; font-size: 10px; padding: 20px; }}
-h1 {{ font-size: 16px; margin-bottom: 5px; }}
-p {{ color: #666; font-size: 11px; margin-bottom: 15px; }}
-table {{ width: 100%; border-collapse: collapse; font-size: 9px; }}
-th {{ background: #2c3e50; color: white; padding: 6px 8px; text-align: left; font-weight: bold; }}
-td {{ padding: 5px 8px; border-bottom: 1px solid #eee; }}
-tr:nth-child(even) {{ background: #f9f9f9; }}
-.footer {{ margin-top: 20px; font-size: 8px; color: #999; text-align: center; }}
-</style></head><body>
-<h1>{title}</h1>
-<p>Период: {period} | Сгенерировано: {datetime.utcnow().strftime("%d.%m.%Y %H:%M")}</p>
-<table><tr>'''
-        for h in headers:
-            html += f'<th>{h}</th>'
-        html += '</tr>'
-        for row in rows:
-            html += '<tr>'
-            for val in row:
-                html += f'<td>{val}</td>'
-            html += '</tr>'
-        html += f'</table><div class="footer">CRM Мастерская — {title} — {period}</div></body></html>'
-        
+        from utils import ensure_fpdf, find_pdf_font
+        from html import escape as h
         try:
-            import pdfkit
-            pdf = pdfkit.from_string(html, False)
-            from flask import Response
-            return Response(pdf, mimetype='application/pdf',
-                headers={'Content-Disposition': f'attachment;filename={filename}.pdf'})
+            FPDF = ensure_fpdf().FPDF
         except Exception:
-            # Fallback: return HTML that can be printed as PDF
+            # Fallback: HTML that can be printed as PDF
+            html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+            <h1>{h(title)}</h1><p>{h(period)}</p><table border="1"><tr>{''.join(f'<th>{h(str(x))}</th>' for x in headers)}</tr>
+            {''.join('<tr>' + ''.join(f'<td>{h(str(v))}</td>' for v in row) + '</tr>' for row in rows)}
+            </table></body></html>'''
             from flask import Response
             return Response(html, mimetype='text/html',
                 headers={'Content-Disposition': f'attachment;filename={filename}.html'})
-    
+
+        font_path = find_pdf_font()
+        unicode_font = bool(font_path)
+
+        def pdf_text(s):
+            s = str(s if s is not None else '')
+            return s if unicode_font else s.encode('latin-1', 'replace').decode('latin-1')
+
+        class RepPDF(FPDF):
+            def header(self):
+                fn = 'AppFont' if unicode_font else 'Helvetica'
+                self.set_font(fn, 'B', 12)
+                self.cell(0, 8, pdf_text(title), new_x='LMARGIN', new_y='NEXT')
+                self.set_font(fn, '', 8)
+                self.cell(0, 5, pdf_text(period), new_x='LMARGIN', new_y='NEXT')
+                self.ln(2)
+
+            def footer(self):
+                fn = 'AppFont' if unicode_font else 'Helvetica'
+                self.set_y(-12)
+                self.set_font(fn, '', 7)
+                self.set_text_color(128)
+                self.cell(0, 8, pdf_text(f'CRM — {self.page_no()}/{{nb}}'), align='C')
+
+        pdf = RepPDF(orientation='L', unit='mm', format='A4')
+        pdf.alias_nb_pages()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        if unicode_font:
+            try:
+                pdf.add_font('AppFont', '', font_path)
+                pdf.add_font('AppFont', 'B', font_path)
+                base_font = 'AppFont'
+            except Exception:
+                unicode_font = False
+                base_font = 'Helvetica'
+        else:
+            base_font = 'Helvetica'
+        pdf.add_page()
+
+        n = max(len(headers), 1)
+        col_w = [277.0 / n] * n  # A4 landscape usable ~277mm
+        pdf.set_font(base_font, 'B', 8)
+        pdf.set_fill_color(44, 62, 80)
+        pdf.set_text_color(255)
+        for i, hdr in enumerate(headers):
+            pdf.cell(col_w[i], 7, pdf_text(str(hdr)[:40]), border=1, fill=True)
+        pdf.ln()
+        pdf.set_text_color(51)
+        pdf.set_font(base_font, '', 7.5)
+        for row in rows:
+            for i, val in enumerate(row):
+                pdf.cell(col_w[i], 6, pdf_text(str(val)[:60]), border=1)
+            pdf.ln()
+
+        import io
+        buf = io.BytesIO()
+        pdf.output(buf)
+        buf.seek(0)
+        return send_file(buf, mimetype='application/pdf',
+                         download_name=f'{filename}.pdf', as_attachment=True)
+
     return jsonify({'error': 'Unknown format'}), 400
 
 

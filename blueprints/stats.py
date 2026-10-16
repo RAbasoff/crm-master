@@ -176,6 +176,8 @@ def stats_export():
     format_type = request.args.get('format', 'pdf')
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
+    import io
+    from flask import send_file
     
     if date_from and date_to:
         d_from = datetime.strptime(date_from, '%Y-%m-%d')
@@ -337,7 +339,7 @@ def stats_export():
             headers={'Content-Disposition': f'attachment;filename={filename}.csv'})
     
     # === EXCEL ===
-    elif format_type == 'excel':
+    elif format_type in ('excel', 'xlsx'):
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         wb = Workbook()
@@ -484,76 +486,117 @@ def stats_export():
     
     # === PDF ===
     elif format_type == 'pdf':
-        from html import escape as h
-        html = f'''<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-body {{ font-family: Arial; padding: 30px; font-size: 12px; }}
-h1 {{ font-size: 18px; border-bottom: 2px solid #2c3e50; padding-bottom: 8px; }}
-h2 {{ font-size: 14px; color: #2c3e50; margin-top: 20px; }}
-table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-th {{ background: #2c3e50; color: white; padding: 8px; text-align: left; }}
-td {{ padding: 6px 8px; border-bottom: 1px solid #eee; }}
-tr:nth-child(even) {{ background: #f9f9f9; }}
-.stat {{ display: inline-block; padding: 10px 20px; margin: 5px; background: #f0f7ff; border-radius: 8px; text-align: center; }}
-.stat .num {{ font-size: 24px; font-weight: bold; color: #2c3e50; }}
-.stat .lbl {{ font-size: 10px; color: #888; }}
-.footer {{ margin-top: 30px; font-size: 9px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }}
-</style></head><body>
-<h1>Статистика — CRM Мастерская</h1>
-<p>Период: {h(stats["period"])} | Дата: {h(stats["date"])}</p>
+        from utils import ensure_fpdf, find_pdf_font
+        try:
+            FPDF = ensure_fpdf().FPDF
+        except Exception:
+            return jsonify({'error': 'PDF unavailable'}), 500
+        font_path = find_pdf_font()
+        unicode_font = bool(font_path)
 
-<h2>Заявки о неисправности</h2>
-<div>
-<div class="stat"><div class="num">{stats["faults"]["total"]}</div><div class="lbl">Всего</div></div>
-<div class="stat"><div class="num">{stats["faults"]["period"]}</div><div class="lbl">За период</div></div>
-<div class="stat"><div class="num">{stats["faults"]["open"]}</div><div class="lbl">Открытых</div></div>
-<div class="stat"><div class="num">{stats["faults"]["resolved"]}</div><div class="lbl">Решённых</div></div>
-<div class="stat"><div class="num">{stats["faults"]["critical"]}</div><div class="lbl">Критичных</div></div>
-</div>
+        def pdf_text(s):
+            s = str(s if s is not None else '')
+            return s if unicode_font else s.encode('latin-1', 'replace').decode('latin-1')
 
-<h2>По приоритету</h2>
-<table><tr><th>Приоритет</th><th>Количество</th></tr>'''
-        for p, c in by_priority:
-            html += f'<tr><td>{h(str(p))}</td><td>{c}</td></tr>'
-        html += '</table>'
-        
-        html += '<h2>Топ станков по заявкам</h2>'
-        html += '<table><tr><th>Станок</th><th>Заявок</th></tr>'
-        for name, cnt in top_machines:
-            html += f'<tr><td>{h(str(name))}</td><td>{cnt}</td></tr>'
-        html += '</table>'
-        
-        html += f'''
-<h2>Склад</h2>
-<div>
-<div class="stat"><div class="num">{stats["warehouse"]["total"]}</div><div class="lbl">Всего позиций</div></div>
-<div class="stat"><div class="num">{stats["warehouse"]["low_stock"]}</div><div class="lbl">Низкий запас</div></div>
-<div class="stat"><div class="num">{stats["warehouse"]["incoming"]}</div><div class="lbl">Приход</div></div>
-<div class="stat"><div class="num">{stats["warehouse"]["outgoing"]}</div><div class="lbl">Расход</div></div>
-</div>
+        class StatsPDF(FPDF):
+            def header(self):
+                fn = 'AppFont' if unicode_font else 'Helvetica'
+                self.set_font(fn, 'B', 14)
+                self.cell(0, 8, pdf_text('Статистика — CRM Мастерская'), new_x='LMARGIN', new_y='NEXT')
+                self.set_font(fn, '', 9)
+                self.cell(0, 5, pdf_text(f'{stats["period"]} | {stats["date"]}'), new_x='LMARGIN', new_y='NEXT')
+                self.ln(2)
 
-<h2>TWO (Наряды)</h2>
-<div>
-<div class="stat"><div class="num">{stats["two"]["total"]}</div><div class="lbl">Всего</div></div>
-<div class="stat"><div class="num">{stats["two"]["active"]}</div><div class="lbl">Активных</div></div>
-<div class="stat"><div class="num">{stats["two"]["completed"]}</div><div class="lbl">Завершённых</div></div>
-</div>
+            def footer(self):
+                fn = 'AppFont' if unicode_font else 'Helvetica'
+                self.set_y(-12)
+                self.set_font(fn, '', 7)
+                self.set_text_color(128)
+                self.cell(0, 8, pdf_text(f'CRM — {self.page_no()}/{{nb}}'), align='C')
 
-<h2>Отчёт по станкам</h2>
-<table><tr><th>Станок</th><th>Тип</th><th>Отдел</th><th>Всего</th><th>Период</th><th>Открытых</th><th>Критичных</th></tr>'''
-        for m in machine_data:
-            html += f'<tr><td>{h(str(m["name"]))}</td><td>{h(str(m["type"]))}</td><td>{h(str(m["section"]))}</td><td>{m["total"]}</td><td>{m["period"]}</td><td>{m["open"]}</td><td>{m["critical"]}</td></tr>'
-        html += '</table>'
-        
-        html += f'''
-<div class="footer">CRM Мастерская — Статистика — {h(stats["date"])}</div>
-</body></html>'''
-        
-        from flask import Response
-        return Response(html, mimetype='text/html',
-            headers={'Content-Disposition': f'attachment;filename={filename}.html'})
-    
+        pdf = StatsPDF(orientation='L', unit='mm', format='A4')
+        pdf.alias_nb_pages()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        if unicode_font:
+            try:
+                pdf.add_font('AppFont', '', font_path)
+                pdf.add_font('AppFont', 'B', font_path)
+                base_font = 'AppFont'
+            except Exception:
+                unicode_font = False
+                base_font = 'Helvetica'
+        else:
+            base_font = 'Helvetica'
+        pdf.add_page()
+
+        def section(t):
+            pdf.set_font(base_font, 'B', 11)
+            pdf.set_text_color(44, 62, 80)
+            pdf.cell(0, 8, pdf_text(t), new_x='LMARGIN', new_y='NEXT')
+            pdf.set_text_color(51)
+
+        def kv_table(pairs):
+            pdf.set_font(base_font, '', 9)
+            for label, val in pairs:
+                pdf.cell(80, 6, pdf_text(label), border=1)
+                pdf.cell(30, 6, pdf_text(str(val)), border=1, new_x='LMARGIN', new_y='NEXT')
+            pdf.ln(2)
+
+        def data_table(headers, rows, widths):
+            pdf.set_font(base_font, 'B', 8)
+            pdf.set_fill_color(44, 62, 80)
+            pdf.set_text_color(255)
+            for i, h in enumerate(headers):
+                pdf.cell(widths[i], 7, pdf_text(h), border=1, fill=True)
+            pdf.ln()
+            pdf.set_text_color(51)
+            pdf.set_font(base_font, '', 8)
+            for row in rows:
+                for i, val in enumerate(row):
+                    pdf.cell(widths[i], 6, pdf_text(val), border=1)
+                pdf.ln()
+            pdf.ln(2)
+
+        section('Заявки о неисправности')
+        kv_table([
+            ('Всего', stats['faults']['total']),
+            ('За период', stats['faults']['period']),
+            ('Открытых', stats['faults']['open']),
+            ('Решённых', stats['faults']['resolved']),
+            ('Критичных', stats['faults']['critical']),
+        ])
+        section('По приоритету')
+        data_table(['Приоритет', 'Количество'], [(str(p), str(c)) for p, c in by_priority], [80, 40])
+        section('Топ станков по заявкам')
+        data_table(['Станок', 'Заявок'], [(str(n), str(c)) for n, c in top_machines], [120, 40])
+        section('Склад')
+        kv_table([
+            ('Всего позиций', stats['warehouse']['total']),
+            ('Низкий запас', stats['warehouse']['low_stock']),
+            ('Приход', stats['warehouse']['incoming']),
+            ('Расход', stats['warehouse']['outgoing']),
+        ])
+        section('TWO (наряды)')
+        kv_table([
+            ('Всего', stats['two']['total']),
+            ('Активных', stats['two']['active']),
+            ('Завершённых', stats['two']['completed']),
+        ])
+        section('Отчёт по станкам')
+        data_table(
+            ['Станок', 'Тип', 'Отдел', 'Всего', 'Период', 'Открытых', 'Критичных'],
+            [(m['name'], m['type'], m['section'], str(m['total']), str(m['period']),
+              str(m['open']), str(m['critical'])) for m in machine_data],
+            [55, 35, 40, 25, 25, 30, 30],
+        )
+
+        import io
+        buf = io.BytesIO()
+        pdf.output(buf)
+        buf.seek(0)
+        return send_file(buf, mimetype='application/pdf',
+                         download_name=f'{filename}.pdf', as_attachment=True)
+
     return jsonify({'error': 'Unknown format'}), 400
 
 @bp.route('/stats/parts')
