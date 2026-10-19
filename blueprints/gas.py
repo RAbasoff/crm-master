@@ -181,7 +181,7 @@ def _orders_by_month(orders_all, now):
                 'ordered_co2': 0,
                 'delivered': 0,
                 'used': used_by_month.get(key, 0),
-                'items': [],
+                'rows': [],  # NOT 'items' — collides with dict.items in Jinja
             }
         qty = int(o.quantity or 0)
         months[key]['ordered'] += qty
@@ -191,7 +191,7 @@ def _orders_by_month(orders_all, now):
             months[key]['ordered_co2'] += qty
         if o.status == 'delivered':
             months[key]['delivered'] += qty
-        months[key]['items'].append(o)
+        months[key]['rows'].append(o)
     # sort newest month first
     return sorted(months.values(), key=lambda m: m['key'], reverse=True)
 

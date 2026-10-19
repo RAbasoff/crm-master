@@ -588,7 +588,7 @@ function quickStatus(cylId, status, btn) {
         </summary>
         <div class="table-wrap" style="padding:0 8px 8px"><table>
             <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th></tr>
-            {% for o in m.items %}
+            {% for o in m.rows %}
             <tr>
                 <td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td>
                 <td>{{ 'N₂' if o.gas_type=='nitrogen' else 'CO₂' }}</td>
