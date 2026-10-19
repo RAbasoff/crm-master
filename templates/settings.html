@@ -409,23 +409,23 @@
             <div style="background:#f8f9fa;padding:16px;border-radius:10px">
                 <h3 style="font-size:14px;margin-bottom:12px">🏷️ {{ _('Priorities') }}</h3>
                 <div style="display:flex;flex-direction:column;gap:8px">
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #27ae60">
-                        <span style="font-weight:700;color:#27ae60">LOW</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #3B82F6">
+                        <span style="font-weight:700;color:#3B82F6">LOW</span>
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Non-urgent, scheduled maintenance') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_priority.get('low', 0) }} {{ _('active') }}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #3498db">
-                        <span style="font-weight:700;color:#3498db">NORMAL</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #22C55E">
+                        <span style="font-weight:700;color:#22C55E">NORMAL</span>
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Standard repair needed') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_priority.get('normal', 0) }} {{ _('active') }}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #f39c12">
-                        <span style="font-weight:700;color:#f39c12">HIGH</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #FF9500">
+                        <span style="font-weight:700;color:#FF9500">HIGH</span>
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Affects production, fix ASAP') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_priority.get('high', 0) }} {{ _('active') }}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #e74c3c">
-                        <span style="font-weight:700;color:#e74c3c">CRITICAL</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #FF1A1A">
+                        <span style="font-weight:700;color:#FF1A1A">CRITICAL</span>
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Machine stopped, immediate action') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_priority.get('critical', 0) }} {{ _('active') }}</span>
                     </div>
@@ -451,15 +451,20 @@
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Work started') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_status.get('in_progress', 0) }}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #27ae60">
-                        <span style="font-weight:700;color:#27ae60">RESOLVED</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #F4B183">
+                        <span style="font-weight:700;color:#C06000">RESOLVED</span>
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Fixed') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_status.get('resolved', 0) }}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #95a5a6">
-                        <span style="font-weight:700;color:#95a5a6">CLOSED</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #A8D5A2">
+                        <span style="font-weight:700;color:#2E7D32">CLOSED</span>
                         <span style="font-size:12px;color:#888;flex:1">{{ _('Confirmed and closed') }}</span>
                         <span style="font-size:11px;color:#888">{{ faults_by_status.get('closed', 0) }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:white;border-radius:8px;border-left:4px solid #F5C6CE">
+                        <span style="font-weight:700;color:#C2185B">ON HOLD</span>
+                        <span style="font-size:12px;color:#888;flex:1">{{ _('Waiting parts / paused') }}</span>
+                        <span style="font-size:11px;color:#888">{{ (faults_by_status.get('waiting_parts', 0) or 0) + (faults_by_status.get('parts_ordered', 0) or 0) }}</span>
                     </div>
                 </div>
             </div>

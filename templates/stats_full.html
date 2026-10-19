@@ -180,8 +180,28 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Charts
-const colors = ['#3498db', '#e74c3c', '#f39c12', '#27ae60', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+// Charts — фирменные цвета Storingen (по требованию пользователя)
+const PRIORITY_COLORS = {
+    critical: '#FF1A1A',  // ядовито-красный
+    high: '#FF9500',      // оранжевый
+    normal: '#22C55E',    // зелёный
+    low: '#3B82F6'        // синий
+};
+const STATUS_COLORS = {
+    closed: '#A8D5A2',           // мягкий зелёный
+    resolved: '#F4B183',         // мягкий оранжевый
+    waiting_parts: '#F5C6CE',    // бледно-розовый (на паузе)
+    parts_ordered: '#F5C6CE',
+    on_hold: '#F5C6CE',
+    paused: '#F5C6CE',
+    open: '#5DADE2',
+    accepted: '#F7DC6F',
+    in_progress: '#EB984E',
+    reopened: '#D7BDE2'
+};
+function pickColor(map, key, i) {
+    return map[String(key || '').toLowerCase()] || ['#3498db','#e74c3c','#f39c12','#27ae60','#9b59b6','#1abc9c','#e67e22','#34495e'][i % 8];
+}
 
 // Priority chart
 new Chart(document.getElementById('chartPriority'), {
@@ -190,7 +210,9 @@ new Chart(document.getElementById('chartPriority'), {
         labels: [{% for p, c in faults_by_priority %}'{{ p }}'{% if not loop.last %},{% endif %}{% endfor %}],
         datasets: [{
             data: [{% for p, c in faults_by_priority %}{{ c }}{% if not loop.last %},{% endif %}{% endfor %}],
-            backgroundColor: colors.slice(0, {{ faults_by_priority|length }})
+            backgroundColor: [
+                {% for p, c in faults_by_priority %}pickColor(PRIORITY_COLORS, '{{ p }}', {{ loop.index0 }}){% if not loop.last %},{% endif %}{% endfor %}
+            ]
         }]
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
@@ -203,7 +225,9 @@ new Chart(document.getElementById('chartStatus'), {
         labels: [{% for s, c in faults_by_status %}'{{ s }}'{% if not loop.last %},{% endif %}{% endfor %}],
         datasets: [{
             data: [{% for s, c in faults_by_status %}{{ c }}{% if not loop.last %},{% endif %}{% endfor %}],
-            backgroundColor: colors.slice(0, {{ faults_by_status|length }})
+            backgroundColor: [
+                {% for s, c in faults_by_status %}pickColor(STATUS_COLORS, '{{ s }}', {{ loop.index0 }}){% if not loop.last %},{% endif %}{% endfor %}
+            ]
         }]
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
