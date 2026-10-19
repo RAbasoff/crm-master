@@ -6444,3 +6444,30 @@ msgstr "Update available"
 
 msgid "You have the latest version"
 msgstr "You have the latest version"
+
+msgid "Activity feed"
+msgstr "Activity feed"
+
+msgid "Online"
+msgstr "Online"
+
+msgid "Last seen"
+msgstr "Last seen"
+
+msgid "When"
+msgstr "When"
+
+msgid "Audit log"
+msgstr "Audit log"
+
+msgid "No activity yet"
+msgstr "No activity yet"
+
+msgid "Now / last page"
+msgstr "Now / last page"
+
+msgid "Last action"
+msgstr "Last action"
+
+msgid "Online / Offline"
+msgstr "Online / Offline"

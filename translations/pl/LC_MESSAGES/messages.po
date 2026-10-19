@@ -6253,3 +6253,33 @@ msgstr "BŁĄD"
 
 msgid "CRITICAL"
 msgstr "KRYTYCZNY"
+
+msgid "Activity feed"
+msgstr "Strumień aktywności"
+
+msgid "Online / Offline"
+msgstr "Online / Offline"
+
+msgid "Online"
+msgstr "Online"
+
+msgid "Last seen"
+msgstr "Ostatnio widziany"
+
+msgid "Last action"
+msgstr "Ostatnia akcja"
+
+msgid "Now / last page"
+msgstr "Teraz / ostatnia strona"
+
+msgid "When"
+msgstr "Kiedy"
+
+msgid "No activity yet"
+msgstr "Brak aktywności"
+
+msgid "Audit log"
+msgstr "Dziennik audytu"
+
+msgid "No events"
+msgstr "Brak zdarzeń"

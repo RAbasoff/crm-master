@@ -6544,3 +6544,30 @@ msgstr "ОШИБКА"
 
 msgid "CRITICAL"
 msgstr "КРИТИЧНО"
+
+msgid "Activity feed"
+msgstr "Лента активности"
+
+msgid "Online / Offline"
+msgstr "Онлайн / Оффлайн"
+
+msgid "Online"
+msgstr "В сети"
+
+msgid "Last seen"
+msgstr "Был(а)"
+
+msgid "Last action"
+msgstr "Последнее действие"
+
+msgid "Now / last page"
+msgstr "Сейчас / последняя страница"
+
+msgid "When"
+msgstr "Когда"
+
+msgid "No activity yet"
+msgstr "Активности пока нет"
+
+msgid "Audit log"
+msgstr "Журнал аудита"

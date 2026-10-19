@@ -6346,3 +6346,42 @@ msgstr "database"
 
 msgid "export"
 msgstr "export"
+
+msgid "Activity feed"
+msgstr "Activiteitenfeed"
+
+msgid "Online / Offline"
+msgstr "Online / Offline"
+
+msgid "Online"
+msgstr "Online"
+
+msgid "Last seen"
+msgstr "Laatst gezien"
+
+msgid "Last action"
+msgstr "Laatste actie"
+
+msgid "Now / last page"
+msgstr "Nu / laatste pagina"
+
+msgid "When"
+msgstr "Wanneer"
+
+msgid "No activity yet"
+msgstr "Nog geen activiteit"
+
+msgid "Audit log"
+msgstr "Auditlogboek"
+
+msgid "No events"
+msgstr "Geen gebeurtenissen"
+
+msgid "view"
+msgstr "weergave"
+
+msgid "login"
+msgstr "inloggen"
+
+msgid "logout"
+msgstr "uitloggen"
