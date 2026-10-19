@@ -487,6 +487,8 @@
             {% endif %}
             {% if has_access('gas') or has_access('machines') %}
             <a href="/gas" class="sb-item {% if request.endpoint and request.endpoint.startswith('gas') %}active{% endif %}" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">🔴</span>{{ _('Gas System') }}</a>
+            <a href="/gas/cylinders" class="sb-item {% if request.endpoint == 'gas.cylinders_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📦</span>{{ _('Cylinders') }}</a>
+            <a href="/gas/scan-list" class="sb-item {% if request.endpoint == 'gas.cylinder_scan_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📋</span>{{ _('Scan list') }}</a>
             <a href="/gas/scan" class="sb-item {% if request.endpoint == 'gas.cylinder_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Cylinders') }}</a>
             <a href="/gas/quality" class="sb-item {% if request.endpoint == 'gas.gas_quality_list' or request.endpoint == 'gas.gas_quality_new' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🧪</span>{{ _('Gas Quality') }}</a>
             {% endif %}
