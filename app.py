@@ -213,6 +213,34 @@ def backup_database(force=False):
     print(f"BACKUP: created {backup_path}")
     return backup_path
 
+
+def maybe_evening_backup():
+    """Автобэкап каждый день в 23:59 (первый запрос после 23:59)."""
+    now = datetime.now()
+    if not (now.hour == 23 and now.minute >= 59) and not (now.hour == 0 and now.minute < 10):
+        return
+    backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+    os.makedirs(backup_dir, exist_ok=True)
+    stamp = os.path.join(backup_dir, '.evening_stamp')
+    today = now.strftime('%Y%m%d')
+    # после полуночи бэкап относится к вчерашнему 23:59
+    if now.hour == 0:
+        from datetime import timedelta
+        today = (now - timedelta(hours=1)).strftime('%Y%m%d')
+    try:
+        if os.path.exists(stamp) and open(stamp, 'r', encoding='utf-8').read().strip() == today:
+            return
+    except Exception:
+        pass
+    path = backup_database(force=True)
+    if path:
+        try:
+            with open(stamp, 'w', encoding='utf-8') as f:
+                f.write(today)
+        except Exception:
+            pass
+        print(f'EVENING BACKUP 23:59: {path}')
+
 def send_email(to_email, subject, body):
     """Send email notification"""
     import smtplib
@@ -420,7 +448,18 @@ def _bootstrap_password(env_key):
 
 
 def get_current_locale():
-    return session.get('lang', 'ru')
+    # 1) preferred_language пользователя, 2) session, 3) default nl
+    try:
+        if current_user.is_authenticated:
+            pl = getattr(current_user, 'preferred_language', None)
+            if pl in ('nl', 'en', 'ru', 'pl'):
+                return pl
+    except Exception:
+        pass
+    lang = session.get('lang')
+    if lang in ('nl', 'en', 'ru', 'pl'):
+        return lang
+    return 'nl'
 
 babel = Babel(app, locale_selector=get_current_locale)
 
@@ -469,6 +508,11 @@ def license_page():
 @app.before_request
 def before_request():
     g._req_start = time.time()
+    # Ежедневный бэкап в 23:59
+    try:
+        maybe_evening_backup()
+    except Exception as _be:
+        print(f'EVENING BACKUP SKIP: {_be}')
     # Лицензия: без ключа — только /license, /static
     if request.endpoint not in ('license_page', 'static') and not (request.path or '').startswith('/static'):
         from license import load_license, parse_license
@@ -476,7 +520,7 @@ def before_request():
         if not ok:
             return redirect(url_for('license_page'))
     if 'lang' not in session:
-        session['lang'] = 'ru'
+        session['lang'] = 'nl'
     g.lang = session.get('lang', 'ru')
     g.LANGUAGES = LANGUAGES
 

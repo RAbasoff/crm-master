@@ -262,14 +262,14 @@ def gas_dashboard():
     stats['co2_consumed_month'] = co2_consumed
     stats['total_consumed_month'] = n2_consumed + co2_consumed
 
-    # Received this month: cylinders created this month
-    received_logs = CylinderLog.query.filter(
-        CylinderLog.action == 'created',
-        CylinderLog.date >= month_start
+    # Received this month = ФАКТИЧЕСКИ доставлено (delivered orders),
+    # а не «сколько строк created» (сканы/лист приёмки искусственно занижают/завышают).
+    delivered_orders = CylinderOrder.query.filter(
+        CylinderOrder.status == 'delivered',
+        CylinderOrder.ordered_at >= month_start
     ).all()
-    received_ids = set(l.cylinder_id for l in received_logs)
-    n2_received = len([cid for cid in received_ids if any(c.id == cid and c.gas_type == 'nitrogen' for c in cylinders)])
-    co2_received = len([cid for cid in received_ids if any(c.id == cid and c.gas_type == 'co2' for c in cylinders)])
+    n2_received = sum(int(o.quantity or 0) for o in delivered_orders if o.gas_type == 'nitrogen')
+    co2_received = sum(int(o.quantity or 0) for o in delivered_orders if o.gas_type == 'co2')
     stats['n2_received_month'] = n2_received
     stats['co2_received_month'] = co2_received
     stats['total_received_month'] = n2_received + co2_received
@@ -1506,17 +1506,16 @@ def gas_report_pdf():
                 row['used_n2'] += 1
             else:
                 row['used_co2'] += 1
-        for log in CylinderLog.query.filter(
-            CylinderLog.action.in_(('created', 'received')),
-            CylinderLog.date >= m_start, CylinderLog.date < m_end
+        # «Получено» = доставленные заказы за месяц
+        for o in CylinderOrder.query.filter(
+            CylinderOrder.status == 'delivered',
+            CylinderOrder.ordered_at >= m_start, CylinderOrder.ordered_at < m_end
         ).all():
-            c = db.session.get(GasCylinder, log.cylinder_id) if log.cylinder_id else None
-            if not c:
-                continue
-            if c.gas_type == 'nitrogen':
-                row['received_n2'] += 1
+            q = int(o.quantity or 0)
+            if o.gas_type == 'nitrogen':
+                row['received_n2'] += q
             else:
-                row['received_co2'] += 1
+                row['received_co2'] += q
         # неисправные: defect/maintenance на конец месяца
         for gt, field in (('nitrogen', 'defect_n2'), ('co2', 'defect_co2')):
             row[field] = GasCylinder.query.filter(

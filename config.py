@@ -51,6 +51,7 @@ class Config:
         SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 5
     BABEL_DEFAULT_LOCALE = 'nl'
     BABEL_SUPPORTED_LOCALES = ['nl', 'en', 'ru', 'pl']
+    BABEL_TRANSLATION_DIRECTORIES = os.path.join(BASE_DIR, 'translations')
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
 
