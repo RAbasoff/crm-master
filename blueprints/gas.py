@@ -25,45 +25,38 @@ GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂'}
 
 
 def _mark_empty_leaves_site(c, user_id=None, note=''):
-    """Пустой баллон сразу увозят — не хранится на площадке.
-
-    Статус empty → returned (история остаётся в CylinderLog).
-    На складе только: full / in_use / maintenance / defect.
-    """
+    """Пустой баллон отмечается empty (остаётся в истории/отображении)."""
     old = c.status
-    c.status = 'returned'
+    c.status = 'empty'
     c.side = None
     c.installed_at = None
     db.session.add(CylinderLog(
         cylinder_id=c.id,
         action='status_%s_to_empty' % (old or 'unknown'),
         performed_by=user_id,
-        notes=(note or 'Empty — taken away with delivery (not stored on site)')
+        notes=(note or 'Empty — waiting return with next delivery')
     ))
     return c
 
 
 def _inventory_balance():
-    """Per-gas inventory for cylinders ON SITE only.
-
-    On site: full + in_use + maintenance + defect.
-    Empty cylinders are taken away immediately → status 'returned' — not counted.
-    """
+    """Per-gas inventory. Empty kept for full information (user request)."""
     bal = {}
     for gt in GAS_TYPES:
         rows = db.session.query(
             GasCylinder.status, db.func.count()
         ).filter(
             GasCylinder.gas_type == gt,
-            GasCylinder.status.notin_(('scanned', 'returned', 'empty')),
+            GasCylinder.status.notin_(('scanned', 'returned')),
             GasCylinder.received_at.isnot(None),
         ).group_by(GasCylinder.status).all()
         counts = {s or 'unknown': int(c or 0) for s, c in rows}
         full = counts.get('full', 0)
         in_use = counts.get('in_use', 0)
+        empty = counts.get('empty', 0)
         maint = counts.get('maintenance', 0)
         defect = counts.get('defect', 0)
-        total = full + in_use + maint + defect
+        total = full + in_use + empty + maint + defect
         pending = GasCylinder.query.filter(
             GasCylinder.gas_type == gt,
             db.or_(GasCylinder.status == 'scanned', GasCylinder.received_at.is_(None))
@@ -83,7 +76,7 @@ def _inventory_balance():
             'label': GAS_LABELS[gt],
             'full': full,
             'in_use': in_use,
-            'empty': 0,
+            'empty': empty,
             'maintenance': maint,
             'defect': defect,
             'total': total,
@@ -215,25 +208,15 @@ def _orders_by_month(orders_all, now):
     return sorted(months.values(), key=lambda m: m['key'], reverse=True)
 
 
+def _cleanup_legacy_empty():
+    """Пустые остаются в системе (для полной информации) — не трогаем."""
+    return None
+
+
 @bp.route('/')
 @login_required
-def _cleanup_legacy_empty():
-    """Старые empty на площадке → returned (пустые сразу увозят)."""
-    try:
-        n = GasCylinder.query.filter_by(status='empty').update(
-            {'status': 'returned', 'side': None, 'installed_at': None},
-            synchronize_session=False
-        )
-        if n:
-            safe_commit()
-            print(f'gas: {n} legacy empty cylinders marked returned')
-    except Exception:
-        pass
-
-
 def gas_dashboard():
     """Main gas module view with interactive cylinder visualization"""
-    _cleanup_legacy_empty()
     # Auto-archive previous month (empty cylinders + monthly counters)
     now = datetime.utcnow()
     _auto_archive(now)
@@ -458,9 +441,7 @@ def cylinder_status(cyl_id):
         return redirect(url_for('gas.gas_dashboard'))
 
     if new_status == 'empty':
-        # Пустой сразу увозят — не хранится на площадке
         _mark_empty_leaves_site(c, user_id=current_user.id)
-        new_status = 'returned'
     else:
         c.status = new_status
         if new_status == 'in_use' and not c.installed_at:
@@ -480,7 +461,7 @@ def cylinder_status(cyl_id):
             )
 
     # When an in_use cylinder empties → promote one full spare into service
-    if old_status == 'in_use' and new_status == 'returned':
+    if old_status == 'in_use' and new_status == 'empty':
         promoted = _promote_full_to_in_use(
             c.gas_type,
             reason=f'Auto-switch: backup activated after {c.cylinder_number} emptied',

@@ -1050,19 +1050,18 @@ def run_data_migrations():
                             CylinderLog, CylinderOrder)
         from sqlalchemy import text, func
 
-        # ── 0b. Empty cylinders leave the site (business rule 2026-10) ──
-        # Delivery takes empties away — only full/in_use/maintenance/defect on site.
+        # ── 0b. Empty cylinders stay visible (user wants full info) ──
         try:
             from models import GasCylinder
-            n_empty = GasCylinder.query.filter_by(status='empty').update(
-                {'status': 'returned', 'side': None, 'installed_at': None},
+            n_ret = GasCylinder.query.filter_by(status='returned').update(
+                {'status': 'empty'},
                 synchronize_session=False
             )
-            if n_empty:
+            if n_ret:
                 safe_commit()
-                print(f"Data migration: {n_empty} empty cylinders marked as returned (taken away)")
+                print(f"Data migration: {n_ret} returned cylinders restored to empty (display)")
         except Exception as e:
-            print(f"Data migration empty→returned skipped: {e}")
+            print(f"Data migration returned→empty skipped: {e}")
 
         # ── 0. Fix admin role (auto-repair from role-switcher corruption) ──
         admin_user = User.query.filter_by(username='admin').first()
