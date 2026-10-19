@@ -4420,7 +4420,7 @@ msgid "Volume"
 msgstr "Объём"
 
 msgid "WARNING"
-msgstr "ПРЕДУПРЕЖДЕНИЕ"
+msgstr "ВНИМАНИЕ"
 
 msgid "Waiting for parts"
 msgstr "Ожидание деталей"
@@ -5082,7 +5082,8 @@ msgstr "Ваш график"
 msgid "Work days"
 msgstr "Рабочие дни"
 
-msgid "Access will be restored automatically during your scheduled working hours."
+msgid ""
+"Access will be restored automatically during your scheduled working hours."
 msgstr "Доступ восстановится автоматически в рабочие часы по вашему графику."
 
 msgid "Machine"
@@ -6117,9 +6118,6 @@ msgstr "Суббота"
 msgid "Day off"
 msgstr "Выходной"
 
-
-
-
 #: schedule_saturdays
 msgid "Morning"
 msgstr "Утро"
@@ -6136,15 +6134,21 @@ msgstr "День недели"
 msgid "Shift"
 msgstr "Смена"
 
-
+#: schedule_saturdays
+msgid ""
+"Working Saturdays are set by the head of technical service or admin. Choose "
+"a worker and mark the Saturdays."
+msgstr ""
+"Рабочие субботы устанавливает начальник технической службы или "
+"администратор. Выберите сотрудника и отметьте субботы."
 
 #: schedule_saturdays
-msgid "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
-msgstr "Рабочие субботы устанавливает начальник технической службы или администратор. Выберите сотрудника и отметьте субботы."
-
-#: schedule_saturdays
-msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
-msgstr "Рабочие субботы устанавливает начальник технической службы или администратор. Ваши назначенные субботы показаны ниже."
+msgid ""
+"Working Saturdays are set by the head of technical service or admin. Your "
+"assigned Saturdays are shown below."
+msgstr ""
+"Рабочие субботы устанавливает начальник технической службы или "
+"администратор. Ваши назначенные субботы показаны ниже."
 
 #: faults work-timer
 msgid "Start work"
@@ -6494,3 +6498,49 @@ msgstr "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧА�
 
 msgid "Access denied. Insufficient rights."
 msgstr "ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ."
+
+msgid "Error logs"
+msgstr "Логи ошибок"
+
+msgid "Recent errors"
+msgstr "Последние ошибки"
+
+msgid "Open error logs"
+msgstr "Открыть логи ошибок"
+
+msgid "Auto-refresh 15s"
+msgstr "Обновление 15 с"
+
+msgid "Loading…"
+msgstr "Загрузка..."
+
+msgid "No errors in the log"
+msgstr "В логе нет ошибок"
+
+msgid "No recent errors"
+msgstr "Нет свежих ошибок"
+
+msgid "Failed to load logs"
+msgstr "Не удалось загрузить логи"
+
+msgid "File log (tail)"
+msgstr "Файловый лог (хвост)"
+
+msgid "Refresh"
+msgstr "Обновить"
+
+msgid "Show all"
+msgstr "Показать все"
+
+msgid ""
+"All application errors are recorded here. Open logs to see messages "
+"immediately."
+msgstr ""
+"Все ошибки приложения пишутся сюда. Откройте логи, чтобы увидеть сообщения "
+"сразу."
+
+msgid "ERROR"
+msgstr "ОШИБКА"
+
+msgid "CRITICAL"
+msgstr "КРИТИЧНО"

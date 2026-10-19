@@ -36,19 +36,36 @@ function esc(s) {
     });
 }
 
+const TLOG = {
+    noErrors: {{ _('No errors in the log')|tojson }},
+    failed: {{ _('Failed to load logs')|tojson }},
+    ERROR: {{ _('ERROR')|tojson }},
+    CRITICAL: {{ _('CRITICAL')|tojson }},
+    WARNING: {{ _('WARNING')|tojson }},
+    loading: {{ _('Loading...')|tojson }}
+};
+
+function levelLabel(l) {
+    const s = String(l || '').toUpperCase();
+    if (s === 'ERROR') return TLOG.ERROR;
+    if (s === 'CRITICAL') return TLOG.CRITICAL;
+    if (s === 'WARNING' || s === 'WARN') return TLOG.WARNING;
+    return esc(l);
+}
+
 function loadLogs() {
     fetch('/api/settings/logs').then(r => r.json()).then(d => {
         const box = document.getElementById('errList');
         const logs = (d.logs && d.logs.db) || [];
         if (!logs.length) {
-            box.innerHTML = '<div style="padding:16px;background:#eafaf1;border-radius:8px;color:#27ae60;font-size:13px">✅ {{ _("No errors in the log") }}</div>';
+            box.innerHTML = '<div style="padding:16px;background:#eafaf1;border-radius:8px;color:#27ae60;font-size:13px">✅ ' + esc(TLOG.noErrors) + '</div>';
         } else {
             box.innerHTML = logs.map(function (r) {
                 const color = /error|critical/i.test(r.level) ? '#c0392b' : '#8a6d3b';
                 const bg = /error|critical/i.test(r.level) ? '#fdecea' : '#fff8e6';
                 return '<div style="background:' + bg + ';border-left:4px solid ' + color + ';border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
                     '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#555">' +
-                    '<b style="color:' + color + '">' + esc(r.level) + '</b>' +
+                    '<b style="color:' + color + '">' + levelLabel(r.level) + '</b>' +
                     '<span>' + esc(r.when) + '</span>' +
                     '<span>' + esc(r.category) + '</span>' +
                     (r.user ? '<span>👤 ' + esc(r.user) + '</span>' : '') +
@@ -62,7 +79,7 @@ function loadLogs() {
         const tail = (d.logs && d.logs.file_tail) || [];
         document.getElementById('fileTail').textContent = tail.length ? tail.join('\n') : '—';
     }).catch(function () {
-        document.getElementById('errList').innerHTML = '<div style="padding:12px;color:#c0392b">{{ _("Failed to load logs") }}</div>';
+        document.getElementById('errList').innerHTML = '<div style="padding:12px;color:#c0392b">' + esc(TLOG.failed) + '</div>';
     });
 }
 

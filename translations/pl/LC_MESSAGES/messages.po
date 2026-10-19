@@ -2788,7 +2788,7 @@ msgid "Linked worker"
 msgstr "Linked worker"
 
 msgid "Loading..."
-msgstr "Loading..."
+msgstr "Ładowanie..."
 
 msgid "Location & Responsibility"
 msgstr "Location & Responsibility"
@@ -2821,7 +2821,8 @@ msgid "Logout"
 msgstr "Logout"
 
 msgid "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
-msgstr "PROGRAM JEST DOSTĘPNY TYLKO W GODZINACH PRACY ZGODNIE Z TWOIM GRAFIKIEM"
+msgstr ""
+"PROGRAM JEST DOSTĘPNY TYLKO W GODZINACH PRACY ZGODNIE Z TWOIM GRAFIKIEM"
 
 msgid "Work hours"
 msgstr "Godziny pracy"
@@ -2832,8 +2833,11 @@ msgstr "Twój grafik"
 msgid "Work days"
 msgstr "Dni robocze"
 
-msgid "Access will be restored automatically during your scheduled working hours."
-msgstr "Dostęp zostanie automatycznie przywrócony w godzinach pracy zgodnie z grafikiem."
+msgid ""
+"Access will be restored automatically during your scheduled working hours."
+msgstr ""
+"Dostęp zostanie automatycznie przywrócony w godzinach pracy zgodnie z "
+"grafikiem."
 
 msgid "Low Stock Alert"
 msgstr "Low Stock Alert"
@@ -5082,7 +5086,7 @@ msgid "Volume"
 msgstr "Volume"
 
 msgid "WARNING"
-msgstr "WARNING"
+msgstr "OSTRZEŻENIE"
 
 msgid "Waiting for parts"
 msgstr "Waiting for parts"
@@ -6015,9 +6019,6 @@ msgstr "Sobota"
 msgid "Day off"
 msgstr "Dzień wolny"
 
-
-
-
 #: schedule_saturdays
 msgid "Morning"
 msgstr "Rano"
@@ -6034,15 +6035,21 @@ msgstr "Dzień tygodnia"
 msgid "Shift"
 msgstr "Zmiana"
 
-
+#: schedule_saturdays
+msgid ""
+"Working Saturdays are set by the head of technical service or admin. Choose "
+"a worker and mark the Saturdays."
+msgstr ""
+"Soboty robocze ustawia kierownik działu technicznego lub administrator. "
+"Wybierz pracownika i oznacz soboty."
 
 #: schedule_saturdays
-msgid "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
-msgstr "Soboty robocze ustawia kierownik działu technicznego lub administrator. Wybierz pracownika i oznacz soboty."
-
-#: schedule_saturdays
-msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
-msgstr "Soboty robocze ustawia kierownik działu technicznego lub administrator. Twoje przydzielone soboty są pokazane poniżej."
+msgid ""
+"Working Saturdays are set by the head of technical service or admin. Your "
+"assigned Saturdays are shown below."
+msgstr ""
+"Soboty robocze ustawia kierownik działu technicznego lub administrator. "
+"Twoje przydzielone soboty są pokazane poniżej."
 
 #: faults work-timer
 msgid "Start work"
@@ -6200,3 +6207,49 @@ msgstr "Aplikacja dostępna tylko w godzinach pracy"
 
 msgid "Access denied. Insufficient rights."
 msgstr "Brak dostępu. Niewystarczające uprawnienia."
+
+msgid "Error logs"
+msgstr "Dzienniki błędów"
+
+msgid "Recent errors"
+msgstr "Ostatnie błędy"
+
+msgid "Open error logs"
+msgstr "Otwórz dzienniki błędów"
+
+msgid "Auto-refresh 15s"
+msgstr "Auto-odświeżanie 15 s"
+
+msgid "Loading…"
+msgstr "Ładowanie..."
+
+msgid "No errors in the log"
+msgstr "Brak błędów w dzienniku"
+
+msgid "No recent errors"
+msgstr "Brak ostatnich błędów"
+
+msgid "Failed to load logs"
+msgstr "Nie udało się wczytać dzienników"
+
+msgid "File log (tail)"
+msgstr "Plik logu (koniec)"
+
+msgid "Refresh"
+msgstr "Odśwież"
+
+msgid "Show all"
+msgstr "Pokaż wszystko"
+
+msgid ""
+"All application errors are recorded here. Open logs to see messages "
+"immediately."
+msgstr ""
+"Wszystkie błędy aplikacji są zapisywane tutaj. Otwórz logi, aby od razu "
+"zobaczyć komunikaty."
+
+msgid "ERROR"
+msgstr "BŁĄD"
+
+msgid "CRITICAL"
+msgstr "KRYTYCZNY"

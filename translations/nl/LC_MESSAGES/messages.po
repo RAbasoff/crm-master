@@ -6303,3 +6303,46 @@ msgstr "Update beschikbaar"
 
 msgid "You have the latest version"
 msgstr "U hebt de nieuwste versie"
+
+msgid "Loading…"
+msgstr "Laden..."
+
+msgid "No errors in the log"
+msgstr "Geen fouten in het logboek"
+
+msgid "Failed to load logs"
+msgstr "Logboek kon niet worden geladen"
+
+msgid "File log (tail)"
+msgstr "Logbestand (einde)"
+
+msgid "Refresh"
+msgstr "Vernieuwen"
+
+msgid "Show all"
+msgstr "Alles tonen"
+
+msgid ""
+"All application errors are recorded here. Open logs to see messages "
+"immediately."
+msgstr ""
+"Alle applicatiefouten worden hier vastgelegd. Open de logs om berichten "
+"meteen te zien."
+
+msgid "ERROR"
+msgstr "FOUT"
+
+msgid "CRITICAL"
+msgstr "KRITIEK"
+
+msgid "http"
+msgstr "http"
+
+msgid "auth"
+msgstr "auth"
+
+msgid "database"
+msgstr "database"
+
+msgid "export"
+msgstr "export"
