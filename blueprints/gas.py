@@ -217,8 +217,23 @@ def _orders_by_month(orders_all, now):
 
 @bp.route('/')
 @login_required
+def _cleanup_legacy_empty():
+    """Старые empty на площадке → returned (пустые сразу увозят)."""
+    try:
+        n = GasCylinder.query.filter_by(status='empty').update(
+            {'status': 'returned', 'side': None, 'installed_at': None},
+            synchronize_session=False
+        )
+        if n:
+            safe_commit()
+            print(f'gas: {n} legacy empty cylinders marked returned')
+    except Exception:
+        pass
+
+
 def gas_dashboard():
     """Main gas module view with interactive cylinder visualization"""
+    _cleanup_legacy_empty()
     # Auto-archive previous month (empty cylinders + monthly counters)
     now = datetime.utcnow()
     _auto_archive(now)
@@ -1541,6 +1556,10 @@ def gas_report_pdf():
 
     def pdf_text(s):
         s = str(s if s is not None else '')
+        # ASCII-замены: N₂/CO₂ → N2/CO2, чтобы в PDF не было «?»
+        s = (s.replace('₂', '2').replace('₃', '3')
+               .replace('—', '-').replace('–', '-')
+               .replace('№', 'No.'))
         return s if unicode_font else s.encode('latin-1', 'replace').decode('latin-1')
 
     title = _('Gas report')
@@ -1578,8 +1597,8 @@ def gas_report_pdf():
     pdf.add_page()
 
     headers = [
-        _('Month'), 'N₂ ' + _('Ordered'), 'N₂ ' + _('Used'),
-        'CO₂ ' + _('Ordered'), 'CO₂ ' + _('Used'),
+        _('Month'), 'N2 ' + _('Ordered'), 'N2 ' + _('Used'),
+        'CO2 ' + _('Ordered'), 'CO2 ' + _('Used'),
         _('Defects'), _('Received')
     ]
     col_w = [30, 32, 32, 32, 32, 32, 32]

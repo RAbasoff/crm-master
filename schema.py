@@ -24,7 +24,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261012
+SCHEMA_VERSION = 20261019
 
 
 def _schema_log(msg):
@@ -1049,6 +1049,20 @@ def run_data_migrations():
                             TimeEntry, Vacation, WorkSchedule, WeekendShift,
                             CylinderLog, CylinderOrder)
         from sqlalchemy import text, func
+
+        # ── 0b. Empty cylinders leave the site (business rule 2026-10) ──
+        # Delivery takes empties away — only full/in_use/maintenance/defect on site.
+        try:
+            from models import GasCylinder
+            n_empty = GasCylinder.query.filter_by(status='empty').update(
+                {'status': 'returned', 'side': None, 'installed_at': None},
+                synchronize_session=False
+            )
+            if n_empty:
+                safe_commit()
+                print(f"Data migration: {n_empty} empty cylinders marked as returned (taken away)")
+        except Exception as e:
+            print(f"Data migration empty→returned skipped: {e}")
 
         # ── 0. Fix admin role (auto-repair from role-switcher corruption) ──
         admin_user = User.query.filter_by(username='admin').first()
