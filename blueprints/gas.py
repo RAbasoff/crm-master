@@ -149,6 +149,46 @@ def _auto_archive(now):
 # MAIN VIEW — Interactive Cylinder Dashboard
 # ============================================================
 
+def _orders_by_month(orders_all, now):
+    """Group cylinder orders by month with ordered/used counts for the UI."""
+    from collections import OrderedDict
+    months = OrderedDict()
+    # used (became empty) per month from logs
+    used_by_month = {}
+    for log in CylinderLog.query.filter(CylinderLog.action.like('%_to_empty%')).all():
+        key = (log.date or log.date).strftime('%Y-%m') if log.date else None
+        if not key:
+            continue
+        used_by_month[key] = used_by_month.get(key, 0) + 1
+    for o in orders_all:
+        if not o.ordered_at:
+            continue
+        key = o.ordered_at.strftime('%Y-%m')
+        if key not in months:
+            months[key] = {
+                'key': key,
+                'label': o.ordered_at.strftime('%Y-%m'),
+                'title': o.ordered_at.strftime('%B %Y'),
+                'ordered': 0,
+                'ordered_n2': 0,
+                'ordered_co2': 0,
+                'delivered': 0,
+                'used': used_by_month.get(key, 0),
+                'items': [],
+            }
+        qty = int(o.quantity or 0)
+        months[key]['ordered'] += qty
+        if o.gas_type == 'nitrogen':
+            months[key]['ordered_n2'] += qty
+        else:
+            months[key]['ordered_co2'] += qty
+        if o.status == 'delivered':
+            months[key]['delivered'] += qty
+        months[key]['items'].append(o)
+    # sort newest month first
+    return sorted(months.values(), key=lambda m: m['key'], reverse=True)
+
+
 @bp.route('/')
 @login_required
 def gas_dashboard():
@@ -160,7 +200,10 @@ def gas_dashboard():
     cylinders = GasCylinder.query.order_by(GasCylinder.gas_type, GasCylinder.cylinder_number).all()
     components = GasSystemComponent.query.order_by(
         GasSystemComponent.gas_type, GasSystemComponent.component_type).all()
+    # All orders grouped by month (for collapsible Bestellingen)
     orders = CylinderOrder.query.order_by(CylinderOrder.ordered_at.desc()).limit(10).all()
+    orders_all = CylinderOrder.query.order_by(CylinderOrder.ordered_at.desc()).all()
+    orders_by_month = _orders_by_month(orders_all, now)
 
     n2_cylinders = [c for c in cylinders if c.gas_type == 'nitrogen']
     co2_cylinders = [c for c in cylinders if c.gas_type == 'co2']
@@ -242,6 +285,7 @@ def gas_dashboard():
                            co2_spare=co2_spare,
                            components=components,
                            orders=orders,
+                           orders_by_month=orders_by_month,
                            stats=stats,
                            balance=balance,
                            low_stock=low_stock)
@@ -921,7 +965,31 @@ def _parse_z_refill(code):
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_scan_list():
-    return render_template('gas/scan_list.html')
+    """Scan list page. Shows recent scans from DB so the list is not lost."""
+    from datetime import timedelta
+    since = datetime.utcnow() - timedelta(hours=48)
+    # cylinders touched by scan-list flow (created/received recently)
+    logs = CylinderLog.query.filter(
+        CylinderLog.date >= since,
+        CylinderLog.action.in_(('created', 'received'))
+    ).order_by(CylinderLog.date.desc()).limit(200).all()
+    seen = set()
+    recent = []
+    for log in logs:
+        c = db.session.get(GasCylinder, log.cylinder_id) if log.cylinder_id else None
+        if not c or c.id in seen:
+            continue
+        seen.add(c.id)
+        recent.append({
+            'id': c.id,
+            'number': c.cylinder_number,
+            'gas_type': c.gas_type,
+            'status': c.status,
+            'refill_date': c.refill_date.isoformat() if c.refill_date else '',
+            'action': log.action,
+            'note': (log.notes or '')[:80],
+        })
+    return render_template('gas/scan_list.html', recent=recent)
 
 
 @bp.route('/api/cylinders/scan-list', methods=['POST'])
@@ -981,7 +1049,13 @@ def cylinder_scan_list_add_stock():
         n += 1
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
-    return jsonify({'ok': True, 'added': n})
+    added_nums = []
+    for cid in ids:
+        c = db.session.get(GasCylinder, int(cid))
+        if c:
+            added_nums.append(c.cylinder_number)
+    return jsonify({'ok': True, 'added': n, 'numbers': added_nums,
+                    'stock_url': '/gas/cylinders'})
 
 
 @bp.route('/api/cylinders/assign-work', methods=['POST'])

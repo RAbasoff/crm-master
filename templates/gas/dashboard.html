@@ -114,7 +114,8 @@
   {% for gt, b in balance.items() %}
   <div style="background:{{ '#eaf3ff' if gt == 'nitrogen' else '#fdeaea' }};border-radius:8px;padding:8px 12px;font-size:11px">
     <div style="font-weight:700;margin-bottom:4px;color:{{ '#1a5fa8' if gt == 'nitrogen' else '#b03a2e' }}">
-      {{ b.label }} — {{ _('Balance') }}:
+      {{ b.label }} — {{ _('Stock right now') }}
+      <span style="font-weight:400;color:#888;font-size:10px">({{ _('not monthly — current leftovers') }})</span>
       {% if b.identity_ok %}<span style="color:#27ae60">✓</span>{% else %}<span style="color:#e74c3c">✗</span>{% endif %}
     </div>
     <div style="font-family:monospace;color:#333;line-height:1.5">
@@ -129,7 +130,7 @@
       {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('OK') }} (1+1)</span>
       {% else %}<span style="color:#e74c3c">{{ _('BROKEN') }}</span>{% endif %}
       · {{ _('spare full') }}: {{ b.spare_full }}
-      · {{ _('delivered') }}: +{{ b.delivered_qty }}
+      · {{ _('delivered total') }}: +{{ b.delivered_qty }}
     </div>
   </div>
   {% endfor %}
@@ -541,12 +542,14 @@ function quickStatus(cylId, status, btn) {
 </script>
 
 {% if components %}
-<div class="card" style="margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <h2 style="font-size:13px;margin:0">🔧 {{ _('Components') }}</h2>
-        <a href="/gas/components" class="btn btn-sm" style="background:#eee;font-size:10px">{{ _('All') }}</a>
-    </div>
-    <div class="table-wrap"><table>
+<details class="card" style="margin-bottom:10px" {% if request.args.get('open') == 'components' %}open{% endif %}>
+    <summary style="cursor:pointer;font-size:13px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center">
+        <span>🔧 {{ _('Components') }} ({{ components|length }}) <span style="font-weight:400;color:#888;font-size:11px">{{ _('collapsed') }}</span></span>
+        <span>
+            <a href="/gas/components" class="btn btn-sm" style="background:#eee;font-size:10px" onclick="event.stopPropagation()">{{ _('All') }}</a>
+        </span>
+    </summary>
+    <div class="table-wrap" style="margin-top:8px"><table>
         <tr><th>{{ _('Type') }}</th><th>{{ _('Name') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Status') }}</th><th>{{ _('Next Check') }}</th></tr>
         {% for c in components %}
         <tr>
@@ -558,26 +561,39 @@ function quickStatus(cylId, status, btn) {
         </tr>
         {% endfor %}
     </table></div>
-</div>
+</details>
 {% endif %}
 
-{% if orders %}
+{% if orders_by_month %}
 <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <h2 style="font-size:13px;margin:0">📦 {{ _('Orders') }}</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="font-size:13px;margin:0">📦 {{ _('Orders') }} — {{ _('by month') }}</h2>
         <a href="/gas/orders" class="btn btn-sm" style="background:#eee;font-size:10px">{{ _('All') }}</a>
     </div>
-    <div class="table-wrap"><table>
-        <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th></tr>
-        {% for o in orders %}
-        <tr>
-            <td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td>
-            <td>{{ 'N₂' if o.gas_type=='nitrogen' else 'CO₂' }}</td>
-            <td>{{ o.quantity }}</td>
-            <td><span class="badge badge-{{ o.status }}">{{ o.status }}</span></td>
-        </tr>
-        {% endfor %}
-    </table></div>
+    {% for m in orders_by_month %}
+    <details style="border:1px solid #e8ecf1;border-radius:8px;margin-bottom:8px;overflow:hidden" {% if loop.first %}open{% endif %}>
+        <summary style="cursor:pointer;padding:10px 12px;background:{% if loop.first %}#eef6ff{% else %}#f8f9fa{% endif %};font-size:12px;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <span>🗓 {{ m.title }}</span>
+            <span style="font-weight:600;color:#555">
+                {{ _('Ordered') }}: <b style="color:#2c3e50">{{ m.ordered }}</b>
+                (N₂ {{ m.ordered_n2 }} · CO₂ {{ m.ordered_co2 }})
+                · {{ _('Used') }}: <b style="color:#c0392b">{{ m.used }}</b>
+                · {{ _('Delivered') }}: <b style="color:#27ae60">{{ m.delivered }}</b>
+            </span>
+        </summary>
+        <div class="table-wrap" style="padding:0 8px 8px"><table>
+            <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th></tr>
+            {% for o in m.items %}
+            <tr>
+                <td>{{ o.ordered_at.strftime('%d-%m-%Y') }}</td>
+                <td>{{ 'N₂' if o.gas_type=='nitrogen' else 'CO₂' }}</td>
+                <td>{{ o.quantity }}</td>
+                <td><span class="badge badge-{{ o.status }}">{{ o.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </table></div>
+    </details>
+    {% endfor %}
 </div>
 {% endif %}
 {% endblock %}

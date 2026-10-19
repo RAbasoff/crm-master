@@ -37,17 +37,22 @@
 <!-- СПИСОК -->
 <div class="card" style="margin-bottom:12px">
     <h2 style="margin:0 0 10px;font-size:15px">🗂 {{ _('Scanned list') }} (<span id="listCount">0</span>)</h2>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">
+        {{ _('List is kept on this page and in the database for 48 hours.') }}
+        <a href="/gas/cylinders">{{ _('Open warehouse cylinders') }} →</a>
+    </div>
     <div class="table-wrap">
         <table>
-            <tr><th>#</th><th>{{ _('Cylinder number') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Refill date') }}</th><th></th></tr>
+            <tr><th>#</th><th>{{ _('Cylinder number') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Refill date') }}</th><th>{{ _('Status') }}</th><th></th></tr>
             <tbody id="scanListBody">
-            <tr><td colspan="5" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>
             </tbody>
         </table>
     </div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" style="background:#27ae60;color:white;padding:10px 16px;font-weight:700"
                 onclick="askAddStock()">📦 {{ _('Add these to stock?') }}</button>
+        <a href="/gas/cylinders" class="btn" style="background:#3498db;color:white;padding:10px 16px;font-weight:700">📋 {{ _('Warehouse / cylinders list') }}</a>
     </div>
     <div id="stockMsg" style="margin-top:8px;font-size:12px;color:#888"></div>
 </div>
@@ -76,6 +81,21 @@ var rows = [];
 var lastId = null;
 var instSide = 'right';
 
+// Серверный список за 48 часов (чтобы список не «терялся»)
+{% if recent %}
+rows = [
+    {% for r in recent %}
+    {
+        cylinder_id: {{ r.id }},
+        number: {{ r.number|tojson }},
+        gas_type: {{ r.gas_type|tojson }},
+        status: {{ r.status|tojson }},
+        refill_date: {{ r.refill_date|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+{% endif %}
+
 function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
         return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
@@ -86,7 +106,7 @@ function renderList() {
     const tb = document.getElementById('scanListBody');
     document.getElementById('listCount').textContent = rows.length;
     if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>';
+        tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:16px">{{ _('Scan numbers to build a list') }}</td></tr>';
         return;
     }
     tb.innerHTML = rows.map(function (r, i) {
@@ -95,6 +115,7 @@ function renderList() {
             '<td><strong>' + esc(r.number) + '</strong></td>' +
             '<td>' + esc(r.gas_type) + '</td>' +
             '<td>' + esc(r.refill_date || '—') + '</td>' +
+            '<td>' + esc(r.status || '—') + '</td>' +
             '<td><button class="btn btn-sm" style="background:#eee" onclick="removeRow(' + i + ')">✕</button></td>' +
             '</tr>';
     }).join('');
@@ -175,7 +196,12 @@ function askAddStock() {
         body: JSON.stringify({ids: ids})
     }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d.ok) { alert(d.error || 'Error'); return; }
-        document.getElementById('stockMsg').textContent = '✓ {{ _("Added to stock") }}: ' + d.added;
+        document.getElementById('stockMsg').innerHTML =
+            '✓ {{ _("Added to stock") }}: ' + d.added +
+            ' — ' + (d.numbers || []).join(', ') +
+            ' · <a href="/gas/cylinders"><b>{{ _("Open cylinders list") }}</b></a>';
+        rows.forEach(function (r) { r.status = 'full'; });
+        renderList();
     });
 }
 
@@ -240,5 +266,6 @@ document.getElementById('instNumber').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); installNow(false); }
 });
 pickSide('right');
+renderList();
 </script>
 {% endblock %}
