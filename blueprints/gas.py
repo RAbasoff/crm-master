@@ -54,11 +54,19 @@ def _inventory_balance():
             GasCylinder.gas_type == gt,
             db.or_(GasCylinder.status == 'scanned', GasCylinder.received_at.is_(None))
         ).count()
-        # delivered orders (informational)
-        ordered = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
-            CylinderOrder.gas_type == gt
+        # Только ТЕКУЩИЙ месяц (не «за всё время» — иначе счёт путает)
+        now = datetime.utcnow()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        ordered_month = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
+            CylinderOrder.gas_type == gt,
+            CylinderOrder.ordered_at >= month_start
         ).scalar() or 0
-        delivered = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
+        delivered_month = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
+            CylinderOrder.gas_type == gt,
+            CylinderOrder.status == 'delivered',
+            CylinderOrder.ordered_at >= month_start
+        ).scalar() or 0
+        delivered_all = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
             CylinderOrder.gas_type == gt, CylinderOrder.status == 'delivered'
         ).scalar() or 0
         bal[gt] = {
@@ -75,8 +83,10 @@ def _inventory_balance():
             'ready_full': full,
             'spare_full': max(0, full - WORKING_READY_FULL),
             'need_order': (in_use < WORKING_IN_USE or full < WORKING_READY_FULL),
-            'ordered_qty': int(ordered),
-            'delivered_qty': int(delivered),
+            'ordered_qty': int(ordered_month),
+            'delivered_qty': int(delivered_month),
+            'delivered_all': int(delivered_all),
+            'month_label': now.strftime('%Y-%m'),
         }
     return bal
 

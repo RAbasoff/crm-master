@@ -2748,7 +2748,9 @@ msgid "Logout"
 msgstr "Logout"
 
 msgid "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
-msgstr "THE PROGRAM IS AVAILABLE ONLY DURING WORKING HOURS ACCORDING TO YOUR SCHEDULE"
+msgstr ""
+"THE PROGRAM IS AVAILABLE ONLY DURING WORKING HOURS ACCORDING TO YOUR "
+"SCHEDULE"
 
 msgid "Work hours"
 msgstr "Work hours"
@@ -2759,8 +2761,10 @@ msgstr "Your schedule"
 msgid "Work days"
 msgstr "Work days"
 
-msgid "Access will be restored automatically during your scheduled working hours."
-msgstr "Access will be restored automatically during your scheduled working hours."
+msgid ""
+"Access will be restored automatically during your scheduled working hours."
+msgstr ""
+"Access will be restored automatically during your scheduled working hours."
 
 msgid "Low Stock Alert"
 msgstr "Low Stock Alert"
@@ -5975,9 +5979,6 @@ msgstr "Saturday"
 msgid "Day off"
 msgstr "Day off"
 
-
-
-
 #: schedule_saturdays
 msgid "Morning"
 msgstr "Morning"
@@ -5994,15 +5995,21 @@ msgstr "Weekday"
 msgid "Shift"
 msgstr "Shift"
 
-
+#: schedule_saturdays
+msgid ""
+"Working Saturdays are set by the head of technical service or admin. Choose "
+"a worker and mark the Saturdays."
+msgstr ""
+"Working Saturdays are set by the head of technical service or admin. Choose "
+"a worker and mark the Saturdays."
 
 #: schedule_saturdays
-msgid "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
-msgstr "Working Saturdays are set by the head of technical service or admin. Choose a worker and mark the Saturdays."
-
-#: schedule_saturdays
-msgid "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
-msgstr "Working Saturdays are set by the head of technical service or admin. Your assigned Saturdays are shown below."
+msgid ""
+"Working Saturdays are set by the head of technical service or admin. Your "
+"assigned Saturdays are shown below."
+msgstr ""
+"Working Saturdays are set by the head of technical service or admin. Your "
+"assigned Saturdays are shown below."
 
 #: faults work-timer
 msgid "Start work"
@@ -6356,3 +6363,84 @@ msgstr "The application is available only during your working hours"
 
 msgid "Access denied. Insufficient rights."
 msgstr "Access denied. Insufficient rights."
+
+msgid "Stock right now"
+msgstr "Stock right now"
+
+msgid "not monthly — current leftovers"
+msgstr "not monthly — current leftovers"
+
+msgid "in use"
+msgstr "in use"
+
+msgid "full"
+msgstr "full"
+
+msgid "empty"
+msgstr "empty"
+
+msgid "Working pair"
+msgstr "Working pair"
+
+msgid "spare full"
+msgstr "spare full"
+
+msgid "This month"
+msgstr "This month"
+
+msgid "in scan list (not in stock yet)"
+msgstr "in scan list (not in stock yet)"
+
+msgid "Received this month"
+msgstr "Received this month"
+
+msgid "In stock total"
+msgstr "In stock total"
+
+msgid "Ordered / received this month"
+msgstr "Ordered / received this month"
+
+msgid "resets monthly"
+msgstr "resets monthly"
+
+msgid "Used"
+msgstr "Used"
+
+msgid "by month"
+msgstr "by month"
+
+msgid "collapsed"
+msgstr "collapsed"
+
+msgid "Error logs"
+msgstr "Error logs"
+
+msgid "Recent errors"
+msgstr "Recent errors"
+
+msgid "Open error logs"
+msgstr "Open error logs"
+
+msgid "No recent errors"
+msgstr "No recent errors"
+
+msgid "Auto-refresh 15s"
+msgstr "Auto-refresh 15s"
+
+msgid "Check for updates"
+msgstr "Check for updates"
+
+msgid "License"
+msgstr "License"
+
+msgid "License active"
+msgstr "License active"
+
+msgid "Valid until"
+msgstr "Valid until"
+
+msgid "Update available"
+msgstr "Update available"
+
+msgid "You have the latest version"
+msgstr "You have the latest version"

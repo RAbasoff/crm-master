@@ -135,7 +135,11 @@
       {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('OK') }} (1+1)</span>
       {% else %}<span style="color:#e74c3c">{{ _('BROKEN') }}</span>{% endif %}
       · {{ _('spare full') }}: {{ b.spare_full }}
-      · {{ _('delivered total') }}: +{{ b.delivered_qty }}
+    </div>
+    <div style="margin-top:3px;color:#666">
+      📦 {{ _('This month') }} ({{ b.month_label }}):
+      {{ _('Ordered') }} <b>{{ b.ordered_qty }}</b>
+      · {{ _('Delivered') }} <b>{{ b.delivered_qty }}</b>
     </div>
   </div>
   {% endfor %}
