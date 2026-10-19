@@ -100,12 +100,37 @@ def settings():
         else:
             responsible_access[r.id] = []
 
+    # License + version for System tab
+    from license import load_license, parse_license
+    from config import APP_VERSION
+    lic_key = load_license()
+    lic_ok, lic_info = parse_license(lic_key)
+    license_info = {
+        'active': bool(lic_ok),
+        'key': lic_key or '',
+        'key_masked': (lic_key[:12] + '…' + lic_key[-6:]) if lic_key and len(lic_key) > 20 else (lic_key or '—'),
+        'error': '' if lic_ok else (lic_info if isinstance(lic_info, str) else ''),
+        'client': (lic_info or {}).get('client', '') if lic_ok else '',
+        'seats': (lic_info or {}).get('seats', '') if lic_ok else '',
+        'expire': (lic_info or {}).get('expire', '') if lic_ok else '',
+        'version': APP_VERSION,
+    }
+    if license_info['expire']:
+        try:
+            exp_d = datetime.strptime(license_info['expire'], '%Y-%m-%d').date()
+            license_info['days_left'] = (exp_d - datetime.now().date()).days
+        except ValueError:
+            license_info['days_left'] = None
+    else:
+        license_info['days_left'] = None
+
     return render_template('settings.html', users=users, mechanics=mechanics, sections=sections, groups=groups,
         responsible=responsible, responsible_list=responsible_list,
         responsible_access=responsible_access, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
         top_machines_faults=top_machines_faults,
-        sections_tree=SECTIONS_TREE)
+        sections_tree=SECTIONS_TREE,
+        license_info=license_info)
 
 
 @bp.route('/settings/backup', methods=['POST'])
@@ -442,3 +467,35 @@ def api_map_all():
             'marker_size': m.marker_size or 30,
         })
     return jsonify({'sections': sections, 'machines': machines})
+
+
+# ============================================================
+# SYSTEM: license info + GitHub updates
+# ============================================================
+
+@bp.route('/settings/check-updates', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_check_updates():
+    """Проверить обновления на GitHub (без изменения файлов)."""
+    try:
+        from github_update import check_updates
+        info = check_updates()
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)[:200]}), 500
+
+
+@bp.route('/settings/run-update', methods=['POST'])
+@login_required
+@role_required('admin')
+def settings_run_update():
+    """Установить обновление кода с GitHub (данные не трогаются)."""
+    try:
+        from github_update import apply_update, restart_hint
+        res = apply_update()
+        res['restart_hint'] = restart_hint()
+        log_audit('update', 'system', None, res.get('message', ''))
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)[:200]}), 500

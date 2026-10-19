@@ -17,6 +17,7 @@ INCLUDE = [
     'security.py', 'logs.py', 'pdf_utils.py', 'push.py', 'wsgi.py',
     'run_server.py',
     'license.py',
+    'github_update.py',
     'requirements.txt', 'runtime.txt',
     'blueprints', 'templates', 'translations', 'vendor_fpdf',
 ]
@@ -95,6 +96,24 @@ def main():
         'if not exist "%DEST%\\.env" copy "%DEST%\\.env.example" "%DEST%\\.env"\r\n'
         'pip install -r "%DEST%\\requirements.txt"\r\n'
         'echo Done. Edit %DEST%\\.env then run: python wsgi.py\r\n'
+        'echo Next updates: open System tab in app or run update_from_github.bat\r\n'
+        'pause\r\n', encoding='utf-8')
+
+    # GitHub updater launcher (server self-update without new EXE)
+    (OUT / 'update_from_github.bat').write_text(
+        '@echo off\r\n'
+        'chcp 65001 >nul\r\n'
+        'title ProMaster — Update from GitHub\r\n'
+        'cd /d "%~dp0"\r\n'
+        'echo Checking updates on GitHub...\r\n'
+        'python github_update.py --check\r\n'
+        'echo.\r\n'
+        'set /p DOIT=Install update now? [Y/N] \r\n'
+        'if /I "%DOIT%"=="Y" (\r\n'
+        '  python github_update.py\r\n'
+        '  echo.\r\n'
+        '  echo Restart the service / run_server.py to apply.\r\n'
+        ')\r\n'
         'pause\r\n', encoding='utf-8')
 
     (OUT / 'README_SERVER.txt').write_text(

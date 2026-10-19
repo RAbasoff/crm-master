@@ -38,7 +38,7 @@ def tool_wear_page():
         else:
             t.wear_percent = 100.0
 
-    check_tool_wear_notifications()
+    # Не создаём уведомления при каждом открытии страницы — только показываем % износа
     return render_template('tool_wear.html', tools=tools, today=today)
 
 

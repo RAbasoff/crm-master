@@ -363,6 +363,10 @@ def add_work_report(entry_text):
         db.session.rollback()
 
 
+# User preference (2026-10-09): knife/tool-wear reminder at most once per 2 hours — not every page load.
+TOOL_WEAR_REMINDER_HOURS = 2
+
+
 def check_tool_wear_notifications():
     """Notify users with tool_wear access when knife wear reaches 80%."""
     from models import ToolWear, User, Machine, Notification, GroupPermission, Verantwoordelijke, UserSectionAccess
@@ -380,12 +384,18 @@ def check_tool_wear_notifications():
     if not notify_user_ids:
         return
 
-    # Не дублируем чаще, чем раз в 20 минут (3 раза в час)
-    cutoff = now_local() - timedelta(minutes=20)
+    # Не дублируем чаще, чем раз в TOOL_WEAR_REMINDER_HOURS (по требованию пользователя)
+    # + не плодим, если уже есть непрочитанное уведомление
+    cutoff = now_local() - timedelta(hours=TOOL_WEAR_REMINDER_HOURS)
     existing_notifs = set()
     for n in Notification.query.filter(
         Notification.type == 'tool_wear',
         Notification.created_at >= cutoff
+    ).all():
+        existing_notifs.add(n.user_id)
+    for n in Notification.query.filter(
+        Notification.type == 'tool_wear',
+        Notification.is_read == False
     ).all():
         existing_notifs.add(n.user_id)
 

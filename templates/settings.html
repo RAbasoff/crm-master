@@ -19,6 +19,7 @@
     <button onclick="showTab('sections')" class="btn btn-sm tab-btn" id="tab-sections" style="background:#eee">🏭 {{ _('Sections') }}</button>
     <button onclick="showTab('faults')" class="btn btn-sm tab-btn" id="tab-faults" style="background:#eee">⚠️ {{ _('Fault Types') }}</button>
     <button onclick="showTab('groups')" class="btn btn-sm tab-btn" id="tab-groups" style="background:#eee">👥 {{ _('Groups') }}</button>
+    <button onclick="showTab('system')" class="btn btn-sm tab-btn" id="tab-system" style="background:#eee">🧩 {{ _('System') }}</button>
     <a href="/map-editor" class="btn btn-sm" style="background:#2c3e50;color:white">🗺️ {{ _('Map Editor') }}</a>
 </div>
 
@@ -483,6 +484,90 @@
     </div>
 </div>
 
+<!-- ==================== TAB: SYSTEM (license + updates) ==================== -->
+<div id="tab-content-system" class="tab-content" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+        <!-- License -->
+        <div class="card">
+            <h2 style="margin:0 0 12px">🔑 {{ _('License') }}</h2>
+            {% if license_info and license_info.active %}
+            <div style="background:#eafaf1;border:1px solid #27ae60;border-radius:10px;padding:12px 14px;margin-bottom:12px">
+                <div style="font-weight:700;color:#27ae60;font-size:14px">✅ {{ _('License active') }}</div>
+            </div>
+            <table style="width:100%;font-size:13px;border-collapse:collapse">
+                <tr>
+                    <td style="padding:6px 0;color:#888;width:45%">{{ _('Client') }}</td>
+                    <td style="padding:6px 0;font-weight:600">{{ license_info.client or '—' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;color:#888">{{ _('Valid until') }}</td>
+                    <td style="padding:6px 0;font-weight:700;color:{% if license_info.days_left is not none and license_info.days_left < 30 %}#e67e22{% else %}#27ae60{% endif %}">
+                        {{ license_info.expire or '—' }}
+                        {% if license_info.days_left is not none %}
+                        <span style="font-weight:500;color:#888;font-size:12px">
+                            ({{ license_info.days_left }} {{ _('days left') }})
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;color:#888">{{ _('Seats') }}</td>
+                    <td style="padding:6px 0">{{ license_info.seats or '—' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;color:#888">{{ _('License key') }}</td>
+                    <td style="padding:6px 0;font-family:monospace;font-size:11px;word-break:break-all">{{ license_info.key_masked }}</td>
+                </tr>
+            </table>
+            <div style="margin-top:12px;display:flex;gap:8px">
+                <a href="/license" class="btn btn-sm" style="background:#eee">{{ _('Change key') }}</a>
+                <button type="button" class="btn btn-sm" style="background:#eee" onclick="copyLicenseKey()">{{ _('Copy key') }}</button>
+            </div>
+            <script>function copyLicenseKey(){navigator.clipboard.writeText({{ (license_info.key or '')|tojson }});showToast('✓ {{ _("License key copied") }}');}</script>
+            {% else %}
+            <div style="background:#fdecea;border:1px solid #e74c3c;border-radius:10px;padding:12px 14px">
+                <div style="font-weight:700;color:#c0392b">⛔ {{ _('No valid license') }}</div>
+                {% if license_info and license_info.error %}
+                <div style="font-size:12px;color:#c0392b;margin-top:6px">{{ license_info.error }}</div>
+                {% endif %}
+            </div>
+            <a href="/license" class="btn btn-sm btn-primary" style="margin-top:12px;display:inline-block">{{ _('Enter license key') }}</a>
+            {% endif %}
+        </div>
+
+        <!-- Updates -->
+        <div class="card">
+            <h2 style="margin:0 0 12px">🔄 {{ _('Updates') }}</h2>
+            <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:12px">
+                <tr>
+                    <td style="padding:6px 0;color:#888;width:45%">{{ _('Current version') }}</td>
+                    <td style="padding:6px 0;font-weight:700">{{ license_info.version if license_info else '—' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;color:#888">{{ _('Latest on GitHub') }}</td>
+                    <td id="upd-remote-ver" style="padding:6px 0;font-weight:700">—</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;color:#888">{{ _('Commit') }}</td>
+                    <td id="upd-sha" style="padding:6px 0;font-family:monospace;font-size:12px">—</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;color:#888">{{ _('What is new') }}</td>
+                    <td id="upd-message" style="padding:6px 0;font-size:12px">—</td>
+                </tr>
+            </table>
+            <div id="upd-status" style="display:none;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button type="button" id="btn-check-updates" class="btn btn-primary" onclick="checkUpdates()">🔍 {{ _('Check for updates') }}</button>
+                <button type="button" id="btn-run-update" class="btn" style="background:#27ae60;color:white;display:none" onclick="runUpdate()">{{ _('Install update') }}</button>
+            </div>
+            <p style="font-size:11px;color:#888;margin:12px 0 0">
+                {{ _('Updates pull code from GitHub. Company data (instance, uploads, backups) is not modified.') }}
+            </p>
+        </div>
+    </div>
+</div>
+
 <script>
 function showTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -639,6 +724,78 @@ function showToast(text) {
     toast.textContent = text;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+}
+
+function checkUpdates() {
+    const btn = document.getElementById('btn-check-updates');
+    const box = document.getElementById('upd-status');
+    btn.disabled = true;
+    box.style.display = 'block';
+    box.style.background = '#eef6ff';
+    box.style.color = '#2c3e50';
+    box.textContent = '{{ _("Checking GitHub…") }}';
+    csrfFetch('/settings/check-updates', {method: 'POST'})
+        .then(r => r.json())
+        .then(d => {
+            btn.disabled = false;
+            if (!d.ok && d.error) {
+                box.style.background = '#fdecea';
+                box.style.color = '#c0392b';
+                box.textContent = '⛔ ' + d.error;
+                return;
+            }
+            document.getElementById('upd-remote-ver').textContent = d.remote_version || '—';
+            document.getElementById('upd-sha').textContent = d.sha || '—';
+            document.getElementById('upd-message').textContent = d.message || '—';
+            if (d.update_available) {
+                box.style.background = '#eafaf1';
+                box.style.color = '#27ae60';
+                box.textContent = '✅ ' + '{{ _("Update available") }}' + ': ' + d.local_version + ' → ' + d.remote_version;
+                document.getElementById('btn-run-update').style.display = 'inline-block';
+            } else {
+                box.style.background = '#eef6ff';
+                box.style.color = '#2c3e50';
+                box.textContent = 'ℹ️ ' + '{{ _("You have the latest version") }}' + ' (' + (d.local_version || '') + ')';
+                document.getElementById('btn-run-update').style.display = 'none';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            box.style.background = '#fdecea';
+            box.style.color = '#c0392b';
+            box.textContent = '⛔ {{ _("Check failed") }}';
+        });
+}
+
+function runUpdate() {
+    if (!confirm('{{ _("Install update from GitHub? Service will need restart.") }}')) return;
+    const btn = document.getElementById('btn-run-update');
+    const box = document.getElementById('upd-status');
+    btn.disabled = true;
+    box.style.background = '#fff8e6';
+    box.style.color = '#8a6d3b';
+    box.textContent = '{{ _("Installing update…") }}';
+    csrfFetch('/settings/run-update', {method: 'POST'})
+        .then(r => r.json())
+        .then(d => {
+            btn.disabled = false;
+            if (d.ok) {
+                box.style.background = '#eafaf1';
+                box.style.color = '#27ae60';
+                box.textContent = '✅ ' + (d.message || '{{ _("Updated") }}') + '. ' + (d.restart_hint || '');
+                showToast('✓ {{ _("Update installed") }}');
+            } else {
+                box.style.background = '#fdecea';
+                box.style.color = '#c0392b';
+                box.textContent = '⛔ ' + (d.error || d.message || '{{ _("Update failed") }}');
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            box.style.background = '#fdecea';
+            box.style.color = '#c0392b';
+            box.textContent = '⛔ {{ _("Update failed") }}';
+        });
 }
 
 // Drag & Drop for machine assignment
