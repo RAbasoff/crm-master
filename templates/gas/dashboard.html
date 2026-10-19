@@ -125,6 +125,11 @@
       {% if b.maintenance %}+ {{ _('TO') }} <b>{{ b.maintenance }}</b>{% endif %}
       = {{ _('total') }} <b>{{ b.total }}</b>
     </div>
+    {% if b.pending_scans %}
+    <div style="margin-top:3px;color:#8a6d3b">
+      📋 {{ _('in scan list (not in stock yet)') }}: <b>{{ b.pending_scans }}</b>
+    </div>
+    {% endif %}
     <div style="margin-top:3px;color:#666">
       {{ _('Working pair') }}:
       {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('OK') }} (1+1)</span>

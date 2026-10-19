@@ -213,22 +213,12 @@ function pickSide(side) {
     document.getElementById('sideRight').style.color = side === 'right' ? '#fff' : '#333';
 }
 
-function installNow(force) {
+function installNow(force, action) {
     const number = document.getElementById('instNumber').value.trim();
     if (!number) return;
     if (/^Z/i.test(number)) {
         alert('{{ _("Number should NOT start with Z — Z is only for refill date") }}');
         return;
-    }
-    // Сверка со списком обязательна
-    const inList = rows.some(function (r) { return r.number === number; });
-    if (!inList && !force) {
-        alert('{{ _("This cylinder is NOT in the scan list") }}: ' + number);
-        if (!confirm('{{ _("Install anyway?") }}')) {
-            document.getElementById('instMsg').textContent = '{{ _("Not installed") }}';
-            return;
-        }
-        force = true;
     }
     csrfFetch('/gas/api/cylinders/assign-work', {
         method: 'POST',
@@ -237,16 +227,22 @@ function installNow(force) {
             number: number,
             gas_type: document.getElementById('instGas').value,
             side: instSide,
-            force: !!force
+            force: !!force,
+            action: action || ''
         })
     }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.need_confirm) {
-            alert('{{ _("This cylinder is NOT in the scan list") }}: ' + number);
-            if (confirm('{{ _("Install anyway?") }}')) {
-                installNow(true);
-            } else {
-                document.getElementById('instMsg').textContent = '{{ _("Not installed") }}';
-            }
+        if (d.need_choose) {
+            // Номера нет в списке — спросить, что делать
+            const msg = '{{ _("Cylinder is not in the scanned list") }}: ' + number +
+                '\n\n1) {{ _("Add to list and install") }}\n' +
+                '2) {{ _("Add to stock and install") }}\n' +
+                '3) {{ _("Install anyway (no list)") }}\n' +
+                '0) {{ _("Cancel") }}';
+            const choice = prompt(msg + '\n\n{{ _("Enter 1 / 2 / 3 / 0") }}', '1');
+            if (choice === '1') return installNow(true, 'add_list');
+            if (choice === '2') return installNow(true, 'add_stock');
+            if (choice === '3') return installNow(true, 'install');
+            document.getElementById('instMsg').textContent = '{{ _("Not installed") }}';
             return;
         }
         if (!d.ok) { alert(d.error || 'Error'); return; }

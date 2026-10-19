@@ -25,22 +25,23 @@ GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂'}
 
 
 def _inventory_balance():
-    """Per-gas inventory arithmetic.
+    """Per-gas inventory arithmetic for REAL stock only.
 
-    Identity (must always hold):
-        full + in_use + empty + maintenance = total
+    Only cylinders with received_at set (added to stock) count:
+        full + in_use + empty + maintenance + defect = total
 
-    Norm (рабочая пара):
-        in_use == 1 and full >= 1
-
-    Incoming goods (delivered orders) must appear as `full` cylinders,
-    so:  leftover_full + received_full + empty + in_use = total.
+    Status 'scanned' (in scan list, not yet accepted) is NEVER in the balance.
     """
     bal = {}
     for gt in GAS_TYPES:
+        # Только принятые на склад (received_at не пустой) и не «в списке скана»
         rows = db.session.query(
             GasCylinder.status, db.func.count()
-        ).filter(GasCylinder.gas_type == gt).group_by(GasCylinder.status).all()
+        ).filter(
+            GasCylinder.gas_type == gt,
+            GasCylinder.status != 'scanned',
+            GasCylinder.received_at.isnot(None),
+        ).group_by(GasCylinder.status).all()
         counts = {s or 'unknown': int(c or 0) for s, c in rows}
         full = counts.get('full', 0)
         in_use = counts.get('in_use', 0)
@@ -48,7 +49,12 @@ def _inventory_balance():
         maint = counts.get('maintenance', 0)
         defect = counts.get('defect', 0)
         total = full + in_use + empty + maint + defect
-        # delivered orders (informational): how many were supposed to arrive
+        # сканы «в пути» / в списке приёмки — отдельно, НЕ в остатке
+        pending = GasCylinder.query.filter(
+            GasCylinder.gas_type == gt,
+            db.or_(GasCylinder.status == 'scanned', GasCylinder.received_at.is_(None))
+        ).count()
+        # delivered orders (informational)
         ordered = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
             CylinderOrder.gas_type == gt
         ).scalar() or 0
@@ -63,10 +69,11 @@ def _inventory_balance():
             'maintenance': maint,
             'defect': defect,
             'total': total,
+            'pending_scans': int(pending),
             'identity_ok': (full + in_use + empty + maint + defect == total),
             'has_working_pair': (in_use >= WORKING_IN_USE and full >= WORKING_READY_FULL),
-            'ready_full': full,  # full cylinders available to become in_use
-            'spare_full': max(0, full - WORKING_READY_FULL),  # stock beyond the working pair
+            'ready_full': full,
+            'spare_full': max(0, full - WORKING_READY_FULL),
             'need_order': (in_use < WORKING_IN_USE or full < WORKING_READY_FULL),
             'ordered_qty': int(ordered),
             'delivered_qty': int(delivered),
@@ -1007,8 +1014,9 @@ def cylinder_scan_list_add():
     c = GasCylinder.query.filter_by(cylinder_number=number).first()
     created = False
     if not c:
+        # scanned only — NOT in stock until «Добавить на склад»
         c = GasCylinder(gas_type=gas_type, cylinder_number=number,
-                        status='full', received_at=datetime.utcnow())
+                        status='scanned', received_at=None)
         db.session.add(c)
         db.session.flush()
         created = True
@@ -1016,6 +1024,8 @@ def cylinder_scan_list_add():
                                    performed_by=current_user.id,
                                    new_cylinder_number=number,
                                    notes='Scan list (not in stock yet)'))
+    elif c.status == 'scanned' and not c.received_at:
+        pass
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True, 'created': created, 'cylinder_id': c.id,
@@ -1038,9 +1048,10 @@ def cylinder_scan_list_add_stock():
         c = db.session.get(GasCylinder, int(cid))
         if not c:
             continue
+        # Только сейчас принимаем на склад
         if not c.received_at:
             c.received_at = datetime.utcnow()
-        if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
+        if c.status in ('scanned', None, '') or c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
             cylinder_id=c.id, action='received', performed_by=current_user.id,
@@ -1058,17 +1069,29 @@ def cylinder_scan_list_add_stock():
                     'stock_url': '/gas/cylinders'})
 
 
+def _scan_list_pending():
+    """Balloons in the intake scan list (not yet accepted to stock)."""
+    return GasCylinder.query.filter(
+        db.or_(GasCylinder.status == 'scanned', GasCylinder.received_at.is_(None))
+    ).count()
+
+
 @bp.route('/api/cylinders/assign-work', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
 def cylinder_assign_work():
-    """Установить баллон на место (left/right). Вне списка — только после подтверждения."""
+    """Установить баллон на место (left/right).
+
+    Если списка сканирования нет — сразу: сканировал → поставил на место.
+    Если список есть, а номера в нём нет — спросить, что делать.
+    """
     data = request.get_json() or {}
     number = (data.get('number') or '').strip()
     cyl_id = safe_int(data.get('cylinder_id'))
     side = (data.get('side') or '').strip()
     gas_type = data.get('gas_type') or 'nitrogen'
     force = bool(data.get('force'))
+    action = (data.get('action') or '').strip()  # install | add_list | add_stock | cancel
     if side not in ('left', 'right'):
         return jsonify({'error': 'Side must be left or right'}), 400
 
@@ -1076,21 +1099,52 @@ def cylinder_assign_work():
     if not c and number:
         c = GasCylinder.query.filter_by(cylinder_number=number).first()
 
-    in_list = bool(c)  # уже есть в базе = был в списке/складе
+    pending = _scan_list_pending()
+    # номер «в списке» = уже есть в БД (скан-лист или склад)
+    in_list = bool(c)
+
+    if pending > 0 and not in_list and not force and action not in ('add_list', 'add_stock', 'install'):
+        return jsonify({
+            'ok': False,
+            'need_choose': True,
+            'number': number,
+            'list_size': pending,
+            'message': 'Number is not in the scanned list',
+            'options': ['add_list', 'add_stock', 'install', 'cancel'],
+        }), 200
+
+    if pending == 0 and not c:
+        # Нет списка — простая схема: сканировал → поставил на место
+        action = action or 'install'
+
     if not c:
-        if not force:
-            return jsonify({'ok': True, 'need_confirm': True, 'number': number,
-                            'message': 'Not in scan list. Install anyway?'}), 200
+        status0 = 'in_use'
+        received0 = datetime.utcnow()
+        if action == 'add_list':
+            status0 = 'scanned'
+            received0 = None
+        elif action == 'add_stock':
+            status0 = 'full'
         c = GasCylinder(gas_type=gas_type if gas_type in GAS_TYPES else 'nitrogen',
                         cylinder_number=number, barcode=number,
-                        status='in_use', side=side,
-                        received_at=datetime.utcnow(), installed_at=datetime.utcnow())
+                        status=status0, side=None,
+                        received_at=received0, installed_at=None)
         db.session.add(c)
         db.session.flush()
         db.session.add(CylinderLog(cylinder_id=c.id, action='created',
                                    performed_by=current_user.id,
                                    new_cylinder_number=number,
-                                   notes='Installed without scan list'))
+                                   notes=f'Scan install action={action or "install"}'))
+    elif action == 'add_stock' and (not c.received_at or c.status == 'scanned'):
+        if not c.received_at:
+            c.received_at = datetime.utcnow()
+        if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
+            c.status = 'full'
+        db.session.add(CylinderLog(
+            cylinder_id=c.id, action='received', performed_by=current_user.id,
+            notes='Accepted to stock on install'
+        ))
+
     # снять предыдущий с этой стороны
     for other in GasCylinder.query.filter(
         GasCylinder.gas_type == c.gas_type,
@@ -1108,6 +1162,8 @@ def cylinder_assign_work():
         ))
     c.status = 'in_use'
     c.side = side
+    if not c.received_at:
+        c.received_at = datetime.utcnow()
     c.gas_type = gas_type if gas_type in GAS_TYPES else c.gas_type
     c.installed_at = datetime.utcnow()
     db.session.add(CylinderLog(cylinder_id=c.id, action='install',
@@ -1117,7 +1173,8 @@ def cylinder_assign_work():
         return jsonify({'error': 'Save failed'}), 500
     log_audit('assign_work', 'gas_cylinder', c.id, f'{c.cylinder_number} → {side}')
     return jsonify({'ok': True, 'number': c.cylinder_number, 'side': side,
-                    'in_list': in_list, 'cylinder_id': c.id})
+                    'in_list': in_list, 'cylinder_id': c.id,
+                    'list_pending': _scan_list_pending()})
 
 
 @bp.route('/scan')
