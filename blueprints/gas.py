@@ -5,7 +5,7 @@ Nitrogen (N₂) and Carbon Dioxide (CO₂) cylinders with visual status
 import os
 import json
 from datetime import datetime, timedelta
-from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, current_app
+from flask import Blueprint, request, redirect, url_for, flash, render_template, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
@@ -24,37 +24,50 @@ GAS_TYPES = ('nitrogen', 'co2')
 GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂'}
 
 
+def _mark_empty_leaves_site(c, user_id=None, note=''):
+    """Пустой баллон сразу увозят — не хранится на площадке.
+
+    Статус empty → returned (история остаётся в CylinderLog).
+    На складе только: full / in_use / maintenance / defect.
+    """
+    old = c.status
+    c.status = 'returned'
+    c.side = None
+    c.installed_at = None
+    db.session.add(CylinderLog(
+        cylinder_id=c.id,
+        action='status_%s_to_empty' % (old or 'unknown'),
+        performed_by=user_id,
+        notes=(note or 'Empty — taken away with delivery (not stored on site)')
+    ))
+    return c
+
+
 def _inventory_balance():
-    """Per-gas inventory arithmetic for REAL stock only.
+    """Per-gas inventory for cylinders ON SITE only.
 
-    Only cylinders with received_at set (added to stock) count:
-        full + in_use + empty + maintenance + defect = total
-
-    Status 'scanned' (in scan list, not yet accepted) is NEVER in the balance.
+    On site: full + in_use + maintenance + defect.
+    Empty cylinders are taken away immediately → status 'returned' — not counted.
     """
     bal = {}
     for gt in GAS_TYPES:
-        # Только принятые на склад (received_at не пустой) и не «в списке скана»
         rows = db.session.query(
             GasCylinder.status, db.func.count()
         ).filter(
             GasCylinder.gas_type == gt,
-            GasCylinder.status != 'scanned',
+            GasCylinder.status.notin_(('scanned', 'returned', 'empty')),
             GasCylinder.received_at.isnot(None),
         ).group_by(GasCylinder.status).all()
         counts = {s or 'unknown': int(c or 0) for s, c in rows}
         full = counts.get('full', 0)
         in_use = counts.get('in_use', 0)
-        empty = counts.get('empty', 0)
         maint = counts.get('maintenance', 0)
         defect = counts.get('defect', 0)
-        total = full + in_use + empty + maint + defect
-        # сканы «в пути» / в списке приёмки — отдельно, НЕ в остатке
+        total = full + in_use + maint + defect
         pending = GasCylinder.query.filter(
             GasCylinder.gas_type == gt,
             db.or_(GasCylinder.status == 'scanned', GasCylinder.received_at.is_(None))
         ).count()
-        # Только ТЕКУЩИЙ месяц (не «за всё время» — иначе счёт путает)
         now = datetime.utcnow()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         ordered_month = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
@@ -66,26 +79,22 @@ def _inventory_balance():
             CylinderOrder.status == 'delivered',
             CylinderOrder.ordered_at >= month_start
         ).scalar() or 0
-        delivered_all = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
-            CylinderOrder.gas_type == gt, CylinderOrder.status == 'delivered'
-        ).scalar() or 0
         bal[gt] = {
             'label': GAS_LABELS[gt],
             'full': full,
             'in_use': in_use,
-            'empty': empty,
+            'empty': 0,
             'maintenance': maint,
             'defect': defect,
             'total': total,
             'pending_scans': int(pending),
-            'identity_ok': (full + in_use + empty + maint + defect == total),
+            'identity_ok': True,
             'has_working_pair': (in_use >= WORKING_IN_USE and full >= WORKING_READY_FULL),
             'ready_full': full,
             'spare_full': max(0, full - WORKING_READY_FULL),
             'need_order': (in_use < WORKING_IN_USE or full < WORKING_READY_FULL),
             'ordered_qty': int(ordered_month),
             'delivered_qty': int(delivered_month),
-            'delivered_all': int(delivered_all),
             'month_label': now.strftime('%Y-%m'),
         }
     return bal
@@ -433,13 +442,16 @@ def cylinder_status(cyl_id):
         flash(_('Status updated'), 'success')
         return redirect(url_for('gas.gas_dashboard'))
 
-    c.status = new_status
-    if new_status == 'in_use' and not c.installed_at:
-        c.installed_at = datetime.utcnow()
     if new_status == 'empty':
-        c.installed_at = None
+        # Пустой сразу увозят — не хранится на площадке
+        _mark_empty_leaves_site(c, user_id=current_user.id)
+        new_status = 'returned'
+    else:
+        c.status = new_status
+        if new_status == 'in_use' and not c.installed_at:
+            c.installed_at = datetime.utcnow()
 
-    # Max 1 in_use per gas type (норма). If another is active → it becomes empty.
+    # Max 1 in_use per gas type (норма). If another is active → it leaves as empty.
     if new_status == 'in_use':
         others = GasCylinder.query.filter(
             GasCylinder.gas_type == c.gas_type,
@@ -447,17 +459,13 @@ def cylinder_status(cyl_id):
             GasCylinder.id != c.id
         ).order_by(GasCylinder.installed_at.asc().nullslast()).all()
         for oldest in others:
-            oldest.status = 'empty'
-            oldest.installed_at = None
-            db.session.add(CylinderLog(
-                cylinder_id=oldest.id,
-                action='status_in_use_to_empty',
-                performed_by=current_user.id,
-                notes='Auto-emptied: replaced by %s (working set = 1 in_use)' % c.cylinder_number
-            ))
+            _mark_empty_leaves_site(
+                oldest, user_id=current_user.id,
+                note='Auto-emptied: replaced by %s (working set = 1 in_use)' % c.cylinder_number
+            )
 
     # When an in_use cylinder empties → promote one full spare into service
-    if new_status == 'empty' and old_status == 'in_use':
+    if old_status == 'in_use' and new_status == 'returned':
         promoted = _promote_full_to_in_use(
             c.gas_type,
             reason=f'Auto-switch: backup activated after {c.cylinder_number} emptied',
@@ -498,11 +506,10 @@ def cylinder_status(cyl_id):
 @login_required
 @role_required('admin', 'technician')
 def cylinder_swap(cyl_id):
-    """Swap cylinder: mark current as empty, promote a full spare into service."""
+    """Swap cylinder: current leaves as empty (taken away), promote a full spare into service."""
     c = GasCylinder.query.get_or_404(cyl_id)
     old_number = c.cylinder_number
-    c.status = 'empty'
-    c.installed_at = None
+    _mark_empty_leaves_site(c, user_id=current_user.id, note=f'Swapped out {old_number}')
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('gas.gas_dashboard'))
@@ -1162,14 +1169,10 @@ def cylinder_assign_work():
         GasCylinder.status == 'in_use',
         GasCylinder.id != c.id
     ).all():
-        other.status = 'empty'
-        other.side = None
-        other.installed_at = None
-        db.session.add(CylinderLog(
-            cylinder_id=other.id, action='status_in_use_to_empty',
-            performed_by=current_user.id,
-            notes=f'Replaced by #{c.cylinder_number} on {side}'
-        ))
+        _mark_empty_leaves_site(
+            other, user_id=current_user.id,
+            note=f'Replaced by #{c.cylinder_number} on {side}'
+        )
     c.status = 'in_use'
     c.side = side
     if not c.received_at:
@@ -1342,14 +1345,10 @@ def cylinder_scan_install():
         GasCylinder.id != (other.id if other else -1)
     ).all()
     for c in old_in_use:
-        c.status = 'empty'
-        c.installed_at = None
-        db.session.add(CylinderLog(
-            cylinder_id=c.id,
-            action='status_in_use_to_empty',
-            performed_by=current_user.id,
-            notes='Auto-emptied: replaced during install of %s' % cylinder.cylinder_number
-        ))
+        _mark_empty_leaves_site(
+            c, user_id=current_user.id,
+            note='Auto-emptied: replaced during install of %s' % cylinder.cylinder_number
+        )
 
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
@@ -1453,3 +1452,173 @@ def gas_quality_delete(check_id):
     else:
         flash(_('Deleted'), 'success')
     return redirect(url_for('gas.gas_quality_list', month=month))
+
+
+# ============================================================
+# PDF REPORT — gas, by month, for a period
+# ============================================================
+
+@bp.route('/report/pdf')
+@login_required
+@role_required('admin', 'director')
+def gas_report_pdf():
+    """PDF: сколько заказано / израсходовано / неисправных — по месяцам за период."""
+    from datetime import date as date_cls
+    date_from = request.args.get('from') or request.args.get('date_from') or ''
+    date_to = request.args.get('to') or request.args.get('date_to') or ''
+    try:
+        d_from = datetime.strptime(date_from, '%Y-%m-%d') if date_from else datetime.utcnow().replace(day=1) - timedelta(days=180)
+        d_to = datetime.strptime(date_to, '%Y-%m-%d') if date_to else datetime.utcnow() + timedelta(days=1)
+    except ValueError:
+        d_from = datetime.utcnow().replace(day=1) - timedelta(days=180)
+        d_to = datetime.utcnow() + timedelta(days=1)
+
+    # Собираем месяцы
+    months = []
+    cur = d_from.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end_m = d_to.replace(day=1)
+    while cur <= end_m:
+        m_start = cur
+        if cur.month == 12:
+            m_end = cur.replace(year=cur.year + 1, month=1)
+        else:
+            m_end = cur.replace(month=cur.month + 1)
+        key = cur.strftime('%Y-%m')
+        row = {
+            'month': key,
+            'ordered_n2': 0, 'ordered_co2': 0,
+            'used_n2': 0, 'used_co2': 0,
+            'defect_n2': 0, 'defect_co2': 0,
+            'received_n2': 0, 'received_co2': 0,
+        }
+        for o in CylinderOrder.query.filter(
+            CylinderOrder.ordered_at >= m_start, CylinderOrder.ordered_at < m_end
+        ).all():
+            q = int(o.quantity or 0)
+            if o.gas_type == 'nitrogen':
+                row['ordered_n2'] += q
+            else:
+                row['ordered_co2'] += q
+        for log in CylinderLog.query.filter(
+            CylinderLog.action.like('%_to_empty%'),
+            CylinderLog.date >= m_start, CylinderLog.date < m_end
+        ).all():
+            c = db.session.get(GasCylinder, log.cylinder_id) if log.cylinder_id else None
+            if not c:
+                continue
+            if c.gas_type == 'nitrogen':
+                row['used_n2'] += 1
+            else:
+                row['used_co2'] += 1
+        for log in CylinderLog.query.filter(
+            CylinderLog.action.in_(('created', 'received')),
+            CylinderLog.date >= m_start, CylinderLog.date < m_end
+        ).all():
+            c = db.session.get(GasCylinder, log.cylinder_id) if log.cylinder_id else None
+            if not c:
+                continue
+            if c.gas_type == 'nitrogen':
+                row['received_n2'] += 1
+            else:
+                row['received_co2'] += 1
+        # неисправные: defect/maintenance на конец месяца
+        for gt, field in (('nitrogen', 'defect_n2'), ('co2', 'defect_co2')):
+            row[field] = GasCylinder.query.filter(
+                GasCylinder.gas_type == gt,
+                GasCylinder.status.in_(('defect', 'maintenance')),
+            ).count()
+        months.append(row)
+        cur = m_end
+
+    # PDF
+    from utils import ensure_fpdf, find_pdf_font
+    try:
+        FPDF = ensure_fpdf().FPDF
+    except Exception:
+        return jsonify({'error': 'PDF library unavailable'}), 500
+    font_path = find_pdf_font()
+    unicode_font = bool(font_path)
+
+    def pdf_text(s):
+        s = str(s if s is not None else '')
+        return s if unicode_font else s.encode('latin-1', 'replace').decode('latin-1')
+
+    title = _('Gas report')
+    period = '%s — %s' % (d_from.strftime('%d.%m.%Y'), (d_to - timedelta(days=1)).strftime('%d.%m.%Y'))
+
+    class GasPDF(FPDF):
+        def header(self):
+            fn = 'AppFont' if unicode_font else 'Helvetica'
+            self.set_font(fn, 'B', 13)
+            self.cell(0, 8, pdf_text(title), new_x='LMARGIN', new_y='NEXT')
+            self.set_font(fn, '', 9)
+            self.cell(0, 5, pdf_text(period), new_x='LMARGIN', new_y='NEXT')
+            self.ln(3)
+
+        def footer(self):
+            fn = 'AppFont' if unicode_font else 'Helvetica'
+            self.set_y(-12)
+            self.set_font(fn, '', 7)
+            self.set_text_color(128)
+            self.cell(0, 8, pdf_text(f'ProMaster — {self.page_no()}/{{nb}}'), align='C')
+
+    pdf = GasPDF(orientation='L', unit='mm', format='A4')
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    if unicode_font:
+        try:
+            pdf.add_font('AppFont', '', font_path)
+            pdf.add_font('AppFont', 'B', font_path)
+            base_font = 'AppFont'
+        except Exception:
+            unicode_font = False
+            base_font = 'Helvetica'
+    else:
+        base_font = 'Helvetica'
+    pdf.add_page()
+
+    headers = [
+        _('Month'), 'N₂ ' + _('Ordered'), 'N₂ ' + _('Used'),
+        'CO₂ ' + _('Ordered'), 'CO₂ ' + _('Used'),
+        _('Defects'), _('Received')
+    ]
+    col_w = [30, 32, 32, 32, 32, 32, 32]
+    pdf.set_font(base_font, 'B', 8)
+    pdf.set_fill_color(44, 62, 80)
+    pdf.set_text_color(255)
+    for i, h in enumerate(headers):
+        pdf.cell(col_w[i], 7, pdf_text(h), border=1, fill=True)
+    pdf.ln()
+    pdf.set_text_color(51)
+    pdf.set_font(base_font, '', 8)
+
+    tot = dict(ordered_n2=0, ordered_co2=0, used_n2=0, used_co2=0)
+    for m in months:
+        pdf.cell(col_w[0], 6, pdf_text(m['month']), border=1)
+        pdf.cell(col_w[1], 6, pdf_text(m['ordered_n2']), border=1)
+        pdf.cell(col_w[2], 6, pdf_text(m['used_n2']), border=1)
+        pdf.cell(col_w[3], 6, pdf_text(m['ordered_co2']), border=1)
+        pdf.cell(col_w[4], 6, pdf_text(m['used_co2']), border=1)
+        pdf.cell(col_w[5], 6, pdf_text(m['defect_n2'] + m['defect_co2']), border=1)
+        pdf.cell(col_w[6], 6, pdf_text(m['received_n2'] + m['received_co2']), border=1)
+        pdf.ln()
+        tot['ordered_n2'] += m['ordered_n2']
+        tot['ordered_co2'] += m['ordered_co2']
+        tot['used_n2'] += m['used_n2']
+        tot['used_co2'] += m['used_co2']
+
+    pdf.set_font(base_font, 'B', 8)
+    pdf.cell(col_w[0], 7, pdf_text(_('Total')), border=1)
+    pdf.cell(col_w[1], 7, pdf_text(tot['ordered_n2']), border=1)
+    pdf.cell(col_w[2], 7, pdf_text(tot['used_n2']), border=1)
+    pdf.cell(col_w[3], 7, pdf_text(tot['ordered_co2']), border=1)
+    pdf.cell(col_w[4], 7, pdf_text(tot['used_co2']), border=1)
+    pdf.cell(col_w[5], 7, pdf_text(''), border=1)
+    pdf.cell(col_w[6], 7, pdf_text(''), border=1)
+
+    import io
+    buf = io.BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+    fname = f'gas_report_{d_from.strftime("%Y%m%d")}_{d_to.strftime("%Y%m%d")}.pdf'
+    return send_file(buf, mimetype='application/pdf', download_name=fname, as_attachment=True)

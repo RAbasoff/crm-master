@@ -114,59 +114,35 @@
   {% for gt, b in balance.items() %}
   <div style="background:{{ '#eaf3ff' if gt == 'nitrogen' else '#fdeaea' }};border-radius:8px;padding:8px 12px;font-size:11px">
     <div style="font-weight:700;margin-bottom:4px;color:{{ '#1a5fa8' if gt == 'nitrogen' else '#b03a2e' }}">
-      {{ b.label }} — {{ _('Stock right now') }}
-      <span style="font-weight:400;color:#888;font-size:10px">({{ _('not monthly — current leftovers') }})</span>
-      {% if b.identity_ok %}<span style="color:#27ae60">✓</span>{% else %}<span style="color:#e74c3c">✗</span>{% endif %}
+      {{ b.label }}
+      — {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('Working pair OK') }}</span>
+      {% else %}<span style="color:#e74c3c">{{ _('Need order') }}</span>{% endif %}
     </div>
-    <div style="font-family:monospace;color:#333;line-height:1.5">
+    <div style="color:#666">
       {{ _('in use') }} <b>{{ b.in_use }}</b>
-      + {{ _('full') }} <b>{{ b.full }}</b>
-      + {{ _('empty') }} <b>{{ b.empty }}</b>
-      {% if b.maintenance %}+ {{ _('TO') }} <b>{{ b.maintenance }}</b>{% endif %}
-      = {{ _('total') }} <b>{{ b.total }}</b>
+      · {{ _('full') }} <b>{{ b.full }}</b>
+      {% if b.defect or b.maintenance %}· {{ _('Defects') }} <b>{{ b.defect + b.maintenance }}</b>{% endif %}
     </div>
-    {% if b.pending_scans %}
-    <div style="margin-top:3px;color:#8a6d3b">
-      📋 {{ _('in scan list (not in stock yet)') }}: <b>{{ b.pending_scans }}</b>
-    </div>
-    {% endif %}
-    <div style="margin-top:3px;color:#666">
-      {{ _('Working pair') }}:
-      {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('OK') }} (1+1)</span>
-      {% else %}<span style="color:#e74c3c">{{ _('BROKEN') }}</span>{% endif %}
-      · {{ _('spare full') }}: {{ b.spare_full }}
-    </div>
-    <div style="margin-top:3px;color:#666">
-      📦 {{ _('This month') }} ({{ b.month_label }}):
-      {{ _('Ordered') }} <b>{{ b.ordered_qty }}</b>
-      · {{ _('Delivered') }} <b>{{ b.delivered_qty }}</b>
+    <div style="margin-top:4px">
+      <a href="/gas/report/pdf?from={{ b.month_label }}-01&to={{ b.month_label }}-28" style="font-size:11px;color:#3498db;font-weight:600">📄 {{ _('PDF report') }}</a>
     </div>
   </div>
   {% endfor %}
 </div>
 {% endif %}
 
-<!-- SUMMARY -->
+<!-- SUMMARY — цифры по месяцам только в PDF-отчёте -->
 <div class="card" style="margin-bottom:12px">
-    <h2 style="margin:0 0 10px;font-size:15px">📊 {{ _('Summary') }}</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">
-        <div class="stat-card"><div class="number">{{ stats.total_received_month }}</div><div class="label">{{ _('Received this month') }} (N₂ {{ stats.n2_received_month }} · CO₂ {{ stats.co2_received_month }})</div></div>
-        <div class="stat-card"><div class="number">{{ stats.total_on_hand }}</div><div class="label">{{ _('In stock total') }} (N₂ {{ stats.n2_total }} · CO₂ {{ stats.co2_total }})</div></div>
-        <div class="stat-card ok"><div class="number">{{ (stats.n2_in_use_list|length) + (stats.co2_in_use_list|length) }}</div><div class="label">{{ _('In work') }}
-            {% for c in stats.n2_in_use_list %}· N₂ {{ c.side or '?' }}{% endfor %}
-            {% for c in stats.co2_in_use_list %}· CO₂ {{ c.side or '?' }}{% endfor %}
-        </div></div>
-        <div class="stat-card warn"><div class="number">{{ (stats.n2_empty_list|length) + (stats.co2_empty_list|length) }}</div><div class="label">{{ _('Empty') }}</div></div>
-        <div class="stat-card {% if stats.total_defect %}warn{% endif %}"><div class="number">{{ stats.total_defect }}</div><div class="label">{{ _('Defects') }}</div></div>
-        <div class="stat-card" style="border-left:4px solid #9b59b6;grid-column:1/-1">
-            <div class="number">{{ stats.ordered_total_month }} / {{ stats.total_received_month }}</div>
-            <div class="label">{{ _('Ordered / received this month') }} — N₂ {{ stats.ordered_n2_month }} / {{ stats.n2_received_month }} · CO₂ {{ stats.ordered_co2_month }} / {{ stats.co2_received_month }} ({{ _('resets monthly') }})</div>
-        </div>
-    </div>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+    <h2 style="margin:0 0 10px;font-size:15px">📊 {{ _('Reports') }}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a href="/gas/report/pdf" class="btn btn-sm" style="background:#e74c3c;color:white;font-weight:700">📄 {{ _('PDF report') }} ({{ _('by month') }})</a>
         <a href="/gas/scan-list" class="btn btn-sm" style="background:#3498db;color:white">📋 {{ _('Scan list') }}</a>
         <a href="/gas/scan" class="btn btn-sm" style="background:#eee">📷 {{ _('Scan') }}</a>
+        <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">📦 {{ _('Cylinders') }}</a>
     </div>
+    <p style="font-size:11px;color:#888;margin:10px 0 0">
+        {{ _('Monthly totals (ordered / used / defects) are in the PDF report. Dashboard shows only current work status.') }}
+    </p>
 </div>
 
 <div class="gas-grid">
