@@ -186,7 +186,7 @@
         <!-- CENTER: SVG -->
         {% set n2_active_left = n2a|length > 0 and n2a[0].status == 'in_use' %}
         {% set n2_active_right = n2a|length > 1 and n2a[1].status == 'in_use' %}
-        <svg viewBox="0 0 300 158" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 300 160" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
             <line x1="85" y1="5" x2="215" y2="5" stroke="#3498db" stroke-width="4" stroke-linecap="round"/>
             <text x="150" y="4" text-anchor="middle" font-size="6" font-weight="bold" fill="#3498db">PIPELINE</text>
             <line x1="105" y1="5" x2="105" y2="16" stroke="#3498db" stroke-width="1.5"/>
@@ -227,14 +227,16 @@
             <line x1="195" y1="68" x2="195" y2="72" stroke="#95a5a6" stroke-width="1"/>
             <line x1="105" y1="84" x2="105" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
             <line x1="195" y1="84" x2="195" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
-            <rect x="87" y="102" width="36" height="42" rx="5" fill="{% if n2_active_left %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="1.5"/>
-            <text x="105" y="118" text-anchor="middle" font-size="6" fill="#3498db" font-weight="bold">N2</text>
-            <text x="105" y="130" text-anchor="middle" font-size="5" fill="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_left %}USE{% else %}FULL{% endif %}</text>
-            <text x="105" y="148" text-anchor="middle" font-size="7" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
-            <rect x="177" y="102" width="36" height="42" rx="5" fill="{% if n2_active_right %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="1.5"/>
-            <text x="195" y="118" text-anchor="middle" font-size="6" fill="#3498db" font-weight="bold">N2</text>
-            <text x="195" y="130" text-anchor="middle" font-size="5" fill="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_right %}USE{% else %}FULL{% endif %}</text>
-            <text x="195" y="148" text-anchor="middle" font-size="7" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+            <rect x="87" y="102" width="36" height="40" rx="5" fill="{% if n2_active_left %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="1.5"/>
+            <text x="105" y="116" text-anchor="middle" font-size="6" fill="#3498db" font-weight="bold">N2</text>
+            <text x="105" y="128" text-anchor="middle" font-size="5" fill="{% if n2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_left %}USE{% else %}FULL{% endif %}</text>
+            <!-- номер ПОД баллоном -->
+            <text x="105" y="152" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
+            <rect x="177" y="102" width="36" height="40" rx="5" fill="{% if n2_active_right %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="1.5"/>
+            <text x="195" y="116" text-anchor="middle" font-size="6" fill="#3498db" font-weight="bold">N2</text>
+            <text x="195" y="128" text-anchor="middle" font-size="5" fill="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_right %}USE{% else %}FULL{% endif %}</text>
+            <!-- номер ПОД баллоном -->
+            <text x="195" y="152" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
         </svg>
         <!-- RIGHT: Counts -->
         <div class="gas-counts" style="font-size:10px;padding-top:10px">
@@ -293,7 +295,7 @@
         </div>
         {% set co2_active_left = co2a|length > 0 and co2a[0].status == 'in_use' %}
         {% set co2_active_right = co2a|length > 1 and co2a[1].status == 'in_use' %}
-        <svg viewBox="0 0 300 158" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 300 160" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
             <line x1="85" y1="5" x2="215" y2="5" stroke="#e74c3c" stroke-width="4" stroke-linecap="round"/>
             <text x="150" y="4" text-anchor="middle" font-size="6" font-weight="bold" fill="#e74c3c">PIPELINE</text>
             <line x1="105" y1="5" x2="105" y2="16" stroke="#e74c3c" stroke-width="1.5"/>
@@ -333,14 +335,14 @@
             <line x1="195" y1="68" x2="195" y2="72" stroke="#95a5a6" stroke-width="1"/>
             <line x1="105" y1="84" x2="105" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
             <line x1="195" y1="84" x2="195" y2="100" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
-            <rect x="87" y="102" width="36" height="42" rx="5" fill="{% if co2_active_left %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_left %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="1.5"/>
-            <text x="105" y="118" text-anchor="middle" font-size="6" fill="#e74c3c" font-weight="bold">CO2</text>
-            <text x="105" y="130" text-anchor="middle" font-size="5" fill="{% if co2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_left %}USE{% else %}FULL{% endif %}</text>
-            <text x="105" y="148" text-anchor="middle" font-size="7" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
-            <rect x="177" y="102" width="36" height="42" rx="5" fill="{% if co2_active_right %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_right %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="1.5"/>
-            <text x="195" y="118" text-anchor="middle" font-size="6" fill="#e74c3c" font-weight="bold">CO2</text>
-            <text x="195" y="130" text-anchor="middle" font-size="5" fill="{% if co2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_right %}USE{% else %}FULL{% endif %}</text>
-            <text x="195" y="148" text-anchor="middle" font-size="7" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+            <rect x="87" y="102" width="36" height="40" rx="5" fill="{% if co2_active_left %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_left %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="1.5"/>
+            <text x="105" y="116" text-anchor="middle" font-size="6" fill="#e74c3c" font-weight="bold">CO2</text>
+            <text x="105" y="128" text-anchor="middle" font-size="5" fill="{% if co2_active_left %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_left %}USE{% else %}FULL{% endif %}</text>
+            <text x="105" y="152" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
+            <rect x="177" y="102" width="36" height="40" rx="5" fill="{% if co2_active_right %}#fff8f0{% else %}#fff0f0{% endif %}" stroke="{% if co2_active_right %}#f39c12{% else %}#e74c3c{% endif %}" stroke-width="1.5"/>
+            <text x="195" y="116" text-anchor="middle" font-size="6" fill="#e74c3c" font-weight="bold">CO2</text>
+            <text x="195" y="128" text-anchor="middle" font-size="5" fill="{% if co2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_right %}USE{% else %}FULL{% endif %}</text>
+            <text x="195" y="152" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
         </svg>
         <div class="gas-counts" style="font-size:10px;padding-top:10px">
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ stats.co2_full }}</b> {{ _('Full') }}</div>
