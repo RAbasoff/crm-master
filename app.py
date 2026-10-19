@@ -7,6 +7,7 @@ from flask_babel import Babel, gettext as _
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 import os, io, json, time
@@ -815,6 +816,30 @@ def not_found(e):
 @app.errorhandler(500)
 def internal_error(e):
     db.session.rollback()
+    try:
+        from logs import log_exception
+        log_exception(getattr(e, 'original_exception', e) or e, category='http', source='errorhandler_500')
+    except Exception:
+        pass
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify(error='Internal server error'), 500
+    flash(_('An error occurred. Please try again.'), 'error')
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return redirect(url_for('login'))
+
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    """Любое необработанное исключение — в лог ошибок (Настройки → Система)."""
+    if isinstance(e, HTTPException):
+        return e
+    db.session.rollback()
+    try:
+        from logs import log_exception
+        log_exception(e, category='http', source='unhandled')
+    except Exception:
+        pass
     if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
         return jsonify(error='Internal server error'), 500
     flash(_('An error occurred. Please try again.'), 'error')

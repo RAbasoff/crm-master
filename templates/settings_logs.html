@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Error logs') }} — {{ _('Settings') }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🧾 {{ _('Error logs') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#3498db;color:white" onclick="loadLogs()">🔄 {{ _('Refresh') }}</button>
+        <a href="/settings" class="btn btn-sm" style="background:#eee">{{ _('Settings') }}</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0;font-size:15px">⛔ {{ _('Recent errors') }}</h2>
+        <label style="font-size:12px;color:#888;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="autoRefresh" checked onchange="toggleAuto()">
+            {{ _('Auto-refresh 15s') }}
+        </label>
+    </div>
+    <div id="errList" style="margin-top:10px">
+        <div style="color:#888;padding:12px">{{ _('Loading…') }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="margin:0 0 10px;font-size:15px">📄 {{ _('File log (tail)') }}</h2>
+    <pre id="fileTail" style="background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;font-size:11px;max-height:320px;overflow:auto;white-space:pre-wrap">…</pre>
+</div>
+
+<script>
+let autoTimer = null;
+
+function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+}
+
+function loadLogs() {
+    fetch('/api/settings/logs').then(r => r.json()).then(d => {
+        const box = document.getElementById('errList');
+        const logs = (d.logs && d.logs.db) || [];
+        if (!logs.length) {
+            box.innerHTML = '<div style="padding:16px;background:#eafaf1;border-radius:8px;color:#27ae60;font-size:13px">✅ {{ _("No errors in the log") }}</div>';
+        } else {
+            box.innerHTML = logs.map(function (r) {
+                const color = /error|critical/i.test(r.level) ? '#c0392b' : '#8a6d3b';
+                const bg = /error|critical/i.test(r.level) ? '#fdecea' : '#fff8e6';
+                return '<div style="background:' + bg + ';border-left:4px solid ' + color + ';border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
+                    '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#555">' +
+                    '<b style="color:' + color + '">' + esc(r.level) + '</b>' +
+                    '<span>' + esc(r.when) + '</span>' +
+                    '<span>' + esc(r.category) + '</span>' +
+                    (r.user ? '<span>👤 ' + esc(r.user) + '</span>' : '') +
+                    (r.source ? '<span style="opacity:.7">' + esc(r.source) + '</span>' : '') +
+                    '</div>' +
+                    '<div style="margin-top:6px;font-size:13px;font-weight:600;color:#333">' + esc(r.message) + '</div>' +
+                    (r.details ? '<pre style="margin:8px 0 0;font-size:10px;background:#fff;padding:8px;border-radius:6px;max-height:160px;overflow:auto;white-space:pre-wrap;color:#666">' + esc(r.details) + '</pre>' : '') +
+                    '</div>';
+            }).join('');
+        }
+        const tail = (d.logs && d.logs.file_tail) || [];
+        document.getElementById('fileTail').textContent = tail.length ? tail.join('\n') : '—';
+    }).catch(function () {
+        document.getElementById('errList').innerHTML = '<div style="padding:12px;color:#c0392b">{{ _("Failed to load logs") }}</div>';
+    });
+}
+
+function toggleAuto() {
+    const on = document.getElementById('autoRefresh').checked;
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    if (on) autoTimer = setInterval(loadLogs, 15000);
+}
+
+loadLogs();
+toggleAuto();
+</script>
+{% endblock %}

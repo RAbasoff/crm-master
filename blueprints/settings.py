@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from config import SECTIONS_TREE
-from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog, FloorMapLine)
+from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog, FloorMapLine, SystemLog)
 from utils import log_audit, role_required, safe_commit
 from sqlalchemy import func, case
 
@@ -499,3 +499,47 @@ def settings_run_update():
         return jsonify(res)
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)[:200]}), 500
+
+
+@bp.route('/settings/logs')
+@login_required
+@role_required('admin')
+def settings_logs_page():
+    """Страница логов ошибок (видна сразу)."""
+    return render_template('settings_logs.html', logs=_load_error_logs())
+
+
+@bp.route('/api/settings/logs')
+@login_required
+@role_required('admin')
+def api_settings_logs():
+    return jsonify({'ok': True, 'logs': _load_error_logs()})
+
+
+def _load_error_logs(limit=40):
+    """Последние ошибки: SystemLog ERROR/WARNING + хвост logs/errors.log."""
+    rows = SystemLog.query.filter(
+        SystemLog.level.in_(('ERROR', 'CRITICAL', 'WARNING', 'error', 'warn', 'warning'))
+    ).order_by(SystemLog.id.desc()).limit(limit).all()
+    logs = []
+    for r in rows:
+        logs.append({
+            'when': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else '',
+            'level': r.level,
+            'category': r.category or '',
+            'message': (r.message or '')[:500],
+            'source': r.source or '',
+            'details': (r.details or '')[-1500:],
+            'user': r.user.username if r.user else '',
+        })
+    # tail of file log (если есть)
+    file_tail = []
+    try:
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs', 'errors.log')
+        if os.path.exists(p):
+            with open(p, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+            file_tail = [ln.rstrip() for ln in lines[-40:]]
+    except Exception:
+        pass
+    return {'db': logs, 'file_tail': file_tail}

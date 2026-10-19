@@ -565,6 +565,21 @@
                 {{ _('Updates pull code from GitHub. Company data (instance, uploads, backups) is not modified.') }}
             </p>
         </div>
+
+        <!-- Error logs -->
+        <div class="card" style="grid-column:1/-1">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                <h2 style="margin:0;font-size:15px">🧾 {{ _('Error logs') }}</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <a href="/settings/logs" class="btn btn-sm" style="background:#e74c3c;color:white;font-weight:700">{{ _('Open error logs') }}</a>
+                    <a href="/settings/activity" class="btn btn-sm" style="background:#eee">{{ _('User Activity') }}</a>
+                </div>
+            </div>
+            <p style="font-size:12px;color:#888;margin:8px 0 0">
+                {{ _('All application errors are recorded here. Open logs to see messages immediately.') }}
+            </p>
+            <div id="sysLogPreview" style="margin-top:10px"></div>
+        </div>
     </div>
 </div>
 
@@ -724,6 +739,33 @@ function showToast(text) {
     toast.textContent = text;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+}
+
+loadSysLogPreview();
+setInterval(loadSysLogPreview, 20000);
+
+function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+}
+
+function loadSysLogPreview() {
+    const box = document.getElementById('sysLogPreview');
+    if (!box) return;
+    fetch('/api/settings/logs').then(r => r.json()).then(d => {
+        const logs = (d.logs && d.logs.db) || [];
+        if (!logs.length) {
+            box.innerHTML = '<div style="font-size:12px;color:#27ae60">✅ {{ _("No recent errors") }}</div>';
+            return;
+        }
+        box.innerHTML = logs.slice(0, 5).map(function (r) {
+            const err = /error|critical/i.test(r.level);
+            return '<div style="font-size:11px;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:' +
+                (err ? '#fdecea' : '#fff8e6') + ';color:' + (err ? '#c0392b' : '#8a6d3b') + '">' +
+                '<b>' + esc(r.level) + '</b> · ' + esc(r.when) + ' · ' + esc(r.message) + '</div>';
+        }).join('') + '<a href="/settings/logs" style="font-size:12px;color:#3498db;font-weight:600">{{ _("Show all") }} →</a>';
+    }).catch(function () {});
 }
 
 function checkUpdates() {

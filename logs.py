@@ -95,3 +95,42 @@ def log_system(level, category, message, details=None, source=None):
         safe_commit()
     except Exception:
         db.session.rollback()
+
+
+def _errors_log_path():
+    import os
+    base = os.path.dirname(os.path.abspath(__file__))
+    d = os.path.join(base, 'logs')
+    try:
+        os.makedirs(d, exist_ok=True)
+    except Exception:
+        pass
+    return os.path.join(d, 'errors.log')
+
+
+def log_exception(exc, category='http', source=None):
+    """Сохранить исключение: traceback в файл + запись ERROR в SystemLog."""
+    import traceback
+    from datetime import datetime
+    tb = traceback.format_exc() if exc else ''
+    path = request.path if request else '?'
+    method = request.method if request else '?'
+    user = ''
+    try:
+        if current_user.is_authenticated:
+            user = getattr(current_user, 'username', '') or str(current_user.id)
+    except Exception:
+        pass
+    msg = f'{method} {path}: {type(exc).__name__ if exc else "Exception"}: {exc}'
+    details = tb[-4000:] if tb else str(exc)
+    try:
+        with open(_errors_log_path(), 'a', encoding='utf-8') as f:
+            f.write(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+            f.write(details or '')
+            f.write('\n')
+    except Exception:
+        pass
+    try:
+        log_system('ERROR', category, msg[:500], details=details, source=source)
+    except Exception:
+        pass
