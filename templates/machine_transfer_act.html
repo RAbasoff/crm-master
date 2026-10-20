@@ -2,6 +2,7 @@
 <html lang="{{ g.lang if g.lang is defined else 'ru' }}">
 <head>
 <meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{{ _('Transfer Act of Material Assets') }} — {{ machine.name }}</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -442,6 +443,8 @@ if (photoInput) {
 }
 
 function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) return meta.content;
     var m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
     if (m) return decodeURIComponent(m[1]);
     var inp = document.querySelector('input[name="csrf_token"]');
@@ -450,28 +453,40 @@ function csrfToken() {
 
 function saveAct() {
     var number = (document.getElementById('actNo') || {}).value || '';
-    var title = {{ ('Transfer Act' ~ ' — ' ~ machine.name)|tojson }};
-    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-    fetch('/machines/{{ machine.id }}/transfer-act/save', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken()
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({ html: html, number: number, title: title })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-        if (!d.ok) {
-            alert(d.error || 'Error');
-            return;
-        }
-        if (document.getElementById('actNo')) {
-            document.getElementById('actNo').value = d.number;
-        }
-        alert('✓ {{ _('Saved') }}: ' + d.number);
-    }).catch(function (e) {
-        alert('Error: ' + e);
-    });
+    var title = 'Transfer Act — {{ machine.name|e }}';
+    try {
+        var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        fetch('/machines/{{ machine.id }}/transfer-act/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ html: html, number: number, title: title })
+        }).then(function (r) {
+            return r.text();
+        }).then(function (txt) {
+            var d = {};
+            try { d = JSON.parse(txt); } catch (e) {
+                alert('{{ _('Save failed') }}: ' + txt.slice(0, 200));
+                return;
+            }
+            if (!d.ok) {
+                alert(d.error || '{{ _('Save failed') }}');
+                return;
+            }
+            if (document.getElementById('actNo')) {
+                document.getElementById('actNo').value = d.number;
+            }
+            alert('✓ {{ _('Saved') }}: ' + d.number);
+        }).catch(function (e) {
+            alert('Error: ' + e);
+        });
+    } catch (e) {
+        alert('JS Error: ' + e);
+    }
 }
 if (photoInput2) {
     photoInput2.addEventListener('change', function () {

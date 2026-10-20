@@ -554,9 +554,11 @@ def machine_saved_acts(machine_id):
 @bp.route('/documents/act/<int:doc_id>')
 @login_required
 def saved_act_view(doc_id):
+    from flask import Response
     from models import SavedDocument
     d = SavedDocument.query.get_or_404(doc_id)
-    return d.content_html or '<html><body>empty</body></html>'
+    html = d.content_html or '<html><body>empty</body></html>'
+    return Response(html, mimetype='text/html; charset=utf-8')
 
 
 @bp.route('/report', methods=['GET', 'POST'])
