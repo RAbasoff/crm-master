@@ -139,9 +139,18 @@ def _build_act_pdf(data, machine, photo_files, number):
     pdf.ln(8)
     pdf.set_font(fn, '', 9)
     pdf.cell(0, 6, t('Giver _______________     Receiver _______________     Date _______________'), new_x='LMARGIN', new_y='NEXT')
-    buf = io.BytesIO()
-    pdf.output(buf)
-    return buf.getvalue()
+    try:
+        out = pdf.output()
+        return bytes(out) if out else None
+    except Exception as e:
+        print('PDF OUTPUT ERR', e)
+        try:
+            buf = io.BytesIO()
+            pdf.output(buf)
+            return buf.getvalue()
+        except Exception as e2:
+            print('PDF OUTPUT ERR2', e2)
+            return None
 
 
 def _optf(value):
@@ -663,18 +672,22 @@ def machine_transfer_act_save(machine_id):
         number = next_document_number('ACT')
     title = title or f"Transfer Act {m.name}"
 
-    # PDF
+    # PDF — путь: static/uploads/docs/ГГГГ/НОМЕР.pdf
     year = datetime.utcnow().strftime('%Y')
     abs_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'static/uploads'), 'docs', year)
     os.makedirs(abs_dir, exist_ok=True)
     pdf_name = f'{number}.pdf'
-    pdf_rel = os.path.join('docs', year, pdf_name)
+    pdf_rel = os.path.join('uploads', 'docs', year, pdf_name)  # URL: /static/uploads/docs/...
     pdf_path = os.path.join(abs_dir, pdf_name)
+    pdf_bytes = None
     try:
         pdf_bytes = _build_act_pdf(data, m, photo_files, number)
         if pdf_bytes:
             with open(pdf_path, 'wb') as f:
                 f.write(pdf_bytes)
+            print(f'ACT PDF saved {pdf_path} size={len(pdf_bytes)}')
+        else:
+            print('ACT PDF EMPTY')
     except Exception as e:
         print('ACT PDF ERROR', e)
         pdf_bytes = None
@@ -703,6 +716,23 @@ def machine_transfer_act_save(machine_id):
     return jsonify({'ok': True, 'number': number, 'id': doc.id,
                     'pdf': f'/static/{pdf_rel}' if pdf_bytes else None,
                     'file': doc.pdf_file})
+
+
+@bp.route('/documents/act/<int:doc_id>/pdf')
+@login_required
+def saved_act_pdf(doc_id):
+    """Отдать PDF акта (надёжный роут)."""
+    from flask import send_from_directory
+    from models import SavedDocument
+    d = SavedDocument.query.get_or_404(doc_id)
+    if not d.pdf_file:
+        return jsonify({'error': 'no pdf'}), 404
+    # pdf_file = uploads/docs/ГГГГ/файл.pdf
+    rel = d.pdf_file
+    if rel.startswith('uploads/'):
+        rel = rel[len('uploads/'):]
+    directory = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'static/uploads'), rel)
+    return send_file(directory, mimetype='application/pdf', download_name=f'{d.number}.pdf', as_attachment=False)
 
 
 @bp.route('/<int:machine_id>/documents/acts')
