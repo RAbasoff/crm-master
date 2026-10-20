@@ -499,16 +499,23 @@ def machine_transfer_act(machine_id):
 @login_required
 @role_required('admin', 'director', 'technician')
 def machine_transfer_act_save(machine_id):
-    """Сохранить заполненный акт передачи в модуль «Станки» + в архив документов."""
+    """Сохранить заполненный акт передачи (form-data + CSRF)."""
     from models import SavedDocument
     from utils import next_document_number
     m = Machine.query.get_or_404(machine_id)
-    data = request.get_json() or {}
-    html = (data.get('html') or '').strip()
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        html = (data.get('html') or '').strip()
+        number = (data.get('number') or '').strip()
+        title = (data.get('title') or '').strip()
+    else:
+        html = (request.form.get('html') or '').strip()
+        number = (request.form.get('number') or '').strip()
+        title = (request.form.get('title') or '').strip()
     if not html:
-        return jsonify({'error': 'empty html'}), 400
-    number = (data.get('number') or '').strip() or next_document_number('ACT')
-    title = data.get('title') or f"Transfer Act — {m.name}"
+        return jsonify({'ok': False, 'error': 'empty html'}), 400
+    number = number or next_document_number('ACT')
+    title = title or f"Transfer Act — {m.name}"
     doc = SavedDocument(
         number=number,
         doc_type='transfer_act',
@@ -519,7 +526,6 @@ def machine_transfer_act_save(machine_id):
         created_by=current_user.id,
     )
     db.session.add(doc)
-    # файл на диске: static/uploads/docs/<year>/<number>.html
     import os
     from flask import current_app
     year = datetime.utcnow().strftime('%Y')
@@ -534,7 +540,7 @@ def machine_transfer_act_save(machine_id):
     except Exception as e:
         print('SAVE DOC FILE ERROR', e)
     if not safe_commit():
-        return jsonify({'error': 'save failed'}), 500
+        return jsonify({'ok': False, 'error': 'save failed'}), 500
     log_audit('save_document', 'machine', m.id, f'{number} transfer_act')
     return jsonify({'ok': True, 'number': number, 'id': doc.id, 'file': doc.file_path})
 

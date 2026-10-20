@@ -445,42 +445,39 @@ if (photoInput) {
 function csrfToken() {
     var meta = document.querySelector('meta[name="csrf-token"]');
     if (meta && meta.content) return meta.content;
-    var m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-    if (m) return decodeURIComponent(m[1]);
-    var inp = document.querySelector('input[name="csrf_token"]');
-    return inp ? inp.value : '';
+    return '';
 }
 
 function saveAct() {
     var number = (document.getElementById('actNo') || {}).value || '';
-    var title = 'Transfer Act — {{ machine.name|e }}';
+    var title = 'Transfer Act - ' + (document.title || '');
     try {
         var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        var fd = new FormData();
+        fd.append('csrf_token', csrfToken());
+        fd.append('html', html);
+        fd.append('number', number);
+        fd.append('title', title);
         fetch('/machines/{{ machine.id }}/transfer-act/save', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken(),
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({ html: html, number: number, title: title })
+            body: fd,
+            credentials: 'same-origin'
         }).then(function (r) {
             return r.text();
         }).then(function (txt) {
             var d = {};
             try { d = JSON.parse(txt); } catch (e) {
-                alert('{{ _('Save failed') }}: ' + txt.slice(0, 200));
+                alert('Save failed: ' + txt.slice(0, 300));
                 return;
             }
             if (!d.ok) {
-                alert(d.error || '{{ _('Save failed') }}');
+                alert(d.error || 'Save failed');
                 return;
             }
             if (document.getElementById('actNo')) {
                 document.getElementById('actNo').value = d.number;
             }
-            alert('✓ {{ _('Saved') }}: ' + d.number);
+            alert('OK: ' + d.number);
         }).catch(function (e) {
             alert('Error: ' + e);
         });
