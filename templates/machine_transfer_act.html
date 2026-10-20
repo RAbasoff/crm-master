@@ -450,30 +450,49 @@ function csrfToken() {
 
 function saveAct() {
     var number = (document.getElementById('actNo') || {}).value || '';
-    var title = 'Transfer Act - ' + (document.title || '');
     try {
-        var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-        // Выносим base64-фото из HTML в отдельные файлы — иначе 413
-        var blobs = [];
-        html = html.replace(/src=(["'])data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+\/=\s]+)\1/g, function (all, q, mime, b64) {
-            var i = blobs.length;
-            blobs.push({ mime: mime || 'png', b64: b64 });
-            return 'src=' + q + 'PENDING_IMG_' + i + q;
+        var items = [];
+        document.querySelectorAll('#itemsTable tbody tr').forEach(function (row) {
+            var check = row.querySelector('.row-check');
+            if (check && !check.checked) return;
+            var tds = row.querySelectorAll('td');
+            if (tds.length < 6) return;
+            items.push({
+                name: (tds[2].innerText || '').trim().split('\n')[0],
+                spec: (tds[3].innerText || '').trim(),
+                qty: (row.querySelector('.qty') || {}).value || '',
+                unit: (tds[5].innerText || '').trim()
+            });
         });
+        // Фото → отдельные файлы (не base64 в HTML)
         var fd = new FormData();
         fd.append('csrf_token', csrfToken());
-        fd.append('html', html);
         fd.append('number', number);
-        fd.append('title', title);
-        fd.append('img_count', String(blobs.length));
-        for (var i = 0; i < blobs.length; i++) {
-            var bin = atob(blobs[i].b64.replace(/\s+/g, ''));
+        fd.append('title', 'Transfer Act');
+        fd.append('act_date', (document.getElementById('actDate') || {}).value || '');
+        fd.append('act_location', (document.getElementById('actLocation') || {}).value || '');
+        fd.append('giver', (document.getElementById('giverSelect') || {}).value || '');
+        fd.append('giver_pos', (document.getElementById('giverPos') || {}).value || '');
+        fd.append('receiver', (document.getElementById('receiverSelect') || {}).innerText || '');
+        fd.append('receiver_pos', (document.getElementById('receiverPos') || {}).value || (document.getElementById('receiverPos') || {}).innerText || '');
+        fd.append('reason', (document.getElementById('actReason') || {}).value || '');
+        fd.append('notes', (document.getElementById('actNotes') || {}).value || '');
+        fd.append('items_json', JSON.stringify(items));
+        // фото из data: URL в grid
+        var idx = 0;
+        document.querySelectorAll('#photosGrid img').forEach(function (img) {
+            var src = img.getAttribute('src') || '';
+            if (src.indexOf('data:image') !== 0) return;
+            var m = src.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (!m) return;
+            var bin = atob(m[2]);
             var arr = new Uint8Array(bin.length);
             for (var j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j);
-            var ext = (blobs[i].mime || 'png').split('+')[0];
+            var ext = m[1].split('+')[0];
             if (ext === 'jpeg') ext = 'jpg';
-            fd.append('img_' + i, new Blob([arr], { type: 'image/' + (blobs[i].mime || 'png') }), 'photo_' + i + '.' + ext);
-        }
+            fd.append('photo_' + idx, new Blob([arr], { type: 'image/' + m[1] }), 'photo_' + idx + '.' + ext);
+            idx++;
+        });
         fetch('/machines/{{ machine.id }}/transfer-act/save', {
             method: 'POST',
             body: fd,
@@ -493,7 +512,8 @@ function saveAct() {
             if (document.getElementById('actNo')) {
                 document.getElementById('actNo').value = d.number;
             }
-            alert('OK: ' + d.number);
+            alert('OK PDF: ' + d.number + (d.pdf ? '\n' + d.pdf : ''));
+            if (d.pdf) window.open(d.pdf, '_blank');
         }).catch(function (e) {
             alert('Error: ' + e);
         });

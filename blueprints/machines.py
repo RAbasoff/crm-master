@@ -22,44 +22,126 @@ from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
 bp = Blueprint('machines', __name__, url_prefix='/machines')
 
 
-def _extract_data_images(html, machine_id, number):
-    """Заменить data:image base64 на файлы — иначе 413 Request Entity Too Large."""
-    import re, base64, uuid, os
-    from flask import current_app
-    if 'data:image' not in html:
-        return html, 0
-    upload = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
-    sub = os.path.join(upload, 'docs', 'images')
-    os.makedirs(sub, exist_ok=True)
-    n = 0
-    pat = re.compile(
-        r'src=(["\'])data:image/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)\1'
-    )
+def _build_act_pdf(data, machine, photo_files, number):
+    """Собрать компактный PDF акта передачи. Возвращает bytes или None."""
+    import io, tempfile, uuid
+    from utils import ensure_fpdf, find_pdf_font
+    try:
+        FPDF = ensure_fpdf().FPDF
+    except Exception:
+        return None
+    font_path = find_pdf_font()
+    uni = bool(font_path)
 
-    def repl(m):
-        nonlocal n
-        quote = m.group(1)
-        ext = (m.group(2) or 'png').split('+')[0].lower()
-        ext = {'jpeg': 'jpg', 'jpg': 'jpg', 'png': 'png', 'gif': 'gif', 'webp': 'webp'}.get(ext, 'png')
-        data = re.sub(r'\s+', '', m.group(3))
-        try:
-            raw = base64.b64decode(data)
-        except Exception:
-            return m.group(0)
-        if len(raw) < 200:
-            return m.group(0)
-        name = f'act_{machine_id}_{uuid.uuid4().hex[:12]}.{ext}'
-        path = os.path.join(sub, name)
-        try:
-            with open(path, 'wb') as f:
-                f.write(raw)
-        except Exception:
-            return m.group(0)
-        n += 1
-        return f'src={quote}/static/uploads/docs/images/{name}{quote}'
+    def t(s):
+        s = '' if s is None else str(s)
+        s = s.replace('₂', '2').replace('—', '-').replace('–', '-')
+        return s if uni else s.encode('latin-1', 'replace').decode('latin-1')
 
-    html = pat.sub(repl, html)
-    return html, n
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=14)
+    fn = 'AppFont' if uni else 'Helvetica'
+    if uni:
+        try:
+            pdf.add_font('AppFont', '', font_path)
+            pdf.add_font('AppFont', 'B', font_path)
+        except Exception:
+            uni = False
+            fn = 'Helvetica'
+    pdf.add_page()
+    pdf.set_font(fn, 'B', 14)
+    pdf.cell(0, 8, t('TRANSFER ACT OF MATERIAL ASSETS'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font(fn, '', 10)
+    pdf.cell(0, 6, t(f"Act No: {number}    Date: {data.get('date') or ''}"), new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, t(f"Location: {data.get('location') or ''}"), new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(3)
+
+    pdf.set_font(fn, 'B', 11)
+    pdf.cell(0, 6, t('MACHINE'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font(fn, '', 10)
+    pdf.cell(0, 5, t(machine.name), new_x='LMARGIN', new_y='NEXT')
+    spec = ' · '.join([x for x in [machine.machine_type, machine.manufacturer, machine.serial_number] if x])
+    pdf.cell(0, 5, t(spec), new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(2)
+
+    pdf.set_font(fn, 'B', 11)
+    pdf.cell(0, 6, t('PARTIES'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font(fn, '', 10)
+    pdf.cell(0, 5, t(f"Giver: {data.get('giver') or ''} / {data.get('giver_pos') or ''}"), new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, t(f"Receiver: {data.get('receiver') or ''} / {data.get('receiver_pos') or ''}"), new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, t(f"Reason: {data.get('reason') or ''}"), new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(2)
+
+    pdf.set_font(fn, 'B', 11)
+    pdf.cell(0, 6, t('ITEMS'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font(fn, 'B', 9)
+    pdf.set_fill_color(44, 62, 80)
+    pdf.set_text_color(255)
+    for i, w in enumerate([10, 70, 45, 18, 15]):
+        pdf.cell(w, 7, t(['#', 'Name', 'Spec', 'Qty', 'Unit'][i]), border=1, fill=True)
+    pdf.ln()
+    pdf.set_text_color(51)
+    pdf.set_font(fn, '', 8)
+    items = data.get('items') or []
+    for i, it in enumerate(items, 1):
+        pdf.cell(10, 6, t(i), border=1)
+        pdf.cell(70, 6, t(str(it.get('name', ''))[:40]), border=1)
+        pdf.cell(45, 6, t(str(it.get('spec', ''))[:30]), border=1)
+        pdf.cell(18, 6, t(it.get('qty', '')), border=1)
+        pdf.cell(15, 6, t(it.get('unit', '')), border=1)
+        pdf.ln()
+    pdf.ln(3)
+
+    if data.get('notes'):
+        pdf.set_font(fn, 'B', 11)
+        pdf.cell(0, 6, t('NOTES'), new_x='LMARGIN', new_y='NEXT')
+        pdf.set_font(fn, '', 9)
+        pdf.multi_cell(0, 5, t(data.get('notes')))
+        pdf.ln(2)
+
+    if photo_files:
+        pdf.add_page()
+        pdf.set_font(fn, 'B', 12)
+        pdf.cell(0, 8, t('PHOTOS (embedded in this Act)'), new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(2)
+        col = 0
+        y0 = 20.0
+        for f in photo_files:
+            try:
+                raw = f.read()
+                if not raw or len(raw) < 100:
+                    continue
+                # определяем тип для fpdf
+                name = (f.filename or '').lower()
+                fmt = 'JPEG' if name.endswith(('.jpg', '.jpeg')) or raw[:2] == b'\xff\xd8' else 'PNG'
+                from io import BytesIO
+                if col == 0:
+                    y0 = pdf.get_y()
+                    if y0 > 200:
+                        pdf.add_page()
+                        y0 = 20.0
+                x = 12 + col * 62
+                try:
+                    pdf.image(BytesIO(raw), x=x, y=y0, w=58, h=42)
+                except Exception:
+                    try:
+                        pdf.image(BytesIO(raw), x=x, y=y0, w=58)
+                    except Exception as e2:
+                        print('PDF IMG SKIP', e2)
+                        continue
+                col += 1
+                if col >= 3:
+                    col = 0
+                    pdf.set_y(y0 + 44)
+            except Exception as e:
+                print('PDF PHOTO ERR', e)
+                continue
+    pdf.ln(8)
+    pdf.set_font(fn, '', 9)
+    pdf.cell(0, 6, t('Giver _______________     Receiver _______________     Date _______________'), new_x='LMARGIN', new_y='NEXT')
+    buf = io.BytesIO()
+    pdf.output(buf)
+    return buf.getvalue()
 
 
 def _optf(value):
@@ -552,34 +634,54 @@ def machine_transfer_act_save(machine_id):
         html = (request.form.get('html') or '').strip()
         number = (request.form.get('number') or '').strip()
         title = (request.form.get('title') or '').strip()
-    if not html:
-        return jsonify({'ok': False, 'error': 'empty html'}), 400
-    # Фото из FormData (PENDING_IMG_i) → файлы, HTML остаётся лёгким
-    import re as _re
-    upload = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
-    img_dir = os.path.join(upload, 'docs', 'images')
-    os.makedirs(img_dir, exist_ok=True)
-    img_count = 0
+    if not html and not request.form.get('act_no') and not request.files.get('photo_0') and not request.form.get('items_json'):
+        return jsonify({'ok': False, 'error': 'empty'}), 400
+    # Структурированные поля → PDF (маленький, открывается везде)
     try:
-        img_count = int(request.form.get('img_count') or 0)
-    except ValueError:
-        img_count = 0
-    for i in range(img_count):
-        f = request.files.get('img_%d' % i)
-        if not f or not f.filename:
-            continue
-        from utils import save_uploaded_file
-        fname = save_uploaded_file(f, prefix=f'act{m.id}_')
-        if not fname:
-            continue
-        html = html.replace(f'src="PENDING_IMG_{i}"', f'src="/static/uploads/{fname}"')
-        html = html.replace(f"src='PENDING_IMG_{i}'", f"src='/static/uploads/{fname}'")
-    # Номер: если уже занят — выдать следующий (не падать на UNIQUE)
+        items = json.loads(request.form.get('items_json') or '[]')
+    except Exception:
+        items = []
+    data = {
+        'date': request.form.get('act_date') or '',
+        'location': request.form.get('act_location') or '',
+        'giver': request.form.get('giver') or '',
+        'giver_pos': request.form.get('giver_pos') or '',
+        'receiver': request.form.get('receiver') or '',
+        'receiver_pos': request.form.get('receiver_pos') or '',
+        'reason': request.form.get('reason') or '',
+        'notes': request.form.get('notes') or '',
+        'items': items,
+    }
+    photo_files = []
+    for key in list(request.files.keys()):
+        if key.startswith('photo_'):
+            photo_files.append(request.files[key])
+
     if number and SavedDocument.query.filter_by(number=number).first():
         number = next_document_number('ACT')
     elif not number:
         number = next_document_number('ACT')
     title = title or f"Transfer Act {m.name}"
+
+    # PDF
+    year = datetime.utcnow().strftime('%Y')
+    abs_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'static/uploads'), 'docs', year)
+    os.makedirs(abs_dir, exist_ok=True)
+    pdf_name = f'{number}.pdf'
+    pdf_rel = os.path.join('docs', year, pdf_name)
+    pdf_path = os.path.join(abs_dir, pdf_name)
+    try:
+        pdf_bytes = _build_act_pdf(data, m, photo_files, number)
+        if pdf_bytes:
+            with open(pdf_path, 'wb') as f:
+                f.write(pdf_bytes)
+    except Exception as e:
+        print('ACT PDF ERROR', e)
+        pdf_bytes = None
+    # компактный HTML (без base64) как дубликат для просмотра
+    if not html:
+        html = f"<html><body><h1>{number}</h1><p>{m.name}</p></body></html>"
+
     doc = SavedDocument(
         number=number,
         doc_type='transfer_act',
@@ -587,22 +689,10 @@ def machine_transfer_act_save(machine_id):
         title=title,
         machine_id=m.id,
         content_html=html,
+        pdf_file=pdf_rel if pdf_bytes else None,
         created_by=current_user.id,
     )
     db.session.add(doc)
-    import os
-    from flask import current_app
-    year = datetime.utcnow().strftime('%Y')
-    rel = os.path.join('docs', year, f'{number}.html')
-    abs_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'static/uploads'), 'docs', year)
-    os.makedirs(abs_dir, exist_ok=True)
-    abs_path = os.path.join(abs_dir, f'{number}.html')
-    try:
-        with open(abs_path, 'w', encoding='utf-8') as f:
-            f.write(html)
-        doc.file_path = rel
-    except Exception as e:
-        print('SAVE DOC FILE ERROR', e)
     try:
         if not safe_commit():
             return jsonify({'ok': False, 'error': 'save failed'}), 500
@@ -610,7 +700,9 @@ def machine_transfer_act_save(machine_id):
         db.session.rollback()
         return jsonify({'ok': False, 'error': str(e)[:200]}), 500
     log_audit('save_document', 'machine', m.id, f'{number} transfer_act')
-    return jsonify({'ok': True, 'number': number, 'id': doc.id, 'file': doc.file_path})
+    return jsonify({'ok': True, 'number': number, 'id': doc.id,
+                    'pdf': f'/static/{pdf_rel}' if pdf_bytes else None,
+                    'file': doc.pdf_file})
 
 
 @bp.route('/<int:machine_id>/documents/acts')
