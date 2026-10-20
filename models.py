@@ -1695,6 +1695,27 @@ class MonthlyArchive(db.Model):
     section = db.Column(db.String(50), nullable=False)  # faults, orders, reports, etc.
     data_json = db.Column(db.Text, nullable=False)  # JSON snapshot
     created_at = db.Column(db.DateTime, default=now_local)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
+class SavedDocument(db.Model):
+    """Акты/документы в заполненном виде. Номер: PREFIX-YYYY-NNNN + дата."""
+    __tablename__ = 'saved_document'
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    doc_type = db.Column(db.String(50), nullable=False, index=True)  # transfer_act, ...
+    module = db.Column(db.String(50), nullable=False, index=True)  # machines, equipment, gas...
+    title = db.Column(db.String(300))
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), index=True)
+    equipment_id = db.Column(db.Integer, index=True)
+    content_html = db.Column(db.Text)  # заполненная форма как есть
+    pdf_file = db.Column(db.String(300))
+    file_path = db.Column(db.String(300))
+    archive_month = db.Column(db.String(7), index=True)  # YYYY-MM — когда ушёл в архив
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    machine = db.relationship('Machine', backref='saved_documents')
+    creator = db.relationship('User', foreign_keys=[created_by])
 
 # ============================================================
 # ============================================================

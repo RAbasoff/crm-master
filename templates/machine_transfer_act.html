@@ -87,6 +87,8 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
 
 <div class="toolbar no-print">
     <button class="btn btn-print" onclick="window.print()">🖨️ {{ _('Print') }}</button>
+    <button class="btn" type="button" style="background:#27ae60;color:#fff" onclick="saveAct()">💾 {{ _('Save document') }}</button>
+    <a class="btn btn-ghost" href="/machines/{{ machine.id }}/documents/acts">📁 {{ _('Saved acts') }}</a>
     <a class="btn btn-ghost" href="/machines/{{ machine.id }}">← {{ _('Back') }}</a>
     <button type="button" class="photo-add-btn" style="margin:0" onclick="document.getElementById('photoInput').click()">
         📷 {{ _('Add photos') }}
@@ -114,7 +116,7 @@ table.items input.qty { width: 52px; text-align: center; border: none; border-bo
 <div class="act-meta">
     <div class="field">
         <span class="label">{{ _('Act No') }}:</span>
-        <input type="text" id="actNo" value="ACT-{{ machine.id }}-{{ now.strftime('%Y%m%d') }}">
+        <input type="text" id="actNo" value="{{ act_no or ('ACT-' ~ machine.id ~ '-' ~ now.strftime('%Y%m%d')) }}">
     </div>
     <div class="field">
         <span class="label">{{ _('Date') }}:</span>
@@ -436,6 +438,39 @@ if (photoInput) {
     photoInput.addEventListener('change', function () {
         handlePhotoFiles(this.files);
         this.value = '';
+    });
+}
+
+function csrfToken() {
+    var m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    if (m) return decodeURIComponent(m[1]);
+    var inp = document.querySelector('input[name="csrf_token"]');
+    return inp ? inp.value : '';
+}
+
+function saveAct() {
+    var number = (document.getElementById('actNo') || {}).value || '';
+    var title = {{ ('Transfer Act' ~ ' — ' ~ machine.name)|tojson }};
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    fetch('/machines/{{ machine.id }}/transfer-act/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken()
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ html: html, number: number, title: title })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) {
+            alert(d.error || 'Error');
+            return;
+        }
+        if (document.getElementById('actNo')) {
+            document.getElementById('actNo').value = d.number;
+        }
+        alert('✓ {{ _('Saved') }}: ' + d.number);
+    }).catch(function (e) {
+        alert('Error: ' + e);
     });
 }
 if (photoInput2) {

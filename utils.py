@@ -58,6 +58,22 @@ def genereer_nummer():
     num = next_number_suffix(Opdracht, 'nummer', f'WO-{day}')
     return f'WO-{day}-{num:04d}'
 
+
+def next_document_number(prefix='ACT'):
+    """Порядковый номер документа + год: ACT-2026-0001."""
+    from models import SavedDocument
+    year = now_local().strftime('%Y')
+    like = f'{prefix}-{year}-%'
+    max_n = 0
+    for (val,) in db.session.query(SavedDocument.number).filter(SavedDocument.number.like(like)).all():
+        if not val:
+            continue
+        try:
+            max_n = max(max_n, int(str(val).rsplit('-', 1)[-1]))
+        except (ValueError, TypeError):
+            continue
+    return f'{prefix}-{year}-{max_n + 1:04d}'
+
 def date_plus_days(d, days):
     if d and days is not None:
         return d + timedelta(days=days)

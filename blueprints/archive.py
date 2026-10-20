@@ -49,6 +49,31 @@ def archive_page():
     return render_template('archive.html', months=months, q=q, search_hits=search_hits)
 
 
+@bp.route('/archive/documents', methods=['POST'])
+@login_required
+@role_required('admin')
+def archive_documents_month():
+    """Документы прошлого месяца → архив (archive_month), хранение бессрочное."""
+    from models import SavedDocument
+    now = datetime.utcnow()
+    prev_month = (now.replace(day=1) - timedelta(days=1))
+    month_str = prev_month.strftime('%Y-%m')
+    d_from = prev_month.replace(day=1)
+    d_to = now.replace(day=1)
+    docs = SavedDocument.query.filter(
+        SavedDocument.created_at >= d_from,
+        SavedDocument.created_at < d_to,
+        SavedDocument.archive_month.is_(None)
+    ).all()
+    for d in docs:
+        d.archive_month = month_str
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('archive.archive_page'))
+    flash(_('%(n)d documents archived for %(m)s', n=len(docs), m=month_str), 'success')
+    return redirect(url_for('archive.archive_page'))
+
+
 @bp.route('/archive/create', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -69,6 +94,13 @@ def archive_create():
     faults = FaultReport.query.filter(FaultReport.created_at >= d_from, FaultReport.created_at < d_to).all()
     faults_data = [{'id': f.id, 'title': f.title, 'machine': f.machine.name if f.machine else '', 'priority': f.priority, 'status': f.status, 'created_at': f.created_at.strftime('%Y-%m-%d %H:%M')} for f in faults]
     db.session.add(MonthlyArchive(archive_month=month_str, section='faults', data_json=json.dumps(faults_data, ensure_ascii=False), created_by=current_user.id))
+    # Документы месяца → вечный архив
+    from models import SavedDocument
+    for d in SavedDocument.query.filter(
+        SavedDocument.created_at >= d_from, SavedDocument.created_at < d_to,
+        SavedDocument.archive_month.is_(None)
+    ).all():
+        d.archive_month = month_str
 
     orders = Opdracht.query.filter(Opdracht.aangemaakt >= d_from, Opdracht.aangemaakt < d_to).all()
     orders_data = [{'id': o.id, 'nummer': o.nummer, 'client': o.verantwoordelijke.naam if o.verantwoordelijke else '', 'status': o.status, 'total': float(o.totaal or 0), 'created_at': o.aangemaakt.strftime('%Y-%m-%d %H:%M')} for o in orders]

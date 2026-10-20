@@ -487,9 +487,76 @@ def machine_transfer_act(machine_id):
     persons = Verantwoordelijke.query.filter_by(is_active=True).order_by(Verantwoordelijke.naam).all()
     items_total = 1 + len(m.parts) + len([sp for sp in m.spare_parts if sp.warehouse_item]) \
                   + len([mc for mc in m.consumables if mc.warehouse_item])
+    from utils import next_document_number
+    act_no = next_document_number('ACT')
     return render_template('machine_transfer_act.html',
                            machine=m, users=users, persons=persons,
-                           items_total=items_total, now=datetime.utcnow())
+                           items_total=items_total, now=datetime.utcnow(),
+                           act_no=act_no)
+
+
+@bp.route('/<int:machine_id>/transfer-act/save', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def machine_transfer_act_save(machine_id):
+    """Сохранить заполненный акт передачи в модуль «Станки» + в архив документов."""
+    from models import SavedDocument
+    from utils import next_document_number
+    m = Machine.query.get_or_404(machine_id)
+    data = request.get_json() or {}
+    html = (data.get('html') or '').strip()
+    if not html:
+        return jsonify({'error': 'empty html'}), 400
+    number = (data.get('number') or '').strip() or next_document_number('ACT')
+    title = data.get('title') or f"Transfer Act — {m.name}"
+    doc = SavedDocument(
+        number=number,
+        doc_type='transfer_act',
+        module='machines',
+        title=title,
+        machine_id=m.id,
+        content_html=html,
+        created_by=current_user.id,
+    )
+    db.session.add(doc)
+    # файл на диске: static/uploads/docs/<year>/<number>.html
+    import os
+    from flask import current_app
+    year = datetime.utcnow().strftime('%Y')
+    rel = os.path.join('docs', year, f'{number}.html')
+    abs_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'static/uploads'), 'docs', year)
+    os.makedirs(abs_dir, exist_ok=True)
+    abs_path = os.path.join(abs_dir, f'{number}.html')
+    try:
+        with open(abs_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+        doc.file_path = rel
+    except Exception as e:
+        print('SAVE DOC FILE ERROR', e)
+    if not safe_commit():
+        return jsonify({'error': 'save failed'}), 500
+    log_audit('save_document', 'machine', m.id, f'{number} transfer_act')
+    return jsonify({'ok': True, 'number': number, 'id': doc.id, 'file': doc.file_path})
+
+
+@bp.route('/<int:machine_id>/documents/acts')
+@login_required
+def machine_saved_acts(machine_id):
+    """Список сохранённых актов по станку."""
+    from models import SavedDocument
+    m = Machine.query.get_or_404(machine_id)
+    acts = SavedDocument.query.filter_by(
+        machine_id=m.id, doc_type='transfer_act'
+    ).order_by(SavedDocument.created_at.desc()).all()
+    return render_template('machine_acts.html', machine=m, acts=acts)
+
+
+@bp.route('/documents/act/<int:doc_id>')
+@login_required
+def saved_act_view(doc_id):
+    from models import SavedDocument
+    d = SavedDocument.query.get_or_404(doc_id)
+    return d.content_html or '<html><body>empty</body></html>'
 
 
 @bp.route('/report', methods=['GET', 'POST'])

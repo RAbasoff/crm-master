@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Saved acts') }} — {{ machine.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📁 {{ _('Saved acts') }} — {{ machine.name }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/machines/{{ machine.id }}/transfer-act" class="btn btn-sm" style="background:#27ae60;color:white">+ {{ _('Transfer Act') }}</a>
+        <a href="/machines/{{ machine.id }}" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+    </div>
+</div>
+<div class="card">
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Date') }}</th>
+            <th>{{ _('Title') }}</th>
+            <th>{{ _('Archived') }}</th>
+            <th></th>
+        </tr>
+        {% for a in acts %}
+        <tr>
+            <td><strong>{{ a.number }}</strong></td>
+            <td>{{ a.created_at.strftime('%d-%m-%Y %H:%M') if a.created_at else '—' }}</td>
+            <td>{{ a.title }}</td>
+            <td>{{ a.archive_month or '—' }}</td>
+            <td>
+                <a href="/machines/documents/act/{{ a.id }}" target="_blank" class="btn btn-sm" style="background:#3498db;color:white">👁 {{ _('Open') }}</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#888;padding:16px">{{ _('No documents yet') }}</td></tr>
+        {% endfor %}
+    </table></div>
+    <p style="font-size:11px;color:#888;margin-top:10px">
+        {{ _('Documents are stored as filled. Once a month they are moved to the permanent archive.') }}
+    </p>
+</div>
+{% endblock %}

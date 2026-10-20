@@ -24,7 +24,7 @@ def safe_commit(retries=3, delay=0.5):
                 return False
     return False
 
-SCHEMA_VERSION = 20261019
+SCHEMA_VERSION = 20261020
 
 
 def _schema_log(msg):
@@ -349,6 +349,21 @@ def ensure_schema():
             data_json TEXT NOT NULL,
             created_at DATETIME,
             created_by INTEGER REFERENCES user(id)
+        )"""),
+        ("saved_document", """CREATE TABLE IF NOT EXISTS saved_document (
+            id INTEGER PRIMARY KEY,
+            number VARCHAR(40) NOT NULL,
+            doc_type VARCHAR(50) NOT NULL,
+            module VARCHAR(50) NOT NULL,
+            title VARCHAR(300),
+            machine_id INTEGER REFERENCES machine(id),
+            equipment_id INTEGER,
+            content_html TEXT,
+            pdf_file VARCHAR(300),
+            file_path VARCHAR(300),
+            archive_month VARCHAR(7),
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME
         )"""),
         ("two_checklist_item", """CREATE TABLE IF NOT EXISTS two_checklist_item (
             id INTEGER PRIMARY KEY,
