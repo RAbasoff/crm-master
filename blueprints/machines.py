@@ -514,8 +514,12 @@ def machine_transfer_act_save(machine_id):
         title = (request.form.get('title') or '').strip()
     if not html:
         return jsonify({'ok': False, 'error': 'empty html'}), 400
-    number = number or next_document_number('ACT')
-    title = title or f"Transfer Act — {m.name}"
+    # Номер: если уже занят — выдать следующий (не падать на UNIQUE)
+    if number and SavedDocument.query.filter_by(number=number).first():
+        number = next_document_number('ACT')
+    elif not number:
+        number = next_document_number('ACT')
+    title = title or f"Transfer Act {m.name}"
     doc = SavedDocument(
         number=number,
         doc_type='transfer_act',
@@ -539,8 +543,12 @@ def machine_transfer_act_save(machine_id):
         doc.file_path = rel
     except Exception as e:
         print('SAVE DOC FILE ERROR', e)
-    if not safe_commit():
-        return jsonify({'ok': False, 'error': 'save failed'}), 500
+    try:
+        if not safe_commit():
+            return jsonify({'ok': False, 'error': 'save failed'}), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)[:200]}), 500
     log_audit('save_document', 'machine', m.id, f'{number} transfer_act')
     return jsonify({'ok': True, 'number': number, 'id': doc.id, 'file': doc.file_path})
 
