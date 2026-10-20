@@ -22,6 +22,46 @@ from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
 bp = Blueprint('machines', __name__, url_prefix='/machines')
 
 
+def _extract_data_images(html, machine_id, number):
+    """Заменить data:image base64 на файлы — иначе 413 Request Entity Too Large."""
+    import re, base64, uuid, os
+    from flask import current_app
+    if 'data:image' not in html:
+        return html, 0
+    upload = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+    sub = os.path.join(upload, 'docs', 'images')
+    os.makedirs(sub, exist_ok=True)
+    n = 0
+    pat = re.compile(
+        r'src=(["\'])data:image/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)\1'
+    )
+
+    def repl(m):
+        nonlocal n
+        quote = m.group(1)
+        ext = (m.group(2) or 'png').split('+')[0].lower()
+        ext = {'jpeg': 'jpg', 'jpg': 'jpg', 'png': 'png', 'gif': 'gif', 'webp': 'webp'}.get(ext, 'png')
+        data = re.sub(r'\s+', '', m.group(3))
+        try:
+            raw = base64.b64decode(data)
+        except Exception:
+            return m.group(0)
+        if len(raw) < 200:
+            return m.group(0)
+        name = f'act_{machine_id}_{uuid.uuid4().hex[:12]}.{ext}'
+        path = os.path.join(sub, name)
+        try:
+            with open(path, 'wb') as f:
+                f.write(raw)
+        except Exception:
+            return m.group(0)
+        n += 1
+        return f'src={quote}/static/uploads/docs/images/{name}{quote}'
+
+    html = pat.sub(repl, html)
+    return html, n
+
+
 def _optf(value):
     """Optional float: empty/invalid -> None (0 stays 0)."""
     if value is None or str(value).strip() == '':
@@ -514,6 +554,26 @@ def machine_transfer_act_save(machine_id):
         title = (request.form.get('title') or '').strip()
     if not html:
         return jsonify({'ok': False, 'error': 'empty html'}), 400
+    # Фото из FormData (PENDING_IMG_i) → файлы, HTML остаётся лёгким
+    import re as _re
+    upload = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+    img_dir = os.path.join(upload, 'docs', 'images')
+    os.makedirs(img_dir, exist_ok=True)
+    img_count = 0
+    try:
+        img_count = int(request.form.get('img_count') or 0)
+    except ValueError:
+        img_count = 0
+    for i in range(img_count):
+        f = request.files.get('img_%d' % i)
+        if not f or not f.filename:
+            continue
+        from utils import save_uploaded_file
+        fname = save_uploaded_file(f, prefix=f'act{m.id}_')
+        if not fname:
+            continue
+        html = html.replace(f'src="PENDING_IMG_{i}"', f'src="/static/uploads/{fname}"')
+        html = html.replace(f"src='PENDING_IMG_{i}'", f"src='/static/uploads/{fname}'")
     # Номер: если уже занят — выдать следующий (не падать на UNIQUE)
     if number and SavedDocument.query.filter_by(number=number).first():
         number = next_document_number('ACT')

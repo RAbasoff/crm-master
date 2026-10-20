@@ -49,6 +49,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24 * 7  # 7 days (was: unlimited)
 app.config['WTF_CSRF_SSL_STRICT'] = False  # allow CSRF across HTTP/HTTPS (PythonAnywhere proxy)
+app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024  # 64MB — акты с фото
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance'), exist_ok=True)
 

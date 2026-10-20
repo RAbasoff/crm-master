@@ -453,11 +453,27 @@ function saveAct() {
     var title = 'Transfer Act - ' + (document.title || '');
     try {
         var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        // Выносим base64-фото из HTML в отдельные файлы — иначе 413
+        var blobs = [];
+        html = html.replace(/src=(["'])data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+\/=\s]+)\1/g, function (all, q, mime, b64) {
+            var i = blobs.length;
+            blobs.push({ mime: mime || 'png', b64: b64 });
+            return 'src=' + q + 'PENDING_IMG_' + i + q;
+        });
         var fd = new FormData();
         fd.append('csrf_token', csrfToken());
         fd.append('html', html);
         fd.append('number', number);
         fd.append('title', title);
+        fd.append('img_count', String(blobs.length));
+        for (var i = 0; i < blobs.length; i++) {
+            var bin = atob(blobs[i].b64.replace(/\s+/g, ''));
+            var arr = new Uint8Array(bin.length);
+            for (var j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j);
+            var ext = (blobs[i].mime || 'png').split('+')[0];
+            if (ext === 'jpeg') ext = 'jpg';
+            fd.append('img_' + i, new Blob([arr], { type: 'image/' + (blobs[i].mime || 'png') }), 'photo_' + i + '.' + ext);
+        }
         fetch('/machines/{{ machine.id }}/transfer-act/save', {
             method: 'POST',
             body: fd,
