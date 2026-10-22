@@ -73,17 +73,34 @@ def two_list():
     groups = OrderedDict()
     if open_orders:
         groups['open'] = {'label': _('Open TWO'), 'orders': open_orders}
+    # Собираем месяцы, затем: декабрь сверху, январь снизу; пустые месяцы не показываем
+    month_map = {}
     for o in closed_orders:
         dt = o.planned_date or (o.created_at.date() if o.created_at else None)
         if not dt:
             year, month = None, None
         else:
             year, month = dt.year, dt.month
+        month_map.setdefault((year, month), []).append(o)
+    # Сортировка ключей: свежие сверху (год DESC, месяц DESC), без даты — в конец
+    def _mk(k):
+        y, m = k
+        if y is None:
+            return (0, 0)
+        return (y, m or 0)
+    for key in sorted(month_map.keys(), key=_mk, reverse=True):
+        year, month = key
         if year not in groups:
             groups[year] = OrderedDict()
-        if month not in groups[year]:
-            groups[year][month] = {'label': MONTHS_RU.get(month, '—') if month else _('No date'), 'orders': []}
-        groups[year][month]['orders'].append(o)
+        groups[year][month] = {
+            'label': MONTHS_RU.get(month, '—') if month else _('No date'),
+            'orders': month_map[key],
+        }
+    # Внутри года — месяцы 12→1
+    for y in list(groups.keys()):
+        if y == 'open':
+            continue
+        groups[y] = OrderedDict(sorted(groups[y].items(), key=lambda kv: kv[0] or 0, reverse=True))
 
     return render_template('two_list.html', orders=orders, groups=groups,
                            status_f=status_f, mine=mine)
