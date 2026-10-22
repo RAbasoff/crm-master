@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
                     CylinderOrder, EquipmentRepair, User, MonthlyArchive,
-                    GasQualityCheck, Monteur)
+                    GasQualityCheck, Monteur, now_local)
 from utils import role_required, log_audit, create_notification, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
