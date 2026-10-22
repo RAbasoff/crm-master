@@ -1636,7 +1636,8 @@ def index():
     my_twos = []
     my_overdue_to = 0
     try:
-        if current_user.has_role('technician', 'director', 'admin') or getattr(current_user, 'worker_profile', None):
+        # Кнопки плана: механики, начальник ТС, админ — НЕ director
+        if current_user.has_role('technician', 'admin') or getattr(current_user, 'worker_profile', None):
             my_twos = _get_user_two_plan(current_user, limit=8)
             my_overdue_to = dashboard_stats.get('overdue_twos', 0)
     except Exception:

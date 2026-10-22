@@ -2,8 +2,8 @@
 {% block title %}{{ _('Dashboard') }} — ProMaster{% endblock %}
 {% block content %}
 
-<!-- MY WORK — механик / начальник ТС -->
-{% if current_user.has_role('technician', 'director', 'admin') or current_user.worker_profile %}
+<!-- MY WORK — механик / начальник ТС / админ (НЕ директор) -->
+{% if current_user.has_role('technician', 'admin') or current_user.worker_profile %}
 {% set has_alert = (my_twos and my_twos|length > 0) or (my_overdue_to and my_overdue_to > 0) %}
 <style>
 @keyframes myWorkPulse {
