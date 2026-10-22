@@ -1127,23 +1127,24 @@ def _get_open_two_for_user(user):
 
 
 def _get_user_two_plan(user, limit=20):
-    """Активные TWO механика (сегодня + ближайшие). Выполненные/закрытые — НЕ в плане."""
+    """Активные TWO механика. Связка Monteur.user_id ИЛИ совпадение имени."""
     from models import Monteur, TechnicalWorkOrder, two_workers
     if not user or not getattr(user, 'id', None):
         return []
     monteur = Monteur.query.filter_by(user_id=user.id).first()
+    if not monteur:
+        # запасной путь: имя пользователя = имя механика
+        name = (getattr(user, 'display_name', None) or getattr(user, 'username', None) or '').strip()
+        if name:
+            monteur = Monteur.query.filter(Monteur.naam.ilike(name)).first()
     if not monteur:
         return []
     return (TechnicalWorkOrder.query
             .join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id)
             .filter(two_workers.c.worker_id == monteur.id)
             .filter(TechnicalWorkOrder.status.notin_([
-                'completed', 'cancelled', 'done', 'closed', 'finished', 'completed'
+                'completed', 'cancelled', 'done', 'closed', 'finished'
             ]))
-            .filter(db.or_(
-                TechnicalWorkOrder.completed_at.is_(None),
-                TechnicalWorkOrder.status.notin_(['completed', 'cancelled', 'done', 'closed', 'finished'])
-            ))
             .order_by(TechnicalWorkOrder.planned_date.asc().nulls_last(),
                       TechnicalWorkOrder.created_at.asc())
             .limit(limit).all())
