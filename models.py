@@ -8,50 +8,59 @@ import os as _os
 db = SQLAlchemy()
 
 
-def now_local():
-    """Текущее местное время (Europe/Brussels) — совпадает с системными часами.
+# Зафиксированный часовой пояс программы (с авто-переводом зима/лето через tzdata)
+APP_TZ = 'Europe/Brussels'
 
-    Раньше везде был now_local() — в Бельгии время отставало на 2 часа.
-    """
-    tz_name = _os.environ.get('APP_TIMEZONE', 'Europe/Brussels')
+
+def now_local():
+    """Текущее местное время Europe/Brussels (DST: CET/CEST — автоматически)."""
+    _os.environ.setdefault('APP_TIMEZONE', APP_TZ)
     try:
         from zoneinfo import ZoneInfo
-        return datetime.now(ZoneInfo(tz_name)).replace(tzinfo=None)
+        return datetime.now(ZoneInfo(APP_TZ)).replace(tzinfo=None)
     except Exception:
+        # запасной вариант: UTC + 1/+2 не нужен — лучше системное время
         return datetime.now()
 
 
-_TIME_SYNC = {'date': None}
+_TIME_SYNC = {'at': None}  # datetime of last successful sync
+
 
 def time_needs_sync():
-    try:
-        from zoneinfo import ZoneInfo
-        today = datetime.now(ZoneInfo('Europe/Brussels')).date()
-    except Exception:
-        today = datetime.now().date()
-    return _TIME_SYNC.get('date') != today
+    """Сверка с сервером: в 03:00 и каждые 6 часов."""
+    now = now_local()
+    last = _TIME_SYNC.get('at')
+    if not last:
+        return True
+    # каждые 6 часов
+    if (now - last).total_seconds() >= 6 * 3600:
+        return True
+    # в 03:00–03:59 — принудительная сверка, если ещё не было после 3 утра
+    if now.hour == 3 and (last.date() < now.date() or last.hour < 3):
+        return True
+    return False
+
 
 def sync_app_time():
-    """Синхронизация времени программы (Europe/Brussels) с часами сервера."""
-    tz = 'Europe/Brussels'
-    _os.environ['APP_TIMEZONE'] = tz
+    """Синхронизация/проверка времени: Europe/Brussels ↔ UTC-сервер."""
+    _os.environ['APP_TIMEZONE'] = APP_TZ
     utc = datetime.utcnow()
     try:
         from zoneinfo import ZoneInfo
-        loc = datetime.now(ZoneInfo(tz)).replace(tzinfo=None)
+        loc = datetime.now(ZoneInfo(APP_TZ)).replace(tzinfo=None)
     except Exception:
         loc = datetime.now()
-        tz = 'system'
-    offset = (loc.date() - utc.date()).days * 24 + (loc.hour - utc.hour)
-    msg = f'TIME SYNC: tz={tz} utc={utc:%Y-%m-%d %H:%M:%S} local={loc:%Y-%m-%d %H:%M:%S} offset_h≈{offset}'
+    # фактический сдвиг (CET +1 / CEST +2)
+    offset = round((loc - utc).total_seconds() / 3600.0, 2)
+    msg = f'TIME SYNC: tz={APP_TZ} utc={utc:%Y-%m-%d %H:%M:%S} local={loc:%Y-%m-%d %H:%M:%S} offset_h={offset}'
     print(msg)
     try:
         from utils import log_system
         log_system('INFO', 'time', msg, source='sync_app_time')
     except Exception:
         pass
-    _TIME_SYNC['date'] = loc.date()
-    return {'tz': tz, 'utc': utc, 'local': loc, 'offset_hours': offset}
+    _TIME_SYNC['at'] = loc
+    return {'tz': APP_TZ, 'utc': utc, 'local': loc, 'offset_hours': offset}
 
 # ============================================================
 # ASSOCIATION TABLES

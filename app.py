@@ -549,7 +549,7 @@ def before_request():
         denied = enforce_floor_access()
         if denied is not None:
             return denied
-        # Ежедневная синхронизация времени (после 00:00 по Брюсселю)
+        # Сверка времени с сервером: 03:00 и каждые 6 часов (Europe/Brussels, DST авто)
         try:
             from models import time_needs_sync, sync_app_time
             if time_needs_sync():
