@@ -153,6 +153,74 @@ def _build_act_pdf(data, machine, photo_files, number):
             return None
 
 
+TO_PERIODS = {
+    'daily': 'Ежедневно / Daily',
+    'weekly': 'Еженедельно / Weekly',
+    'biweekly': 'Раз в 2 недели / Biweekly',
+    'monthly': 'Ежемесячно / Monthly',
+    'quarterly': 'Квартально / Quarterly',
+    'semiannual': 'Полугодово / Semiannual',
+    'yearly': 'Годовое / Yearly',
+}
+
+DEFAULT_TO_CHECKLISTS = {
+    'daily': [
+        'Визуальный осмотр оборудования',
+        'Проверка уровня смазки / масла',
+        'Проверка на утечки (воздух, газ, вода)',
+        'Уборка рабочей зоны',
+    ],
+    'weekly': [
+        'Очистка фильтров',
+        'Проверка крепежей и болтов',
+        'Проверка состояния приводных ремней / цепей',
+        'Смазка подшипников',
+    ],
+    'biweekly': [
+        'Проверка износа ножей / инструмента',
+        'Контроль зазоров и регулировок',
+        'Проверка пневматики / клапанов',
+    ],
+    'monthly': [
+        'Полная смазка узлов',
+        'Проверка электрических соединений',
+        'Калибровка датчиков / приборов',
+        'Проверка защиты и аварийных кнопок',
+    ],
+    'quarterly': [
+        'Замена расходных материалов по регламенту',
+        'Проверка гидравлики / пневматики',
+        'Акт ТО + фото',
+    ],
+    'semiannual': [
+        'Замена масел / смазок по регламенту',
+        'Проверка геометрии / выверка',
+        'Диагностика электродвигателей',
+    ],
+    'yearly': [
+        'Полное ТО по паспорту завода',
+        'Замена изношенных узлов',
+        'Обновление документации / актов',
+    ],
+}
+
+
+def ensure_machine_to_checklists(machine_id):
+    """Заполнить чек-листы ТО по умолчанию, если пусто."""
+    from models import MachineTOChecklist
+    if MachineTOChecklist.query.filter_by(machine_id=machine_id).count() > 0:
+        return
+    for period, items in DEFAULT_TO_CHECKLISTS.items():
+        for i, text in enumerate(items, 1):
+            db.session.add(MachineTOChecklist(
+                machine_id=machine_id, period=period, text=text, sort_order=i, is_active=True
+            ))
+    try:
+        safe_commit()
+    except Exception:
+        db.session.rollback()
+
+
 def _optf(value):
     """Optional float: empty/invalid -> None (0 stays 0)."""
     if value is None or str(value).strip() == '':
@@ -243,8 +311,62 @@ def machine_detail(machine_id):
     maintenance = MaintenanceRecord.query.filter_by(machine_id=m.id).order_by(MaintenanceRecord.date_performed.desc()).all()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
     timeline = _build_machine_timeline(m.id, limit=80)
+    ensure_machine_to_checklists(m.id)
+    from models import MachineTOChecklist
+    checks = MachineTOChecklist.query.filter_by(machine_id=m.id, is_active=True).order_by(
+        MachineTOChecklist.period, MachineTOChecklist.sort_order, MachineTOChecklist.id).all()
+    checklist_by_period = {k: [] for k in TO_PERIODS}
+    for c in checks:
+        checklist_by_period.setdefault(c.period, []).append(c)
     return render_template('machine_detail.html', machine=m, faults=faults, maintenance=maintenance,
-                           warehouse_items=warehouse_items, timeline=timeline)
+                           warehouse_items=warehouse_items, timeline=timeline,
+                           to_periods=TO_PERIODS, checklist_by_period=checklist_by_period)
+
+
+@bp.route('/<int:machine_id>/to-checklist/add', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def machine_to_checklist_add(machine_id):
+    from models import MachineTOChecklist
+    m = Machine.query.get_or_404(machine_id)
+    period = (request.form.get('period') or 'monthly').strip()
+    if period not in TO_PERIODS:
+        period = 'monthly'
+    text = (request.form.get('text') or '').strip()
+    if not text:
+        flash(_('Text required'), 'error')
+        return redirect(url_for('machines.machine_detail', machine_id=m.id) + '#to-checklist')
+    max_o = db.session.query(db.func.coalesce(db.func.max(MachineTOChecklist.sort_order), 0)).filter_by(
+        machine_id=m.id, period=period).scalar() or 0
+    db.session.add(MachineTOChecklist(machine_id=m.id, period=period, text=text, sort_order=max_o + 1))
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    return redirect(url_for('machines.machine_detail', machine_id=m.id) + '#to-checklist')
+
+
+@bp.route('/to-checklist/<int:item_id>/toggle', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def machine_to_checklist_toggle(item_id):
+    from models import MachineTOChecklist
+    it = MachineTOChecklist.query.get_or_404(item_id)
+    it.is_active = not it.is_active
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    return redirect(url_for('machines.machine_detail', machine_id=it.machine_id) + '#to-checklist')
+
+
+@bp.route('/to-checklist/<int:item_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def machine_to_checklist_delete(item_id):
+    from models import MachineTOChecklist
+    it = MachineTOChecklist.query.get_or_404(item_id)
+    mid = it.machine_id
+    db.session.delete(it)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    return redirect(url_for('machines.machine_detail', machine_id=mid) + '#to-checklist')
 
 
 def _build_machine_timeline(machine_id, limit=100):

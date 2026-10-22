@@ -355,6 +355,14 @@ def ensure_schema():
             worker_id INTEGER NOT NULL REFERENCES worker(id),
             PRIMARY KEY (plan_id, worker_id)
         )"""),
+        ("machine_to_checklist", """CREATE TABLE IF NOT EXISTS machine_to_checklist (
+            id INTEGER PRIMARY KEY,
+            machine_id INTEGER NOT NULL REFERENCES machine(id),
+            period VARCHAR(20) NOT NULL,
+            text VARCHAR(500) NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT 1
+        )"""),
         ("saved_document", """CREATE TABLE IF NOT EXISTS saved_document (
             id INTEGER PRIMARY KEY,
             number VARCHAR(40) NOT NULL,

@@ -139,6 +139,43 @@
     </div>
 </div>
 
+<!-- TO CHECKLISTS (by period) -->
+<div class="card" id="to-checklist">
+    <h2>✅ {{ _('Maintenance checklists') }}</h2>
+    <p style="font-size:12px;color:#888;margin-bottom:10px">{{ _('Auto-inserted into TWO when TO is scheduled. Collapsed on screen — full on print.') }}</p>
+    {% for key, title in (to_periods or {}).items() %}
+    {% set items = (checklist_by_period or {}).get(key) or [] %}
+    <details class="to-chk" style="border:1px solid #e8ecf1;border-radius:8px;margin-bottom:8px;overflow:hidden" {% if key in ('daily','weekly') %}open{% endif %}>
+        <summary style="cursor:pointer;padding:10px 12px;background:#f8fafc;font-size:13px;font-weight:700;display:flex;justify-content:space-between">
+            <span>📋 {{ title }}</span>
+            <span style="color:#888;font-weight:500">{{ items|length }}</span>
+        </summary>
+        <div style="padding:10px 12px">
+            <ul style="list-style:none;margin:0 0 10px;padding:0">
+                {% for it in items %}
+                <li style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #f0f0f0;font-size:13px">
+                    <span style="color:#27ae60">☑</span>
+                    <span style="flex:1">{{ it.text }}</span>
+                    <form method="POST" action="/machines/to-checklist/{{ it.id }}/delete" style="margin:0">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px">✕</button>
+                    </form>
+                </li>
+                {% else %}
+                <li style="color:#999;font-size:12px;padding:6px 0">{{ _('No items') }}</li>
+                {% endfor %}
+            </ul>
+            <form method="POST" action="/machines/{{ machine.id }}/to-checklist/add" style="display:flex;gap:6px">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="period" value="{{ key }}">
+                <input type="text" name="text" placeholder="{{ _('Add item') }}" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                <button class="btn btn-sm" style="background:#27ae60;color:#fff">＋</button>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+
 <!-- DOCUMENTS -->
 <div class="card">
     <h2>📄 {{ _('Documents') }}</h2>

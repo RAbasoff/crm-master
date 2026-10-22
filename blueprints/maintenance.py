@@ -1316,6 +1316,23 @@ def maintenance_plan_new():
                     w = Monteur.query.get(wid)
                     if w:
                         two.workers.append(w)
+                # Чек-лист ТО из карточки станка (по периодичности плана)
+                try:
+                    from models import MachineTOChecklist, TWOChecklistItem
+                    from blueprints.machines import ensure_machine_to_checklists
+                    ensure_machine_to_checklists(last_p.machine_id)
+                    period = (last_p.recurrence or 'monthly') or 'monthly'
+                    items = MachineTOChecklist.query.filter_by(
+                        machine_id=last_p.machine_id, period=period, is_active=True
+                    ).order_by(MachineTOChecklist.sort_order, MachineTOChecklist.id).all()
+                    if not items and period == 'none':
+                        items = MachineTOChecklist.query.filter_by(
+                            machine_id=last_p.machine_id, period='monthly', is_active=True
+                        ).order_by(MachineTOChecklist.sort_order).all()
+                    for i, it in enumerate(items, 1):
+                        db.session.add(TWOChecklistItem(two_id=two.id, text=it.text, sort_order=i))
+                except Exception as _ce:
+                    print('TWO checklist insert skip', _ce)
                 safe_commit()
             except Exception:
                 pass

@@ -329,6 +329,19 @@ plan_workers = db.Table('plan_workers',
 )
 
 
+class MachineTOChecklist(db.Model):
+    """Чек-лист ТО по станку: пункты на каждую периодичность."""
+    __tablename__ = 'machine_to_checklist'
+    id = db.Column(db.Integer, primary_key=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=False, index=True)
+    period = db.Column(db.String(20), nullable=False, index=True)
+    # daily, weekly, biweekly, monthly, quarterly, semiannual, yearly
+    text = db.Column(db.String(500), nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    machine = db.relationship('Machine', backref='to_checklists')
+
+
 class MaintenancePlan(db.Model):
     __tablename__ = 'maintenance_plan'
     id = db.Column(db.Integer, primary_key=True)
