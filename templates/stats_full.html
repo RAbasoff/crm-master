@@ -43,6 +43,36 @@
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card">
+        <h2 style="font-size:14px;margin-bottom:12px">🔧 {{ _('TWO — open / completed / cancelled') }}</h2>
+        <canvas id="chartTWO" height="200"></canvas>
+        <div style="margin-top:10px;font-size:12px;color:#555">
+            {{ _('Total') }}: <b>{{ two_total }}</b>
+            · {{ _('Open') }}: <b style="color:#f39c12">{{ two_active }}</b>
+            · {{ _('Completed') }}: <b style="color:#27ae60">{{ two_completed }}</b>
+            · {{ _('Cancelled') }}: <b style="color:#95a5a6">{{ two_cancelled or 0 }}</b>
+        </div>
+    </div>
+    <div class="card">
+        <h2 style="font-size:14px;margin-bottom:12px">👷 {{ _('TWO by mechanic') }}</h2>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Worker') }}</th><th>{{ _('Open') }}</th><th>{{ _('Completed') }}</th><th>{{ _('Cancelled') }}</th><th>{{ _('Total') }}</th></tr>
+            {% for m in two_by_mechanic or [] %}
+            <tr>
+                <td><strong>{{ m.name }}</strong></td>
+                <td style="color:#f39c12;font-weight:700">{{ m.open }}</td>
+                <td style="color:#27ae60;font-weight:700">{{ m.completed }}</td>
+                <td>{{ m.cancelled }}</td>
+                <td>{{ m.total }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;color:#888">—</td></tr>
+            {% endfor %}
+        </table></div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
         <h2 style="font-size:14px;margin-bottom:12px">⚙️ {{ _('Top Machines') }}</h2>
         <canvas id="chartMachines" height="200"></canvas>
     </div>
@@ -228,6 +258,19 @@ new Chart(document.getElementById('chartStatus'), {
             backgroundColor: [
                 {% for s, c in faults_by_status %}pickColor(STATUS_COLORS, '{{ s }}', {{ loop.index0 }}){% if not loop.last %},{% endif %}{% endfor %}
             ]
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// TWO chart — open / completed / cancelled
+new Chart(document.getElementById('chartTWO'), {
+    type: 'doughnut',
+    data: {
+        labels: ['{{ _("Open") }}', '{{ _("Completed") }}', '{{ _("Cancelled") }}'],
+        datasets: [{
+            data: [{{ two_active or 0 }}, {{ two_completed or 0 }}, {{ two_cancelled or 0 }}],
+            backgroundColor: ['#F39C12', '#22C55E', '#94A3B8']
         }]
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }

@@ -50,15 +50,32 @@ def two_list():
         except Exception:
             orders = []
 
-    # Группировка по году → месяцу (planned_date, иначе created_at).
+    # Открытые TWO — всегда СВЕРХУ (независимо от даты).
+    # completed/cancelled — по дате и порядковому номеру.
+    def _two_sort_key(o):
+        st = (o.status or '').lower()
+        is_open = st not in ('completed', 'cancelled', 'done', 'closed', 'finished')
+        dt = o.planned_date or (o.created_at.date() if o.created_at else None)
+        ymd = dt.toordinal() if dt else 0
+        num = o.number or ''
+        return (0 if is_open else 1, -ymd if is_open else ymd, num)
+
+    orders = sorted(orders, key=_two_sort_key)
+
+    # Группировка: сначала блок «Открытые», затем по году → месяцу.
     from collections import OrderedDict
     MONTHS_RU = {1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель', 5: 'Май', 6: 'Июнь',
                  7: 'Июль', 8: 'Август', 9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'}
+    OPEN_ST = ('completed', 'cancelled', 'done', 'closed', 'finished')
+    open_orders = [o for o in orders if (o.status or '').lower() not in OPEN_ST]
+    closed_orders = [o for o in orders if (o.status or '').lower() in OPEN_ST]
+
     groups = OrderedDict()
-    for o in orders:
+    if open_orders:
+        groups['open'] = {'label': _('Open TWO'), 'orders': open_orders}
+    for o in closed_orders:
         dt = o.planned_date or (o.created_at.date() if o.created_at else None)
         if not dt:
-            key = (None, None)
             year, month = None, None
         else:
             year, month = dt.year, dt.month

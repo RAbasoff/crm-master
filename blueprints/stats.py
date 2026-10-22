@@ -91,8 +91,24 @@ def stats_full():
     
     # TWO stats
     two_total = TechnicalWorkOrder.query.count()
-    two_active = TechnicalWorkOrder.query.filter(TechnicalWorkOrder.status.in_(['draft', 'assigned', 'in_progress'])).count()
+    two_active = TechnicalWorkOrder.query.filter(TechnicalWorkOrder.status.in_(['draft', 'assigned', 'in_progress', 'pending_approval'])).count()
     two_completed = TechnicalWorkOrder.query.filter_by(status='completed').count()
+    two_cancelled = TechnicalWorkOrder.query.filter_by(status='cancelled').count()
+    # TWO по механикам
+    from models import Monteur, two_workers
+    two_by_mechanic = []
+    for m in Monteur.query.order_by(Monteur.naam).all():
+        twos = (TechnicalWorkOrder.query
+                .join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id)
+                .filter(two_workers.c.worker_id == m.id)
+                .all())
+        two_by_mechanic.append({
+            'name': m.naam,
+            'open': sum(1 for t in twos if (t.status or '') not in ('completed', 'cancelled', 'done', 'closed')),
+            'completed': sum(1 for t in twos if t.status == 'completed'),
+            'cancelled': sum(1 for t in twos if t.status == 'cancelled'),
+            'total': len(twos),
+        })
     
     # Gas cylinder stats
     cyl_n2_full = GasCylinder.query.filter_by(gas_type='nitrogen', status='full').count()
@@ -165,6 +181,7 @@ def stats_full():
         cyl_n2_full=cyl_n2_full, cyl_n2_in_use=cyl_n2_in_use,
         cyl_co2_full=cyl_co2_full, cyl_co2_in_use=cyl_co2_in_use,
         two_total=two_total, two_active=two_active, two_completed=two_completed,
+        two_cancelled=two_cancelled, two_by_mechanic=two_by_mechanic,
         machine_report=machine_report, sections=sections, groups=groups,
         section_filter=section_filter, group_filter=group_filter)
 

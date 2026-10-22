@@ -21,10 +21,69 @@
 
 <form id="merge-form" method="POST" action="/two/merge">
 
-{% set year_list = groups.keys()|list %}
+{# ── ОТКРЫТЫЕ TWO — всегда наверху, без сворачивания ── #}
+{% if groups.get('open') %}
+{% set odata = groups.get('open') %}
+<div class="card" data-month="open" style="padding:0;margin-bottom:8px;border:2px solid #f39c12">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fff8f0;border-radius:8px 8px 0 0">
+        <span style="font-size:16px">🟢</span>
+        <strong style="font-size:15px;color:#e67e22">{{ odata.label }} ({{ odata.orders|length }})</strong>
+        <span style="margin-left:auto;font-size:11px;font-weight:700;background:#f39c12;color:#fff;padding:3px 10px;border-radius:99px">{{ _('Open') }}: {{ odata.orders|length }}</span>
+    </div>
+    <div style="border:1px solid #f39c12;border-top:none;border-radius:0 0 8px 8px">
+        <div class="table-wrap"><table>
+        <tr>
+            <th style="width:30px"><input type="checkbox" class="check-all-month" title="{{ _('Select all') }}"></th>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Sections') }} / {{ _('Machines') }}</th>
+            <th>{{ _('Workers') }}</th>
+            <th>{{ _('Planned') }}</th>
+            <th>{{ _('Fault') }}</th>
+            <th></th>
+        </tr>
+        {% for o in odata.orders %}
+        <tr>
+            <td><input type="checkbox" name="two_ids" value="{{ o.id }}" class="two-check" onchange="toggleMergeBtn()"></td>
+            <td><a href="/two/{{ o.id }}" style="color:#3498db;font-weight:bold">{{ o.number }}</a></td>
+            <td><span class="badge badge-{% if o.status == 'completed' %}closed{% elif o.status == 'in_progress' %}in_progress{% elif o.status == 'cancelled' %}geannuleerd{% else %}open{% endif %}">{{ o.status }}</span></td>
+            <td style="font-size:12px">
+                {% if o.assignments %}
+                    {% for a in o.assignments %}
+                        {% if a.section %}<span style="display:inline-block;padding:2px 6px;background:#e3f2fd;border-radius:4px;margin:1px;font-size:11px">🏗️ {{ a.section.name }}</span>{% endif %}
+                        {% if a.machine %}<span style="display:inline-block;padding:2px 6px;background:#e8f5e9;border-radius:4px;margin:1px;font-size:11px">⚙️ {{ a.machine.name }}</span>{% endif %}
+                    {% endfor %}
+                {% elif o.machine %}<a href="/machines/{{ o.machine_id }}">{{ o.machine.name }}</a>
+                {% elif o.section %}{{ o.section.name }}
+                {% else %}—{% endif %}
+            </td>
+            <td>{% for w in o.workers %}{{ w.naam }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            <td>{{ o.planned_date.strftime('%d-%m-%Y') if o.planned_date else '—' }}</td>
+            <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">#{{ o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <a href="/two/{{ o.id }}/print" class="btn btn-sm" style="background:#eee;padding:4px 8px" target="_blank">🖨️</a>
+                    {% if current_user.has_role('admin') %}
+                    <a href="/two/{{ o.id }}/edit" class="btn btn-sm btn-primary" style="padding:4px 8px">✏️</a>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </table></div>
+    </div>
+</div>
+{% endif %}
+
+{# ── ЗАКРЫТЫЕ / история по месяцам ── #}
+{% set year_list = [] %}
+{% for y, months in groups.items() %}
+  {% if y != 'open' %}{% if year_list.append(y) %}{% endif %}{% endif %}
+{% endfor %}
 {% set multi_year = year_list|select('ne', none)|list|length > 1 or (none in year_list and year_list|length > 1) %}
 
 {% for year, months in groups.items() %}
+{% if year != 'open' %}
 {# ── ГОД (если лет больше одного) ── #}
 {% if multi_year %}
 <div class="card two-year-group" data-year="{{ year or 'none' }}" style="padding:0;margin-bottom:8px">
@@ -40,11 +99,15 @@
 {# ── МЕСЯЦ ── #}
 <div class="card two-month-group" data-month="{{ month or 'none' }}" style="padding:0;margin-bottom:8px;{% if multi_year %}border:none;box-shadow:none{% endif %}">
     <div class="two-month-header" onclick="toggleMonth(this)" style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;background:{% if multi_year %}#f0f4f8{% else %}#2c3e50;color:#fff{% endif %};border-radius:{% if multi_year %}0{% else %}8px 8px 0 0{% endif %};user-select:none">
-        <span class="two-toggle-icon" style="font-size:12px;transition:transform .2s">▼</span>
+        <span class="two-toggle-icon" style="font-size:12px;transition:transform .2s">▶</span>
         <strong style="font-size:14px">{{ data.label }}</strong>
         <span style="opacity:.7;font-size:12px">{{ data.orders|length }} {{ _('orders') }}</span>
+        <span style="margin-left:auto;display:flex;gap:6px;font-size:10px;font-weight:700">
+            <span style="background:#e8f8e8;color:#27ae60;padding:2px 8px;border-radius:99px">✓ {{ _('Completed') }}: {{ data.orders|selectattr('status','equalto','completed')|list|length }}</span>
+            <span style="background:#fff4e6;color:#e67e22;padding:2px 8px;border-radius:99px">● {{ _('Other') }}: {{ data.orders|rejectattr('status','equalto','completed')|list|length }}</span>
+        </span>
     </div>
-    <div class="two-month-body" style="border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px">
+    <div class="two-month-body" style="border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px;display:none">
         <div class="table-wrap"><table>
         <tr>
             <th style="width:30px"><input type="checkbox" class="check-all-month" title="{{ _('Select all') }}"></th>
@@ -93,7 +156,7 @@
     </div>
 </div>
 {% endif %}
-
+{% endif %}
 {% endfor %}
 </form>
 

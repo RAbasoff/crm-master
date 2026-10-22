@@ -331,25 +331,68 @@ def faults_list():
     page = request.args.get('page', 1, type=int)
     base = FaultReport.query.options(*_FAULTS_EAGER)
     if current_user.has_role('admin', 'director'):
-        pagination = base.order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+        q = base
     elif current_user.has_role('technician'):
-        # Механик видит: свои назначения, созданные им, свободные (open)
-        pagination = base.filter(
+        q = base.filter(
             (FaultReport.technician_id == current_user.id) |
             (FaultReport.reporter_id == current_user.id) |
             (FaultReport.assigned_technicians.any(User.id == current_user.id)) |
             (FaultReport.status == 'open')
-        ).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+        )
     else:
-        # Обычный пользователь / ответственный: свои заявки
         uid = current_user.id
         if not isinstance(uid, int):
             person_id = getattr(current_user, 'person_id', None)
             linked = User.query.filter_by(person_id=person_id).first() if person_id else None
             uid = linked.id if linked else -1
-        pagination = base.filter_by(reporter_id=uid).order_by(FaultReport.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
-    faults = pagination.items
-    return render_template('faults.html', faults=faults, pagination=pagination, status_msgs=STATUS_MSGIDS)
+        q = base.filter_by(reporter_id=uid)
+
+    # Все заявки (без жёсткой пагинации — группируем по месяцам)
+    all_f = q.order_by(FaultReport.id.asc()).all()
+
+    # Сортировка: open → работа (отметка механика) → resolved (зелёная зона) → closed по номеру
+    ACTIVE = ('accepted', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing')
+    CLOSED = ('closed', 'rejected')
+
+    def _fkey(f):
+        st = (f.status or 'open').lower()
+        if st == 'open' or st == 'reopened':
+            band = 0
+        elif st == 'resolved':
+            band = 2
+        elif st in CLOSED:
+            band = 3
+        else:
+            band = 1  # active work — наверху зелёной/рабочей зоны
+        # внутри band: недавно тронутые сверху (1/2), закрытые — по номеру
+        upd = f.resolved_at or f.accepted_at or f.created_at
+        ts = upd.toordinal() * 86400 + (upd.hour * 3600 + upd.minute * 60 + upd.second if upd else 0)
+        if band in (0, 1, 2):
+            return (band, -ts, f.id)
+        return (band, f.id)
+
+    all_f = sorted(all_f, key=_fkey)
+    active_list = [f for f in all_f if (f.status or '').lower() not in CLOSED]
+    closed_list = [f for f in all_f if (f.status or '').lower() in CLOSED]
+
+    # Месяцы закрытых: текущий — открыт, прошлые — свёрнуты
+    from collections import OrderedDict
+    now = now_local()
+    month_groups = OrderedDict()
+    for f in closed_list:
+        d = f.created_at.date() if f.created_at else now.date()
+        key = d.strftime('%Y-%m')
+        month_groups.setdefault(key, {'label': d.strftime('%m.%Y'), 'orders': []})
+        month_groups[key]['orders'].append(f)
+    current_key = now.strftime('%Y-%m')
+
+    return render_template('faults.html',
+                           faults=active_list,
+                           closed_list=closed_list,
+                           month_groups=month_groups,
+                           current_month=current_key,
+                           pagination=None,
+                           status_msgs=STATUS_MSGIDS)
 
 
 @bp.route('/new', methods=['GET', 'POST'])
