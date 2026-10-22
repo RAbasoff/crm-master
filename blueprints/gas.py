@@ -1410,7 +1410,7 @@ def gas_quality_new():
         if not (0 <= o2 <= 100) or not (0 <= co2 <= 100):
             flash(_('Percent must be 0–100'), 'error')
             return redirect(url_for('gas.gas_quality_new'))
-        now = datetime.utcnow()
+        now = now_local()
         d = safe_date(request.form.get('check_date')) or now.date()
         chk = GasQualityCheck(
             check_date=d,
@@ -1432,7 +1432,7 @@ def gas_quality_new():
             flash(_('Gas quality check saved'), 'success')
         return redirect(url_for('gas.gas_quality_list', month=d.strftime('%Y-%m')))
     mechanics = User.query.filter(User.role == 'technician', User.is_active_user == True).order_by(User.display_name).all()
-    now = datetime.utcnow()
+    now = now_local()
     return render_template('gas_quality_form.html', mechanics=mechanics, now=now)
 
 
