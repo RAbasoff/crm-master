@@ -2,6 +2,63 @@
 {% block title %}{{ _('Dashboard') }} — ProMaster{% endblock %}
 {% block content %}
 
+<!-- MY WORK — механик / начальник ТС -->
+{% if current_user.has_role('technician', 'director', 'admin') or current_user.worker_profile %}
+{% set has_alert = (my_twos and my_twos|length > 0) or (my_overdue_to and my_overdue_to > 0) %}
+<style>
+@keyframes myWorkPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.55); }
+    50% { box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); }
+}
+.my-work-alert { animation: myWorkPulse 2.2s ease-in-out infinite; }
+.my-work-btn {
+    display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:14px;
+    text-decoration:none;color:#fff;font-weight:800;font-size:17px;
+    box-shadow:0 4px 14px rgba(0,0,0,.12);transition:transform .12s;
+}
+.my-work-btn:active { transform:scale(.97); }
+.my-work-btn .n { margin-left:auto;font-size:28px;font-weight:900;opacity:.95 }
+</style>
+<div class="card my-work-section" style="margin-bottom:16px;border:2px solid {% if has_alert %}#f39c12{% else %}#e8eef5{% endif %}">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">
+            📋 {{ _('My work') }}
+        </div>
+        {% if has_alert %}
+        <span class="my-work-alert" style="background:#f39c12;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px">
+            {{ _('Action needed') }}
+        </span>
+        {% endif %}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <a href="/me-day-plan" class="my-work-btn {% if has_alert %}my-work-alert{% endif %}" style="background:linear-gradient(135deg,#f39c12,#e67e22)">
+            <span style="font-size:26px">🔧</span>
+            <span>{{ _('Day plan / TWO') }}
+                <div style="font-size:11px;font-weight:600;opacity:.9;margin-top:2px">{{ my_twos|length if my_twos else 0 }} {{ _('active') }}</div>
+            </span>
+            <span class="n">{{ my_twos|length if my_twos else 0 }}</span>
+        </a>
+        <a href="/two?status=completed&mine=1" class="my-work-btn" style="background:linear-gradient(135deg,#27ae60,#1e8449)">
+            <span style="font-size:26px">✅</span>
+            <span>{{ _('Completed TWO') }}
+                <div style="font-size:11px;font-weight:600;opacity:.9;margin-top:2px">{{ _('Parts used') }}</div>
+            </span>
+        </a>
+    </div>
+    {% if my_twos %}
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+        {% for o in my_twos[:3] %}
+        <a href="/two/{{ o.id }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff8f0;border-radius:10px;text-decoration:none;border-left:4px solid #f39c12">
+            <code style="font-weight:800;color:#e67e22;font-size:13px">{{ o.number }}</code>
+            <span style="font-size:12px;color:#555;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ (o.description or '')[:70] }}</span>
+            {% if o.planned_date %}<span style="font-size:11px;color:#888">{{ o.planned_date.strftime('%d.%m') }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Welcome Banner -->
 <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden">
     <div style="position:absolute;top:-20px;right:-20px;width:160px;height:160px;background:rgba(91,156,246,0.1);border-radius:50%"></div>

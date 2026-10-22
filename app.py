@@ -1633,8 +1633,18 @@ def index():
             {'status': s or 'unknown', 'count': int(c or 0)} for s, c in status_rows
         ]
 
+    my_twos = []
+    my_overdue_to = 0
+    try:
+        if current_user.has_role('technician', 'director', 'admin') or getattr(current_user, 'worker_profile', None):
+            my_twos = _get_user_two_plan(current_user, limit=8)
+            my_overdue_to = dashboard_stats.get('overdue_twos', 0)
+    except Exception:
+        pass
+
     return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
                            gas_quality=gas_quality, show_gas_quality=show_gas_quality,
+                           my_twos=my_twos, my_overdue_to=my_overdue_to,
                            today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())
 
 # ============================================================
