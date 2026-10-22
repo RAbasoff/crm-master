@@ -1247,6 +1247,7 @@ def maintenance_plan_new():
             worker_id = worker_ids[0]
         created = 0
         last_p = None
+        created_plans = []
         for tid in targets:
             kind, target_id = _parse_target_id(tid)
             if kind == 'machine':
@@ -1293,49 +1294,58 @@ def maintenance_plan_new():
             db.session.add(p)
             created += 1
             last_p = p
+            created_plans.append(p)
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_new'))
         if last_p is None:
             flash(_('No valid targets'), 'error')
             return redirect(url_for('maintenance.maintenance_plan_new'))
-        if create_two and worker_id and last_p.machine_id:
+        # TWO — на КАЖДЫЙ созданный план со станком
+        if create_two and (worker_ids or worker_id):
+            created_twos = 0
             try:
                 from blueprints.two import gen_two_number
-                two = TechnicalWorkOrder(
-                    number=gen_two_number(),
-                    machine_id=last_p.machine_id,
-                    description=f'{last_p.title}\n{last_p.description or ""}',
-                    planned_date=last_p.planned_start,
-                    status='assigned',
-                    created_by=current_user.id if isinstance(current_user.id, int) else None
-                )
-                db.session.add(two)
-                db.session.flush()
-                for wid in (worker_ids or ([worker_id] if worker_id else [])):
-                    w = Monteur.query.get(wid)
-                    if w:
-                        two.workers.append(w)
-                # Чек-лист ТО из карточки станка (по периодичности плана)
-                try:
-                    from models import MachineTOChecklist, TWOChecklistItem
-                    from blueprints.machines import ensure_machine_to_checklists
-                    ensure_machine_to_checklists(last_p.machine_id)
-                    period = (last_p.recurrence or 'monthly') or 'monthly'
-                    items = MachineTOChecklist.query.filter_by(
-                        machine_id=last_p.machine_id, period=period, is_active=True
-                    ).order_by(MachineTOChecklist.sort_order, MachineTOChecklist.id).all()
-                    if not items and period == 'none':
-                        items = MachineTOChecklist.query.filter_by(
-                            machine_id=last_p.machine_id, period='monthly', is_active=True
-                        ).order_by(MachineTOChecklist.sort_order).all()
-                    for i, it in enumerate(items, 1):
-                        db.session.add(TWOChecklistItem(two_id=two.id, text=it.text, sort_order=i))
-                except Exception as _ce:
-                    print('TWO checklist insert skip', _ce)
-                safe_commit()
+                from models import MachineTOChecklist, TWOChecklistItem
+                from blueprints.machines import ensure_machine_to_checklists
             except Exception:
-                pass
+                gen_two_number = None
+            if gen_two_number:
+                for p in created_plans:
+                    if not p.machine_id:
+                        continue
+                    two = TechnicalWorkOrder(
+                        number=gen_two_number(),
+                        machine_id=p.machine_id,
+                        description=f'{p.title}\n{p.description or ""}',
+                        planned_date=p.planned_start,
+                        status='assigned',
+                        created_by=current_user.id if isinstance(current_user.id, int) else None
+                    )
+                    db.session.add(two)
+                    db.session.flush()
+                    for wid in (worker_ids or ([worker_id] if worker_id else [])):
+                        w = Monteur.query.get(wid)
+                        if w:
+                            two.workers.append(w)
+                    try:
+                        ensure_machine_to_checklists(p.machine_id)
+                        period = (p.recurrence or 'monthly') or 'monthly'
+                        items = MachineTOChecklist.query.filter_by(
+                            machine_id=p.machine_id, period=period, is_active=True
+                        ).order_by(MachineTOChecklist.sort_order, MachineTOChecklist.id).all()
+                        if not items:
+                            items = MachineTOChecklist.query.filter_by(
+                                machine_id=p.machine_id, period='monthly', is_active=True
+                            ).order_by(MachineTOChecklist.sort_order).all()
+                        for i, it in enumerate(items, 1):
+                            db.session.add(TWOChecklistItem(two_id=two.id, text=it.text, sort_order=i))
+                    except Exception as _ce:
+                        print('TWO checklist insert skip', _ce)
+                    created_twos += 1
+                safe_commit()
+                if created_twos:
+                    flash(_('Created TWO for machines: %(n)d', n=created_twos), 'success')
         flash(_('Created %(n)d plans', n=created) if created != 1 else _('Plan created'), 'success')
         return redirect(url_for('maintenance.maintenance_plans_list'))
     machines = Machine.query.order_by(Machine.name).all()

@@ -6571,3 +6571,75 @@ msgstr "Активности пока нет"
 
 msgid "Audit log"
 msgstr "Журнал аудита"
+
+msgid "Visual inspection of equipment"
+msgstr "Визуальный осмотр оборудования"
+
+msgid "Check oil / lubricant level"
+msgstr "Проверка уровня масла / смазки"
+
+msgid "Check for leaks (air, gas, water)"
+msgstr "Проверка утечек (воздух, газ, вода)"
+
+msgid "Clean work area"
+msgstr "Уборка рабочей зоны"
+
+msgid "Clean filters"
+msgstr "Очистка фильтров"
+
+msgid "Check bolts and fasteners"
+msgstr "Проверка болтов и крепежа"
+
+msgid "Check drive belts / chains"
+msgstr "Проверка ремней / цепей"
+
+msgid "Lubricate bearings"
+msgstr "Смазка подшипников"
+
+msgid "Check knife / tool wear"
+msgstr "Проверка износа ножей / инструмента"
+
+msgid "Check gaps and adjustments"
+msgstr "Контроль зазоров и регулировок"
+
+msgid "Check pneumatics / valves"
+msgstr "Проверка пневматики / клапанов"
+
+msgid "Full lubrication of assemblies"
+msgstr "Полная смазка узлов"
+
+msgid "Check electrical connections"
+msgstr "Проверка электрических соединений"
+
+msgid "Calibrate sensors / instruments"
+msgstr "Калибровка датчиков / приборов"
+
+msgid "Check safety and emergency buttons"
+msgstr "Проверка защиты и аварийных кнопок"
+
+msgid "Replace consumables per schedule"
+msgstr "Замена расходников по регламенту"
+
+msgid "Check hydraulics / pneumatics"
+msgstr "Проверка гидравлики / пневматики"
+
+msgid "TO act + photos"
+msgstr "Акт ТО + фото"
+
+msgid "Replace oils / greases per schedule"
+msgstr "Замена масел / смазок по регламенту"
+
+msgid "Check geometry / alignment"
+msgstr "Проверка геометрии / выверка"
+
+msgid "Diagnose electric motors"
+msgstr "Диагностика электродвигателей"
+
+msgid "Full TO per manufacturer manual"
+msgstr "Полное ТО по паспорту завода"
+
+msgid "Replace worn assemblies"
+msgstr "Замена изношенных узлов"
+
+msgid "Update documentation / acts"
+msgstr "Обновление документации / актов"

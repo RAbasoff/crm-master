@@ -6385,3 +6385,75 @@ msgstr "inloggen"
 
 msgid "logout"
 msgstr "uitloggen"
+
+msgid "Visual inspection of equipment"
+msgstr "Visuele inspectie van de apparatuur"
+
+msgid "Check oil / lubricant level"
+msgstr "Controleer olie-/smeerniveau"
+
+msgid "Check for leaks (air, gas, water)"
+msgstr "Controleer op lekkages (lucht, gas, water)"
+
+msgid "Clean work area"
+msgstr "Werkgebied schoonmaken"
+
+msgid "Clean filters"
+msgstr "Filters reinigen"
+
+msgid "Check bolts and fasteners"
+msgstr "Controleer bouten en bevestigingen"
+
+msgid "Check drive belts / chains"
+msgstr "Controleer aandrijfriemen / kettingen"
+
+msgid "Lubricate bearings"
+msgstr "Lagers smeren"
+
+msgid "Check knife / tool wear"
+msgstr "Controleer slijtage van messen / gereedschap"
+
+msgid "Check gaps and adjustments"
+msgstr "Controleer speling en afstellingen"
+
+msgid "Check pneumatics / valves"
+msgstr "Controleer pneumatiek / ventielen"
+
+msgid "Full lubrication of assemblies"
+msgstr "Volledige smering van samenstellen"
+
+msgid "Check electrical connections"
+msgstr "Controleer elektrische verbindingen"
+
+msgid "Calibrate sensors / instruments"
+msgstr "Kalibreer sensoren / instrumenten"
+
+msgid "Check safety and emergency buttons"
+msgstr "Controleer veiligheid- en noodknoppen"
+
+msgid "Replace consumables per schedule"
+msgstr "Vervang verbruiksartikelen volgens schema"
+
+msgid "Check hydraulics / pneumatics"
+msgstr "Controleer hydrauliek / pneumatiek"
+
+msgid "TO act + photos"
+msgstr "Onderhoudsact + foto’s"
+
+msgid "Replace oils / greases per schedule"
+msgstr "Vervang oliën / vetten volgens schema"
+
+msgid "Check geometry / alignment"
+msgstr "Controleer geometrie / uitlijning"
+
+msgid "Diagnose electric motors"
+msgstr "Diagnoseer elektromotoren"
+
+msgid "Full TO per manufacturer manual"
+msgstr "Volledig onderhoud volgens handleiding"
+
+msgid "Replace worn assemblies"
+msgstr "Vervang versleten onderdelen"
+
+msgid "Update documentation / acts"
+msgstr "Documentatie / acten bijwerken"

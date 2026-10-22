@@ -155,7 +155,7 @@
                 {% for it in items %}
                 <li style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #f0f0f0;font-size:13px">
                     <span style="color:#27ae60">☑</span>
-                    <span style="flex:1">{{ it.text }}</span>
+                    <span style="flex:1">{{ _(it.text) }}</span>
                     <form method="POST" action="/machines/to-checklist/{{ it.id }}/delete" style="margin:0">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button class="btn btn-sm" style="padding:2px 8px;font-size:11px">✕</button>

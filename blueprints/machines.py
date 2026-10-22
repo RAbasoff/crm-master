@@ -165,55 +165,59 @@ TO_PERIODS = {
 
 DEFAULT_TO_CHECKLISTS = {
     'daily': [
-        'Визуальный осмотр оборудования',
-        'Проверка уровня смазки / масла',
-        'Проверка на утечки (воздух, газ, вода)',
-        'Уборка рабочей зоны',
+        'Visual inspection of equipment',
+        'Check oil / lubricant level',
+        'Check for leaks (air, gas, water)',
+        'Clean work area',
     ],
     'weekly': [
-        'Очистка фильтров',
-        'Проверка крепежей и болтов',
-        'Проверка состояния приводных ремней / цепей',
-        'Смазка подшипников',
+        'Clean filters',
+        'Check bolts and fasteners',
+        'Check drive belts / chains',
+        'Lubricate bearings',
     ],
     'biweekly': [
-        'Проверка износа ножей / инструмента',
-        'Контроль зазоров и регулировок',
-        'Проверка пневматики / клапанов',
+        'Check knife / tool wear',
+        'Check gaps and adjustments',
+        'Check pneumatics / valves',
     ],
     'monthly': [
-        'Полная смазка узлов',
-        'Проверка электрических соединений',
-        'Калибровка датчиков / приборов',
-        'Проверка защиты и аварийных кнопок',
+        'Full lubrication of assemblies',
+        'Check electrical connections',
+        'Calibrate sensors / instruments',
+        'Check safety and emergency buttons',
     ],
     'quarterly': [
-        'Замена расходных материалов по регламенту',
-        'Проверка гидравлики / пневматики',
-        'Акт ТО + фото',
+        'Replace consumables per schedule',
+        'Check hydraulics / pneumatics',
+        'TO act + photos',
     ],
     'semiannual': [
-        'Замена масел / смазок по регламенту',
-        'Проверка геометрии / выверка',
-        'Диагностика электродвигателей',
+        'Replace oils / greases per schedule',
+        'Check geometry / alignment',
+        'Diagnose electric motors',
     ],
     'yearly': [
-        'Полное ТО по паспорту завода',
-        'Замена изношенных узлов',
-        'Обновление документации / актов',
+        'Full TO per manufacturer manual',
+        'Replace worn assemblies',
+        'Update documentation / acts',
     ],
 }
 
 
 def ensure_machine_to_checklists(machine_id):
-    """Заполнить чек-листы ТО по умолчанию, если пусто."""
+    """Заполнить чек-листы ТО (переводятся по языку пользователя при создании)."""
     from models import MachineTOChecklist
     if MachineTOChecklist.query.filter_by(machine_id=machine_id).count() > 0:
         return
     for period, items in DEFAULT_TO_CHECKLISTS.items():
         for i, text in enumerate(items, 1):
+            try:
+                label = _(text)
+            except Exception:
+                label = text
             db.session.add(MachineTOChecklist(
-                machine_id=machine_id, period=period, text=text, sort_order=i, is_active=True
+                machine_id=machine_id, period=period, text=label, sort_order=i, is_active=True
             ))
     try:
         safe_commit()
