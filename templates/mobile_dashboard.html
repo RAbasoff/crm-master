@@ -75,6 +75,37 @@
         </a>
     </div>
 
+    <!-- MY PLAN / TWO — первый блок для механика -->
+    {% if my_twos %}
+    <div class="section" style="margin-top:8px">
+        <div class="section-title">
+            <span>📋 {{ _('My plan / TWO') }}</span>
+            <a href="/me-day-plan" style="color:#3498db;font-size:12px;font-weight:700">{{ _('All') }} →</a>
+        </div>
+        {% for o in my_twos[:5] %}
+        <a class="card" href="/two/{{ o.id }}">
+            <div class="icon" style="background:#e8f1ff;color:#2980b9">🔧</div>
+            <div class="info">
+                <div class="title" style="font-family:ui-monospace,monospace;color:#2980b9">{{ o.number }}</div>
+                <div class="desc">{{ (o.description or '')[:80] }}{% if o.planned_date %} · 📅 {{ o.planned_date.strftime('%d.%m') }}{% endif %}</div>
+            </div>
+            <span class="badge badge-{{ o.status if o.status in ('open','in_progress','critical') else 'normal' }}">{{ o.status }}</span>
+        </a>
+        {% endfor %}
+        <a class="card" href="/me-day-plan" style="justify-content:center;color:#3498db;font-weight:700">
+            {{ _('Open day plan') }} →
+        </a>
+    </div>
+    {% else %}
+    <div class="section" style="margin-top:8px">
+        <a class="card" href="/me-day-plan" style="justify-content:center">
+            <div class="icon" style="background:#e8f1ff">📋</div>
+            <div class="info"><div class="title">{{ _('My plan / TWO') }}</div>
+            <div class="desc">{{ _('No open TWO yet') }}</div></div>
+        </a>
+    </div>
+    {% endif %}
+
     <!-- My tasks -->
     <div class="section">
         <div class="section-title">

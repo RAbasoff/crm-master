@@ -26,6 +26,14 @@ def mobile_dashboard():
         FaultReport.status.in_(['open', 'accepted', 'in_progress'])
     ).order_by(FaultReport.created_at.desc()).limit(10).all()
 
+    # План дня механика: TWO с датами (первый блок на телефоне)
+    my_twos = []
+    try:
+        from app import _get_user_two_plan
+        my_twos = _get_user_two_plan(current_user, limit=10)
+    except Exception:
+        my_twos = []
+
     # My assigned machines
     my_machines = current_user.assigned_machines[:12] if current_user.assigned_machines else []
 
@@ -41,6 +49,7 @@ def mobile_dashboard():
 
     return render_template('mobile_dashboard.html',
         my_faults=my_faults,
+        my_twos=my_twos,
         my_machines=my_machines,
         active_faults=active_faults,
         critical_faults=critical_faults,

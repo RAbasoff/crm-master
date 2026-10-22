@@ -985,10 +985,10 @@ def login():
                 session['last_activity'] = _time.time()
                 # Механик с назначенными ордерами — уведомление с кнопкой ОК
                 if user_schedule_restricted(user):
-                    open_order = _get_open_two_for_user(user)
-                    if open_order:
-                        session['me_order_id'] = open_order.id
-                        return redirect(url_for('me_order_notice'))
+                    plan = _get_user_two_plan(user, limit=5)
+                    if plan:
+                        session['me_order_id'] = plan[0].id
+                        return redirect(url_for('me_day_plan'))
                 next_url = request.args.get('next')
                 if next_url:
                     parsed = urlparse(next_url)
@@ -1126,6 +1126,45 @@ def _get_open_two_for_user(user):
             .first())
 
 
+def _get_user_two_plan(user, limit=20):
+    """Активные TWO механика (сегодня + ближайшие). Выполненные/закрытые — НЕ в плане."""
+    from models import Monteur, TechnicalWorkOrder, two_workers
+    if not user or not getattr(user, 'id', None):
+        return []
+    monteur = Monteur.query.filter_by(user_id=user.id).first()
+    if not monteur:
+        return []
+    return (TechnicalWorkOrder.query
+            .join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id)
+            .filter(two_workers.c.worker_id == monteur.id)
+            .filter(TechnicalWorkOrder.status.notin_([
+                'completed', 'cancelled', 'done', 'closed', 'finished', 'completed'
+            ]))
+            .filter(db.or_(
+                TechnicalWorkOrder.completed_at.is_(None),
+                TechnicalWorkOrder.status.notin_(['completed', 'cancelled', 'done', 'closed', 'finished'])
+            ))
+            .order_by(TechnicalWorkOrder.planned_date.asc().nulls_last(),
+                      TechnicalWorkOrder.created_at.asc())
+            .limit(limit).all())
+
+
+@app.route('/me-day-plan')
+@login_required
+def me_day_plan():
+    """План дня механика: работы + номера TWO. Первый экран после входа."""
+    orders = _get_user_two_plan(current_user)
+    today = datetime.now().date()
+    today_orders = [o for o in orders if o.planned_date == today]
+    later_orders = [o for o in orders if o.planned_date and o.planned_date > today]
+    no_date_orders = [o for o in orders if not o.planned_date]
+    return render_template('me_day_plan.html',
+                           today_orders=today_orders,
+                           later_orders=later_orders,
+                           no_date_orders=no_date_orders,
+                           all_orders=orders, today=today)
+
+
 @app.route('/work-hours-block')
 @login_required
 def work_hours_block():
@@ -1138,13 +1177,9 @@ def work_hours_block():
 @app.route('/me-order-notice')
 @login_required
 def me_order_notice():
-    """Уведомление механику о назначенном наряде. Кнопка ОК → переход к наряду."""
-    from models import TechnicalWorkOrder
-    order_id = session.pop('me_order_id', None)
-    order = db.session.get(TechnicalWorkOrder, order_id) if order_id else None
-    if not order:
-        return redirect(url_for('index'))
-    return render_template('me_order_notice.html', order=order)
+    """Уведомление механику о назначенных нарядах (старый редирект → план дня)."""
+    session.pop('me_order_id', None)
+    return redirect(url_for('me_day_plan'))
 
 
 @app.route('/profile', methods=['GET', 'POST'])

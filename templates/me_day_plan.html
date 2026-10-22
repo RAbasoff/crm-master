@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="{{ g.lang if g.lang is defined else 'nl' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a2e">
+<title>{{ _('My day plan') }} — ProMaster</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:16px 14px 32px;-webkit-tap-highlight-color:transparent}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.sub{font-size:12px;color:#94a3b8;margin-bottom:18px}
+.sec{margin:18px 0 8px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px}
+.order{display:block;background:#1e293b;border-radius:14px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:#f1f5f9;border-left:4px solid #3b82f6;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.order.today{border-left-color:#22c55e}
+.order.done{opacity:.55}
+.order .top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px}
+.order .num{font-family:ui-monospace,monospace;font-size:15px;font-weight:800;color:#38bdf8}
+.order .date{font-size:11px;color:#94a3b8}
+.order .title{font-size:14px;font-weight:600;line-height:1.35;margin-bottom:4px}
+.order .meta{font-size:11px;color:#94a3b8}
+.order .st{display:inline-block;margin-top:8px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px}
+.st-assigned{background:#1e3a5f;color:#7dd3fc}
+.st-in_progress{background:#14532d;color:#86efac}
+.st-pending_approval{background:#713f12;color:#fde68a}
+.st-draft{background:#334155;color:#cbd5e1}
+.btn{display:block;text-align:center;padding:14px;border-radius:12px;background:#2563eb;color:#fff;font-weight:700;font-size:15px;text-decoration:none;margin-top:18px}
+.btn.ghost{background:#334155;color:#e2e8f0}
+.empty{text-align:center;padding:40px 16px;color:#94a3b8}
+.empty .e{font-size:48px;display:block;margin-bottom:10px}
+</style>
+</head>
+<body>
+<h1>🔧 {{ _('My day plan') }}</h1>
+<div class="sub">{{ current_user.display_name or current_user.username }} · {{ today.strftime('%d.%m.%Y') }}</div>
+
+{% if today_orders %}
+<div class="sec">📅 {{ _('Today') }} ({{ today_orders|length }})</div>
+{% for o in today_orders %}
+<a class="order today" href="/two/{{ o.id }}">
+    <div class="top">
+        <span class="num">{{ o.number }}</span>
+        <span class="date">{{ o.planned_date.strftime('%d-%m') if o.planned_date else '' }}</span>
+    </div>
+    <div class="title">{{ (o.description or '')[:120] }}</div>
+    <div class="meta">
+        {% if o.machine %}⚙️ {{ o.machine.name }}{% endif %}
+        {% if o.section %} · 🏭 {{ o.section.name }}{% endif %}
+    </div>
+    <span class="st st-{{ o.status }}">{{ o.status }}</span>
+</a>
+{% endfor %}
+{% else %}
+<div class="empty"><span class="e">✅</span>{{ _('No work planned for today') }}</div>
+{% endif %}
+
+{% if later_orders %}
+<div class="sec">📆 {{ _('Upcoming') }}</div>
+{% for o in later_orders %}
+<a class="order" href="/two/{{ o.id }}">
+    <div class="top">
+        <span class="num">{{ o.number }}</span>
+        <span class="date">{{ o.planned_date.strftime('%d-%m-%Y') }}</span>
+    </div>
+    <div class="title">{{ (o.description or '')[:120] }}</div>
+    <div class="meta">{% if o.machine %}⚙️ {{ o.machine.name }}{% endif %}</div>
+    <span class="st st-{{ o.status }}">{{ o.status }}</span>
+</a>
+{% endfor %}
+{% endif %}
+
+{% if no_date_orders %}
+<div class="sec">📋 {{ _('Without date') }}</div>
+{% for o in no_date_orders %}
+<a class="order" href="/two/{{ o.id }}">
+    <div class="top">
+        <span class="num">{{ o.number }}</span>
+        <span class="date">—</span>
+    </div>
+    <div class="title">{{ (o.description or '')[:120] }}</div>
+    <span class="st st-{{ o.status }}">{{ o.status }}</span>
+</a>
+{% endfor %}
+{% endif %}
+
+{% if today_orders %}
+<a class="btn" href="/two/{{ today_orders[0].id }}">{{ _('Open first TWO') }} →</a>
+{% endif %}
+<a class="btn ghost" href="/mobile">{{ _('Mobile home') }}</a>
+</body>
+</html>
