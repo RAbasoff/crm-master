@@ -95,6 +95,13 @@
         <a class="card" href="/me-day-plan" style="justify-content:center;color:#3498db;font-weight:700">
             {{ _('Open day plan') }} →
         </a>
+        <a class="card" href="/two?status=completed&mine=1">
+            <div class="icon" style="background:#d4efdf;color:#27ae60">✅</div>
+            <div class="info">
+                <div class="title">{{ _('Completed TWO') }}</div>
+                <div class="desc">{{ _('Parts used / history') }}</div>
+            </div>
+        </a>
     </div>
     {% else %}
     <div class="section" style="margin-top:8px">

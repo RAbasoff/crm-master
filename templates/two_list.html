@@ -3,7 +3,10 @@
 {% block content %}
 <div class="page-header">
     <h1>🔧 TWO — {{ _('Technical Work Orders') }}</h1>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/two" class="btn btn-sm" style="background:{% if not status_f %}#3498db;color:#fff{% else %}#eee{% endif %}">{{ _('All') }}</a>
+        <a href="/two?status=completed" class="btn btn-sm" style="background:{% if status_f=='completed' %}#27ae60;color:#fff{% else %}#eee{% endif %}">✅ {{ _('Completed') }}</a>
+        <a href="/two?mine=1" class="btn btn-sm" style="background:{% if mine %}#8e44ad;color:#fff{% else %}#eee{% endif %}">👤 {{ _('My') }}</a>
         <button type="submit" form="merge-form" id="merge-btn" class="btn" style="background:#e67e22;color:#fff;display:none" onclick="return confirm('{{ _('Merge selected TWOs?') }}')">🔀 {{ _('Merge') }}</button>
         <a href="/two/new" class="btn btn-primary">+ {{ _('New TWO') }}</a>
     </div>

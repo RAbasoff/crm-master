@@ -87,6 +87,8 @@ h1{font-size:20px;font-weight:800;margin-bottom:4px}
 {% if today_orders %}
 <a class="btn" href="/two/{{ today_orders[0].id }}">{{ _('Open first TWO') }} →</a>
 {% endif %}
+<a class="btn" href="/two?status=completed&mine=1" style="background:#059669">✅ {{ _('Completed TWO / parts used') }}</a>
+<a class="btn ghost" href="/two">{{ _('All TWO') }}</a>
 <a class="btn ghost" href="/mobile">{{ _('Mobile home') }}</a>
 </body>
 </html>

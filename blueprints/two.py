@@ -29,23 +29,32 @@ def gen_two_number():
 @login_required
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
 def two_list():
+    status_f = (request.args.get('status') or '').strip()
+    mine = request.args.get('mine') == '1'
+    q = TechnicalWorkOrder.query
+    if status_f:
+        q = q.filter(TechnicalWorkOrder.status == status_f)
+    if mine and current_user.is_authenticated:
+        from models import Monteur, two_workers
+        monteur = Monteur.query.filter_by(user_id=current_user.id).first()
+        if monteur:
+            q = q.join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id).filter(
+                two_workers.c.worker_id == monteur.id)
     if current_user.has_role('admin', 'director', 'technician'):
-        orders = TechnicalWorkOrder.query.order_by(TechnicalWorkOrder.created_at.desc()).all()
+        orders = q.order_by(TechnicalWorkOrder.created_at.desc()).all()
     elif getattr(current_user, 'role', '') in ('user', 'responsible') or hasattr(current_user, '_person'):
-        # Цеховой ответственный: смотрит TWO (без создания)
-        orders = TechnicalWorkOrder.query.order_by(TechnicalWorkOrder.created_at.desc()).all()
+        orders = q.order_by(TechnicalWorkOrder.created_at.desc()).all()
     else:
         try:
-            orders = TechnicalWorkOrder.query.filter_by(created_by=current_user.id).order_by(TechnicalWorkOrder.created_at.desc()).all()
+            orders = q.filter_by(created_by=current_user.id).order_by(TechnicalWorkOrder.created_at.desc()).all()
         except Exception:
             orders = []
 
     # Группировка по году → месяцу (planned_date, иначе created_at).
-    # Пустые месяцы не попадают в список.
     from collections import OrderedDict
     MONTHS_RU = {1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель', 5: 'Май', 6: 'Июнь',
                  7: 'Июль', 8: 'Август', 9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'}
-    groups = OrderedDict()  # year -> OrderedDict(month_num -> {'label':..., 'orders':[...]})
+    groups = OrderedDict()
     for o in orders:
         dt = o.planned_date or (o.created_at.date() if o.created_at else None)
         if not dt:
@@ -59,7 +68,8 @@ def two_list():
             groups[year][month] = {'label': MONTHS_RU.get(month, '—') if month else _('No date'), 'orders': []}
         groups[year][month]['orders'].append(o)
 
-    return render_template('two_list.html', orders=orders, groups=groups)
+    return render_template('two_list.html', orders=orders, groups=groups,
+                           status_f=status_f, mine=mine)
 
 @bp.route('/two/new', methods=['GET', 'POST'])
 @login_required
