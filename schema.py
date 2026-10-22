@@ -350,6 +350,11 @@ def ensure_schema():
             created_at DATETIME,
             created_by INTEGER REFERENCES user(id)
         )"""),
+        ("plan_workers", """CREATE TABLE IF NOT EXISTS plan_workers (
+            plan_id INTEGER NOT NULL REFERENCES maintenance_plan(id),
+            worker_id INTEGER NOT NULL REFERENCES worker(id),
+            PRIMARY KEY (plan_id, worker_id)
+        )"""),
         ("saved_document", """CREATE TABLE IF NOT EXISTS saved_document (
             id INTEGER PRIMARY KEY,
             number VARCHAR(40) NOT NULL,

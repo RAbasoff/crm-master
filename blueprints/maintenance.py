@@ -1242,6 +1242,9 @@ def maintenance_plan_new():
             planned_end = planned_start + timedelta(days=3)
         create_two = request.form.get('create_two') == 'yes'
         worker_id = safe_int(request.form.get('worker_id')) or None
+        worker_ids = [safe_int(x) for x in request.form.getlist('worker_ids') if safe_int(x)]
+        if worker_ids and not worker_id:
+            worker_id = worker_ids[0]
         created = 0
         last_p = None
         for tid in targets:
@@ -1275,6 +1278,10 @@ def maintenance_plan_new():
                 notes=request.form.get('notes', ''),
                 created_by=current_user.id if isinstance(current_user.id, int) else None
             )
+            for wid in worker_ids:
+                w = Monteur.query.get(wid)
+                if w:
+                    p.workers.append(w)
             if 'offer_file' in request.files and request.files['offer_file'].filename:
                 fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
                 if fn:
@@ -1305,9 +1312,10 @@ def maintenance_plan_new():
                 )
                 db.session.add(two)
                 db.session.flush()
-                worker = Monteur.query.get(worker_id)
-                if worker:
-                    two.workers.append(worker)
+                for wid in (worker_ids or ([worker_id] if worker_id else [])):
+                    w = Monteur.query.get(wid)
+                    if w:
+                        two.workers.append(w)
                 safe_commit()
             except Exception:
                 pass
@@ -1360,6 +1368,14 @@ def maintenance_plan_edit(plan_id):
         p.company_contact = request.form.get('company_contact', '')
         p.company_person = request.form.get('company_person', '')
         p.worker_id = safe_int(request.form.get('worker_id')) or None
+        worker_ids = [safe_int(x) for x in request.form.getlist('worker_ids') if safe_int(x)]
+        if worker_ids and not p.worker_id:
+            p.worker_id = worker_ids[0]
+        p.workers = []
+        for wid in worker_ids:
+            w = Monteur.query.get(wid)
+            if w:
+                p.workers.append(w)
         p.parts_used = request.form.get('parts_used', '[]')
         p.cost = safe_float(request.form.get('cost'), 0)
         p.report = request.form.get('report', '')

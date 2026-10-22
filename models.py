@@ -323,6 +323,12 @@ class MaintenancePhoto(db.Model):
     description = db.Column(db.String(300))
     uploaded_at = db.Column(db.DateTime, default=now_local)
 
+plan_workers = db.Table('plan_workers',
+    db.Column('plan_id', db.Integer, db.ForeignKey('maintenance_plan.id'), primary_key=True),
+    db.Column('worker_id', db.Integer, db.ForeignKey('worker.id'), primary_key=True)
+)
+
+
 class MaintenancePlan(db.Model):
     __tablename__ = 'maintenance_plan'
     id = db.Column(db.Integer, primary_key=True)
@@ -355,7 +361,8 @@ class MaintenancePlan(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=now_local)
     machine = db.relationship('Machine', backref='maintenance_plans')
-    worker = db.relationship('Monteur', backref='maintenance_plans')
+    worker = db.relationship('Monteur', foreign_keys=[worker_id], backref='maintenance_plans')
+    workers = db.relationship('Monteur', secondary=plan_workers, backref='plans')
     creator = db.relationship('User', foreign_keys=[created_by])
     equipment = db.relationship('Equipment', foreign_keys=[equipment_id],
                                 primaryjoin='MaintenancePlan.equipment_id == Equipment.id')

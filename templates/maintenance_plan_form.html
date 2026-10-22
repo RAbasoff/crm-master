@@ -133,13 +133,16 @@
 
             <div id="internalFields" style="display:{% if plan and plan.is_external %}none{% else %}block{% endif %}">
                 <div class="form-group">
-                    <label>{{ _('Worker / Technician') }}</label>
-                    <select name="worker_id" id="workerSelect">
-                        <option value="">{{ _('Select worker') }}</option>
+                    <label>{{ _('Workers / Technicians') }} ({{ _('multiple') }})</label>
+                    <select name="worker_ids" id="workerSelect" multiple size="5" style="width:100%;min-height:120px">
                         {% for w in workers %}
-                        <option value="{{ w.id }}" {% if plan and plan.worker_id == w.id %}selected{% endif %}>{{ w.naam }} ({{ w.specialisatie }})</option>
+                        <option value="{{ w.id }}"
+                            {% if plan and (plan.worker_id == w.id or (plan.workers and w in plan.workers)) %}selected{% endif %}>
+                            {{ w.naam }}{% if w.specialisatie %} ({{ w.specialisatie }}){% endif %}
+                        </option>
                         {% endfor %}
                     </select>
+                    <small style="color:#888">{{ _('Select one or more mechanics (Ctrl / Shift)') }}</small>
                 </div>
                 {% if not plan %}
                 <div class="form-group" style="background:#fff3cd;padding:12px;border-radius:8px;border:1px solid #f39c12">
