@@ -6457,3 +6457,36 @@ msgstr "Vervang versleten onderdelen"
 
 msgid "Update documentation / acts"
 msgstr "Documentatie / acten bijwerken"
+
+msgid "License required"
+msgstr "Licentie vereist"
+
+msgid "Enter the license key received from A.B.A.S.O.F.F."
+msgstr "Voer de licentiesleutel in die u van A.B.A.S.O.F.F. hebt ontvangen"
+
+msgid "Activate"
+msgstr "Activeren"
+
+msgid "You have an assigned work order"
+msgstr "U hebt een toegewezen werkorder"
+
+msgid "Knives / Cutter"
+msgstr "Messen / Frees"
+
+msgid "Steel"
+msgstr "Staal"
+
+msgid "Copper"
+msgstr "Koper"
+
+msgid "Plastic"
+msgstr "Kunststof"
+
+msgid "Aluminum"
+msgstr "Aluminium"
+
+msgid "Cast iron"
+msgstr "Gietijzer"
+
+msgid "Assigned work"
+msgstr "Toegewezen werk"

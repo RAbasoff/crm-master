@@ -19,18 +19,18 @@ button{width:100%;margin-top:14px;padding:12px;border:none;border-radius:10px;ba
 </head>
 <body>
 <div class="card">
-    <h2>🔑 Требуется лицензия</h2>
-    <p>Введите лицензионный ключ, полученный от A.B.A.S.O.F.F.</p>
+    <h2>🔑 {{ _('License required') }}</h2>
+    <p>{{ _('Enter the license key received from A.B.A.S.O.F.F.') }}</p>
     {% if error %}<div class="err">⛔ {{ error }}</div>{% endif %}
     {% if ok_msg %}<div class="ok">✅ {{ ok_msg }}</div>{% endif %}
     <form method="POST" action="/license">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label>Лицензионный ключ</label>
+        <label>{{ _('License key') }}</label>
         <textarea name="license_key" rows="4" required>{{ license_key or '' }}</textarea>
-        <button type="submit">Активировать</button>
+        <button type="submit">{{ _('Activate') }}</button>
     </form>
     {% if payload %}
-    <div class="meta">Клиент: {{ payload.client }} · до {{ payload.expire }} · мест: {{ payload.seats }}</div>
+    <div class="meta">{{ _('Client') }}: {{ payload.client }} · {{ _('Valid until') }} {{ payload.expire }} · {{ _('Seats') }}: {{ payload.seats }}</div>
     {% endif %}
 </div>
 </body>

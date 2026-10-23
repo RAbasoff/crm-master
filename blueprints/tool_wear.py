@@ -21,7 +21,7 @@ def tool_wear_page():
     default_machines = ['VULBUS 1', 'VULBUS 2', 'Lift Seydelmann', 'Станок BOLDT']
     if not tools:
         for m in default_machines:
-            t = ToolWear(machine_name=m, tool_name='Ножи / Фреза', cycle_days=14,
+            t = ToolWear(machine_name=m, tool_name='Knives / Cutter', cycle_days=14,
                          last_replaced=datetime.utcnow().date())
             db.session.add(t)
         if not safe_commit():

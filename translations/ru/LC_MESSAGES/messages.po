@@ -6494,7 +6494,7 @@ msgid "Session ended due to inactivity. Please log in again."
 msgstr "Сессия завершена из-за бездействия. Войдите снова."
 
 msgid "The application is available only during your working hours"
-msgstr "ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА"
+msgstr "Программа доступна только в рабочие часы согласно вашего графика"
 
 msgid "Access denied. Insufficient rights."
 msgstr "ДОСТУП ЗАКРЫТ. НЕ ДОСТАТОЧНО ПРАВ."
@@ -6643,3 +6643,36 @@ msgstr "Замена изношенных узлов"
 
 msgid "Update documentation / acts"
 msgstr "Обновление документации / актов"
+
+msgid "License required"
+msgstr "Требуется лицензия"
+
+msgid "Enter the license key received from A.B.A.S.O.F.F."
+msgstr "Введите лицензионный ключ, полученный от A.B.A.S.O.F.F."
+
+msgid "Activate"
+msgstr "Активировать"
+
+msgid "You have an assigned work order"
+msgstr "У вас есть назначенный рабочий наряд"
+
+msgid "Knives / Cutter"
+msgstr "Ножи / Фреза"
+
+msgid "Steel"
+msgstr "Сталь"
+
+msgid "Copper"
+msgstr "Медь"
+
+msgid "Plastic"
+msgstr "Пластик"
+
+msgid "Aluminum"
+msgstr "Алюминий"
+
+msgid "Cast iron"
+msgstr "Чугун"
+
+msgid "Assigned work"
+msgstr "Назначенные работы"
