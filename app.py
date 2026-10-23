@@ -675,6 +675,7 @@ def inject_section_access():
             pass
 
     return dict(has_access=has_access, reminder_count=reminder_count, chat_unread=chat_unread,
+                APP_VERSION=getattr(__import__('config'), 'APP_VERSION', '2.15.4'),
                 impersonate_admin_id=session.get('impersonate_admin_id'),
                 impersonate_admin=db.session.get(User, session['impersonate_admin_id']) if session.get('impersonate_admin_id') else None,
                 is_admin=(current_user.is_authenticated and current_user.has_role('admin') and not session.get('impersonate_admin_id')),
