@@ -2381,7 +2381,7 @@ msgid "Event not found"
 msgstr "Событие не найдено"
 
 msgid "Every 2 weeks"
-msgstr "Каждые 2 недели"
+msgstr "Раз в 2 недели"
 
 msgid "Everything is running smoothly!"
 msgstr "Всё работает отлично!"
@@ -3595,7 +3595,7 @@ msgid "Quantity must be positive"
 msgstr "Количество должно быть положительным"
 
 msgid "Quarterly"
-msgstr "Ежеквартально"
+msgstr "Квартально"
 
 msgid "Quick Scan (Auto-detect)"
 msgstr "Быстрое сканирование (автоопределение)"
@@ -4563,7 +4563,7 @@ msgid "Year"
 msgstr "Год"
 
 msgid "Yearly"
-msgstr "Ежегодно"
+msgstr "Годовое"
 
 msgid "Yes"
 msgstr "Да"
@@ -6676,3 +6676,6 @@ msgstr "Чугун"
 
 msgid "Assigned work"
 msgstr "Назначенные работы"
+
+msgid "Semiannual"
+msgstr "Полугодово"

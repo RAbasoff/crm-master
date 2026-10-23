@@ -147,7 +147,7 @@
     {% set items = (checklist_by_period or {}).get(key) or [] %}
     <details class="to-chk" style="border:1px solid #e8ecf1;border-radius:8px;margin-bottom:8px;overflow:hidden" {% if key in ('daily','weekly') %}open{% endif %}>
         <summary style="cursor:pointer;padding:10px 12px;background:#f8fafc;font-size:13px;font-weight:700;display:flex;justify-content:space-between">
-            <span>📋 {{ title }}</span>
+            <span>📋 {{ _(title) }}</span>
             <span style="color:#888;font-weight:500">{{ items|length }}</span>
         </summary>
         <div style="padding:10px 12px">

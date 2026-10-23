@@ -2065,7 +2065,7 @@ msgid "Event removed"
 msgstr "Gebeurtenis verwijderd"
 
 msgid "Every 2 weeks"
-msgstr "Elke 2 weken"
+msgstr "Om de 2 weken"
 
 msgid "Everything is running smoothly!"
 msgstr "Alles werkt soepel!"
@@ -6490,3 +6490,6 @@ msgstr "Gietijzer"
 
 msgid "Assigned work"
 msgstr "Toegewezen werk"
+
+msgid "Semiannual"
+msgstr "Halfjaarlijks"

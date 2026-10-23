@@ -154,13 +154,13 @@ def _build_act_pdf(data, machine, photo_files, number):
 
 
 TO_PERIODS = {
-    'daily': 'Ежедневно / Daily',
-    'weekly': 'Еженедельно / Weekly',
-    'biweekly': 'Раз в 2 недели / Biweekly',
-    'monthly': 'Ежемесячно / Monthly',
-    'quarterly': 'Квартально / Quarterly',
-    'semiannual': 'Полугодово / Semiannual',
-    'yearly': 'Годовое / Yearly',
+    'daily': 'Daily',
+    'weekly': 'Weekly',
+    'biweekly': 'Every 2 weeks',
+    'monthly': 'Monthly',
+    'quarterly': 'Quarterly',
+    'semiannual': 'Semiannual',
+    'yearly': 'Yearly',
 }
 
 DEFAULT_TO_CHECKLISTS = {
