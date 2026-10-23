@@ -430,6 +430,12 @@ def fault_new():
                     except Exception:
                         linked = User.query.filter_by(person_id=person_id).first()
                 f.reporter_id = linked.id if linked else None
+            # Всегда есть reporter_id — иначе заявка не сохранится (NOT NULL)
+            if not f.reporter_id:
+                fallback = User.query.filter_by(username='admin').first() or User.query.first()
+                f.reporter_id = fallback.id if fallback else None
+                if not f.reporter_name:
+                    f.reporter_name = getattr(current_user, 'display_name', None) or 'user'
             # Заявка от текущего; админ / начальник ТС — от любого
             who = current_user.display_name or current_user.username
             if not who or who.lower() in ('admin', 'administrator', 'director', 'technicus'):
