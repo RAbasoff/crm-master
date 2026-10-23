@@ -423,6 +423,20 @@ def maintenance_calendar():
     eq_all = _Eq.query.all()
     equipment_unscheduled = [e for e in eq_all if not e.next_service_date]
 
+    # Дни выходные, где у кого-то из механиков отмечена работа (WeekendShift)
+    weekend_work_days = set()
+    try:
+        from models import WeekendShift
+        _ws_from = month_start - timedelta(days=7)
+        _ws_to = month_end + timedelta(days=7)
+        for ws in WeekendShift.query.filter(
+                WeekendShift.shift_date >= _ws_from,
+                WeekendShift.shift_date < _ws_to).all():
+            if ws.shift_date:
+                weekend_work_days.add(ws.shift_date.isoformat())
+    except Exception:
+        pass
+
     return render_template('maintenance_calendar.html',
         month=month, month_start=month_start, month_end=month_end,
         events=sorted(events, key=lambda e: e['date']),
@@ -430,6 +444,7 @@ def maintenance_calendar():
         prev_month=prev_month, next_month=next_month,
         timedelta=timedelta,
         month_name=month_start.strftime('%B %Y'),
+        weekend_work_days=weekend_work_days,
         equipment_unscheduled=equipment_unscheduled)
 
 @bp.route('/maintenance-calendar/complete', methods=['POST'])

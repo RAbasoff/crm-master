@@ -126,11 +126,16 @@
                         {% set cell_date.val = month_start + timedelta(days=ns.day - 1) %}
                         {% set day_s = cell_date.val.strftime('%Y-%m-%d') %}
                         {% set day_events = [] %}
+                        {% set is_we = (dow >= 5) %}
+                        {% set we_work = (weekend_work_days is defined and day_s in weekend_work_days) %}
                         {% for ev in events %}
                             {% if ev.date == cell_date.val %}
                                 {% if day_events.append(ev) %}{% endif %}
                             {% elif ev.type == 'plan' and ev.window_start and ev.window_end and ev.window_start <= day_s <= ev.window_end %}
-                                {% if day_events.append(ev) %}{% endif %}
+                                {# Полоса ТО не рисуется в сб/вс, если нет работы в выходной #}
+                                {% if not is_we or we_work %}
+                                    {% if day_events.append(ev) %}{% endif %}
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
                         <td class="cal-drop{% if dow < 5 %} weekday{% endif %}" data-date="{{ cell_date.val.strftime('%Y-%m-%d') }}" style="vertical-align:top;height:90px;padding:4px 6px;border:1px solid #eee;{% if cell_date.val == today %}background:#e8f4fd{% elif dow >= 5 %}background:#fff5f5{% endif %}">
