@@ -1692,11 +1692,11 @@ def ensure_floor_users():
     except Exception as e:
         db.session.rollback()
         print(f"ensure_floor_users bad-username: {e}")
-    floor_names = ['Bartek', 'Hashem', 'Hqshem', 'Safa', 'Pablo', 'Paulina']
+    floor_names = ['Bartek', 'Hashem', 'Safa', 'Pablo', 'Paulina', 'Peter', 'Thijs', 'Tim', 'Aris', 'Javier', 'Filip', 'Maico']
     try:
         for pname in floor_names:
             person = Verantwoordelijke.query.filter(
-                func.lower(Verantwoordelijke.naam) == pname.lower()
+                func.lower(Verantwoordelijke.naam).like(pname.lower() + '%')
             ).first()
             user = User.query.filter_by(person_id=person.id).first() if person else None
             if not user and person:
