@@ -348,6 +348,20 @@ def machine_to_checklist_add(machine_id):
     return redirect(url_for('machines.machine_detail', machine_id=m.id) + '#to-checklist')
 
 
+@bp.route('/to-checklist/<int:item_id>/update', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def machine_to_checklist_update(item_id):
+    from models import MachineTOChecklist
+    it = MachineTOChecklist.query.get_or_404(item_id)
+    text = (request.form.get('text') or '').strip()
+    if text:
+        it.text = text
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+    return redirect(url_for('machines.machine_detail', machine_id=it.machine_id) + '#to-checklist')
+
+
 @bp.route('/to-checklist/<int:item_id>/toggle', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
