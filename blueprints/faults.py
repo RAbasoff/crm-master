@@ -523,9 +523,10 @@ def fault_new():
                 from app import send_email
                 admins = User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all()
                 for admin in admins:
-                    if admin.email:
+                    admin_email = getattr(admin, 'email', None)
+                    if admin_email:
                         send_email(
-                            admin.email,
+                            admin_email,
                             f"{_('Critical fault')}: {f.title}",
                             f"<h2>{_('Critical fault')} #{f.id}</h2>"
                             f"<p><strong>{_('Machine / Equipment')}:</strong> {target}</p>"
