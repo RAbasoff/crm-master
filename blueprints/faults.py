@@ -417,6 +417,18 @@ def fault_new():
             if f.reporter_id is None:
                 person_id = getattr(current_user, 'person_id', None)
                 linked = User.query.filter_by(person_id=person_id).first() if person_id else None
+                if not linked and person_id:
+                    # авто-связь: User для ответственного person_id
+                    try:
+                        uname = (getattr(current_user, 'username', None) or f'user{person_id}')[:80]
+                        linked = User(username=uname,
+                                      display_name=getattr(current_user, 'display_name', None) or uname,
+                                      role='user', is_active_user=True)
+                        linked.person_id = person_id
+                        db.session.add(linked)
+                        db.session.flush()
+                    except Exception:
+                        linked = User.query.filter_by(person_id=person_id).first()
                 f.reporter_id = linked.id if linked else None
             # Заявка от текущего; админ / начальник ТС — от любого
             who = current_user.display_name or current_user.username

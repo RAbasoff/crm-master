@@ -1393,8 +1393,8 @@
     </script>
     {% endif %}
 
-    <!-- TODAY TO REMINDER — при входе + 3 раза за день (не чаще 1 раза в 2 часа) -->
-    {% if current_user.has_role('admin', 'director', 'technician') %}
+    <!-- TODAY TO — только механики, начальник ТС (director), админ -->
+    {% if current_user.has_role('admin', 'technician') or current_user.username == 'director' %}
     <script>
     (function() {
         const MAX_SHOW = 4;

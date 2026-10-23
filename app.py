@@ -1153,7 +1153,9 @@ def _get_user_two_plan(user, limit=20):
 @app.route('/me-day-plan')
 @login_required
 def me_day_plan():
-    """План дня механика: работы + номера TWO. Первый экран после входа."""
+    """План дня — только механик / начальник ТС / админ (НЕ Директор)."""
+    if not (current_user.has_role('admin', 'technician') or getattr(current_user, 'username', '') == 'director'):
+        return redirect(url_for('index'))
     orders = _get_user_two_plan(current_user)
     today = datetime.now().date()
     today_orders = [o for o in orders if o.planned_date == today]
