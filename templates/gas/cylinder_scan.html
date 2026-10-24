@@ -4,23 +4,34 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <h1 style="margin:0;font-size:20px">🔴 {{ _('Cylinder Scanner') }}</h1>
     <div style="display:flex;gap:6px">
-        <a href="/scanner" class="btn btn-sm" style="background:#eee">← {{ _('All Scanners') }}</a>
+        <a href="/gas/scan-list" class="btn btn-sm" style="background:#eee">📋 {{ _('Scan list') }}</a>
         <a href="/gas/" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
     </div>
 </div>
 
-<!-- Step 1: Select gas type and side -->
-<div class="card" id="step1" style="margin-bottom:16px;border:2px solid #e74c3c">
-    <h3 style="margin:0 0 12px;font-size:14px">1️⃣ {{ _('Select gas type and side') }}</h3>
+<!-- 1. Mode -->
+<div class="card" style="margin-bottom:12px;border:2px solid #e74c3c">
+    <h3 style="margin:0 0 10px;font-size:14px">1️⃣ {{ _('Where to scan?') }}</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" id="modeStock" onclick="setMode('stock')" class="btn" style="flex:1;min-width:140px;padding:14px;background:#3498db;color:#fff;font-weight:700">📦 {{ _('To stock') }}</button>
+        <button type="button" id="modeInstall" onclick="setMode('install')" class="btn" style="flex:1;min-width:140px;padding:14px;background:#27ae60;color:#fff;font-weight:700">🔧 {{ _('To install') }}</button>
+    </div>
+    <div id="modeHint" style="margin-top:8px;font-size:11px;color:#888">{{ _('Select stock or install') }}</div>
+</div>
+
+<!-- 2. Gas + side -->
+<div class="card" id="stepSetup" style="display:none;margin-bottom:12px">
+    <h3 style="margin:0 0 10px;font-size:14px">2️⃣ {{ _('Settings') }}</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
             <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Gas Type') }}</label>
             <select id="gasType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
                 <option value="nitrogen">N₂ Nitrogen</option>
                 <option value="co2">CO₂ Carbon Dioxide</option>
+                <option value="mixed">{{ _('Mixed gas') }}</option>
             </select>
         </div>
-        <div>
+        <div id="sideWrap" style="display:none">
             <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Side') }}</label>
             <select id="side" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
                 <option value="left">{{ _('Left') }}</option>
@@ -28,160 +39,275 @@
             </select>
         </div>
     </div>
-    <div style="margin-top:8px;font-size:11px;color:#888">
-        {{ _('Scanned cylinder will be set as IN USE on the selected side. Current cylinder on that side will become EMPTY.') }}
-    </div>
 </div>
 
-<!-- Step 2: Scan or enter barcode -->
-<div class="card" id="step2" style="margin-bottom:16px">
-    <h3 style="margin:0 0 12px;font-size:14px">2️⃣ {{ _('Scan barcode or enter number') }}</h3>
+<!-- 3. Number -->
+<div class="card" id="stepNumber" style="display:none;margin-bottom:12px">
+    <h3 style="margin:0 0 10px;font-size:14px">3️⃣ {{ _('Scan cylinder number') }}</h3>
     <div id="reader" style="width:100%;max-width:400px;margin:0 auto;border-radius:10px;overflow:hidden"></div>
     <div style="display:flex;gap:8px;margin-top:12px">
-        <input type="text" id="manualCode" placeholder="{{ _('Scan or enter cylinder number...') }}"
-            style="flex:1;padding:10px;border:2px solid #3498db;border-radius:8px;font-size:14px;font-family:monospace;outline:none"
-            onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#3498db'"
-            autocomplete="off" autofocus>
-        <button class="btn btn-primary" onclick="processCode(document.getElementById('manualCode').value)">{{ _('Submit') }}</button>
+        <input type="text" id="manualCode" placeholder="{{ _('Cylinder number (not Z...)') }}"
+            style="flex:1;padding:10px;border:2px solid #3498db;border-radius:8px;font-size:16px;font-family:monospace"
+            autocomplete="off">
+        <button class="btn btn-primary" onclick="submitNumber()">{{ _('Next') }}</button>
     </div>
-    <div style="font-size:11px;color:#888;margin-top:4px">{{ _('Honeywell scanner ready — scan to auto-submit') }}</div>
-    <div style="text-align:center;margin-top:8px">
-        <button id="btnScan" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="startScanner()">{{ _('📷 Start Camera') }}</button>
-        <button id="btnStop" class="btn btn-sm" style="background:#e74c3c;color:white;display:none" onclick="stopScanner()">{{ _('⏹ Stop Camera') }}</button>
-    </div>
+    <div style="font-size:11px;color:#888;margin-top:4px">{{ _('Z-code is a refill date — enter it on the next step') }}</div>
 </div>
 
-<!-- Step 3: Result -->
-<div class="card" id="step3" style="display:none;margin-bottom:16px">
-    <h3 id="step3Title" style="margin:0 0 12px;font-size:14px">3️⃣ {{ _('Result') }}</h3>
+<!-- 4. Date -->
+<div class="card" id="stepDate" style="display:none;margin-bottom:12px">
+    <h3 style="margin:0 0 10px;font-size:14px">4️⃣ {{ _('Refill date (Z + 6 digits)') }}</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="zCode" placeholder="Z020926" maxlength="10"
+               style="padding:10px;border:2px solid #e67e22;border-radius:8px;font-size:16px;font-family:monospace;width:140px">
+        <input type="date" id="refillDate" style="padding:10px;border:1px solid #ddd;border-radius:8px">
+        <button class="btn" style="background:#27ae60;color:#fff;padding:10px 18px;font-weight:700" onclick="submitRefill()">✓ {{ _('Save') }}</button>
+        <button class="btn" style="background:#eee;padding:10px 18px" onclick="skipRefill()">{{ _('Skip') }}</button>
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:6px">
+        {{ _('Scan Z-code or type date manually. Example Z020926 = 02.09.2026') }}
+    </div>
+    <div id="dateMsg" style="margin-top:6px;font-size:12px"></div>
+</div>
+
+<!-- 5. Result / actions if not in stock -->
+<div class="card" id="stepResult" style="display:none;margin-bottom:12px">
+    <h3 id="resultTitle" style="margin:0 0 10px;font-size:14px">5️⃣ {{ _('Result') }}</h3>
     <div id="resultContent"></div>
+    <div id="resultActions" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn" style="background:#27ae60;color:#fff" onclick="doAction('add_stock')">{{ _('Add to stock') }}</button>
+        <button class="btn" style="background:#3498db;color:#fff" onclick="doAction('install')">{{ _('Install') }}</button>
+        <button class="btn" style="background:#eee" onclick="doAction('ignore')">{{ _('Ignore') }}</button>
+    </div>
 </div>
 
-<!-- Current active cylinders -->
 <div class="card">
-    <h3 style="margin:0 0 12px;font-size:14px">{{ _('Current Active Cylinders') }}</h3>
+    <h3 style="margin:0 0 10px;font-size:14px">{{ _('Current Cylinders') }}</h3>
     <div id="currentCylinders" style="font-size:12px"></div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/static/js/scanner-common.js"></script>
 <script>
+let mode = ''; // stock | install
+let lastCode = '';
+let lastDateCode = '';
 let scanner = null;
 let lastScanned = '';
 let lastScannedTime = 0;
-const manualInput = document.getElementById('manualCode');
 
-ScannerCommon.init({
-    inputId: 'manualCode',
-    cameraBtnId: 'btnScan',
-    onScan: processCode,
-    autoStartCamera: true,
-    cameraStartFn: function() { startScanner(); }
+function setMode(m) {
+    mode = m;
+    document.getElementById('stepSetup').style.display = '';
+    document.getElementById('stepNumber').style.display = '';
+    document.getElementById('stepDate').style.display = 'none';
+    document.getElementById('stepResult').style.display = 'none';
+    document.getElementById('sideWrap').style.display = (m === 'install') ? '' : 'none';
+    document.getElementById('modeStock').style.background = m === 'stock' ? '#1a6fb5' : '#3498db';
+    document.getElementById('modeInstall').style.background = m === 'install' ? '#1e8449' : '#27ae60';
+    document.getElementById('modeHint').textContent = m === 'stock'
+        ? '{{ _("Stock: gas type → number → refill date") }}'
+        : '{{ _("Install: gas type → side → number → refill date") }}';
+}
+
+function normalize(code) {
+    if (!code) return '';
+    code = String(code).trim();
+    if (typeof ScannerCommon !== 'undefined' && ScannerCommon.normalizeCode) code = ScannerCommon.normalizeCode(code);
+    return code;
+}
+
+function parseZ(code) {
+    code = normalize(code).toUpperCase();
+    if (!/^Z/.test(code)) return null;
+    let s = code.slice(1).replace(/[-\/]/g, '');
+    if (s.length === 8 && /^\d+$/.test(s)) {
+        return s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8);
+    }
+    return null;
+}
+
+document.getElementById('zCode').addEventListener('change', function() {
+    const d = parseZ(this.value);
+    if (d) {
+        document.getElementById('refillDate').value = d;
+        document.getElementById('dateMsg').textContent = '✓ ' + d;
+    }
+});
+document.getElementById('zCode').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitRefill(); }
 });
 
-// also show stop button on mobile when camera starts
-function startScanner() {
-    if (scanner) return;
-    scanner = new Html5Qrcode('reader');
-    scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 150 } },
-        function(text) {
-            if (text !== lastScanned || (Date.now() - lastScannedTime) > 2000) {
-                lastScanned = text;
-                lastScannedTime = Date.now();
-                processCode(text);
+function submitNumber() {
+    let code = normalize(document.getElementById('manualCode').value);
+    if (!code) return;
+    if (/^Z/i.test(code)) {
+        // это дата — сразу к шагу даты
+        lastCode = lastCode || 'UNKNOWN';
+        document.getElementById('stepDate').style.display = '';
+        document.getElementById('zCode').value = code.toUpperCase();
+        const d = parseZ(code);
+        if (d) document.getElementById('refillDate').value = d;
+        return;
+    }
+    lastCode = code;
+    document.getElementById('manualCode').value = '';
+    document.getElementById('stepDate').style.display = '';
+    document.getElementById('zCode').focus();
+}
+
+function skipRefill() { sendToServer(null); }
+
+function submitRefill() {
+    const z = document.getElementById('zCode').value.trim();
+    const d = parseZ(z) || document.getElementById('refillDate').value || null;
+    sendToServer(d, z || '');
+}
+
+function sendToServer(refillDate, zcode) {
+    const gasType = document.getElementById('gasType').value;
+    const side = document.getElementById('side').value;
+    const step = document.getElementById('stepResult');
+    step.style.display = '';
+    document.getElementById('resultTitle').innerHTML = '⏳ {{ _("Processing...") }}';
+    document.getElementById('resultContent').innerHTML = '<div style="padding:12px;background:#e8f4fd;border-radius:8px">' + esc(lastCode) + '…</div>';
+    document.getElementById('resultActions').style.display = 'none';
+
+    const payload = {
+        code: lastCode,
+        gas_type: gasType,
+        side: side,
+        refill_date: refillDate,
+        zcode: zcode || '',
+        mode: mode
+    };
+    const url = (mode === 'stock') ? '/gas/api/cylinders/scan-list' : '/gas/api/cylinders/assign-work';
+    if (mode === 'stock') {
+        payload.number = lastCode;
+        payload.gas_type = gasType;
+    }
+
+    csrfFetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.need_choose) {
+            document.getElementById('resultTitle').innerHTML = '⚠️ {{ _("Not in stock list") }}';
+            document.getElementById('resultContent').innerHTML =
+                '<div style="padding:12px;background:#fff8e6;border-radius:8px;border:1px solid #f39c12">' +
+                esc(d.number || lastCode) + ' — {{ _("choose action") }}' +
+                (d.list_size ? ' (' + d.list_size + ')' : '') +
+                '</div>';
+            document.getElementById('resultActions').style.display = 'flex';
+            return;
+        }
+        if (!d.ok && d.error) {
+            document.getElementById('resultTitle').innerHTML = '❌ {{ _("Error") }}';
+            document.getElementById('resultContent').innerHTML = '<div style="padding:12px;background:#fdecea;border-radius:8px">' + esc(d.error) + '</div>';
+            return;
+        }
+        document.getElementById('resultTitle').innerHTML = '✅ {{ _("Success") }}';
+        let html = '<div style="padding:12px;background:#f0fff0;border-radius:8px;border:1px solid #27ae60">';
+        html += '<b>' + esc(d.number || lastCode) + '</b>';
+        if (mode === 'stock') {
+            html += ' — {{ _("added to stock") }}';
+            if (d.refill_date) html += ' · 📅 ' + esc(d.refill_date);
+        } else {
+            html += ' — {{ _("installed") }} ' + esc(side.toUpperCase());
+            if (d.other_activated) {
+                html += '<br><span style="color:#27ae60">→ {{ _("Neighbour now IN USE") }}: <b>' + esc(d.other_activated) + '</b></span>';
             }
-        },
-        function() {}
-    ).then(function() {
-        document.getElementById('btnScan').style.display = 'none';
-        document.getElementById('btnStop').style.display = '';
-    }).catch(function() {
-        document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">{{ _("Camera not available. Use manual entry or USB scanner.") }}</div>';
-        document.getElementById('step3').style.display = '';
-        scanner = null;
+        }
+        html += '</div>';
+        document.getElementById('resultContent').innerHTML = html;
+        loadCurrent();
+        lastCode = '';
+    }).catch(function(e) {
+        document.getElementById('resultTitle').innerHTML = '❌ {{ _("Error") }}';
+        document.getElementById('resultContent').innerHTML = esc(String(e));
     });
 }
 
-function stopScanner() {
-    if (scanner) {
-        scanner.stop().then(function() { scanner.clear(); scanner = null; });
-        document.getElementById('btnScan').style.display = '';
-        document.getElementById('btnStop').style.display = 'none';
+function doAction(action) {
+    if (action === 'ignore') {
+        document.getElementById('stepResult').style.display = 'none';
+        lastCode = '';
+        return;
     }
+    // форсируем add_stock / install
+    const gasType = document.getElementById('gasType').value;
+    const side = document.getElementById('side').value;
+    csrfFetch('/gas/api/cylinders/assign-work', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ number: lastCode, gas_type: gasType, side: side, action: action, force: true })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        document.getElementById('resultTitle').innerHTML = '✅ {{ _("Success") }}';
+        document.getElementById('resultContent').innerHTML =
+            '<div style="padding:12px;background:#f0fff0;border-radius:8px">' +
+            esc(d.number || lastCode) + ' — ' + (action === 'stock' ? '{{ _("added to stock") }}' : '{{ _("installed") }}') +
+            (d.other_activated ? ' · {{ _("Neighbour") }} ' + esc(d.other_activated) : '') +
+            '</div>';
+        document.getElementById('resultActions').style.display = 'none';
+        loadCurrent();
+        lastCode = '';
+    }).catch(function() {});
+}
+
+function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+}
+
+function startScanner() {
+    if (scanner) return;
+    scanner = new Html5Qrcode('reader');
+    scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 120 } },
+        function(text) {
+            if (text !== lastScanned || (Date.now() - lastScannedTime) > 1500) {
+                lastScanned = text; lastScannedTime = Date.now();
+                const d = parseZ(text);
+                if (d) {
+                    document.getElementById('zCode').value = String(text).trim().toUpperCase();
+                    document.getElementById('refillDate').value = d;
+                    submitRefill();
+                } else {
+                    document.getElementById('manualCode').value = text;
+                    submitNumber();
+                }
+            }
+        }, function() {}
+    ).catch(function() {});
 }
 
 function loadCurrent() {
-    csrfFetch('/gas/api/cylinders')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    csrfFetch('/gas/api/cylinders').then(function(r) { return r.json(); }).then(function(data) {
         var active = data.filter(function(c) { return c.status === 'in_use' || c.status === 'full'; });
-        if (active.length === 0) {
-            document.getElementById('currentCylinders').innerHTML = '<div style="color:#888;font-size:12px">{{ _("No active cylinders") }}</div>';
+        if (!active.length) {
+            document.getElementById('currentCylinders').innerHTML = '<div style="color:#888">{{ _("No active cylinders") }}</div>';
             return;
         }
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+        var html = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
         active.forEach(function(c) {
-            var gas = c.gas_type === 'nitrogen' ? 'N₂' : 'CO₂';
             var color = c.status === 'in_use' ? '#f39c12' : '#27ae60';
-            html += '<div style="padding:6px 10px;border-radius:6px;border:1px solid ' + color + ';background:' + color + '11">';
-            html += '<b>' + gas + '</b> ' + c.number + ' <span style="color:' + color + ';font-weight:700">' + c.status.toUpperCase().replace('_',' ') + '</span>';
-            html += '</div>';
+            html += '<div style="padding:6px 10px;border-radius:6px;border:1px solid ' + color + '"><b>' + esc(c.number) + '</b> ' + esc(c.gas_type) + ' <b style="color:' + color + '">' + esc(c.status) + '</b></div>';
         });
         html += '</div>';
         document.getElementById('currentCylinders').innerHTML = html;
     });
 }
 
-function processCode(code) {
-    if (!code || !code.trim()) return;
-    code = code.trim();
-    // Russian keyboard layout fix: Я→Z etc.
-    if (typeof ScannerCommon !== 'undefined') code = ScannerCommon.normalizeCode(code);
-    var gasType = document.getElementById('gasType').value;
-    var side = document.getElementById('side').value;
-    var step3 = document.getElementById('step3');
-    step3.style.display = '';
-    document.getElementById('step3Title').innerHTML = '⏳ {{ _("Processing...") }}';
-    document.getElementById('resultContent').innerHTML = '<div style="padding:12px;background:#e8f4fd;border-radius:8px"><b>' + code + '</b> — installing on ' + side.toUpperCase() + ' (' + (gasType === 'nitrogen' ? 'N₂' : 'CO₂') + ')...</div>';
-
-    csrfFetch('/gas/api/cylinders/scan', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({code: code, gas_type: gasType, side: side})
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        if (d.ok) {
-            var gas = gasType === 'nitrogen' ? 'N₂' : 'CO₂';
-            document.getElementById('step3Title').innerHTML = '✅ {{ _("Success") }}';
-            var html = '<div style="padding:12px;background:#f0fff0;border-radius:8px;border:1px solid #27ae60">';
-            html += '<b>' + gas + ' ' + (d.cylinder_number || code) + '</b> — <b style="color:#27ae60">FULL</b> ({{ _("installed on") }} ' + side.toUpperCase() + ')<br>';
-            if (d.other_activated) {
-                html += '<span style="font-size:12px;color:#27ae60">→ {{ _("Other cylinder") }} <b>' + d.other_activated + '</b> {{ _("is now IN USE") }}</span><br>';
-            }
-            if (d.created) {
-                html += '<span style="font-size:11px;color:#888">{{ _("New cylinder created in DB") }}</span><br>';
-            }
-            html += '</div>';
-            document.getElementById('resultContent').innerHTML = html;
-            loadCurrent();
-            lastScanned = '';
-        } else {
-            document.getElementById('step3Title').innerHTML = '⚠️ {{ _("Error") }}';
-            document.getElementById('resultContent').innerHTML =
-                '<div style="padding:12px;background:#fff0f0;border-radius:8px;border:1px solid #e74c3c">' +
-                (d.error || 'Unknown error') +
-                '</div>';
-        }
-    })
-    .catch(function(e) {
-        document.getElementById('step3Title').innerHTML = '❌ {{ _("Error") }}';
-        document.getElementById('resultContent').innerHTML = '<div style="color:#e74c3c">' + e.message + '</div>';
-    });
+document.getElementById('manualCode').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitNumber(); }
+});
+if (typeof ScannerCommon !== 'undefined') {
+    ScannerCommon.init({ inputId: 'manualCode', onScan: function(t) {
+        if (parseZ(t)) { document.getElementById('zCode').value = t; document.getElementById('refillDate').value = parseZ(t); submitRefill(); }
+        else { document.getElementById('manualCode').value = t; submitNumber(); }
+    }, autoStartCamera: true, cameraStartFn: startScanner });
 }
-
 loadCurrent();
 </script>
 {% endblock %}

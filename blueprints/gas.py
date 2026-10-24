@@ -1101,12 +1101,13 @@ def cylinder_assign_work():
     Если список есть, а номера в нём нет — спросить, что делать.
     """
     data = request.get_json() or {}
-    number = (data.get('number') or '').strip()
+    number = (data.get('number') or data.get('code') or '').strip()
     cyl_id = safe_int(data.get('cylinder_id'))
     side = (data.get('side') or '').strip()
     gas_type = data.get('gas_type') or 'nitrogen'
     force = bool(data.get('force'))
     action = (data.get('action') or '').strip()  # install | add_list | add_stock | cancel
+    refill_date = (data.get('refill_date') or '').strip()
     if side not in ('left', 'right'):
         return jsonify({'error': 'Side must be left or right'}), 400
 
@@ -1175,16 +1176,39 @@ def cylinder_assign_work():
     c.side = side
     if not c.received_at:
         c.received_at = datetime.utcnow()
+    if refill_date:
+        try:
+            c.refill_date = datetime.strptime(refill_date, '%Y-%m-%d').date()
+        except Exception:
+            pass
     c.gas_type = gas_type if gas_type in GAS_TYPES else c.gas_type
     c.installed_at = datetime.utcnow()
     db.session.add(CylinderLog(cylinder_id=c.id, action='install',
                                performed_by=current_user.id,
                                notes=f'Installed on {side}'))
+    # Соседний баллон становится IN USE (рабочая пара переключается)
+    other_activated = None
+    other_side = 'right' if side == 'left' else 'left'
+    neighbor = (GasCylinder.query
+                .filter(GasCylinder.gas_type == c.gas_type,
+                        GasCylinder.side == other_side,
+                        GasCylinder.status == 'full')
+                .order_by(GasCylinder.id.asc()).first())
+    if neighbor:
+        neighbor.status = 'in_use'
+        neighbor.installed_at = datetime.utcnow()
+        db.session.add(CylinderLog(
+            cylinder_id=neighbor.id, action='status_full_to_in_use',
+            performed_by=current_user.id,
+            notes=f'Working pair: switched after install of {c.cylinder_number} on {side}'
+        ))
+        other_activated = neighbor.cylinder_number
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     log_audit('assign_work', 'gas_cylinder', c.id, f'{c.cylinder_number} → {side}')
     return jsonify({'ok': True, 'number': c.cylinder_number, 'side': side,
                     'in_list': in_list, 'cylinder_id': c.id,
+                    'other_activated': other_activated,
                     'list_pending': _scan_list_pending()})
 
 
