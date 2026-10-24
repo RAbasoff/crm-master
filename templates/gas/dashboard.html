@@ -121,45 +121,8 @@
 </div>
 {% endif %}
 
-{% if balance %}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-  {% for gt, b in balance.items() %}
-  <div style="background:{{ '#eaf3ff' if gt == 'nitrogen' else '#fdeaea' }};border-radius:8px;padding:8px 12px;font-size:11px">
-    <div style="font-weight:700;margin-bottom:4px;color:{{ '#1a5fa8' if gt == 'nitrogen' else '#b03a2e' }}">
-      {{ b.label }}
-      — {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('Working pair OK') }}</span>
-      {% else %}<span style="color:#e74c3c">{{ _('Need order') }}</span>{% endif %}
-    </div>
-    <div style="color:#666">
-      {{ _('in use') }} <b>{{ b.in_use }}</b>
-      · {{ _('full') }} <b>{{ b.full }}</b>
-      {% if b.defect or b.maintenance %}· {{ _('Defects') }} <b>{{ b.defect + b.maintenance }}</b>{% endif %}
-    </div>
-    <div style="margin-top:4px">
-      <a href="/gas/report/pdf?from={{ b.month_label }}-01&to={{ b.month_label }}-28" style="font-size:11px;color:#3498db;font-weight:600">📄 {{ _('PDF report') }}</a>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- SUMMARY — цифры по месяцам только в PDF-отчёте -->
-<div class="card" style="margin-bottom:12px">
-    <h2 style="margin:0 0 10px;font-size:15px">📊 {{ _('Reports') }}</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <a href="/gas/report/pdf" class="btn btn-sm" style="background:#e74c3c;color:white;font-weight:700">📄 {{ _('PDF report') }} ({{ _('by month') }})</a>
-        <a href="/gas/archive/view" class="btn btn-sm" style="background:#2c3e50;color:white;font-weight:700">🗄 {{ _('Gas archive') }}</a>
-        <a href="/gas/returns" class="btn btn-sm" style="background:#e67e22;color:white;font-weight:700">↩️ {{ _('Return full cylinders') }}</a>
-        <a href="/gas/scan-list" class="btn btn-sm" style="background:#3498db;color:white">📋 {{ _('Scan list') }}</a>
-        <a href="/gas/scan" class="btn btn-sm" style="background:#eee">📷 {{ _('Scan') }}</a>
-        <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">📦 {{ _('Cylinders') }}</a>
-    </div>
-    <p style="font-size:11px;color:#888;margin:10px 0 0">
-        {{ _('Monthly totals (ordered / used / defects) are in the PDF report. Dashboard shows only current work status.') }}
-    </p>
-</div>
-
-<div class="gas-grid">
+<!-- GRAPH FIRST — always on top -->
+<div class="gas-grid" id="gasGraphTop">
 
 <!-- ═══ N₂ ═══ -->
 <div class="card" style="padding:10px;border-top:3px solid #3498db">
@@ -377,6 +340,38 @@
     </div>
 </div>
 
+</div><!-- /gas-graph -->
+
+{% if balance %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+  {% for gt, b in balance.items() %}
+  <div style="background:{{ '#eaf3ff' if gt == 'nitrogen' else '#fdeaea' }};border-radius:8px;padding:8px 12px;font-size:11px">
+    <div style="font-weight:700;margin-bottom:4px;color:{{ '#1a5fa8' if gt == 'nitrogen' else '#b03a2e' }}">
+      {{ b.label }}
+      — {% if b.has_working_pair %}<span style="color:#27ae60">{{ _('Working pair OK') }}</span>
+      {% else %}<span style="color:#e74c3c">{{ _('Need order') }}</span>{% endif %}
+    </div>
+    <div style="color:#666">
+      {{ _('in use') }} <b>{{ b.in_use }}</b>
+      · {{ _('full') }} <b>{{ b.full }}</b>
+      {% if b.defect or b.maintenance %}· {{ _('Defects') }} <b>{{ b.defect + b.maintenance }}</b>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- SUMMARY / links BELOW the graph -->
+<div class="card" style="margin-bottom:12px">
+    <h2 style="margin:0 0 10px;font-size:15px">📊 {{ _('Reports') }}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a href="/gas/report/pdf" class="btn btn-sm" style="background:#e74c3c;color:white;font-weight:700">📄 {{ _('PDF report') }} ({{ _('by month') }})</a>
+        <a href="/gas/archive/view" class="btn btn-sm" style="background:#2c3e50;color:white;font-weight:700">🗄 {{ _('Gas archive') }}</a>
+        <a href="/gas/returns" class="btn btn-sm" style="background:#e67e22;color:white;font-weight:700">↩️ {{ _('Return full cylinders') }}</a>
+        <a href="/gas/scan-list" class="btn btn-sm" style="background:#3498db;color:white">📋 {{ _('Scan list') }}</a>
+        <a href="/gas/scan" class="btn btn-sm" style="background:#eee">📷 {{ _('Scan') }}</a>
+        <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">📦 {{ _('Cylinders') }}</a>
+    </div>
 </div>
 
 <!-- Popup -->
