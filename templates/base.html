@@ -491,6 +491,7 @@
             <a href="/gas/scan-list" class="sb-item {% if request.endpoint == 'gas.cylinder_scan_list' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📋</span>{{ _('Scan list') }}</a>
             <a href="/gas/scan" class="sb-item {% if request.endpoint == 'gas.cylinder_scan_page' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📷</span>{{ _('Scan Cylinders') }}</a>
             <a href="/gas/quality" class="sb-item {% if request.endpoint == 'gas.gas_quality_list' or request.endpoint == 'gas.gas_quality_new' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🧪</span>{{ _('Gas Quality') }}</a>
+            <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🔧</span>{{ _('Equipment Repairs') }}</a>
             {% endif %}
             {% if has_access('air') %}
             <a href="/air" class="sb-item {% if request.endpoint and request.endpoint.startswith('air.') and request.endpoint != 'air.air_map' %}active{% endif %}" data-section="air" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">💨</span>{{ _('Compressed Air') }}</a>
@@ -517,7 +518,8 @@
             </div>
             {% endif %}
             {% if has_access('equipment') %}
-            <a href="/repairs" class="sb-item {% if 'repair' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Equipment Repairs') }}</a>
+            <!-- Equipment Repairs moved under Gas System -->
+
             {% endif %}
             {% if has_access('faults') %}
             <a href="/faults" class="sb-item {% if 'fault' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⚠️</span>{{ _('Faults') }}</a>
