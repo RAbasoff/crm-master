@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gas archive') }} — {{ _('Gas Cylinders') }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🗄 {{ _('Gas archive') }} — {{ _('by month') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/gas" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
+        <a href="/gas/report/pdf" class="btn btn-sm" style="background:#e74c3c;color:white">📄 {{ _('PDF report') }}</a>
+        <a href="/gas/returns" class="btn btn-sm" style="background:#e67e22;color:white">↩️ {{ _('Return full cylinders') }}</a>
+        <a href="/archive" class="btn btn-sm" style="background:#eee">{{ _('All archive') }}</a>
+    </div>
+</div>
+
+<!-- Текущий остаток (кратко) -->
+<div class="card" style="margin-bottom:12px">
+    <h2 style="font-size:14px;margin:0 0 8px">{{ _('Stock right now') }}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:12px">
+        {% for gt, b in (balance or {}).items() %}
+        <div style="padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e8ecf1">
+            <b>{{ b.label }}</b>:
+            {{ _('Full') }} <b>{{ b.full }}</b>
+            · {{ _('Use') }} <b>{{ b.in_use }}</b>
+            · {{ _('Empty') }} <b>{{ b.empty }}</b>
+            · {{ _('Total') }} <b>{{ b.total }}</b>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Месяцы — все свёрнуты -->
+{% for key, m in months.items() %}
+<div class="card" style="padding:0;margin-bottom:8px">
+    <div onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.ic').textContent=b.style.display==='none'?'▶':'▼'"
+         style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#1a1a2e;color:#fff;border-radius:8px">
+        <span class="ic" style="font-size:12px">▶</span>
+        <strong style="font-size:15px">🗓 {{ m.key }}</strong>
+        <span style="opacity:.8;font-size:11px;margin-left:auto">
+            {{ _('Ordered') }}: N₂ {{ m.ordered_n2 or 0 }} / CO₂ {{ m.ordered_co2 or 0 }} / {{ _('Mixed gas') }} {{ m.ordered_mixed or 0 }}
+            · {{ _('Delivered') }}: N₂ {{ m.delivered_n2 or 0 }} / CO₂ {{ m.delivered_co2 or 0 }} / {{ _('Mixed gas') }} {{ m.delivered_mixed or 0 }}
+            · {{ _('Empty') }}: {{ m.empty_count or 0 }}
+        </span>
+    </div>
+    <div style="display:none;border:1px solid #dee2e6;border-top:none">
+        <div style="padding:12px 16px">
+            {% if m.summary %}
+            <div style="font-size:12px;color:#555;margin-bottom:8px">
+                {{ _('Summary') }}: {{ m.summary }}
+            </div>
+            {% endif %}
+            <div style="font-size:12px;color:#555">
+                {{ _('Empty at month end') }}: <b>{{ m.empty_count }}</b>
+                {% if m.empty_sample %}
+                <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+                    {% for e in m.empty_sample %}
+                    <span style="padding:2px 8px;background:#fdecea;border-radius:99px;font-size:11px">
+                        {{ e.number }} ({{ e.gas }})
+                    </span>
+                    {% endfor %}
+                    {% if m.empty_count > m.empty_sample|length %}
+                    <span style="font-size:11px;color:#888">+{{ m.empty_count - m.empty_sample|length }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+                <a href="/gas/report/pdf?from={{ m.key }}-01&to={{ m.key }}-31" class="btn btn-sm" style="background:#e74c3c;color:white">📄 {{ _('PDF report') }}</a>
+                {% if m.created_at %}
+                <span style="font-size:11px;color:#888;align-self:center">{{ _('Archived') }}: {{ m.created_at.strftime('%d-%m-%Y') }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div style="text-align:center;padding:30px;color:#888">{{ _('No archive yet') }}</div>
+</div>
+{% endfor %}
+{% endblock %}

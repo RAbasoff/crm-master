@@ -1480,6 +1480,53 @@ def gas_quality_delete(check_id):
 # PDF REPORT — gas, by month, for a period
 # ============================================================
 
+@bp.route('/archive/view')
+@login_required
+@role_required('admin', 'director', 'technician')
+def gas_archive_view():
+    """Архив газовых баллонов по месяцам (все свёрнуты) + отчёт/статистика."""
+    import json as _json
+    from collections import OrderedDict
+    rows = (MonthlyArchive.query.filter_by(section='gas_cylinders')
+            .order_by(MonthlyArchive.archive_month.desc()).all())
+    months = OrderedDict()
+    for a in rows:
+        try:
+            data = _json.loads(a.data_json or '{}')
+        except Exception:
+            data = {}
+        summary = (data or {}).get('summary') or {}
+        empties = (data or {}).get('empty') or []
+        months[a.archive_month] = {
+            'key': a.archive_month,
+            'summary': summary,
+            'empty_count': len(empties),
+            'empty_sample': empties[:12],
+            'created_at': a.created_at,
+        }
+    # статистика по месяцам из заказов (если архива ещё нет)
+    from collections import defaultdict
+    order_stats = defaultdict(lambda: {'ordered_n2': 0, 'ordered_co2': 0, 'ordered_mixed': 0,
+                                       'delivered_n2': 0, 'delivered_co2': 0, 'delivered_mixed': 0})
+    for o in CylinderOrder.query.all():
+        if not o.ordered_at:
+            continue
+        k = o.ordered_at.strftime('%Y-%m')
+        q = int(o.quantity or 0)
+        field = {'nitrogen': 'n2', 'co2': 'co2', 'mixed': 'mixed'}.get(o.gas_type, 'n2')
+        order_stats[k]['ordered_' + field] += q
+        if o.status == 'delivered':
+            order_stats[k]['delivered_' + field] += q
+    for k, v in order_stats.items():
+        if k not in months:
+            months[k] = {'key': k, 'summary': {}, 'empty_count': 0, 'empty_sample': [], 'created_at': None}
+        months[k].update(v)
+    months = OrderedDict(sorted(months.items(), key=lambda kv: kv[0], reverse=True))
+    balance = _inventory_balance()
+    return render_template('gas/archive.html', months=months, balance=balance,
+                           gas_labels=GAS_LABELS)
+
+
 @bp.route('/returns', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
