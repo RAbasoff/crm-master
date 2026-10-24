@@ -1482,9 +1482,17 @@ def gas_quality_delete(check_id):
 
 @bp.route('/archive/view')
 @login_required
-@role_required('admin', 'director', 'technician')
 def gas_archive_view():
     """Архив газовых баллонов по месяцам (все свёрнуты) + отчёт/статистика."""
+    try:
+        return _gas_archive_view_impl()
+    except Exception as e:
+        print('GAS ARCHIVE ERROR', e)
+        flash(_('An error occurred. Please try again.'), 'error')
+        return redirect(url_for('gas.gas_dashboard'))
+
+
+def _gas_archive_view_impl():
     import json as _json
     from collections import OrderedDict
     rows = (MonthlyArchive.query.filter_by(section='gas_cylinders')
@@ -1495,13 +1503,21 @@ def gas_archive_view():
             data = _json.loads(a.data_json or '{}')
         except Exception:
             data = {}
-        summary = (data or {}).get('summary') or {}
-        empties = (data or {}).get('empty') or []
+        if isinstance(data, list):
+            data = {'empty': data if data and isinstance(data[0], dict) else []}
+        if not isinstance(data, dict):
+            data = {}
+        summary = data.get('summary') or {}
+        if not isinstance(summary, dict):
+            summary = {}
+        empties = data.get('empty') or []
+        if not isinstance(empties, list):
+            empties = []
         months[a.archive_month] = {
             'key': a.archive_month,
             'summary': summary,
             'empty_count': len(empties),
-            'empty_sample': empties[:12],
+            'empty_sample': empties[:12] if all(isinstance(e, dict) for e in empties[:12]) else [],
             'created_at': a.created_at,
         }
     # статистика по месяцам из заказов (если архива ещё нет)
