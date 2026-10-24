@@ -1494,7 +1494,8 @@ def gas_archive_view():
 
 def _gas_archive_view_impl():
     import json as _json
-    from collections import OrderedDict
+    from collections import OrderedDict, defaultdict
+    from models import FaultReport, EquipmentRepair, MaintenanceRecord
     rows = (MonthlyArchive.query.filter_by(section='gas_cylinders')
             .order_by(MonthlyArchive.archive_month.desc()).all())
     months = OrderedDict()
@@ -1504,7 +1505,7 @@ def _gas_archive_view_impl():
         except Exception:
             data = {}
         if isinstance(data, list):
-            data = {'empty': data if data and isinstance(data[0], dict) else []}
+            data = {}
         if not isinstance(data, dict):
             data = {}
         summary = data.get('summary') or {}
@@ -1513,31 +1514,84 @@ def _gas_archive_view_impl():
         empties = data.get('empty') or []
         if not isinstance(empties, list):
             empties = []
+        empties = [e for e in empties if isinstance(e, dict)][:20]
         months[a.archive_month] = {
             'key': a.archive_month,
             'summary': summary,
             'empty_count': len(empties),
-            'empty_sample': empties[:12] if all(isinstance(e, dict) for e in empties[:12]) else [],
+            'empty_sample': empties,
             'created_at': a.created_at,
         }
-    # статистика по месяцам из заказов (если архива ещё нет)
-    from collections import defaultdict
-    order_stats = defaultdict(lambda: {'ordered_n2': 0, 'ordered_co2': 0, 'ordered_mixed': 0,
-                                       'delivered_n2': 0, 'delivered_co2': 0, 'delivered_mixed': 0})
+
+    def _ensure(mk):
+        if mk not in months:
+            months[mk] = {'key': mk, 'summary': {}, 'empty_count': 0, 'empty_sample': [], 'created_at': None}
+        return months[mk]
+
+    # Заказы и доставки по месяцам (реальные суммы)
     for o in CylinderOrder.query.all():
         if not o.ordered_at:
             continue
         k = o.ordered_at.strftime('%Y-%m')
+        row = _ensure(k)
         q = int(o.quantity or 0)
         field = {'nitrogen': 'n2', 'co2': 'co2', 'mixed': 'mixed'}.get(o.gas_type, 'n2')
-        order_stats[k]['ordered_' + field] += q
+        row.setdefault('ordered_n2', 0)
+        row.setdefault('ordered_co2', 0)
+        row.setdefault('ordered_mixed', 0)
+        row.setdefault('delivered_n2', 0)
+        row.setdefault('delivered_co2', 0)
+        row.setdefault('delivered_mixed', 0)
+        row.setdefault('orders_list', [])
+        row['ordered_' + field] = row.get('ordered_' + field, 0) + q
         if o.status == 'delivered':
-            order_stats[k]['delivered_' + field] += q
-    for k, v in order_stats.items():
-        if k not in months:
-            months[k] = {'key': k, 'summary': {}, 'empty_count': 0, 'empty_sample': [], 'created_at': None}
-        months[k].update(v)
+            row['delivered_' + field] = row.get('delivered_' + field, 0) + q
+        row['orders_list'].append({
+            'id': o.id, 'gas': o.gas_type, 'qty': q, 'status': o.status,
+            'date': o.ordered_at.strftime('%d-%m-%Y'),
+            'delivered': o.delivered_at.strftime('%d-%m-%Y') if o.delivered_at else '',
+        })
+
+    # Расход (стало пустым) и возвраты по месяцам
+    for log in CylinderLog.query.all():
+        if not log.date:
+            continue
+        k = log.date.strftime('%Y-%m')
+        row = _ensure(k)
+        act = (log.action or '')
+        if '_to_empty' in act or act == 'return_full':
+            row['used_total'] = row.get('used_total', 0) + 1
+        if act == 'return_full':
+            row['returned_total'] = row.get('returned_total', 0) + 1
+        if act in ('created', 'received'):
+            row.setdefault('received_ops', 0)
+            row['received_ops'] += 1
+
+    # Неисправности / ремонты оборудования по месяцам
+    for f in FaultReport.query.all():
+        ts = f.created_at
+        if not ts:
+            continue
+        k = ts.strftime('%Y-%m')
+        row = _ensure(k)
+        row.setdefault('faults', 0)
+        row['faults'] += 1
+    for r in EquipmentRepair.query.all():
+        ts = r.date_broken or r.created_at
+        if not ts:
+            continue
+        k = ts.strftime('%Y-%m')
+        row = _ensure(k)
+        row.setdefault('repairs', 0)
+        row['repairs'] += 1
+
     months = OrderedDict(sorted(months.items(), key=lambda kv: kv[0], reverse=True))
+    # normalize missing keys
+    for row in months.values():
+        for f in ('ordered_n2', 'ordered_co2', 'ordered_mixed',
+                  'delivered_n2', 'delivered_co2', 'delivered_mixed',
+                  'used_total', 'returned_total', 'faults', 'repairs', 'orders_list'):
+            row.setdefault(f, 0 if f != 'orders_list' else [])
     balance = _inventory_balance()
     return render_template('gas/archive.html', months=months, balance=balance,
                            gas_labels=GAS_LABELS)

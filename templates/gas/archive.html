@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Gas archive') }} — {{ _('Gas Cylinders') }}{% endblock %}
+{% block title %}{{ _('Gas archive') }} — {{ _('by month') }}{% endblock %}
 {% block content %}
 <div class="page-header">
     <h1>🗄 {{ _('Gas archive') }} — {{ _('by month') }}</h1>
@@ -7,11 +7,10 @@
         <a href="/gas" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
         <a href="/gas/report/pdf" class="btn btn-sm" style="background:#e74c3c;color:white">📄 {{ _('PDF report') }}</a>
         <a href="/gas/returns" class="btn btn-sm" style="background:#e67e22;color:white">↩️ {{ _('Return full cylinders') }}</a>
-        <a href="/archive" class="btn btn-sm" style="background:#eee">{{ _('All archive') }}</a>
     </div>
 </div>
 
-<!-- Текущий остаток (кратко) -->
+{% if balance %}
 <div class="card" style="margin-bottom:12px">
     <h2 style="font-size:14px;margin:0 0 8px">{{ _('Stock right now') }}</h2>
     <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:12px">
@@ -26,47 +25,90 @@
         {% endfor %}
     </div>
 </div>
+{% endif %}
 
-<!-- Месяцы — все свёрнуты -->
 {% for key, m in months.items() %}
 <div class="card" style="padding:0;margin-bottom:8px">
     <div onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.ic').textContent=b.style.display==='none'?'▶':'▼'"
          style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#1a1a2e;color:#fff;border-radius:8px">
         <span class="ic" style="font-size:12px">▶</span>
         <strong style="font-size:15px">🗓 {{ m.key }}</strong>
-        <span style="opacity:.8;font-size:11px;margin-left:auto">
-            {{ _('Ordered') }}: N₂ {{ m.ordered_n2 or 0 }} / CO₂ {{ m.ordered_co2 or 0 }} / {{ _('Mixed gas') }} {{ m.ordered_mixed or 0 }}
-            · {{ _('Delivered') }}: N₂ {{ m.delivered_n2 or 0 }} / CO₂ {{ m.delivered_co2 or 0 }} / {{ _('Mixed gas') }} {{ m.delivered_mixed or 0 }}
-            · {{ _('Empty') }}: {{ m.empty_count or 0 }}
+        <span style="opacity:.85;font-size:11px;margin-left:auto">
+            📦 {{ _('Ordered') }} {{ (m.ordered_n2 or 0) + (m.ordered_co2 or 0) + (m.ordered_mixed or 0) }}
+            · 🚚 {{ _('Delivered') }} {{ (m.delivered_n2 or 0) + (m.delivered_co2 or 0) + (m.delivered_mixed or 0) }}
+            · 🔧 {{ _('Used') }} {{ m.used_total or 0 }}
+            · ⚠️ {{ _('Faults') }} {{ m.faults or 0 }}
+            · 🛠 {{ _('Repairs') }} {{ m.repairs or 0 }}
         </span>
     </div>
     <div style="display:none;border:1px solid #dee2e6;border-top:none">
         <div style="padding:12px 16px">
-            {% if m.summary %}
-            <div style="font-size:12px;color:#555;margin-bottom:8px">
-                {{ _('Summary') }}: {{ m.summary }}
+            <!-- Приход / расход -->
+            <h3 style="font-size:13px;margin:0 0 8px">📊 {{ _('In / out this month') }}</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px">
+                <div style="padding:8px;background:#e8f4fd;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Ordered') }} N₂</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.ordered_n2 or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#fde8e8;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Ordered') }} CO₂</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.ordered_co2 or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#f3e8fd;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Ordered') }} {{ _('Mixed gas') }}</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.ordered_mixed or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#e8f8e8;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Delivered') }} N₂</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.delivered_n2 or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#e8f8e8;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Delivered') }} CO₂</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.delivered_co2 or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#e8f8e8;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Delivered') }} {{ _('Mixed gas') }}</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.delivered_mixed or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#fff3cd;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Used') }}</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.used_total or 0 }}</div>
+                </div>
+                <div style="padding:8px;background:#fdecea;border-radius:8px">
+                    <div style="font-size:11px;color:#666">{{ _('Returned') }}</div>
+                    <div style="font-size:18px;font-weight:700">{{ m.returned_total or 0 }}</div>
+                </div>
+            </div>
+
+            {% if m.orders_list %}
+            <h3 style="font-size:13px;margin:0 0 6px">📦 {{ _('Orders') }}</h3>
+            <div class="table-wrap"><table>
+                <tr><th>{{ _('Date') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Status') }}</th><th>{{ _('Delivered') }}</th></tr>
+                {% for o in m.orders_list %}
+                <tr>
+                    <td>{{ o.date }}</td>
+                    <td>{{ o.gas }}</td>
+                    <td>{{ o.qty }}</td>
+                    <td>{{ o.status }}</td>
+                    <td>{{ o.delivered or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </table></div>
+            {% endif %}
+
+            {% if m.empty_sample %}
+            <h3 style="font-size:13px;margin:12px 0 6px">🔴 {{ _('Empty at month end') }} ({{ m.empty_count }})</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+                {% for e in m.empty_sample %}
+                <span style="padding:2px 8px;background:#fdecea;border-radius:99px;font-size:11px">
+                    {{ e.number or e.get('cylinder_number') or '?' }} ({{ e.gas or '' }})
+                </span>
+                {% endfor %}
             </div>
             {% endif %}
-            <div style="font-size:12px;color:#555">
-                {{ _('Empty at month end') }}: <b>{{ m.empty_count }}</b>
-                {% if m.empty_sample %}
-                <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
-                    {% for e in m.empty_sample %}
-                    <span style="padding:2px 8px;background:#fdecea;border-radius:99px;font-size:11px">
-                        {{ e.number }} ({{ e.gas }})
-                    </span>
-                    {% endfor %}
-                    {% if m.empty_count > m.empty_sample|length %}
-                    <span style="font-size:11px;color:#888">+{{ m.empty_count - m.empty_sample|length }}</span>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-                <a href="/gas/report/pdf?from={{ m.key }}-01&to={{ m.key }}-31" class="btn btn-sm" style="background:#e74c3c;color:white">📄 {{ _('PDF report') }}</a>
-                {% if m.created_at %}
-                <span style="font-size:11px;color:#888;align-self:center">{{ _('Archived') }}: {{ m.created_at.strftime('%d-%m-%Y') }}</span>
-                {% endif %}
+
+            <div style="margin-top:10px">
+                <a href="/gas/report/pdf?from={{ m.key }}-01&to={{ m.key }}-28" class="btn btn-sm" style="background:#e74c3c;color:white">📄 {{ _('PDF report') }}</a>
             </div>
         </div>
     </div>
