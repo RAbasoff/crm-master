@@ -7,7 +7,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
-                <label>{{ _('Machine / Equipment') }} *</label>
+                <label>{{ _('Machines') }} / {{ _('Other equipment') }} *</label>
                 <div style="display:flex;gap:8px;align-items:center">
                     <input type="hidden" name="machine_id" id="machineIdInput">
                     <input type="hidden" name="equipment_id" id="equipmentIdInput">
@@ -18,7 +18,7 @@
                             <option value="m_{{ m.id }}" data-type="machine" data-serial="{{ m.serial_number or '' }}" data-name="{{ m.name }}" {% if request.args.get('machine')|int == m.id %}selected{% endif %}>{{ m.name }} ({{ m.machine_type or '?' }})</option>
                             {% endfor %}
                         </optgroup>
-                        <optgroup label="⚙️ {{ _('Equipment') }}">
+                        <optgroup label="⚙️ {{ _('Other equipment') }}">
                             {% for e in equipment_list %}
                             <option value="e_{{ e.id }}" data-type="equipment" data-serial="{{ e.serial_number or '' }}" data-name="{{ e.name }}">{{ e.name }} ({{ e.equipment_type or '?' }})</option>
                             {% endfor %}
@@ -26,6 +26,7 @@
                     </select>
                     <button type="button" class="btn btn-sm camera-btn" style="background:#3498db;color:white;white-space:nowrap" onclick="toggleScanner()">📷 {{ _('Scan') }}</button>
                 </div>
+                <small style="color:#888">{{ _('Machines and other equipment are in separate lists') }}</small>
             </div>
             <div class="form-group">
                 <label>{{ _('Priority') }}</label>

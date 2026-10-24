@@ -6136,7 +6136,7 @@ msgstr "Werk beëindigen op melding"
 
 #: equip-cal
 msgid "Other equipment"
-msgstr "Overige apparatuur"
+msgstr "Overig apparatuur"
 
 #: equip-cal
 msgid "no service date"
@@ -6493,3 +6493,6 @@ msgstr "Toegewezen werk"
 
 msgid "Semiannual"
 msgstr "Halfjaarlijks"
+
+msgid "Machines and other equipment are in separate lists"
+msgstr "Machines en overig apparatuur staan in aparte lijsten"
