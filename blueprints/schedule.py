@@ -120,6 +120,47 @@ def schedule_delete(user_id):
     return redirect(url_for('schedule.schedule_list'))
 
 
+@bp.route('/schedule/item/<int:item_id>/update', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def schedule_item_update(item_id):
+    """Правка одного графика механика (когда планов несколько)."""
+    s = WorkSchedule.query.get_or_404(item_id)
+    if not current_user.has_role('admin', 'director') and current_user.id != s.user_id:
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('schedule.schedule_list'))
+    s.name = (request.form.get('name') or s.name or '').strip() or s.name
+    s.shift_start = request.form.get('shift_start') or s.shift_start
+    s.shift_end = request.form.get('shift_end') or s.shift_end
+    s.break_minutes = safe_int(request.form.get('break_minutes'), s.break_minutes or 60)
+    days = request.form.getlist('work_days')
+    if days:
+        s.work_days = ','.join(days)
+    if 'is_active' in request.form:
+        # единственный активный на пользователя
+        WorkSchedule.query.filter(WorkSchedule.user_id == s.user_id, WorkSchedule.id != s.id).update({'is_active': False})
+        s.is_active = True
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        flash(_('Schedule saved'), 'success')
+    return redirect(url_for('schedule.schedule_user', user_id=s.user_id))
+
+
+@bp.route('/schedule/item/<int:item_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director')
+def schedule_item_delete(item_id):
+    s = WorkSchedule.query.get_or_404(item_id)
+    uid = s.user_id
+    db.session.delete(s)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        flash(_('Schedule deleted'), 'success')
+    return redirect(url_for('schedule.schedule_user', user_id=uid))
+
+
 @bp.route('/schedule/monthly')
 @login_required
 @role_required('admin', 'director')

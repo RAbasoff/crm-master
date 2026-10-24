@@ -49,17 +49,32 @@
     <h2>{{ _('Current Schedules') }}</h2>
     {% if schedules %}
     <div class="table-wrap"><table>
-        <tr><th>{{ _('Name') }}</th><th>{{ _('Start') }}</th><th>{{ _('End') }}</th><th>{{ _('Break') }}</th><th>{{ _('Days') }}</th></tr>
+        <tr><th>{{ _('Name') }}</th><th>{{ _('Start') }}</th><th>{{ _('End') }}</th><th>{{ _('Break') }}</th><th>{{ _('Days') }}</th><th></th></tr>
         {% for s in schedules %}
-        <tr>
-            <td>{{ s.name }}</td>
-            <td>{{ s.shift_start }}</td>
-            <td>{{ s.shift_end }}</td>
-            <td>{{ s.break_minutes }} min</td>
+        <tr {% if s.is_active %}style="background:#eafaf1"{% endif %}>
             <td>
-                {% for d in s.work_days.split(',') %}
-                {% if d == '1' %}Mon{% elif d == '2' %}Tue{% elif d == '3' %}Wed{% elif d == '4' %}Thu{% elif d == '5' %}Fri{% elif d == '6' %}Sat{% elif d == '7' %}Sun{% endif %}{% if not loop.last %}, {% endif %}
+                <form method="POST" action="/schedule/item/{{ s.id }}/update" id="sch-form-{{ s.id }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="name" value="{{ s.name }}" style="width:120px;padding:4px 6px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+            </td>
+            <td><input type="time" name="shift_start" value="{{ s.shift_start }}" style="padding:4px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+            <td><input type="time" name="shift_end" value="{{ s.shift_end }}" style="padding:4px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+            <td><input type="number" name="break_minutes" value="{{ s.break_minutes or 60 }}" min="0" style="width:70px;padding:4px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+            <td>
+                {% for d, dn in [(1,'Mon'),(2,'Tue'),(3,'Wed'),(4,'Thu'),(5,'Fri'),(6,'Sat'),(7,'Sun')] %}
+                <label style="font-size:10px;margin-right:2px"><input type="checkbox" name="work_days" value="{{ d }}" {% if d|string in (s.work_days or '').split(',') %}checked{% endif %} style="width:12px;height:12px"> {{ dn }}</label>
                 {% endfor %}
+                <div style="margin-top:4px;font-size:11px">
+                    <label><input type="checkbox" name="is_active" value="1" {% if s.is_active %}checked{% endif %}> {{ _('Active') }}</label>
+                </div>
+            </td>
+            <td>
+                <button type="submit" class="btn btn-sm" style="background:#27ae60;color:#fff">✓</button>
+                </form>
+                <form method="POST" action="/schedule/item/{{ s.id }}/delete" style="margin:4px 0 0" onsubmit="return confirm('{{ _('Delete schedule?') }}')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑</button>
+                </form>
             </td>
         </tr>
         {% endfor %}
