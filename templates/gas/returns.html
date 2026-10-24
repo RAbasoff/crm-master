@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Return full cylinders') }} — {{ _('Gas Cylinders') }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>↩️ {{ _('Return full cylinders') }}</h1>
+    <div style="display:flex;gap:8px">
+        <a href="/gas" class="btn btn-sm" style="background:#eee">{{ _('Dashboard') }}</a>
+        <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">{{ _('Cylinders') }}</a>
+    </div>
+</div>
+
+<div class="card" style="max-width:640px">
+    <h2 style="font-size:15px;margin:0 0 12px">{{ _('New return') }}</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Return date') }} *</label>
+                <input type="date" name="return_date" required>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Gas type') }} *</label>
+                <select name="gas_type" required>
+                    {% for g in gas_types %}
+                    <option value="{{ g }}">{{ gas_labels.get(g, g) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>{{ _('Quantity') }} *</label>
+                <input type="number" name="quantity" min="1" step="1" value="1" required>
+            </div>
+            <div class="form-group">
+                <label>{{ _('Reason') }}</label>
+                <input type="text" name="reason" placeholder="{{ _('Reason for return') }}">
+            </div>
+        </div>
+        <button type="submit" class="btn" style="background:#e67e22;color:#fff;font-weight:700;padding:12px 24px">
+            ↩️ {{ _('Return full cylinders') }}
+        </button>
+    </form>
+    <p style="font-size:11px;color:#888;margin-top:10px">
+        {{ _('Full cylinders are taken from stock (oldest first). Empty cylinders are not kept on site.') }}
+    </p>
+</div>
+
+<div class="card">
+    <h2 style="font-size:15px;margin:0 0 10px">{{ _('Return history') }}</h2>
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Date') }}</th><th>{{ _('Cylinder') }}</th><th>{{ _('Gas') }}</th><th>{{ _('Reason') }}</th></tr>
+        {% for r in returns %}
+        <tr>
+            <td>{{ r.date.strftime('%d-%m-%Y') if r.date else '—' }}</td>
+            <td>{{ r.cylinder.cylinder_number if r.cylinder else r.new_cylinder_number or '—' }}</td>
+            <td>{{ gas_labels.get(r.cylinder.gas_type, r.cylinder.gas_type) if r.cylinder else '—' }}</td>
+            <td style="font-size:12px">{{ r.notes or '' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:#888">{{ _('No returns yet') }}</td></tr>
+        {% endfor %}
+    </table></div>
+</div>
+{% endblock %}

@@ -20,8 +20,8 @@ bp = Blueprint('gas', __name__, url_prefix='/gas')
 # Working set (норма): 1 in_use + 1 ready full spare per gas type
 WORKING_IN_USE = 1
 WORKING_READY_FULL = 1
-GAS_TYPES = ('nitrogen', 'co2')
-GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂'}
+GAS_TYPES = ('nitrogen', 'co2', 'mixed')
+GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂', 'mixed': 'Mixed gas'}
 
 
 def _mark_empty_leaves_site(c, user_id=None, note=''):
@@ -231,6 +231,7 @@ def gas_dashboard():
 
     n2_cylinders = [c for c in cylinders if c.gas_type == 'nitrogen']
     co2_cylinders = [c for c in cylinders if c.gas_type == 'co2']
+    mixed_cylinders = [c for c in cylinders if c.gas_type == 'mixed']
 
     balance = _inventory_balance()
     stats = {
@@ -305,6 +306,7 @@ def gas_dashboard():
                            cylinders=cylinders,
                            n2_cylinders=n2_cylinders,
                            co2_cylinders=co2_cylinders,
+                           mixed_cylinders=mixed_cylinders,
                            n2_spare=n2_spare,
                            co2_spare=co2_spare,
                            components=components,
@@ -830,7 +832,7 @@ def cylinder_quick_add():
 
     if not number:
         return jsonify({'error': 'No number'}), 400
-    if gas_type not in ('nitrogen', 'co2'):
+    if gas_type not in GAS_TYPES:
         return jsonify({'error': 'Invalid gas type'}), 400
 
     # Find by barcode or cylinder_number
@@ -1207,7 +1209,7 @@ def cylinder_add():
 
     if not code:
         return jsonify({'error': 'No code provided'}), 400
-    if gas_type not in ('nitrogen', 'co2'):
+    if gas_type not in GAS_TYPES:
         return jsonify({'error': 'Invalid gas type'}), 400
 
     existing = GasCylinder.query.filter(
@@ -1262,7 +1264,7 @@ def cylinder_scan_install():
 
     if not code:
         return jsonify({'error': 'No barcode scanned'}), 400
-    if gas_type not in ('nitrogen', 'co2'):
+    if gas_type not in GAS_TYPES:
         return jsonify({'error': 'Invalid gas type'}), 400
     if side not in ('left', 'right'):
         return jsonify({'error': 'Invalid side'}), 400
@@ -1453,6 +1455,62 @@ def gas_quality_delete(check_id):
 # ============================================================
 # PDF REPORT — gas, by month, for a period
 # ============================================================
+
+@bp.route('/returns', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def gas_returns():
+    """Возврат полных баллонов поставщику (дата, тип, количество, причина)."""
+    if request.method == 'POST':
+        try:
+            ret_date = datetime.strptime(request.form.get('return_date') or '', '%Y-%m-%d').date()
+        except ValueError:
+            ret_date = now_local().date()
+        gas_type = request.form.get('gas_type') or 'nitrogen'
+        if gas_type not in GAS_TYPES:
+            gas_type = 'nitrogen'
+        qty = safe_int(request.form.get('quantity'), 0)
+        reason = (request.form.get('reason') or '').strip()
+        if qty <= 0:
+            flash(_('Quantity must be positive'), 'error')
+            return redirect(url_for('gas.gas_returns'))
+        fulls = GasCylinder.query.filter_by(gas_type=gas_type, status='full').order_by(
+            GasCylinder.id.asc()).limit(qty).all()
+        n = 0
+        for c in fulls:
+            c.status = 'returned'
+            c.side = None
+            db.session.add(CylinderLog(
+                cylinder_id=c.id, action='return_full', performed_by=current_user.id,
+                notes=f'Returned full cylinder {ret_date}: {reason}'
+            ))
+            n += 1
+        # не нашлось полных — отмечаем фактический возврат (пусть empty/любые)
+        if n < qty:
+            rest = GasCylinder.query.filter(
+                GasCylinder.gas_type == gas_type,
+                GasCylinder.status.in_(('empty', 'full', 'scanned'))
+            ).order_by(GasCylinder.id.asc()).limit(qty - n).all()
+            for c in rest:
+                if c.status == 'returned':
+                    continue
+                old = c.status
+                c.status = 'returned'
+                db.session.add(CylinderLog(
+                    cylinder_id=c.id, action='return_full', performed_by=current_user.id,
+                    notes=f'Returned ({old}) {ret_date}: {reason}'
+                ))
+                n += 1
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+        else:
+            flash(_('Cylinders returned') + f': {n} ({GAS_LABELS.get(gas_type, gas_type)}), {ret_date}', 'success')
+        log_audit('return_full', 'gas_cylinder', 0, f'{gas_type} x{qty} {ret_date} {reason}')
+        return redirect(url_for('gas.gas_returns'))
+    returns = (CylinderLog.query.filter_by(action='return_full')
+               .order_by(CylinderLog.date.desc()).limit(50).all())
+    return render_template('gas/returns.html', returns=returns, gas_labels=GAS_LABELS, gas_types=GAS_TYPES)
+
 
 @bp.route('/report/pdf')
 @login_required

@@ -34,6 +34,17 @@
     </div>
 </div>
 
+<!-- MIXED GAS -->
+<div class="card" style="padding:10px;border-top:3px solid #9b59b6;margin-bottom:10px">
+    <h3 style="margin:0 0 8px;text-align:center;color:#9b59b6;font-size:12px">{{ _('Mixed gas') }}</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;font-size:11px">
+        <span>🟢 {{ _('Full') }}: <b>{{ (mixed_cylinders or [])|selectattr('status','equalto','full')|list|length }}</b></span>
+        <span>🟠 {{ _('Use') }}: <b>{{ (mixed_cylinders or [])|selectattr('status','equalto','in_use')|list|length }}</b></span>
+        <span>🔴 {{ _('Empty') }}: <b>{{ (mixed_cylinders or [])|selectattr('status','equalto','empty')|list|length }}</b></span>
+        <span style="color:#888">{{ _('Total') }}: {{ (mixed_cylinders or [])|length }}</span>
+    </div>
+</div>
+
 <!-- Install / Add modal -->
 <div id="installModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:12px;padding:20px">
@@ -45,6 +56,7 @@
             <select id="imGas" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:12px">
                 <option value="nitrogen">N₂ Nitrogen</option>
                 <option value="co2">CO₂ Carbon Dioxide</option>
+                <option value="mixed">{{ _('Mixed gas') }}</option>
             </select>
 
             <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px">{{ _('Action') }}</label>
@@ -134,8 +146,9 @@
 <!-- SUMMARY — цифры по месяцам только в PDF-отчёте -->
 <div class="card" style="margin-bottom:12px">
     <h2 style="margin:0 0 10px;font-size:15px">📊 {{ _('Reports') }}</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <a href="/gas/report/pdf" class="btn btn-sm" style="background:#e74c3c;color:white;font-weight:700">📄 {{ _('PDF report') }} ({{ _('by month') }})</a>
+        <a href="/gas/returns" class="btn btn-sm" style="background:#e67e22;color:white;font-weight:700">↩️ {{ _('Return full cylinders') }}</a>
         <a href="/gas/scan-list" class="btn btn-sm" style="background:#3498db;color:white">📋 {{ _('Scan list') }}</a>
         <a href="/gas/scan" class="btn btn-sm" style="background:#eee">📷 {{ _('Scan') }}</a>
         <a href="/gas/cylinders" class="btn btn-sm" style="background:#eee">📦 {{ _('Cylinders') }}</a>
