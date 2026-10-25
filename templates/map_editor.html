@@ -28,7 +28,7 @@
         <!-- Drawing tools (edit mode only) -->
         <div id="drawTools" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f5f7fa;padding:8px 10px;border-bottom:1px solid #e0e4ea">
             <button type="button" id="btnDraw" class="btn btn-sm" style="background:#eee;padding:6px 12px;font-size:12px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
-            <button type="button" id="btnDrawSection" class="btn btn-sm" style="background:#3498db;color:white;padding:6px 12px;font-size:12px" onclick="toggleSectionDraw()">🏗️ {{ _('Draw section') }}</button>
+            <!-- Автосоздание цеха прямоугольником убрано: только линия → «Сделать цех» -->
             <button type="button" id="btnDrawMachine" class="btn btn-sm" style="background:#e67e22;color:white;padding:6px 12px;font-size:12px" onclick="toggleMachineDraw()">⚙️ {{ _('Draw machine') }}</button>
             <button type="button" id="btnDrawExit" class="btn btn-sm" style="background:#27ae60;color:white;padding:6px 12px;font-size:12px;display:none" onclick="exitDrawMode()">✅ {{ _('Done drawing') }} (Esc)</button>
             <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px">{{ _('Width') }}:
@@ -105,6 +105,20 @@
                 <div class="form-group">
                     <label>⚙️ {{ _('Machines in this section') }}</label>
                     <div id="propMachinesList" style="max-height:150px;overflow-y:auto;background:#f8f9fa;border-radius:8px;padding:6px"></div>
+                </div>
+                <div class="form-group">
+                    <label>🔐 {{ _('Users with access') }}</label>
+                    <div id="propAccessUsers" style="max-height:120px;overflow-y:auto;background:#f8f9fa;border-radius:8px;padding:6px;font-size:12px">
+                        <div style="color:#888">{{ _('Responsible persons and linked users') }}</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>✏️ {{ _('Section boundary') }}</label>
+                    <div style="font-size:11px;color:#666">
+                        {{ _('Draw the workshop boundary with a line, then press Make section.') }}
+                        <button type="button" class="btn btn-sm" style="background:#27ae60;color:#fff;margin-top:6px" onclick="toggleDrawMode()">✏️ {{ _('Draw line') }}</button>
+                        <button type="button" class="btn btn-sm" style="background:#3498db;color:#fff;margin-top:6px" onclick="convertLineToSection()">🏗️ {{ _('Make section') }}</button>
+                    </div>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:8px">
                     <button onclick="deleteSelected()" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
@@ -418,6 +432,24 @@ function selectSection(id) {
 
         // Ответственные за цех
         const respBox=document.getElementById('propRespList');
+        const accessBox=document.getElementById('propAccessUsers');
+        let accessHtml = '';
+        if(respBox){
+            const names=[];
+            const sel=document.getElementById('propResponsible');
+            if(sel){
+                Array.from(sel.selectedOptions).forEach(function(o){ names.push(o.textContent); });
+            }
+            respBox.innerHTML = names.length
+                ? names.map(function(n){ return '👤 '+esc(n); }).join('<br>')
+                : '<span style="color:#888">{{ _("No responsible") }}</span>';
+            if(names.length){
+                accessHtml = names.map(function(n){ return '<div>👤 '+esc(n)+' <small style="color:#27ae60">{{ _("Responsible") }}</small></div>'; }).join('');
+            } else {
+                accessHtml = '<div style="color:#888">{{ _("No users with access") }}</div>';
+            }
+        }
+        if(accessBox){ accessBox.innerHTML = accessHtml || '<div style="color:#888">{{ _("No users with access") }}</div>'; }
         if(respBox){
             const names=[];
             for(const opt of selEl.options){ if(opt.selected) names.push(opt.textContent); }
@@ -632,17 +664,8 @@ function toggleMachineDraw(){
 }
 
 function toggleSectionDraw(){
-    if(SECTION_DRAW){ exitDrawMode(); return; }
-    exitDrawMode();
-    SECTION_DRAW=true;
-    const b=document.getElementById('btnDrawSection');
-    b.style.background='#e67e22';
-    document.getElementById('btnDrawExit').style.display='';
-    document.getElementById('drawHint').style.display='block';
-    document.getElementById('drawHintText').textContent='🏗️ {{ _("Section draw mode") }}';
-    document.getElementById('drawHintHelp').textContent='{{ _("Drag a rectangle on the map to create a workshop section. Esc to exit.") }}';
-    document.getElementById('canvasWrap').style.cursor='crosshair';
-    showSectionProps();
+    // Автопрямоугольник отключён — только рисование границы линией
+    if (typeof toggleDrawMode === 'function') toggleDrawMode();
 }
 
 function convertLineToSection(){
@@ -715,7 +738,7 @@ function exitDrawMode(){
     const b=document.getElementById('btnDraw');
     b.style.background='#eee'; b.style.color='#333';
     b.textContent='✏️ {{ _("Draw line") }}';
-    const sb=document.getElementById('btnDrawSection');
+    const sb=document.getElementById('btnDraw');
     if(sb){ sb.style.background='#3498db'; }
     const mb=document.getElementById('btnDrawMachine');
     if(mb){ mb.style.background='#e67e22'; }
