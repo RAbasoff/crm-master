@@ -117,6 +117,34 @@ def send_sms(phone, text):
             except Exception:
                 pass
             return True
+        if provider in ('gatewayapi', 'gateway', 'app.gatewayapi.com'):
+            import urllib.parse
+            import urllib.request
+            import json as _json
+            token = _env('SMS_API_KEY')
+            sender = _env('SMS_FROM', 'ProMaster')
+            payload = _json.dumps({
+                'recipients': [{'msisdn': phone}],
+                'message': (text or '')[:160],
+                'sender': sender,
+            }).encode()
+            req = urllib.request.Request(
+                'https://gatewayapi.com/rest/mtsms',
+                data=payload,
+                headers={
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json',
+                },
+                method='POST',
+            )
+            urllib.request.urlopen(req, timeout=20)
+            log.info(f'SMS (gatewayapi) отправлено: {phone}')
+            try:
+                from sms_counter import sms_count_add
+                sms_count_add()
+            except Exception:
+                pass
+            return True
         log.warning(f'Неизвестный SMS_PROVIDER: {provider}')
         return False
     except Exception as e:
