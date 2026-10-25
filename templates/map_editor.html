@@ -646,7 +646,16 @@ function deleteSelected() {
     if (!sel) return;
     if (!confirm(T.deleteConfirm)) return;
     csrfFetch('/api/map/delete-section',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:sel})})
-    .then(() => { sections=sections.filter(s=>s.id!==sel); deselectAll(); render(); });
+    .then(() => {
+        sections=sections.filter(s=>s.id!==sel);
+        deselectAll();
+        render();
+        fetch('/api/map/all').then(r=>r.json()).then(function(all){
+            sections = all.sections||[];
+            machines = all.machines||[];
+            render();
+        }).catch(function(){});
+    });
 }
 
 function assignMachineToSection() {
