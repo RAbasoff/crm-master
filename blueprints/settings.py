@@ -675,6 +675,8 @@ def sms_send_bulk():
         if send_sms(phone, text[:160]):
             sent.append((u.display_name or u.username) + ' ' + phone)
         else:
-            errors.append((u.display_name or u.username) + ': send failed')
+            from notify import SMS_LAST_ERROR
+            msg = (u.display_name or u.username) + ': ' + (SMS_LAST_ERROR or 'send failed')
+            errors.append(msg[:200])
     log_audit('sms', 'bulk', 0, f'sent={len(sent)} errors={len(errors)} text={text[:60]}')
     return jsonify({'ok': True, 'sent': sent, 'errors': errors})

@@ -20,6 +20,7 @@ import logging
 from datetime import datetime
 
 log = logging.getLogger('app.notify')
+SMS_LAST_ERROR = ''
 
 def _load_dotenv():
     """Прочитать .env рядом с программой в os.environ (без внешних зависимостей)."""
@@ -178,7 +179,15 @@ def send_sms(phone, text):
         log.warning(f'Неизвестный SMS_PROVIDER: {provider}')
         return False
     except Exception as e:
-        log.error(f'SMS ошибка: {e}')
+        global SMS_LAST_ERROR
+        body = ''
+        try:
+            if hasattr(e, 'read'):
+                body = e.read().decode('utf-8', 'replace')[:300]
+        except Exception:
+            pass
+        SMS_LAST_ERROR = (body or str(e))
+        log.error(f'SMS ошибка: {e} {body}')
         return False
 
 
