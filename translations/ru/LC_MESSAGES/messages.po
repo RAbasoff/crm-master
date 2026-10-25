@@ -6727,3 +6727,15 @@ msgstr "Выберите пользователей и введите сообщ
 
 msgid "No users"
 msgstr "Нет пользователей"
+
+msgid "Complete TWO"
+msgstr "Завершить TWO"
+
+msgid "What was done?"
+msgstr "Что было сделано?"
+
+msgid "Parts / materials"
+msgstr "Запчасти / материалы"
+
+msgid "Extra remarks"
+msgstr "Доп. замечания"

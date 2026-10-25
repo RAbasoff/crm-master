@@ -131,11 +131,18 @@ def send_sms(phone, text):
             import urllib.parse
             import urllib.request
             import base64
-            sid = _env('SMS_API_KEY')
-            token = _env('SMS_AUTH_TOKEN') or _env('SMS_API_SECRET')
+            # Account SID (AC...) for URL; API Key SID (SK...) or Account SID for Basic auth
+            key = _env('SMS_API_KEY')
+            account_sid = _env('SMS_ACCOUNT_SID') or (key if key.startswith('AC') else '')
+            api_key_sid = _env('SMS_API_KEY_SID') or (key if key.startswith('SK') else '')
+            secret = _env('SMS_API_SECRET') or _env('SMS_AUTH_TOKEN') or _env('SMS_CLIENT_SECRET')
+            auth_user = api_key_sid or account_sid
+            if not account_sid or not auth_user or not secret:
+                log.error(f'Twilio config incomplete: account_sid={bool(account_sid)} auth_user={bool(auth_user)} secret={bool(secret)}')
+                return False
             from_num = _env('SMS_FROM')
-            url = f'https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json'
-            auth = base64.b64encode(f'{sid}:{token}'.encode()).decode()
+            url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json'
+            auth = base64.b64encode(f'{auth_user}:{secret}'.encode()).decode()
             data = urllib.parse.urlencode({
                 'To': phone, 'From': from_num, 'Body': (text or '')[:160],
             }).encode()

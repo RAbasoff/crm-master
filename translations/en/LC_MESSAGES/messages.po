@@ -6486,3 +6486,15 @@ msgstr "Select users and enter message"
 
 msgid "No users"
 msgstr "No users"
+
+msgid "Complete TWO"
+msgstr "Complete TWO"
+
+msgid "What was done?"
+msgstr "What was done?"
+
+msgid "Parts / materials"
+msgstr "Parts / materials"
+
+msgid "Extra remarks"
+msgstr "Extra remarks"

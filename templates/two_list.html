@@ -57,7 +57,7 @@
                 {% elif o.section %}{{ o.section.name }}
                 {% else %}—{% endif %}
             </td>
-            <td>{% for w in o.workers %}{{ w.naam }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            <td>{{ o.workers|workers_for_user(current_user) }}</td>
             <td>{{ o.planned_date.strftime('%d-%m-%Y') if o.planned_date else '—' }}</td>
             <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">#{{ o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>
             <td>

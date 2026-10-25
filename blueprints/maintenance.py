@@ -1237,7 +1237,7 @@ def _parse_target_id(tid):
 def maintenance_plan_new():
     if request.method == 'POST':
         targets = request.form.getlist('target_ids')
-        title = (request.form.get('title') or '').strip() or 'ТО'
+        title = (request.form.get('title') or '').strip() or _('Maintenance')
         try:
             planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
         except (ValueError, KeyError):

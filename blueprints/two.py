@@ -25,6 +25,23 @@ def gen_two_number():
     num = next_number_suffix(TechnicalWorkOrder, 'number', f'TWO-{day}')
     return f'TWO-{day}-{num:04d}'
 
+
+def _load_machine_to_checklist(machine_id, period=None):
+    """Чек-лист ТО для машины из machine_to_checklist (по виду обслуживания)."""
+    try:
+        from models import db as _db
+        sql = "SELECT text FROM machine_to_checklist WHERE machine_id=:m AND is_active=1"
+        params = {'m': machine_id}
+        if period:
+            sql += " AND period=:p"
+            params['p'] = period
+        sql += " ORDER BY sort_order, id"
+        rows = _db.session.execute(_db.text(sql), params).fetchall()
+        return [r[0] for r in rows]
+    except Exception:
+        return []
+
+
 @bp.route('/two')
 @login_required
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
@@ -700,7 +717,22 @@ def two_complete(two_id):
     two.status = 'completed'
     two.completed_at = now_local()
     two.result = request.form.get('result', two.result)
-    # Do NOT auto-resolve linked fault — close manually
+    two.notes = request.form.get('notes', two.notes)
+    two.parts_used = request.form.get('parts_used', two.parts_used)
+    ts = safe_float(request.form.get('time_spent_hours'))
+    if ts is not None:
+        two.time_spent_hours = ts
+    # photos from work report
+    if 'photos' in request.files:
+        for photo in request.files.getlist('photos'):
+            if photo and photo.filename:
+                fn = save_uploaded_file(photo, prefix=f"two_{two.id}_")
+                if fn:
+                    try:
+                        from models import TWOPhoto
+                        db.session.add(TWOPhoto(two_id=two.id, filename=fn))
+                    except Exception:
+                        pass
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('two.two_detail', two_id=two.id))

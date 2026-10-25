@@ -6541,3 +6541,15 @@ msgstr "Selecteer gebruikers en voer een bericht in"
 
 msgid "No users"
 msgstr "Geen gebruikers"
+
+msgid "Complete TWO"
+msgstr "TWO afronden"
+
+msgid "What was done?"
+msgstr "Wat is er gedaan?"
+
+msgid "Parts / materials"
+msgstr "Onderdelen / materialen"
+
+msgid "Extra remarks"
+msgstr "Extra opmerkingen"

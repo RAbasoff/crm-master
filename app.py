@@ -40,6 +40,7 @@ def _load_env_file():
 
 _load_env_file()
 
+
 import io, json, time
 import qrcode
 from sqlalchemy import func, case
@@ -77,6 +78,26 @@ from security import enforce_mechanic_access, is_mechanic, is_floor_user, enforc
 
 from logs_util import setup_file_logging, log_info, log_error
 app = Flask(__name__)
+
+@app.template_filter('workers_for_user')
+def _workers_for_user(workers, user=None):
+    """Имена механиков: своё имя первым, напарник через / (Iqbal/Aristidis)."""
+    try:
+        names = [getattr(w, 'naam', None) or getattr(w, 'display_name', '') or '?' for w in (workers or [])]
+    except Exception:
+        names = []
+    if not names:
+        return ''
+    me = []
+    if user is not None and getattr(user, 'is_authenticated', False):
+        uname = ((getattr(user, 'display_name', '') or '') + ' ' + (getattr(user, 'username', '') or '')).lower()
+        uname = ' '.join(uname.split())
+        for n in list(names):
+            if n.lower() in uname or (uname and uname in n.lower()) or n.lower() == uname:
+                me.append(names.pop(names.index(n)))
+                break
+    return ' / '.join(me + names)
+
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config.from_object(Config)

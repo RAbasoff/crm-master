@@ -6298,3 +6298,15 @@ msgstr "Wybierz użytkowników i wpisz wiadomość"
 
 msgid "No users"
 msgstr "Brak użytkowników"
+
+msgid "Complete TWO"
+msgstr "Zakończ TWO"
+
+msgid "What was done?"
+msgstr "Co zostało zrobione?"
+
+msgid "Parts / materials"
+msgstr "Części / materiały"
+
+msgid "Extra remarks"
+msgstr "Dodatkowe uwagi"

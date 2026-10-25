@@ -647,7 +647,7 @@
         </div>
         
         <div class="topbar-right">
-            <button type="button" data-sms-open="1" onclick="openSmsModal(); return false;" style="background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;border:none;padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;margin-right:8px;box-shadow:0 2px 8px rgba(39,174,96,.35)">📱 SMS</button>
+            {% if can_use_sms %}<button type="button" data-sms-open="1" onclick="openSmsModal(); return false;" style="background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;border:none;padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;margin-right:8px;box-shadow:0 2px 8px rgba(39,174,96,.35)">📱 SMS</button>{% endif %}
         
             <!-- Admin: switch user (left of language) -->
             {% if is_admin or impersonate_admin_id %}
@@ -1526,10 +1526,10 @@
 
 <script src="/static/js/sms-modal.js?v=3"></script>
 
-<div id="smsFab" onclick="openSmsModal(); return false;" data-sms-open="1"
+{% if can_use_sms %}<div id="smsFab" onclick="openSmsModal(); return false;" data-sms-open="1"
      style="position:fixed;right:18px;bottom:18px;z-index:2600;cursor:pointer;background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;padding:16px 22px;border-radius:99px;font-weight:800;font-size:14px;box-shadow:0 8px 24px rgba(39,174,96,.4);user-select:none">
   📱 SMS
-</div>
+</div>{% endif %}
 
 <!-- SMS SEND MODAL (global) -->
 <div id="smsSendModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2500;overflow:auto">

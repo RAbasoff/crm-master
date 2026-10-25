@@ -83,6 +83,9 @@
         <h2>👷 {{ _('Workers') }}</h2>
         {% if two.workers %}
         <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <div style="background:#e8f5e9;padding:10px 14px;border-radius:8px;border:1px solid #c8e6c9;margin-bottom:8px">
+                <strong>{{ two.workers|workers_for_user(current_user) }}</strong>
+            </div>
             {% for w in two.workers %}
             <div style="background:#f0f7ff;padding:8px 12px;border-radius:8px">
                 <strong>{{ w.naam }}</strong>
@@ -128,6 +131,44 @@
         </div>
     </div>
 </div>
+
+
+{# Work report — for mechanics / head of TS #}
+{% if two.status not in ('completed', 'approved', 'cancelled') and (current_user.has_role('technician', 'admin', 'director') or current_user.worker_profile) %}
+<div class="card" style="margin-top:16px;border-left:4px solid #27ae60">
+    <h2>🛠 {{ _('Work report') }}</h2>
+    <form method="POST" action="/two/{{ two.id }}/complete" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">{{ _('Result') }}</label>
+                <textarea name="result" rows="4" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('What was done?') }}">{{ two.result or '' }}</textarea>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">{{ _('Parts used') }}</label>
+                <textarea name="parts_used" rows="4" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Parts / materials') }}">{{ two.parts_used or '' }}</textarea>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">{{ _('Time spent') }} ({{ _('hours') }})</label>
+                <input type="number" name="time_spent_hours" step="0.25" min="0" value="{{ two.time_spent_hours or '' }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">{{ _('Notes') }}</label>
+                <input type="text" name="notes" value="{{ two.notes or '' }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Extra remarks') }}">
+            </div>
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">📷 {{ _('Photos') }}</label>
+            <input type="file" name="photos" accept="image/*" capture="environment" multiple style="width:100%;padding:8px">
+        </div>
+        <button type="submit" class="btn" style="background:#27ae60;color:#fff;padding:12px 22px;font-weight:700">
+            ✅ {{ _('Complete TWO') }}
+        </button>
+    </form>
+</div>
+{% endif %}
 
 {% if two.result %}
 <div class="card" style="margin-top:16px">
