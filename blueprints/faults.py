@@ -517,6 +517,13 @@ def fault_new():
                     )
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
+            try:
+                from notify import notify_fault_created
+                from security import is_head_of_ts
+                head_users = [u for u in User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all()]
+                notify_fault_created(f, list(f.assigned_technicians or []), head_users)
+            except Exception as _ne:
+                print('notify_fault_created', _ne)
             add_work_report(f"{_('New fault')}: {f.title} — {target} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})")
 
             if f.priority == 'critical':
@@ -915,6 +922,13 @@ def fault_close(fault_id):
             return jsonify({'error': 'Save failed'}), 500
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
+    try:
+        from notify import notify_fault_done
+        ru = User.query.get(f.reporter_id) if f.reporter_id else None
+        heads = list(User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all())
+        notify_fault_done(f, ru, heads)
+    except Exception as _ne:
+        print('notify done', _ne)
     create_notification(f.reporter_id, 'Fault closed',
         f"{_('Your fault report has been closed')}: {f.title}. {close_notes}",
         'success',

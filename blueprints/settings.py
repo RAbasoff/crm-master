@@ -459,7 +459,8 @@ def api_map_all():
             'responsible': ', '.join(p.naam for p in s.responsible_persons) if s.responsible_persons else None
         })
     machines = []
-    for m in Machine.query.all():
+    from security import filter_machines_for_user
+    for m in filter_machines_for_user(Machine.query).all():
         machines.append({
             'id': m.id, 'name': m.name, 'status': m.status,
             'type': m.machine_type or '', 'serial': m.serial_number or '',
@@ -542,4 +543,55 @@ def _load_error_logs(limit=40):
             file_tail = [ln.rstrip() for ln in lines[-40:]]
     except Exception:
         pass
+    try:
+        from logs_util import read_log_tail
+        file_tail = read_log_tail('app.log', 40)
+        err_tail = read_log_tail('error.log', 20)
+        file_tail = file_tail + (['--- error.log ---'] + err_tail if err_tail else [])
+    except Exception:
+        pass
     return {'db': logs, 'file_tail': file_tail}
+
+@bp.route('/settings/logs/file/<filename>')
+@login_required
+@role_required('admin')
+def settings_logs_file(filename):
+    from flask import send_file
+    import os
+    fn = os.path.basename(filename)
+    if fn not in ('app.log', 'error.log'):
+        return jsonify({'error': 'not allowed'}), 400
+    from logs_util import log_file_path
+    path = log_file_path(fn)
+    if not os.path.exists(path):
+        return jsonify({'error': 'not found'}), 404
+    return send_file(path, as_attachment=True, download_name=fn)
+
+
+@bp.route('/api/settings/user/<int:user_id>/object-access', methods=['GET'])
+@login_required
+@role_required('admin')
+def api_user_object_access_get(user_id):
+    u = User.query.get_or_404(user_id)
+    return jsonify({
+        'ok': True,
+        'section_ids': [s.id for s in (getattr(u, 'visible_sections', None) or [])],
+        'hidden_machine_ids': [m.id for m in (getattr(u, 'hidden_machines', None) or [])],
+    })
+
+
+@bp.route('/api/settings/user/<int:user_id>/object-access', methods=['POST'])
+@login_required
+@role_required('admin')
+def api_user_object_access(user_id):
+    from models import FactorySection, Machine
+    u = User.query.get_or_404(user_id)
+    data = request.get_json() or {}
+    sec_ids = [int(x) for x in (data.get('section_ids') or []) if str(x).isdigit()]
+    hid_ids = [int(x) for x in (data.get('hidden_machine_ids') or []) if str(x).isdigit()]
+    u.visible_sections = FactorySection.query.filter(FactorySection.id.in_(sec_ids)).all() if sec_ids else []
+    u.hidden_machines = Machine.query.filter(Machine.id.in_(hid_ids)).all() if hid_ids else []
+    if not safe_commit():
+        return jsonify({'ok': False, 'error': 'save failed'}), 500
+    log_audit('update', 'user_access', u.id, f'object-access sections={sec_ids} hidden={hid_ids}')
+    return jsonify({'ok': True})

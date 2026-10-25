@@ -76,6 +76,18 @@ section_responsible = db.Table('section_responsible',
     db.Column('person_id', db.Integer, db.ForeignKey('client.id'), primary_key=True)
 )
 
+# Пользователь → видимые участки (пусто = без ограничения по участкам)
+user_section_allow = db.Table('user_section_allow',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('section_id', db.Integer, db.ForeignKey('factory_section.id'), primary_key=True)
+)
+
+# Исключение: станок скрыт у пользователя (даже на своём участке)
+user_machine_deny = db.Table('user_machine_deny',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('machine_id', db.Integer, db.ForeignKey('machine.id'), primary_key=True)
+)
+
 # ============================================================
 # USER MODELS
 # ============================================================
@@ -101,6 +113,8 @@ class User(UserMixin, db.Model):
     fire_date = db.Column(db.Date)
     # Постоянный доступ без привязки к графику (вне work-hours / idle logout)
     work_hours_exempt = db.Column(db.Boolean, default=False)
+    visible_sections = db.relationship('FactorySection', secondary=lambda: user_section_allow, backref='allowed_users')
+    hidden_machines = db.relationship('Machine', secondary=lambda: user_machine_deny, backref='hidden_from_users')
     # Язык интерфейса и уведомлений (ru/nl/en/pl)
     preferred_language = db.Column(db.String(5))
     created_at = db.Column(db.DateTime, default=now_local)

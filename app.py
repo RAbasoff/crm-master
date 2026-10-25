@@ -39,12 +39,13 @@ from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    check_tool_wear_notifications, safe_commit, add_work_report,
                    safe_int, safe_float, safe_date, find_pdf_font, ensure_fpdf,
                    is_user_at_work, user_schedule_restricted)
-from security import enforce_mechanic_access, is_mechanic, is_floor_user, enforce_floor_access
+from security import enforce_mechanic_access, is_mechanic, is_floor_user, enforce_floor_access, filter_machines_for_user, get_user_section_ids
 
 # ============================================================
 # APP CONFIG
 # ============================================================
 
+from logs_util import setup_file_logging, log_info, log_error
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24 * 7  # 7 days (was: unlimited)
@@ -134,6 +135,10 @@ from blueprints.push import bp as push_api_bp
 app.register_blueprint(push_api_bp)
 
 csrf = CSRFProtect(app)
+try:
+    setup_file_logging()
+except Exception:
+    pass
 db.init_app(app)
 
 # SQLite concurrency: enable WAL mode + busy_timeout on every new connection
@@ -1151,6 +1156,51 @@ def _get_user_two_plan(user, limit=20):
             .limit(limit).all())
 
 
+def _get_blocking_open_two(user):
+    """Незакрытый TWO (не заявка) — блокирует следующую работу."""
+    from models import Monteur, TechnicalWorkOrder, two_workers
+    if not user or not getattr(user, 'id', None):
+        return None
+    monteur = Monteur.query.filter_by(user_id=user.id).first()
+    if not monteur:
+        return None
+    return (TechnicalWorkOrder.query
+            .join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id)
+            .filter(two_workers.c.worker_id == monteur.id)
+            .filter(TechnicalWorkOrder.status.notin_(['completed', 'cancelled', 'done', 'closed', 'finished']))
+            .filter(TechnicalWorkOrder.fault_id.is_(None))  # заявки не блокируем
+            .order_by(TechnicalWorkOrder.planned_date.asc().nullslast(),
+                      TechnicalWorkOrder.created_at.asc())
+            .first())
+
+
+def _get_today_to_plans(user, limit=20):
+    """План ТО на сегодня из календаря для машин/участков механика."""
+    from models import Monteur, MaintenancePlan, two_workers
+    if not user or not getattr(user, 'id', None):
+        return []
+    today = now_local().date()
+    q = MaintenancePlan.query.filter(
+        MaintenancePlan.status.notin_(('completed', 'cancelled')),
+    )
+    # если есть назначенные TWO — берём машины из них, иначе все открытые планы
+    monteur = Monteur.query.filter_by(user_id=user.id).first()
+    machine_ids = set()
+    if monteur:
+        twos = (TechnicalWorkOrder.query
+                .join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id)
+                .filter(two_workers.c.worker_id == monteur.id)
+                .filter(TechnicalWorkOrder.status.notin_(['completed', 'cancelled']))
+                .all())
+        for t in twos:
+            if t.machine_id:
+                machine_ids.add(t.machine_id)
+    if machine_ids:
+        q = q.filter(MaintenancePlan.machine_id.in_(list(machine_ids)))
+    plans = q.order_by(MaintenancePlan.planned_start.asc()).limit(limit).all()
+    return [p for p in plans if p.planned_start and (today <= p.window_end_date())]
+
+
 @app.route('/me-day-plan')
 @login_required
 def me_day_plan():
@@ -1158,6 +1208,8 @@ def me_day_plan():
     if not (current_user.has_role('admin', 'technician') or getattr(current_user, 'username', '') == 'director'):
         return redirect(url_for('index'))
     orders = _get_user_two_plan(current_user)
+    blocker = _get_blocking_open_two(current_user)
+    to_plans = _get_today_to_plans(current_user)
     today = datetime.now().date()
     today_orders = [o for o in orders if o.planned_date == today]
     later_orders = [o for o in orders if o.planned_date and o.planned_date > today]
@@ -1166,6 +1218,8 @@ def me_day_plan():
                            today_orders=today_orders,
                            later_orders=later_orders,
                            no_date_orders=no_date_orders,
+                           to_plans=to_plans,
+                           blocker=blocker,
                            all_orders=orders, today=today)
 
 
@@ -1252,7 +1306,7 @@ def change_password():
 @login_required
 def floor_plan():
     if current_user.has_role('admin', 'director'):
-        machines = Machine.query.all()
+        machines = filter_machines_for_user(Machine.query).all()
         sections = FactorySection.query.all()
     elif hasattr(current_user, '_person') and current_user.role == 'responsible':
         # Responsible person — show only their sections and machines

@@ -153,6 +153,74 @@ def can_close_or_reopen(user=None):
     return is_head_of_ts(user)
 
 
+def get_user_section_ids(user):
+    """Участки, которые видит пользователь. None = без ограничений."""
+    u = user or current_user
+    if not (u and getattr(u, 'is_authenticated', False)):
+        return None
+    if getattr(u, 'role', '') in ('admin', 'director', 'technician'):
+        return None
+    # ответственный: свои участки
+    if hasattr(u, '_person'):
+        try:
+            secs = list(u._person.resp_sections or [])
+            return {s.id for s in secs} if secs else None
+        except Exception:
+            return None
+    # обычный user: таблица user_section_allow
+    try:
+        secs = list(getattr(u, 'visible_sections', None) or [])
+        if secs:
+            return {s.id for s in secs}
+    except Exception:
+        pass
+    # fallback: User.person_id → Verantwoordelijke.resp_sections
+    try:
+        pid = getattr(u, 'person_id', None)
+        if pid:
+            from models import Verantwoordelijke
+            person = Verantwoordelijke.query.get(pid)
+            if person and person.resp_sections:
+                return {s.id for s in person.resp_sections}
+    except Exception:
+        pass
+    return None
+
+
+def get_hidden_machine_ids(user):
+    u = user or current_user
+    try:
+        return {m.id for m in (getattr(u, 'hidden_machines', None) or [])}
+    except Exception:
+        return set()
+
+
+def filter_machines_for_user(query, user=None):
+    """SQLAlchemy query: только видимые станки пользователя."""
+    from models import Machine
+    u = user or current_user
+    sec_ids = get_user_section_ids(u)
+    hidden = get_hidden_machine_ids(u)
+    q = query
+    if sec_ids is not None:
+        q = q.filter(Machine.section_id.in_(list(sec_ids)))
+    if hidden:
+        q = q.filter(~Machine.id.in_(list(hidden)))
+    return q
+
+
+def machine_visible_for_user(machine, user=None):
+    u = user or current_user
+    if not machine:
+        return False
+    sec_ids = get_user_section_ids(u)
+    if sec_ids is not None and (machine.section_id or 0) not in sec_ids:
+        return False
+    if machine.id in get_hidden_machine_ids(u):
+        return False
+    return True
+
+
 def mechanic_denied_endpoint(endpoint):
     """True, если механику нельзя на этот endpoint."""
     if not endpoint:

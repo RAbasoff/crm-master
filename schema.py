@@ -355,6 +355,16 @@ def ensure_schema():
             worker_id INTEGER NOT NULL REFERENCES worker(id),
             PRIMARY KEY (plan_id, worker_id)
         )"""),
+        ("user_section_allow", """CREATE TABLE IF NOT EXISTS user_section_allow (
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            section_id INTEGER NOT NULL REFERENCES factory_section(id),
+            PRIMARY KEY (user_id, section_id)
+        )"""),
+        ("user_machine_deny", """CREATE TABLE IF NOT EXISTS user_machine_deny (
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            machine_id INTEGER NOT NULL REFERENCES machine(id),
+            PRIMARY KEY (user_id, machine_id)
+        )"""),
         ("machine_to_checklist", """CREATE TABLE IF NOT EXISTS machine_to_checklist (
             id INTEGER PRIMARY KEY,
             machine_id INTEGER NOT NULL REFERENCES machine(id),

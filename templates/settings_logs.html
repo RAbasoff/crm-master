@@ -23,7 +23,12 @@
 </div>
 
 <div class="card">
-    <h2 style="margin:0 0 10px;font-size:15px">📄 {{ _('File log (tail)') }}</h2>
+    <h2 style="margin:0 0 10px;font-size:15px">📄 {{ _('File log') }}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <a href="/settings/logs/file/app.log" class="btn btn-sm" style="background:#eee">⬇ app.log</a>
+        <a href="/settings/logs/file/error.log" class="btn btn-sm" style="background:#eee">⬇ error.log</a>
+        <span style="font-size:11px;color:#888;align-self:center">YYYY-MM-DD HH:MM:SS [LEVEL] logger: message</span>
+    </div>
     <pre id="fileTail" style="background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;font-size:11px;max-height:320px;overflow:auto;white-space:pre-wrap">…</pre>
 </div>
 

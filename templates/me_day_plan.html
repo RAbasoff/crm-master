@@ -35,6 +35,32 @@ h1{font-size:20px;font-weight:800;margin-bottom:4px}
 <h1>🔧 {{ _('My day plan') }}</h1>
 <div class="sub">{{ current_user.display_name or current_user.username }} · {{ today.strftime('%d.%m.%Y') }}</div>
 
+{% if blocker %}
+<div style="background:#fff3cd;border:2px solid #f39c12;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px">
+    ⚠️ <b>{{ _('Close the previous TWO first') }}</b>:
+    <a href="/two/{{ blocker.id }}" style="color:#e67e22;font-weight:700">{{ blocker.number }}</a>
+    — {{ _('next planned work is locked until this is closed (signed)') }}.
+    <span style="display:block;margin-top:4px;font-size:11px;color:#888">{{ _('Fault reports can still be done.') }}</span>
+</div>
+{% endif %}
+
+{% if to_plans %}
+<div class="sec">🗓 {{ _('TO plan') }} ({{ to_plans|length }})</div>
+{% for p in to_plans %}
+<div class="order" style="border-left-color:#8e44ad">
+    <div class="top">
+        <span class="num" style="color:#bb8fce">TO</span>
+        <span class="date">{{ p.planned_start.strftime('%d-%m') }} – {{ p.window_end_date().strftime('%d-%m') }}</span>
+    </div>
+    <div class="title">{{ (p.title or '')[:100] }}</div>
+    <div class="meta">
+        {% if p.machine %}⚙️ {{ p.machine.name }}{% endif %}
+        {% if p.worker %} · 👤 {{ p.worker.naam }}{% endif %}
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
 {% if today_orders %}
 <div class="sec">📅 {{ _('Today') }} ({{ today_orders|length }})</div>
 {% for o in today_orders %}
@@ -47,6 +73,12 @@ h1{font-size:20px;font-weight:800;margin-bottom:4px}
     <div class="meta">
         {% if o.machine %}⚙️ {{ o.machine.name }}{% endif %}
         {% if o.section %} · 🏭 {{ o.section.name }}{% endif %}
+        {% if o.workers and o.workers|length > 1 %}
+        · 👥
+        {% for w in o.workers %}
+        <span style="background:#f39c12;color:#fff;padding:1px 8px;border-radius:99px;font-weight:700;font-size:11px">{{ w.naam }}</span>
+        {% endfor %}
+        {% endif %}
     </div>
     <span class="st st-{{ o.status }}">{{ o.status }}</span>
 </a>
