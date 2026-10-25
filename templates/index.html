@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Dashboard') }} — ProMaster{% endblock %}
 {% block content %}
+<script>
+function loadSms(){
+  fetch('/api/settings/sms-stats').then(function(r){return r.json();}).then(function(d){
+    var a=document.getElementById('smsToday'); if(a) a.textContent=d.today;
+    var b=document.getElementById('smsMonth'); if(b) b.textContent=d.month;
+    var c=document.getElementById('smsLeft'); if(c) c.textContent=d.left_month;
+  }).catch(function(){});
+}
+loadSms(); setInterval(loadSms, 30000);
+</script>
 
 <!-- MY WORK — механик / начальник ТС / админ (НЕ директор) -->
 {% if current_user.has_role('technician', 'admin') or current_user.worker_profile %}
@@ -71,48 +81,11 @@
 </div>
 
 
-{% if current_user.has_role('admin') or current_user.username == 'director' or current_user.has_role('director') %}
-<div class="card" style="margin-bottom:12px;border-left:4px solid #27ae60">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="font-size:20px">📱</div>
-        <div style="flex:1;min-width:160px">
-            <div style="font-size:11px;color:#888;text-transform:uppercase">{{ _('SMS') }}</div>
-            <div style="font-size:18px;font-weight:800">
-                <span id="smsToday">{{ sms_stats.today if sms_stats else 0 }}</span> {{ _('today') }}
-                · <span id="smsMonth">{{ sms_stats.month if sms_stats else 0 }}</span>/350 {{ _('this month') }}
-            </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-            <div style="font-size:12px;color:#888">{{ _('Left this month') }}: <b id="smsLeft">{{ sms_stats.left_month if sms_stats else 350 }}</b></div>
-            <button type="button" class="btn btn-sm" style="background:#27ae60;color:#fff" onclick="sendSmsTest(this)">{{ _('Send test SMS') }}</button>
-        </div>
-        <script>
-        function sendSmsTest(btn){
-            btn.disabled = true;
-            fetch('/api/settings/sms-test', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':(document.querySelector('meta[name=\'csrf-token\']')||{}).content||''}})
-            .then(function(r){return r.json();}).then(function(d){
-                btn.disabled = false;
-                alert(d.ok ? 'OK: ' + (d.phone||'') : (d.error||'fail'));
-            }).catch(function(){ btn.disabled = false; alert('error'); });
-        }
-        </script>
-    </div>
-</div>
-<script>
-(function(){
-  function loadSms(){
-    fetch('/api/settings/sms-stats').then(function(r){return r.json();}).then(function(d){
-      var a=document.getElementById('smsToday'); if(a) a.textContent=d.today;
-      var b=document.getElementById('smsMonth'); if(b) b.textContent=d.month;
-      var c=document.getElementById('smsLeft'); if(c) c.textContent=d.left_month;
-    }).catch(function(){});
-  }
-  loadSms();
-  setInterval(loadSms, 30000);
-})();
-</script>
-{% endif %}
 
+
+{% if current_user.has_role('admin') %}
+<div class="card" id="smsBox" style="margin-bottom:12px">📱 SMS: <span id="smsToday">0</span> · <span id="smsMonth">0</span>/350</div>
+{% endif %}
 <!-- CLOCK IN / OUT (механики) -->
 {% set is_mech = current_user.has_role('technician') or current_user.worker_profile %}
 {% if is_mech %}
