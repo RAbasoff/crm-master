@@ -454,7 +454,10 @@ def _bootstrap_password(env_key):
 
 
 def get_current_locale():
-    # 1) preferred_language пользователя, 2) session, 3) default nl
+    """Язык: явный выбор пользователя (сессия) > preferred_language > nl."""
+    lang = session.get('lang')
+    if lang in ('nl', 'en', 'ru', 'pl'):
+        return lang
     try:
         if current_user.is_authenticated:
             pl = getattr(current_user, 'preferred_language', None)
@@ -462,9 +465,6 @@ def get_current_locale():
                 return pl
     except Exception:
         pass
-    lang = session.get('lang')
-    if lang in ('nl', 'en', 'ru', 'pl'):
-        return lang
     return 'nl'
 
 babel = Babel(app, locale_selector=get_current_locale)
@@ -798,6 +798,13 @@ def offline_queue_response(response):
 def set_language(lang):
     if lang in LANGUAGES:
         session['lang'] = lang
+        session.modified = True
+        try:
+            if current_user.is_authenticated and isinstance(getattr(current_user, 'id', None), int):
+                current_user.preferred_language = lang
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/reset-role')
