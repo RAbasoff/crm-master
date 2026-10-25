@@ -3330,7 +3330,7 @@ msgid "Nothing found"
 msgstr "Ничего не найдено"
 
 msgid "OK"
-msgstr "OK"
+msgstr "Понятно"
 
 msgid "Object"
 msgstr "Объект"
@@ -5258,7 +5258,7 @@ msgid "Nothing to save"
 msgstr "Нечего сохранять"
 
 msgid "Offline"
-msgstr "Офлайн"
+msgstr "Оффлайн"
 
 msgid "On Stock"
 msgstr "На складе"
@@ -6682,3 +6682,33 @@ msgstr "Полугодово"
 
 msgid "Machines and other equipment are in separate lists"
 msgstr "Станки и прочее оборудование — в отдельных списках"
+
+msgid "Offline queue"
+msgstr "Оффлайн-очередь"
+
+msgid "Sync"
+msgstr "Синхронизировать"
+
+msgid "Data is saved on the device when offline."
+msgstr "Данные без интернета сохраняются на устройстве."
+
+msgid "Install ProMaster"
+msgstr "Установить ProMaster"
+
+msgid "Install on iPhone"
+msgstr "Установить на iPhone"
+
+msgid "The app will open from the icon like a normal app"
+msgstr "Программа откроется с иконки как обычное приложение"
+
+msgid "Open the site in"
+msgstr "Откройте сайт в"
+
+msgid "Share"
+msgstr "Поделиться"
+
+msgid "Add to Home Screen"
+msgstr "На экран «Домой»"
+
+msgid "After install open CRM from the icon"
+msgstr "После установки открывайте CRM с иконки"

@@ -6496,3 +6496,33 @@ msgstr "Halfjaarlijks"
 
 msgid "Machines and other equipment are in separate lists"
 msgstr "Machines en overig apparatuur staan in aparte lijsten"
+
+msgid "Offline queue"
+msgstr "Offline-wachtrij"
+
+msgid "Sync"
+msgstr "Synchroniseren"
+
+msgid "Data is saved on the device when offline."
+msgstr "Gegevens worden opgeslagen op het apparaat zonder internet."
+
+msgid "Install ProMaster"
+msgstr "Installeer ProMaster"
+
+msgid "Install on iPhone"
+msgstr "Installeer op iPhone"
+
+msgid "The app will open from the icon like a normal app"
+msgstr "De app opent vanaf het icoon zoals een normale app"
+
+msgid "Open the site in"
+msgstr "Open de site in"
+
+msgid "Share"
+msgstr "Delen"
+
+msgid "Add to Home Screen"
+msgstr "Zet op beginscherm"
+
+msgid "After install open CRM from the icon"
+msgstr "Open na installatie CRM vanaf het icoon"
