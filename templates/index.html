@@ -73,10 +73,22 @@ loadSms(); setInterval(loadSms, 30000);
 <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden">
     <div style="position:absolute;top:-20px;right:-20px;width:160px;height:160px;background:rgba(91,156,246,0.1);border-radius:50%"></div>
     <div style="position:absolute;bottom:-30px;right:60px;width:100px;height:100px;background:rgba(91,156,246,0.06);border-radius:50%"></div>
-    <div style="position:relative;z-index:1">
-        <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px">{{ _('Welcome back') }}</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:4px">{{ current_user.display_name or current_user.username }}</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.5)">{{ now.strftime('%A, %d %B %Y') if now else '' }}</div>
+    <div style="position:relative;z-index:1;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px">{{ _('Welcome back') }}</div>
+            <div style="font-size:22px;font-weight:800;margin-bottom:4px">{{ current_user.display_name or current_user.username }}</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.5)">{{ now.strftime('%A, %d %B %Y') if now else '' }}</div>
+        </div>
+        {% if current_user.has_role('admin') or current_user.username == 'director' %}
+        <div style="margin-left:auto;margin-right:48px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:12px 22px;text-align:center;min-width:200px">
+            <div style="font-size:11px;opacity:.75;letter-spacing:.5px">📱 SMS</div>
+            <div style="font-size:18px;font-weight:800">
+                <span id="smsToday">{{ sms_stats.today if sms_stats else 0 }}</span> {{ _('today') }}
+                · <span id="smsMonth">{{ sms_stats.month if sms_stats else 0 }}</span>/350
+            </div>
+            <div style="font-size:11px;opacity:.8">{{ _('Left') }}: <b id="smsLeft">{{ sms_stats.left_month if sms_stats else 350 }}</b></div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
