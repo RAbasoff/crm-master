@@ -1,87 +1,147 @@
-<!-- ==================== TAB: ACCESS RIGHTS ==================== -->
+<!-- ==================== TAB: ACCESS RIGHTS (ONE PLACE) ==================== -->
 <div id="tab-content-access" class="tab-content" style="display:none">
     <div class="card">
-        <h2 style="margin-bottom:16px">🔐 {{ _('Access Rights by Module') }}</h2>
-        <p style="font-size:12px;color:#888;margin-bottom:16px">{{ _('Check modules each user/Responsible can access. Press Save to apply.') }}</p>
+        <h2 style="margin-bottom:8px">🔐 {{ _('Access Rights') }}</h2>
+        <p style="font-size:12px;color:#888;margin-bottom:12px">
+            {{ _('One place: modules, factory sections, hidden machines.') }}
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button type="button" class="btn btn-sm" style="background:#27ae60;color:#fff" onclick="saveAllAccess()">💾 {{ _('Save All') }}</button>
+            <button type="button" class="btn btn-sm" style="background:#eee" onclick="expandAllAccess(true)">{{ _('Expand all') }}</button>
+            <button type="button" class="btn btn-sm" style="background:#eee" onclick="expandAllAccess(false)">{{ _('Collapse all') }}</button>
+        </div>
 
-        {% for section in sections_tree %}
-        <div style="margin-bottom:12px;background:#f8f9fa;border-radius:10px;overflow:hidden">
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1a1a2e;color:white;cursor:pointer"
-                 onclick="var g=this.nextElementSibling;g.style.display=g.style.display==='none'?'block':'none';this.querySelector('.arr').textContent=g.style.display==='none'?'▶':'▼'">
-                <span class="arr" style="font-size:10px;opacity:0.6">▼</span>
-                <span style="font-size:10px">{{ section.icon }}</span>
-                <strong style="font-size:13px">{{ section.group }}</strong>
+        {% for u in users %}
+        <div class="access-user-block" data-user="{{ u.id }}" style="border:1px solid #e8ecf1;border-radius:10px;margin-bottom:8px;overflow:hidden">
+            <div onclick="toggleAccessBlock(this)" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;background:#f8fafc">
+                <span class="arr" style="font-size:10px;opacity:.5">▶</span>
+                <div style="width:32px;height:32px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#3498db{% elif u.role=='director' %}#f39c12{% else %}#27ae60{% endif %};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">
+                    {{ (u.display_name or u.username)[:1]|upper }}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:13px">{{ u.display_name or u.username }} <span style="font-weight:400;color:#888;font-size:11px">({{ u.username }})</span></div>
+                    <div style="font-size:11px;color:#888">{{ u.role }}{% if u.work_hours_exempt %} · 24/7{% endif %}</div>
+                </div>
+                {% if u.role == 'admin' %}
+                <span style="font-size:11px;color:#27ae60;font-weight:700">✓ {{ _('always on') }}</span>
+                {% else %}
+                <div style="display:flex;gap:4px">
+                    <button type="button" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#27ae60;color:#fff" onclick="event.stopPropagation();selectAllUser({{ u.id }}, true)">All</button>
+                    <button type="button" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#e74c3c;color:#fff" onclick="event.stopPropagation();selectAllUser({{ u.id }}, false)">None</button>
+                </div>
+                {% endif %}
             </div>
-            <div style="display:block">
-                <table style="width:100%;border-collapse:collapse;font-size:11px">
-                    <tr>
-                        <th style="text-align:left;padding:6px 14px;color:#888;font-weight:600;width:200px">{{ _('Module') }}</th>
-                        {% for u in users %}
-                        <th style="text-align:center;padding:6px 4px;min-width:50px">
-                            <div style="font-size:10px;font-weight:600;color:#555">{{ (u.display_name or u.username)[:6] }}</div>
-                        </th>
+            {% if u.role != 'admin' %}
+            <div class="access-body" style="display:none;padding:12px">
+                <!-- MODULES -->
+                <div style="margin-bottom:12px">
+                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🧩 {{ _('Modules') }}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        {% for section in sections_tree %}
+                        <div style="width:100%;margin-bottom:4px">
+                            <div style="font-size:11px;color:#666;font-weight:600;margin-bottom:2px">{{ section.icon }} {{ section.group }}</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                                {% for key, name, icon in section.entries %}
+                                <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:{% if u.has_section_access(key) %}#e8f5e9{% else %}#f5f7fa{% endif %};border:1px solid {% if u.has_section_access(key) %}#a5d6a7{% else %}#e0e0e0{% endif %}">
+                                    <input type="checkbox" class="access-cb user-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if u.has_section_access(key) %}checked{% endif %} style="width:14px;height:14px">
+                                    <span>{{ icon }} {{ name }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
                         {% endfor %}
-                        {% for r in responsible_list %}
-                        <th style="text-align:center;padding:6px 4px;min-width:50px">
-                            <div style="font-size:10px;font-weight:600;color:#e67e22">{{ r.naam[:6] }}</div>
-                        </th>
+                    </div>
+                </div>
+
+                <!-- SECTIONS (factory map) -->
+                <div style="margin-bottom:12px">
+                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🏭 {{ _('Factory sections') }}
+                        <small style="font-weight:400;color:#888">({{ _('empty = all sections') }})</small>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        {% for s in factory_sections %}
+                        <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:#eef6ff;border:1px solid #b3d4f5">
+                            <input type="checkbox" class="sec-cb user-{{ u.id }}" data-user="{{ u.id }}" data-section-id="{{ s.id }}"
+                                   {% if u.visible_sections and s in u.visible_sections %}checked{% endif %}
+                                   style="width:14px;height:14px">
+                            <span>{{ s.name }}</span>
+                        </label>
                         {% endfor %}
-                    </tr>
-                    {% for key, name, icon in section.entries %}
-                    <tr style="border-top:1px solid #e8ecf1">
-                        <td style="padding:5px 14px">{{ icon }} {{ name }}</td>
-                        {% for u in users %}
-                        <td style="text-align:center;padding:4px">
-                            {% if u.role == 'admin' %}
-                            <span style="color:#27ae60;font-size:14px" title="Admin: always enabled">✓</span>
-                            {% else %}
-                            <input type="checkbox"
-                                   class="access-cb user-{{ u.id }}"
-                                   data-user="{{ u.id }}"
-                                   data-section="{{ key }}"
-                                   {% if u.has_section_access(key) %}checked{% endif %}
-                                   style="width:15px;height:15px;cursor:pointer">
-                            {% endif %}
-                        </td>
+                    </div>
+                </div>
+
+                <!-- HIDDEN MACHINES -->
+                <div>
+                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🚫 {{ _('Hidden machines (exceptions)') }}</div>
+                    <select multiple class="hid-mach user-{{ u.id }}" data-user="{{ u.id }}" size="5"
+                            style="width:100%;min-height:100px;font-size:11px;padding:6px;border:1px solid #ddd;border-radius:8px">
+                        {% for m in all_machines %}
+                        <option value="{{ m.id }}" {% if u.hidden_machines and m in u.hidden_machines %}selected{% endif %}>
+                            {{ m.name }}{% if m.section %} ({{ m.section.name }}){% endif %}
+                        </option>
                         {% endfor %}
-                        {% for r in responsible_list %}
-                        <td style="text-align:center;padding:4px">
-                            <input type="checkbox"
-                                   class="access-cb resp-{{ r.id }}"
-                                   data-responsible="{{ r.id }}"
-                                   data-section="{{ key }}"
+                    </select>
+                    <small style="color:#888;font-size:11px">{{ _('Ctrl+click to select several. Selected = hidden from this user.') }}</small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% for r in responsible_list %}
+        <div class="access-user-block" data-responsible="{{ r.id }}" style="border:1px solid #f0d0a0;border-radius:10px;margin-bottom:8px;overflow:hidden">
+            <div onclick="toggleAccessBlock(this)" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;background:#fff8f0">
+                <span class="arr" style="font-size:10px;opacity:.5">▶</span>
+                <div style="width:32px;height:32px;border-radius:50%;background:#e67e22;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">
+                    {{ (r.naam or '?')[:1]|upper }}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:13px">{{ r.naam }}</div>
+                    <div style="font-size:11px;color:#888">{{ _('Responsible') }}</div>
+                </div>
+                <div style="display:flex;gap:4px">
+                    <button type="button" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#27ae60;color:#fff" onclick="event.stopPropagation();selectAllResp({{ r.id }}, true)">All</button>
+                    <button type="button" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#e74c3c;color:#fff" onclick="event.stopPropagation();selectAllResp({{ r.id }}, false)">None</button>
+                </div>
+            </div>
+            <div class="access-body" style="display:none;padding:12px">
+                <div style="margin-bottom:12px">
+                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🏭 {{ _('Factory sections') }}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        {% for s in factory_sections %}
+                        <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:#eef6ff;border:1px solid #b3d4f5">
+                            <input type="checkbox" class="resp-sec" data-responsible="{{ r.id }}" data-section-id="{{ s.id }}"
+                                   {% if s in r.resp_sections %}checked{% endif %}
+                                   style="width:14px;height:14px">
+                            <span>{{ s.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🧩 {{ _('Modules') }}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        {% for section in sections_tree %}
+                        {% for key, name, icon in section.entries %}
+                        <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:{% if r.id in responsible_access and key in responsible_access[r.id] %}#e8f5e9{% else %}#f5f7fa{% endif %};border:1px solid {% if r.id in responsible_access and key in responsible_access[r.id] %}#a5d6a7{% else %}#e0e0e0{% endif %}">
+                            <input type="checkbox" class="access-cb resp-{{ r.id }}" data-responsible="{{ r.id }}" data-section="{{ key }}"
                                    {% if r.id in responsible_access and key in responsible_access[r.id] %}checked{% endif %}
-                                   style="width:15px;height:15px;cursor:pointer">
-                        </td>
+                                   style="width:14px;height:14px">
+                            <span>{{ icon }} {{ name }}</span>
+                        </label>
                         {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </table>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
         {% endfor %}
 
-        <!-- Quick actions + Save -->
-        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center">
-            <button onclick="saveAllAccess()" class="btn btn-primary" style="padding:8px 24px;font-size:13px">💾 {{ _('Save All') }}</button>
-            {% for u in users if u.role != 'admin' %}
-            <div style="padding:8px 12px;background:white;border-radius:8px;border:1px solid #ddd">
-                <strong style="font-size:11px">{{ u.display_name or u.username }}</strong>
-                <div style="margin-top:4px;display:flex;gap:4px">
-                    <button onclick="selectAllUser({{ u.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#27ae60;color:white">All</button>
-                    <button onclick="selectAllUser({{ u.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#e74c3c;color:white">None</button>
-                </div>
-            </div>
-            {% endfor %}
-            {% for r in responsible_list %}
-            <div style="padding:8px 12px;background:white;border-radius:8px;border:1px solid #e67e22">
-                <strong style="font-size:11px;color:#e67e22">{{ r.naam }}</strong>
-                <div style="margin-top:4px;display:flex;gap:4px">
-                    <button onclick="selectAllResp({{ r.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#27ae60;color:white">All</button>
-                    <button onclick="selectAllResp({{ r.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:2px 6px;background:#e74c3c;color:white">None</button>
-                </div>
-            </div>
-            {% endfor %}
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" onclick="saveAllAccess()" class="btn btn-primary" style="padding:10px 28px;font-size:13px">💾 {{ _('Save All') }}</button>
         </div>
+        <p style="font-size:11px;color:#888;margin-top:8px">
+            {{ _('Empty sections = all. Selected hidden machines are never shown.') }}
+        </p>
     </div>
 </div>

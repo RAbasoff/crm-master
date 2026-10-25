@@ -129,7 +129,7 @@ def settings():
         responsible_access=responsible_access, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
         top_machines_faults=top_machines_faults,
-        sections_tree=SECTIONS_TREE,
+        sections_tree=SECTIONS_TREE, factory_sections=FactorySection.query.order_by(FactorySection.name).all(), all_machines=Machine.query.order_by(Machine.name).all(),
         license_info=license_info)
 
 

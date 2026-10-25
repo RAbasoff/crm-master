@@ -887,3 +887,50 @@ function dropMachine(event, targetType, targetId) {
 }
 </script>
 {% endblock %}
+
+<script>
+function toggleAccessBlock(header) {
+    const body = header.nextElementSibling;
+    if (!body || !body.classList.contains('access-body')) return;
+    const open = body.style.display === 'block';
+    body.style.display = open ? 'none' : 'block';
+    const arr = header.querySelector('.arr');
+    if (arr) arr.textContent = open ? '▶' : '▼';
+}
+function expandAllAccess(open) {
+    document.querySelectorAll('.access-body').forEach(b => { b.style.display = open ? 'block' : 'none'; });
+    document.querySelectorAll('.access-user-block .arr').forEach(a => { a.textContent = open ? '▼' : '▶'; });
+}
+function saveAllAccessObject() {
+    const jobs = [];
+    const userSecs = {};
+    document.querySelectorAll('input.sec-cb[data-user]').forEach(cb => {
+        const uid = cb.dataset.user;
+        userSecs[uid] = userSecs[uid] || [];
+        if (cb.checked) userSecs[uid].push(parseInt(cb.dataset.sectionId, 10));
+    });
+    const userHid = {};
+    document.querySelectorAll('select.hid-mach[data-user]').forEach(sel => {
+        userHid[sel.dataset.user] = Array.from(sel.selectedOptions).map(o => parseInt(o.value, 10));
+    });
+    const ids = Object.keys(userSecs).concat(Object.keys(userHid));
+    ids.filter((v,i,a)=>a.indexOf(v)===i).forEach(uid => {
+        jobs.push(csrfFetch('/api/settings/user/' + uid + '/object-access', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                section_ids: userSecs[uid] || [],
+                hidden_machine_ids: userHid[uid] || []
+            })
+        }));
+    });
+    return Promise.all(jobs);
+}
+const _origSaveAllAccess = saveAllAccess;
+saveAllAccess = function() {
+    try { _origSaveAllAccess(); } catch (e) {}
+    saveAllAccessObject().then(function(){
+        showToast('✓ {{ _("Saved") }}');
+    }).catch(function(){});
+};
+</script>
