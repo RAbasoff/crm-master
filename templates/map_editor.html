@@ -622,9 +622,6 @@ function stopResize() {
     drag = null;
 }
 
-canvasEl.addEventListener('click', e => {
-    // обработчик ниже решает, что кликнуть: линия / пусто / секция
-});
 
 // ---- ACTIONS ----
 function addSection() {
@@ -754,24 +751,34 @@ function canvasPct(e){
     };
 }
 function toggleDrawMode(){
-    if(DRAW_MODE){ exitDrawMode(); return; }
-    exitDrawMode();
-    DRAW_MODE=true;
-    SELECTED_LINE=null;
-    sel=null;
-    const b=document.getElementById('btnDraw');
-    b.style.background='#e67e22'; b.style.color='#fff';
-    b.textContent='✏️ {{ _("Drawing…") }}';
-    document.getElementById('btnDrawExit').style.display='';
-    document.getElementById('drawHint').style.display='block';
-    document.getElementById('drawHintText').textContent='✏️ {{ _("Draw mode is ON") }}';
-    document.getElementById('drawHintHelp').textContent='{{ _("click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.") }}';
-    document.getElementById('canvasWrap').style.cursor='crosshair';
-    showLineProps();
-    document.getElementById('lineName').value='';
-    document.getElementById('lineDesc').value='';
-    document.getElementById('lineColor').value=(document.getElementById('drawColor')||{}).value||'#2980b9';
-    document.getElementById('lineWidth').value=String(getDrawWidth());
+    try {
+        if(DRAW_MODE){ exitDrawMode(); return; }
+        if(typeof exitDrawMode==='function') exitDrawMode();
+        DRAW_MODE=true;
+        SECTION_DRAW=false;
+        MACHINE_DRAW=false;
+        SELECTED_LINE=null;
+        sel=null;
+        DRAW_PTS=[];
+        const b=document.getElementById('btnDraw');
+        if(b){ b.style.background='#e67e22'; b.style.color='#fff'; b.textContent='✏️ {{ _("Drawing…") }}'; }
+        const ex=document.getElementById('btnDrawExit');
+        if(ex) ex.style.display='';
+        const hint=document.getElementById('drawHint');
+        if(hint) hint.style.display='block';
+        const ht=document.getElementById('drawHintText');
+        if(ht) ht.textContent='✏️ {{ _("Draw mode is ON") }}';
+        const hh=document.getElementById('drawHintHelp');
+        if(hh) hh.textContent='{{ _("click on the map to add points. Click Done drawing or press Esc.") }}';
+        const wrap=document.getElementById('canvasWrap');
+        if(wrap) wrap.style.cursor='crosshair';
+        if(typeof showLineProps==='function') showLineProps();
+        const ln=document.getElementById('lineName'); if(ln) ln.value='';
+        const ld=document.getElementById('lineDesc'); if(ld) ld.value='';
+        const lc=document.getElementById('lineColor'); if(lc) lc.value=(document.getElementById('drawColor')||{}).value||'#2980b9';
+        const lw=document.getElementById('lineWidth'); if(lw) lw.value=String(typeof getDrawWidth==='function'?getDrawWidth():2);
+        if(typeof redrawLines==='function') redrawLines();
+    } catch(err) { console.error('toggleDrawMode', err); alert('Draw error: '+err); }
 }
 function exitDrawMode(){
     DRAW_MODE=false;
