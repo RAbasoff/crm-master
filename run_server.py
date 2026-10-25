@@ -28,6 +28,8 @@ if __name__ == '__main__':
     os.environ.setdefault('FLASK_ENV', 'production')
     os.environ.setdefault('APP_TIMEZONE', 'Europe/Brussels')
     from app import app
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     # Открыть браузер через 1 сек (необязательно)
     try:

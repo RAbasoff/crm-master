@@ -6471,3 +6471,18 @@ msgstr "Last action"
 
 msgid "Online / Offline"
 msgstr "Online / Offline"
+
+msgid "Send SMS"
+msgstr "Send SMS"
+
+msgid "Select recipients"
+msgstr "Select recipients"
+
+msgid "Type your message"
+msgstr "Type your message"
+
+msgid "Select users and enter message"
+msgstr "Select users and enter message"
+
+msgid "No users"
+msgstr "No users"

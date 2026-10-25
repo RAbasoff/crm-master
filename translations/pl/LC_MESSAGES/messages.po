@@ -6283,3 +6283,18 @@ msgstr "Dziennik audytu"
 
 msgid "No events"
 msgstr "Brak zdarzeń"
+
+msgid "Send SMS"
+msgstr "Wyślij SMS"
+
+msgid "Select recipients"
+msgstr "Wybierz odbiorców"
+
+msgid "Type your message"
+msgstr "Wpisz swoją wiadomość"
+
+msgid "Select users and enter message"
+msgstr "Wybierz użytkowników i wpisz wiadomość"
+
+msgid "No users"
+msgstr "Brak użytkowników"

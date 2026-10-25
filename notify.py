@@ -21,6 +21,35 @@ from datetime import datetime
 
 log = logging.getLogger('app.notify')
 
+def _load_dotenv():
+    """Прочитать .env рядом с программой в os.environ (без внешних зависимостей)."""
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+    except Exception:
+        base = os.getcwd()
+    for name in ('.env', '.env.txt'):
+        path = os.path.join(base, name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    k, v = line.split('=', 1)
+                    k = k.strip()
+                    v = v.strip().strip('"').strip("'")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+        except Exception as e:
+            log.warning(f'.env load failed: {e}')
+        break
+
+
+_load_dotenv()
+
+
 
 def _env(key, default=''):
     return (os.environ.get(key) or default).strip()
@@ -71,6 +100,7 @@ def send_email(to_addr, subject, body_html):
 
 def send_sms(phone, text):
     """SMS через провайдера из .env. Возвращает True/False."""
+    import base64 as _b64
     if not sms_configured():
         log.info('SMS не настроен (SMS_ENABLED/SMS_API_KEY)')
         return False
@@ -132,7 +162,7 @@ def send_sms(phone, text):
                 'https://gatewayapi.com/rest/mtsms',
                 data=payload,
                 headers={
-                    'Authorization': 'Bearer ' + token,
+                    'Authorization': 'Basic ' + _b64.b64encode((token + ':').encode()).decode(),
                     'Content-Type': 'application/json',
                 },
                 method='POST',
@@ -152,19 +182,69 @@ def send_sms(phone, text):
         return False
 
 
+def _name_of(u):
+    return ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
+
+
+def fault_sms_recipients():
+    """Кому слать SMS о новой заявке:
+    механики + начальник ТС + админ + Peter."""
+    from models import User
+    from security import is_head_of_ts
+    result = {}
+    for u in User.query.filter(User.is_active_user == True).all():
+        n = _name_of(u)
+        role = (getattr(u, 'role', '') or '').lower()
+        hit_mech = role == 'technician' or any(k in n for k in ('aris', 'aristidis', 'nikita', 'iqbal', 'ruslan', 'abasoff'))
+        hit_admin = role == 'admin'
+        hit_peter = 'peter' in n or 'petr' in n or 'петр' in n or 'питер' in n
+        hit_head = False
+        try:
+            hit_head = is_head_of_ts(u)
+        except Exception:
+            pass
+        if hit_mech or hit_peter or hit_head or hit_admin:
+            result[u.id] = u
+    return list(result.values())
+
+
 def notify_fault_created(fault, mechanics, head_of_ts_users=None):
     """Новая заявка: механики + начальник ТС — email/SMS."""
-    title = f"Новая заявка #{fault.id}: {fault.title}"
+    title = f"Nieuwe storing #{fault.id}: {fault.title}"
     body = (
-        f"<p><b>Заявка #{fault.id}</b></p>"
+        f"<p><b>Storing #{fault.id}</b></p>"
         f"<p>{fault.title}</p>"
         f"<p>{(fault.description or '')[:300]}</p>"
-        f"<p>Приоритет: {fault.priority}</p>"
-        f"<p>Заявитель: {getattr(fault, 'reporter_name', '') or ''}</p>"
+        f"<p>Prioriteit: {fault.priority}</p>"
+        f"<p>Melder: {getattr(fault, 'reporter_name', '') or ''}</p>"
     )
-    sms_text = f'Заявка #{fault.id}: {fault.title[:80]}'
+    reporter = getattr(fault, 'reporter_label', None) or getattr(fault, 'reporter_name', '') or '—'
+    machine = getattr(fault, 'target_name', None) or '—'
+    loc = ''
+    try:
+        m = getattr(fault, 'machine', None)
+        if m is not None and getattr(m, 'section', None) is not None:
+            loc = m.section.name or ''
+    except Exception:
+        loc = ''
+    prio = {'critical': 'Kritiek', 'high': 'Hoog', 'normal': 'Normaal', 'low': 'Laag'}.get(
+        (fault.priority or '').lower(), fault.priority or '—')
+    sms_text = (
+        f'Gebruiker {reporter} heeft een nieuwe storing gemeld voor machine {machine}'
+        f' in {loc or "—"}. '
+        f'{(fault.title or "")[:100]}. '
+        f'Prioriteit: {prio}'
+    )
     sent = 0
-    for u in list(mechanics or []) + list(head_of_ts_users or []):
+    try:
+        extra = fault_sms_recipients()
+    except Exception:
+        extra = []
+    seen = {}
+    for u in list(mechanics or []) + list(head_of_ts_users or []) + extra:
+        if u is not None and getattr(u, 'id', None) not in seen:
+            seen[getattr(u, 'id', None)] = u
+    for u in seen.values():
         email = getattr(u, 'email', None)
         phone = getattr(u, 'phone', None) or getattr(u, 'telefoon', None)
         if email and send_email(email, title, body):
@@ -173,7 +253,7 @@ def notify_fault_created(fault, mechanics, head_of_ts_users=None):
             sent += 1
         try:
             from app import create_notification
-            create_notification(u.id, 'New fault report', sms_text, 'fault', f'/faults/{fault.id}')
+            create_notification(u.id, 'Nieuwe storing', sms_text, 'fault', f'/faults/{fault.id}')
         except Exception:
             pass
     return sent
@@ -184,7 +264,12 @@ def notify_fault_done(fault, reporter_user=None, head_users=None):
     st = getattr(fault, 'status', '') or ''
     title = f"Заявка #{fault.id}: {st}"
     body = f"<p>Заявка <b>#{fault.id}</b> — {fault.title}</p><p>Статус: <b>{st}</b></p>"
-    sms_text = f'Заявка #{fault.id} — {st}: {fault.title[:60]}'
+    st_map = {
+        'open': 'Open', 'accepted': 'Geaccepteerd', 'in_progress': 'In behandeling',
+        'resolved': 'Opgelost', 'closed': 'Gesloten', 'reopened': 'Heropend',
+    }
+    st_nl = st_map.get((st or '').lower(), st or '')
+    sms_text = f'Storing #{fault.id} — {st_nl}: {fault.title[:60]}'
     sent = 0
     for u in list(reporter_user and [reporter_user] or []) + list(head_users or []):
         email = getattr(u, 'email', None)

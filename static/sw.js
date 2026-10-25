@@ -4,7 +4,7 @@
  *  - HTML pages: network-first, fallback to cache, fallback to offline.html
  *  - API / POST: always network (never cache mutations)
  */
-const CACHE = 'promaster-v3';
+const CACHE = 'promaster-v6';
 const OFFLINE_URL = '/static/offline.html';
 
 const PRECACHE = [
@@ -18,6 +18,10 @@ const PRECACHE = [
   '/static/js/offline-queue.js',
   '/static/fonts/DejaVuSans.ttf',
 ];
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') { self.skipWaiting(); }
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -6526,3 +6526,18 @@ msgstr "Zet op beginscherm"
 
 msgid "After install open CRM from the icon"
 msgstr "Open na installatie CRM vanaf het icoon"
+
+msgid "Send SMS"
+msgstr "SMS verzenden"
+
+msgid "Select recipients"
+msgstr "Selecteer ontvangers"
+
+msgid "Type your message"
+msgstr "Typ uw bericht"
+
+msgid "Select users and enter message"
+msgstr "Selecteer gebruikers en voer een bericht in"
+
+msgid "No users"
+msgstr "Geen gebruikers"

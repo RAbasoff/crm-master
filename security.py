@@ -1,3 +1,4 @@
+import re
 """Roles, group permissions, and access decorators."""
 from functools import wraps
 from flask import flash, redirect, url_for, request
@@ -143,7 +144,30 @@ def is_head_of_ts(user=None):
     if 'ruslan' in name or 'abasoff' in name or 'абасов' in name or 'руслан' in name:
         return True
     # системный аккаунт director = начальник ТС
-    if getattr(u, 'username', '') == 'director':
+    if (getattr(u, 'username', '') or '').lower() == 'director':
+        return True
+    return False
+
+
+def can_use_sms(user=None):
+    """Кто видит SMS-баннер и может слать SMS:
+    админ, директор, начальник ТС (Ruslan), Tim, Thijs, Peter."""
+    u = user or current_user
+    if not (u and getattr(u, 'is_authenticated', False)):
+        return False
+    if (getattr(u, 'role', '') or '').lower() in ('admin', 'director'):
+        return True
+    if (getattr(u, 'username', '') or '').lower() == 'director':
+        return True
+    if is_head_of_ts(u):
+        return True
+    name = ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
+    # word-boundary style match so "tim.jansen" / "Tim Janssen" work, but "martin" does not
+    if re.search(r'(^|[^a-z])tim([^a-z]|$)', name):
+        return True
+    if 'thijs' in name or 'тис' in name or 'тхис' in name:
+        return True
+    if 'peter' in name or 'petr' in name or 'петр' in name or 'питер' in name:
         return True
     return False
 

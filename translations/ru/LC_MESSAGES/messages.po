@@ -6712,3 +6712,18 @@ msgstr "На экран «Домой»"
 
 msgid "After install open CRM from the icon"
 msgstr "После установки открывайте CRM с иконки"
+
+msgid "Send SMS"
+msgstr "Отправить SMS"
+
+msgid "Select recipients"
+msgstr "Выберите получателей"
+
+msgid "Type your message"
+msgstr "Введите текст сообщения"
+
+msgid "Select users and enter message"
+msgstr "Выберите пользователей и введите сообщение"
+
+msgid "No users"
+msgstr "Нет пользователей"

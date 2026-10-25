@@ -647,6 +647,8 @@
         </div>
         
         <div class="topbar-right">
+            <button type="button" data-sms-open="1" onclick="openSmsModal(); return false;" style="background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;border:none;padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;margin-right:8px;box-shadow:0 2px 8px rgba(39,174,96,.35)">📱 SMS</button>
+        
             <!-- Admin: switch user (left of language) -->
             {% if is_admin or impersonate_admin_id %}
             <div style="position:relative;display:flex;align-items:center;gap:6px">
@@ -985,7 +987,7 @@
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js')
+                navigator.serviceWorker.register('/static/sw.js?v=5').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } })
                     .then(reg => {
                         console.log('SW registered:', reg.scope);
                         initWebPush(reg);
@@ -1520,6 +1522,99 @@
     })();
     </script>
     {% endif %}
+
+
+<script src="/static/js/sms-modal.js?v=3"></script>
+
+<div id="smsFab" onclick="openSmsModal(); return false;" data-sms-open="1"
+     style="position:fixed;right:18px;bottom:18px;z-index:2600;cursor:pointer;background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;padding:16px 22px;border-radius:99px;font-weight:800;font-size:14px;box-shadow:0 8px 24px rgba(39,174,96,.4);user-select:none">
+  📱 SMS
+</div>
+
+<!-- SMS SEND MODAL (global) -->
+<div id="smsSendModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2500;overflow:auto">
+  <div style="max-width:560px;margin:36px auto;background:#fff;border-radius:12px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0;font-size:16px">📱 {{ _('Send SMS') }}</h3>
+      <button type="button" onclick="closeSmsModal()" style="background:none;border:none;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:12px;color:#666;margin-bottom:8px">{{ _('Select recipients') }}</div>
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <button type="button" class="btn" style="background:#eef;padding:6px 10px;font-size:12px" onclick="smsToggleAll(true)">{{ _('Select all') }}</button>
+      <button type="button" class="btn" style="background:#eee;padding:6px 10px;font-size:12px" onclick="smsToggleAll(false)">{{ _('Clear') }}</button>
+    </div>
+    <div id="smsUserList" style="max-height:300px;overflow:auto;border:1px solid #e0e0e0;border-radius:8px;padding:8px"></div>
+    <label style="font-size:12px;font-weight:600;display:block;margin:10px 0 4px">{{ _('Message') }}</label>
+    <textarea id="smsText" rows="3" maxlength="160" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Type your message') }}"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+      <button type="button" class="btn" style="background:#27ae60;color:#fff;padding:10px 18px" onclick="smsSendSelected(this)">{{ _('Send') }}</button>
+      <button type="button" class="btn" style="background:#eee;padding:10px 18px" onclick="closeSmsModal()">{{ _('Cancel') }}</button>
+    </div>
+    <div id="smsSendResult" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+<script>
+window.openSmsModal = function(){
+  try {
+    var m=document.getElementById('smsSendModal');
+    if(m){ m.style.display='block'; }
+    var box=document.getElementById('smsUserList');
+    if(!box) return;
+    box.innerHTML='<div style="padding:8px;color:#888">...</div>';
+    fetch('/api/settings/sms-users').then(function(r){return r.json();}).then(function(d){
+      if(!d || !d.users){ box.innerHTML='error'; return; }
+      var html='';
+      d.users.forEach(function(u){
+        var ph=u.phone||'';
+        html+='<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;'+(ph?'':'opacity:.45')+'">'
+          +'<input type="checkbox" class="sms-user-cb" value="'+u.id+'" '+(ph?'':'disabled')+'>'
+          +'<span style="flex:1"><b>'+u.name+'</b> <small style="color:#888">'+(u.role||'')+'</small></span>'
+          +'<span style="font-family:monospace;font-size:12px">'+(ph||'—')+'</span></label>';
+      });
+      box.innerHTML=html || '<div style="padding:8px;color:#888">{{ _("No users") }}</div>';
+    }).catch(function(){ box.innerHTML='error'; });
+  } catch(e){ alert('SMS modal error: '+(e&&e.message||e)); }
+};
+window.closeSmsModal = function(){
+  var m=document.getElementById('smsSendModal');
+  if(m) m.style.display='none';
+};
+window.smsToggleAll = function(on){
+  document.querySelectorAll('.sms-user-cb').forEach(function(cb){ if(!cb.disabled) cb.checked=on; });
+};
+window.smsSendSelected = function(btn){
+  var ids=[];
+  document.querySelectorAll('.sms-user-cb:checked').forEach(function(cb){ ids.push(cb.value); });
+  var text=(document.getElementById('smsText')||{}).value||'';
+  if(!ids.length || !text.trim()){ alert('{{ _("Select users and enter message") }}'); return; }
+  btn.disabled=true;
+  var meta=document.querySelector('meta[name="csrf-token"]');
+  fetch('/api/settings/sms-send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':(meta&&meta.content)||''},
+    body:JSON.stringify({user_ids:ids,text:text})
+  }).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false;
+    var box=document.getElementById('smsSendResult');
+    if(box){
+      var sent=(d&&d.sent)||[];
+      var err=(d&&d.errors)||[];
+      box.innerHTML='<span style="color:#27ae60">OK '+sent.length+'</span>'
+        +(err.length?' <span style="color:#c0392b">'+err.join('; ')+'</span>':'');
+    }
+    if(typeof loadSms==='function') loadSms();
+  }).catch(function(){ btn.disabled=false; alert('error'); });
+};
+// bind ANY element with data-sms-open
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('[data-sms-open], [onclick="openSmsModal()"]').forEach(function(el){
+    el.addEventListener('click', function(ev){
+      ev.preventDefault();
+      window.openSmsModal();
+    });
+  });
+});
+</script>
 
 </body>
 </html>

@@ -596,24 +596,85 @@ def api_user_object_access(user_id):
     log_audit('update', 'user_access', u.id, f'object-access sections={sec_ids} hidden={hid_ids}')
     return jsonify({'ok': True})
 
+
+def _sms_allowed():
+    from security import can_use_sms
+    return can_use_sms(current_user)
+
 @bp.route('/api/settings/sms-stats')
 @login_required
-@role_required('admin')
 def api_sms_stats():
+    if not _sms_allowed():
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
     from sms_counter import sms_stats
     return jsonify(sms_stats())
 
 
 @bp.route('/api/settings/sms-test', methods=['POST'])
 @login_required
-@role_required('admin')
 def sms_test_send():
     """Тестовое SMS на телефон текущего пользователя."""
+    if not _sms_allowed():
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
     from notify import send_sms, sms_configured
     phone = (getattr(current_user, 'phone', None) or '').strip()
     if not phone:
         return jsonify({'ok': False, 'error': 'No phone in profile'}), 400
     if not sms_configured():
         return jsonify({'ok': False, 'error': 'SMS not configured (.env SMS_ENABLED=1 + SMS_API_KEY)'}), 400
-    ok = send_sms(phone, 'ProMaster: test SMS')
+    ok = send_sms(phone, 'ProMaster: testbericht')
     return jsonify({'ok': bool(ok), 'phone': phone})
+
+
+@bp.route('/api/settings/sms-users')
+@login_required
+def sms_users_list():
+    """Список активных пользователей с телефонами (для модалки SMS)."""
+    if not _sms_allowed():
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
+    data = []
+    for u in users:
+        phone = (getattr(u, 'phone', None) or '').strip()
+        data.append({
+            'id': u.id,
+            'name': u.display_name or u.username,
+            'username': u.username,
+            'role': u.role or '',
+            'phone': phone,
+        })
+    return jsonify({'ok': True, 'users': data})
+
+
+@bp.route('/api/settings/sms-send', methods=['POST'])
+@login_required
+def sms_send_bulk():
+    """Отправить SMS выбранным пользователям (текст свой)."""
+    if not _sms_allowed():
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+    from notify import send_sms, sms_configured
+    data = request.get_json() or {}
+    user_ids = data.get('user_ids') or []
+    text = (data.get('text') or '').strip()
+    if not user_ids or not text:
+        return jsonify({'ok': False, 'error': 'no recipients or empty text'}), 400
+    if not sms_configured():
+        return jsonify({'ok': False, 'error': 'SMS not configured'}), 400
+    sent, errors = [], []
+    for uid in user_ids:
+        try:
+            u = User.query.get(int(uid))
+        except (TypeError, ValueError):
+            continue
+        if not u:
+            continue
+        phone = (getattr(u, 'phone', None) or '').strip()
+        if not phone:
+            errors.append((u.display_name or u.username) + ': no phone')
+            continue
+        if send_sms(phone, text[:160]):
+            sent.append((u.display_name or u.username) + ' ' + phone)
+        else:
+            errors.append((u.display_name or u.username) + ': send failed')
+    log_audit('sms', 'bulk', 0, f'sent={len(sent)} errors={len(errors)} text={text[:60]}')
+    return jsonify({'ok': True, 'sent': sent, 'errors': errors})

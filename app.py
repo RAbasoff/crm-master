@@ -10,7 +10,37 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
-import os, io, json, time
+import os
+
+def _load_env_file():
+    """Load .env into os.environ (no external package)."""
+    import os as _os
+    try:
+        base = _os.path.dirname(_os.path.abspath(__file__))
+    except Exception:
+        base = _os.getcwd()
+    for name in ('.env', '.env.txt'):
+        path = _os.path.join(base, name)
+        if not _os.path.isfile(path):
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    k, v = line.split('=', 1)
+                    k = k.strip()
+                    v = v.strip().strip('"').strip("'")
+                    if k and k not in _os.environ:
+                        _os.environ[k] = v
+        except Exception:
+            pass
+        break
+
+_load_env_file()
+
+import io, json, time
 import qrcode
 from sqlalchemy import func, case
 
@@ -47,6 +77,8 @@ from security import enforce_mechanic_access, is_mechanic, is_floor_user, enforc
 
 from logs_util import setup_file_logging, log_info, log_error
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config.from_object(Config)
 app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24 * 7  # 7 days (was: unlimited)
 app.config['WTF_CSRF_SSL_STRICT'] = False  # allow CSRF across HTTP/HTTPS (PythonAnywhere proxy)
@@ -638,6 +670,16 @@ def log_request_activity(response):
     except Exception:
         pass
     return response
+
+
+@app.context_processor
+def inject_sms_access():
+    from security import can_use_sms as _cus
+    try:
+        sms_ok = _cus(current_user) if current_user.is_authenticated else False
+    except Exception:
+        sms_ok = False
+    return {'can_use_sms': sms_ok}
 
 
 @app.context_processor
