@@ -595,3 +595,10 @@ def api_user_object_access(user_id):
         return jsonify({'ok': False, 'error': 'save failed'}), 500
     log_audit('update', 'user_access', u.id, f'object-access sections={sec_ids} hidden={hid_ids}')
     return jsonify({'ok': True})
+
+@bp.route('/api/settings/sms-stats')
+@login_required
+@role_required('admin')
+def api_sms_stats():
+    from sms_counter import sms_stats
+    return jsonify(sms_stats())

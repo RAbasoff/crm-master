@@ -90,6 +90,11 @@ def send_sms(phone, text):
             }).encode()
             urllib.request.urlopen('https://sms.ru/sms/send', data=data, timeout=20)
             log.info(f'SMS отправлено: {phone}')
+            try:
+                from sms_counter import sms_count_add
+                sms_count_add()
+            except Exception:
+                pass
             return True
         if provider == 'twilio':
             import urllib.parse
@@ -106,6 +111,11 @@ def send_sms(phone, text):
             req = urllib.request.Request(url, data=data, headers={'Authorization': f'Basic {auth}'})
             urllib.request.urlopen(req, timeout=20)
             log.info(f'SMS (twilio) отправлено: {phone}')
+            try:
+                from sms_counter import sms_count_add
+                sms_count_add()
+            except Exception:
+                pass
             return True
         log.warning(f'Неизвестный SMS_PROVIDER: {provider}')
         return False
