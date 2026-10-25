@@ -482,7 +482,8 @@ loadSms(); setInterval(loadSms, 30000);
     </div>
     
     <!-- Recent Work Orders -->
-    <div class="card" style="grid-column:{% if recent_faults and recent_orders %}2{% else %}1 / -1{% endif %};order:2" data-order="2">
+    {% if not (current_user.has_role('technician') or current_user.worker_profile) %}
+<div class="card" style="grid-column:{% if recent_faults and recent_orders %}2{% else %}1 / -1{% endif %};order:2" data-order="2">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <h2 style="margin:0;font-size:15px">📋 {{ _('Recent Orders') }}</h2>
             <a href="/orders" style="font-size:12px;color:#5b9cf6;text-decoration:none;font-weight:600">{{ _('View all') }} →</a>
@@ -512,6 +513,7 @@ loadSms(); setInterval(loadSms, 30000);
     </div>
 </div>
 {% endif %}
+{% endif %}
 
 <!-- Users Management (Admin only) -->
 {% if current_user.has_role('admin') %}
@@ -540,7 +542,7 @@ loadSms(); setInterval(loadSms, 30000);
 {% endif %}
 
 <!-- Low Stock Alert -->
-{% if low_stock and not is_floor_user %}
+{% if low_stock and not is_floor_user and not (current_user.has_role('technician') or current_user.worker_profile) %}
 <div class="card" style="border-left:4px solid #e74c3c;margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h2 style="margin:0;font-size:15px;color:#e74c3c">📦 {{ _('Low Stock Alert') }}</h2>

@@ -73,11 +73,8 @@ h1{font-size:20px;font-weight:800;margin-bottom:4px}
     <div class="meta">
         {% if o.machine %}⚙️ {{ o.machine.name }}{% endif %}
         {% if o.section %} · 🏭 {{ o.section.name }}{% endif %}
-        {% if o.workers and o.workers|length > 1 %}
-        · 👥
-        {% for w in o.workers %}
-        <span style="background:#f39c12;color:#fff;padding:1px 8px;border-radius:99px;font-weight:700;font-size:11px">{{ w.naam }}</span>
-        {% endfor %}
+        {% if o.workers %}
+        · <span style="background:#f39c12;color:#fff;padding:1px 10px;border-radius:99px;font-weight:700;font-size:11px">{{ o.workers|workers_for_user(current_user) }}</span>
         {% endif %}
     </div>
     <span class="st st-{{ o.status }}">{{ o.status }}</span>
