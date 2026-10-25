@@ -4,7 +4,7 @@
 <div class="page-header">
     <h1>🗺️ {{ _('Map Editor') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="addSection()" class="btn btn-primary btn-sm">+ {{ _('Add Section') }}</button>
+        <button onclick="addSection()" class="btn btn-primary btn-sm">✏️ {{ _('New Section') }} ({{ _('draw line') }})</button>
         <button onclick="saveAll()" class="btn btn-success btn-sm">💾 {{ _('Save All') }}</button>
         <button onclick="toggleMachines()" id="toggleMachinesBtn" class="btn btn-sm" style="background:#e67e22;color:white">👁️ {{ _('Hide Machines') }}</button>
         <a href="/sections" class="btn btn-sm" style="background:#8e44ad;color:white">🏗️ {{ _('Sections') }}</a>
@@ -624,9 +624,18 @@ canvasEl.addEventListener('click', e => {
 
 // ---- ACTIONS ----
 function addSection() {
-    const ns = {id:null, name:T.newSection, description:'', type:'workshop', color:'#3498db', x:10, y:10, w:25, h:25, responsible_ids:[]};
-    csrfFetch('/api/map/save-section',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ns)})
-    .then(r=>r.json()).then(d => { ns.id=d.id; sections.push(ns); render(); selectSection(d.id); });
+    // Только линия вручную — без автопрямоугольника
+    if (typeof toggleDrawMode === 'function') toggleDrawMode();
+    const nm = document.getElementById('lineName');
+    if (nm) nm.value = T.newSection;
+    const hint = document.getElementById('drawHint');
+    if (hint) {
+        hint.style.display = 'block';
+        const ht = document.getElementById('drawHintText');
+        const hh = document.getElementById('drawHintHelp');
+        if (ht) ht.textContent = '✏️ {{ _("Draw section boundary") }}';
+        if (hh) hh.textContent = '{{ _("Click points along the workshop border. Then press Make section.") }}';
+    }
 }
 
 function deleteSelected() {
@@ -684,8 +693,11 @@ function toggleMachineDraw(){
 }
 
 function toggleSectionDraw(){
-    // Автопрямоугольник отключён — только рисование границы линией
+    // Автосоздание прямоугольником ЗАПРЕЩЕНО — только линия
     if (typeof toggleDrawMode === 'function') toggleDrawMode();
+    document.getElementById('drawHint').style.display='block';
+    document.getElementById('drawHintText').textContent='✏️ {{ _("Draw line") }}';
+    document.getElementById('drawHintHelp').textContent='{{ _("click on the map to add points. Click Done drawing or press Esc.") }}';
 }
 
 function convertLineToSection(){
