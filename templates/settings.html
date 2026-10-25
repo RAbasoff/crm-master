@@ -543,6 +543,25 @@
         <!-- Updates -->
         <div class="card">
             <h2 style="margin:0 0 12px">🔄 {{ _('Updates') }}</h2>
+        <div id="smsStats" style="margin:8px 0;padding:10px;background:#f0fff4;border:1px solid #a5d6a7;border-radius:8px;font-size:12px">
+            📱 SMS: <b id="smsToday">...</b> {{ _('today') }} ·
+            <b id="smsMonth">...</b> {{ _('this month') }} / 350
+        </div>
+        <script>
+        (function(){
+          function loadSms(){
+            fetch('/api/settings/sms-stats').then(function(r){return r.json();}).then(function(d){
+              var t=document.getElementById('smsToday');
+              if(t) t.textContent=d.today;
+              var m=document.getElementById('smsMonth');
+              if(m) m.textContent=d.month+' (+'+d.left_month+' left)';
+            }).catch(function(){});
+          }
+          loadSms();
+          setInterval(loadSms, 30000);
+        })();
+        </script>
+
             <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:12px">
                 <tr>
                     <td style="padding:6px 0;color:#888;width:45%">{{ _('Current version') }}</td>
