@@ -300,9 +300,29 @@ const canvasWrapEl = document.getElementById('canvasWrap');
 // ---- MAP ZOOM (mouse wheel + buttons) ----
 let mapZoom = 1;
 function applyMapZoom() {
-    // width scale → wrap scrolls; % coordinates of sections/machines stay correct
-    canvasEl.style.width = (mapZoom * 100) + '%';
-    canvasEl.style.minHeight = Math.round(550 * mapZoom) + 'px';
+    // Единый transform: секции/станки/линии масштабируются вместе
+    const wrap = document.getElementById('canvasWrap');
+    const canvas = document.getElementById('canvas');
+    if (!wrap || !canvas) return;
+    const baseW = canvas._baseW || canvas.offsetWidth;
+    const baseH = canvas._baseH || canvas.offsetHeight;
+    canvas._baseW = baseW;
+    canvas._baseH = baseH;
+    canvas.style.transformOrigin = '0 0';
+    canvas.style.transform = 'scale(' + mapZoom + ')';
+    canvas.style.width = baseW + 'px';
+    canvas.style.minHeight = baseH + 'px';
+    let sizer = document.getElementById('mapSizer');
+    if (!sizer) {
+        sizer = document.createElement('div');
+        sizer.id = 'mapSizer';
+        sizer.style.position = 'relative';
+        wrap.insertBefore(sizer, canvas);
+        sizer.appendChild(canvas);
+    }
+    sizer.style.width = Math.round(baseW * mapZoom) + 'px';
+    sizer.style.height = Math.round(baseH * mapZoom) + 'px';
+    sizer.style.overflow = 'hidden';
 }
 function mapZoomBy(factor) {
     mapZoom = Math.max(0.4, Math.min(4, mapZoom * factor));
