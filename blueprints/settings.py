@@ -602,3 +602,18 @@ def api_user_object_access(user_id):
 def api_sms_stats():
     from sms_counter import sms_stats
     return jsonify(sms_stats())
+
+
+@bp.route('/api/settings/sms-test', methods=['POST'])
+@login_required
+@role_required('admin')
+def sms_test_send():
+    """Тестовое SMS на телефон текущего пользователя."""
+    from notify import send_sms, sms_configured
+    phone = (getattr(current_user, 'phone', None) or '').strip()
+    if not phone:
+        return jsonify({'ok': False, 'error': 'No phone in profile'}), 400
+    if not sms_configured():
+        return jsonify({'ok': False, 'error': 'SMS not configured (.env SMS_ENABLED=1 + SMS_API_KEY)'}), 400
+    ok = send_sms(phone, 'ProMaster: test SMS')
+    return jsonify({'ok': bool(ok), 'phone': phone})

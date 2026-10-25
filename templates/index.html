@@ -82,9 +82,20 @@
                 · <span id="smsMonth">{{ sms_stats.month if sms_stats else 0 }}</span>/350 {{ _('this month') }}
             </div>
         </div>
-        <div style="font-size:12px;color:#888">
-            {{ _('Left this month') }}: <b id="smsLeft">{{ sms_stats.left_month if sms_stats else 350 }}</b>
+        <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:12px;color:#888">{{ _('Left this month') }}: <b id="smsLeft">{{ sms_stats.left_month if sms_stats else 350 }}</b></div>
+            <button type="button" class="btn btn-sm" style="background:#27ae60;color:#fff" onclick="sendSmsTest(this)">{{ _('Send test SMS') }}</button>
         </div>
+        <script>
+        function sendSmsTest(btn){
+            btn.disabled = true;
+            fetch('/api/settings/sms-test', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':(document.querySelector('meta[name=\'csrf-token\']')||{}).content||''}})
+            .then(function(r){return r.json();}).then(function(d){
+                btn.disabled = false;
+                alert(d.ok ? 'OK: ' + (d.phone||'') : (d.error||'fail'));
+            }).catch(function(){ btn.disabled = false; alert('error'); });
+        }
+        </script>
     </div>
 </div>
 <script>
