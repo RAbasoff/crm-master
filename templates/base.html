@@ -676,7 +676,7 @@
             </div>
             <div class="tb-sep"></div>
             <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="{{ _('Install App') }}">📲</button>
-            <button class="tb-btn" id="offlineBtn" onclick="toggleOfflinePanel()" style="display:none" title="Оффлайн">
+            <button class="tb-btn" id="offlineBtn" onclick="toggleOfflinePanel()" style="display:none" title="{{ _("Offline") }}">
                 📴<span id="offlineCount" style="display:none;position:absolute;top:2px;right:2px;background:#f39c12;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;padding:0 4px;border:2px solid white">0</span>
             </button>
             <button class="dark-toggle" onclick="toggleDarkMode()" title="{{ _('Toggle dark mode') }}">🌙</button>
@@ -702,12 +702,12 @@
     <!-- OFFLINE QUEUE PANEL -->
     <div class="offline-panel" id="offlinePanel">
         <div class="offline-header">
-            <span>Оффлайн-очередь</span>
-            <button class="offline-sync-btn" onclick="syncOfflineNow()">Синхронизировать</button>
+            <span>{{ _("Offline queue") }}</span>
+            <button class="offline-sync-btn" onclick="syncOfflineNow()">{{ _("Sync") }}</button>
         </div>
         <div id="offlineQueueList"></div>
         <div style="padding:12px 16px;font-size:11px;color:#889;line-height:1.4">
-            Данные без интернета сохраняются на устройстве.<br>
+            {{ _("Data is saved on the device when offline.") }}<br>
             При появлении сети отправляются на сервер — номера присваивает сервер.
         </div>
     </div>
@@ -1136,7 +1136,7 @@
                     'font-size:13px;line-height:1.35;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
                 banner.innerHTML =
                     '<div style="font-size:22px">📲</div>' +
-                    '<div style="flex:1"><strong>Установить ProMaster</strong><br>' +
+                    '<div style="flex:1"><strong>{{ _("Install ProMaster") }}</strong><br>' +
                     '<span style="opacity:.85">' +
                     (mode === 'android'
                         ? 'Добавьте программу на рабочий стол — как обычное приложение.'
@@ -1176,20 +1176,20 @@
                     '<button id="pwaIosClose" style="position:absolute;right:12px;top:10px;border:none;' +
                     'background:none;font-size:22px;color:#999;cursor:pointer">×</button>' +
                     '<div style="font-size:40px;text-align:center">📲</div>' +
-                    '<h2 style="margin:8px 0 4px;font-size:18px;text-align:center">Установить на iPhone</h2>' +
+                    '<h2 style="margin:8px 0 4px;font-size:18px;text-align:center">{{ _("Install on iPhone") }}</h2>' +
                     '<p style="color:#666;font-size:13px;text-align:center;margin-bottom:14px">' +
-                    'Программа откроется с иконки как обычное приложение</p>' +
+                    '{{ _("The app will open from the icon like a normal app") }}</p>' +
                     '<ol style="margin:0 0 12px 18px;font-size:14px;line-height:1.7;color:#333">' +
-                    '<li>Откройте сайт в <strong>Safari</strong> (не Chrome)</li>' +
+                    '<li>{{ _("Open the site in") }} <strong>Safari</strong> (не Chrome)</li>' +
                     '<li>Нажмите <strong>«Поделиться»</strong> <span style="font-size:16px">⬆️</span> внизу</li>' +
-                    '<li>Выберите <strong>«На экран “Домой”»</strong></li>' +
+                    '<li>{{ _("Choose") }} <strong>«На экран “Домой”»</strong></li>' +
                     '<li>Нажмите <strong>«Добавить»</strong></li>' +
                     '</ol>' +
                     '<p style="font-size:12px;color:#888;background:#f5f7fa;border-radius:10px;padding:10px;' +
-                    'margin:0 0 14px">После установки открывайте CRM с иконки <strong>ProMaster</strong> — ' +
+                    'margin:0 0 14px">{{ _("After install open CRM from the icon") }} <strong>ProMaster</strong> — ' +
                     'полный экран, без адресной строки.</p>' +
                     '<button id="pwaIosOk" style="width:100%;background:#1a1a2e;color:#fff;border:none;' +
-                    'border-radius:12px;padding:12px;font-size:15px;font-weight:700;cursor:pointer">Понятно</button>' +
+                    'border-radius:12px;padding:12px;font-size:15px;font-weight:700;cursor:pointer">{{ _("OK") }}</button>' +
                     '</div>';
                 document.body.appendChild(modal);
                 const close = () => { modal.style.display = 'none'; };
@@ -1205,7 +1205,7 @@
                 const btn = document.getElementById('installBtn');
                 if (btn) {
                     btn.style.display = 'flex';
-                    btn.title = 'Установить на iPhone';
+                    btn.title = '{{ _("Install on iPhone") }}';
                 }
             }
         })();
