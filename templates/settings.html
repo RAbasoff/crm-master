@@ -74,13 +74,13 @@
                 <p style="font-size:12px;color:#27ae60;padding:8px 0">⚡ {{ _('Admin has full access to all modules.') }}</p>
                 {% else %}
                 <p style="font-size:11px;color:#888;margin-bottom:8px">{{ _('Toggle section access for this user:') }}</p>
-                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                <div style="display:flex;flex-wrap:wrap;gap:4px;max-width:100%;overflow:hidden">
                     {% for section in sections_tree %}
                     <div style="background:white;border:1px solid #e8ecf1;border-radius:6px;padding:6px 8px">
                         <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px">{{ section.icon }} {{ section.group }}</div>
                         <div style="display:flex;flex-wrap:wrap;gap:2px">
                             {% for key, name, icon in section.entries %}
-                            <label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;background:{% if u.has_section_access(key) %}#e8f5e9{% else %}#f5f5f5{% endif %};border:1px solid {% if u.has_section_access(key) %}#c8e6c9{% else %}#e8ecf1{% endif %}">
+                            <label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;max-width:140px;background:{% if u.has_section_access(key) %}#e8f5e9{% else %}#f5f5f5{% endif %};border:1px solid {% if u.has_section_access(key) %}#c8e6c9{% else %}#e8ecf1{% endif %}">
                                 <input type="checkbox" class="user-access-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if u.has_section_access(key) %}checked{% endif %} style="width:12px;height:12px">
                                 {{ icon }} {{ name }}
                             </label>
@@ -328,7 +328,7 @@
             <!-- Machines in this section -->
             <div style="margin-top:10px">
                 <div style="font-size:11px;color:#888;margin-bottom:4px">{{ _('Machines in this section:') }}</div>
-                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                <div style="display:flex;flex-wrap:wrap;gap:4px;max-width:100%;overflow:hidden">
                     {% for m in s.machines %}
                     <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:white;border:1px solid #ddd;border-radius:6px;font-size:11px">
                         ⚙️ {{ m.name }}
