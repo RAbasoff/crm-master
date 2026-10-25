@@ -52,8 +52,8 @@
             ✏️ <b id="drawHintText">{{ _('Draw mode is ON') }}</b> — <span id="drawHintHelp">{{ _('click on the map to add points. Click “Done drawing” or press Esc to return to normal editing.') }}</span>
         </div>
         <div id="canvasWrap" style="position:relative;overflow:auto;background:#e8ecf1;max-height:65vh">
-            <div id="canvas" style="position:relative;width:100%;min-height:550px">
-                <img src="/static/floor_plan.jpeg" style="display:block;width:100%;height:auto;opacity:0.3;pointer-events:none;user-select:none" draggable="false">
+            <div id="canvas" style="position:relative;width:100%;aspect-ratio:1520/1080;min-height:0">
+                <img id="mapImg" src="/static/floor_plan.jpeg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:0.3;pointer-events:none;user-select:none" draggable="false">
                 <div id="linesLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:5"></div>
                 <div id="labelsLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:15"></div>
                 <div id="sectionsLayer" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
@@ -732,7 +732,9 @@ function convertLineToSection(){
     });
 }
 function canvasPct(e){
-    const r=document.getElementById('canvas').getBoundingClientRect();
+    // % от размера КАРТИНКИ плана — линии не съезжают
+    const img=document.getElementById('mapImg')||document.getElementById('canvas');
+    const r=img.getBoundingClientRect();
     return {
         x: Math.max(0, Math.min(100, (e.clientX-r.left)/r.width*100)),
         y: Math.max(0, Math.min(100, (e.clientY-r.top)/r.height*100))
