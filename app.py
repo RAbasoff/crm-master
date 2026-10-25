@@ -1708,7 +1708,13 @@ def index():
     except Exception:
         pass
 
-    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
+    sms = {}
+    try:
+        from sms_counter import sms_stats as _sms_stats
+        sms = _sms_stats()
+    except Exception:
+        sms = {}
+    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats, sms_stats=sms,
                            gas_quality=gas_quality, show_gas_quality=show_gas_quality,
                            my_twos=my_twos, my_overdue_to=my_overdue_to,
                            today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())
