@@ -103,7 +103,9 @@
             <input type="file" name="videos" multiple accept="video/*" style="padding:10px">
             <small style="color:#888">{{ _('Attach videos of the fault (mp4, mov, avi, webm)') }}</small>
         </div>
-        <button type="submit" class="btn btn-warning">{{ _('Submit Report') }}</button>
+        <div id="faultSubmitBar">
+            <button type="submit" class="btn btn-warning">{{ _('Submit Report') }}</button>
+        </div>
         <a href="/faults" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
     </form>
 </div>
@@ -272,6 +274,22 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <style>#faultScanner{border:2px solid #3498db;border-radius:12px;overflow:hidden}#faultScanner video{border-radius:10px}</style>
 
+
+<style>
+@media (max-width: 768px) {
+  #faultSubmitBar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 2300;
+    background: #fff; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(0,0,0,.12); border-top: 1px solid #eee;
+    display: flex; gap: 10px;
+  }
+  #faultSubmitBar button[type=submit] { flex: 1; font-size: 16px; padding: 14px; }
+  body.has-fault-bar { padding-bottom: 80px; }
+}
+#targetSelect.field-error { border: 2px solid #e74c3c !important; background: #fff5f5; }
+.field-error-msg { color: #e74c3c; font-size: 13px; font-weight: 700; margin-top: 6px; }
+</style>
+
 <script>
 (function () {
   function showErr(msg) {
@@ -287,6 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function () { box.style.display = 'none'; }, 5000);
   }
   document.addEventListener('DOMContentLoaded', function () {
+    document.body.classList.add('has-fault-bar');
     var forms = document.querySelectorAll('form[enctype="multipart/form-data"]');
     forms.forEach(function (form) {
       if (!form.querySelector('#targetSelect') && !form.querySelector('input[name=title]')) return;
@@ -300,6 +319,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sel && !sel.value && (!mid || !mid.value) && (!eid || !eid.value)) {
           ev.preventDefault();
           showErr('{{ _("Please select a machine or equipment") }}');
+          sel.classList.add('field-error');
+          var msg = sel.parentNode.querySelector('.field-error-msg');
+          if (!msg) {
+            msg = document.createElement('div');
+            msg.className = 'field-error-msg';
+            sel.parentNode.appendChild(msg);
+          }
+          msg.textContent = '{{ _("Please select a machine or equipment") }}';
           sel.focus();
           sel.scrollIntoView({ block: 'center' });
           return;
