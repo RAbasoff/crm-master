@@ -6739,3 +6739,6 @@ msgstr "Запчасти / материалы"
 
 msgid "Extra remarks"
 msgstr "Доп. замечания"
+
+msgid "Please select a machine or equipment"
+msgstr "Выберите станок или оборудование"

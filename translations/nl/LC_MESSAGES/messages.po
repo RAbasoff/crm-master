@@ -6553,3 +6553,6 @@ msgstr "Onderdelen / materialen"
 
 msgid "Extra remarks"
 msgstr "Extra opmerkingen"
+
+msgid "Please select a machine or equipment"
+msgstr "Selecteer een machine of apparatuur"

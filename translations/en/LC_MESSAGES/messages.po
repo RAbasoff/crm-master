@@ -6498,3 +6498,6 @@ msgstr "Parts / materials"
 
 msgid "Extra remarks"
 msgstr "Extra remarks"
+
+msgid "Please select a machine or equipment"
+msgstr "Please select a machine or equipment"

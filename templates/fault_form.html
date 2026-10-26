@@ -271,4 +271,55 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <style>#faultScanner{border:2px solid #3498db;border-radius:12px;overflow:hidden}#faultScanner video{border-radius:10px}</style>
+
+<script>
+(function () {
+  function showErr(msg) {
+    var box = document.getElementById('formValidateMsg');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'formValidateMsg';
+      box.style.cssText = 'display:none;position:fixed;left:12px;right:12px;bottom:16px;z-index:3000;background:#e74c3c;color:#fff;padding:14px 16px;border-radius:10px;font-size:15px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+      document.body.appendChild(box);
+    }
+    box.textContent = msg;
+    box.style.display = 'block';
+    setTimeout(function () { box.style.display = 'none'; }, 5000);
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    var forms = document.querySelectorAll('form[enctype="multipart/form-data"]');
+    forms.forEach(function (form) {
+      if (!form.querySelector('#targetSelect') && !form.querySelector('input[name=title]')) return;
+      form.setAttribute('novalidate', 'novalidate');
+      form.addEventListener('submit', function (ev) {
+        var sel = form.querySelector('#targetSelect');
+        var mid = form.querySelector('input[name=machine_id]');
+        var eid = form.querySelector('input[name=equipment_id]');
+        var title = form.querySelector('input[name=title]');
+        var desc = form.querySelector('textarea[name=description]');
+        if (sel && !sel.value && (!mid || !mid.value) && (!eid || !eid.value)) {
+          ev.preventDefault();
+          showErr('{{ _("Please select a machine or equipment") }}');
+          sel.focus();
+          sel.scrollIntoView({ block: 'center' });
+          return;
+        }
+        if (title && !title.value.trim()) {
+          ev.preventDefault();
+          showErr('{{ _("Title and description are required") }}');
+          title.focus();
+          return;
+        }
+        if (desc && !desc.value.trim()) {
+          ev.preventDefault();
+          showErr('{{ _("Title and description are required") }}');
+          desc.focus();
+          return;
+        }
+      });
+    });
+  });
+})();
+</script>
+
 {% endblock %}
