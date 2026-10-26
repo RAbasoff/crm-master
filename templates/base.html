@@ -431,7 +431,7 @@
   }
   if (window.caches && caches.keys) {
     caches.keys().then(function (keys) {
-      keys.forEach(function (k) { if (k !== 'promaster-v6') { caches.delete(k); } });
+      keys.forEach(function (k) { caches.delete(k); });
     });
   }
 })();
