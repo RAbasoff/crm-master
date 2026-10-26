@@ -971,10 +971,11 @@ def unhandled_exception(e):
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+    # JSON/AJAX -> 400; HTML form -> back with friendly message
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify(error='CSRF token missing or expired'), 400
     flash(_('Session expired. Please try again.'), 'error')
-    return redirect(url_for('login'))
+    return redirect(request.referrer or url_for('login'))
 
 @app.route('/favicon.ico')
 def favicon():
