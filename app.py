@@ -621,7 +621,7 @@ def before_request():
         allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block', 'switch_back', 'switch_user')
         endpoint = request.endpoint or ''
         # Заявки на неисправность доступны ВСЕГДА (24/7)
-        if not (endpoint in allowed or endpoint.startswith('static') or endpoint.startswith('faults.')):
+        if not (endpoint in allowed or endpoint.startswith('static') or endpoint.startswith('faults.') or endpoint.startswith('mobile.')):
             if not is_user_at_work(current_user):
                 return redirect(url_for('work_hours_block'))
 
