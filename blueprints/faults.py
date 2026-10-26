@@ -518,10 +518,20 @@ def fault_new():
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
+                # SMS/email — в фоне, чтобы не блокировать ответ (заявка уже сохранена)
+                import threading
                 from notify import notify_fault_created
                 from security import is_head_of_ts
-                head_users = [u for u in User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all()]
-                notify_fault_created(f, list(f.assigned_technicians or []), head_users)
+                _techs = list(f.assigned_technicians or [])
+                _heads = [u for u in User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all()]
+                def _send_notify(_f=f, _t=_techs, _h=_heads):
+                    try:
+                        from app import app as _app
+                        with _app.app_context():
+                            notify_fault_created(_f, _t, _h)
+                    except Exception as _e:
+                        print('notify bg', _e)
+                threading.Thread(target=_send_notify, daemon=True).start()
             except Exception as _ne:
                 print('notify_fault_created', _ne)
             add_work_report(f"{_('New fault')}: {f.title} — {target} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})")
