@@ -620,7 +620,8 @@ def before_request():
     if current_user.is_authenticated and not session.get('impersonate_admin_id') and user_schedule_restricted(current_user):
         allowed = ('login', 'logout', 'static', 'set_language', 'change_password', 'work_hours_block', 'switch_back', 'switch_user')
         endpoint = request.endpoint or ''
-        if endpoint not in allowed and not endpoint.startswith('static'):
+        # Заявки на неисправность доступны ВСЕГДА (24/7)
+        if not (endpoint in allowed or endpoint.startswith('static') or endpoint.startswith('faults.')):
             if not is_user_at_work(current_user):
                 return redirect(url_for('work_hours_block'))
 

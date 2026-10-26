@@ -188,6 +188,13 @@ def user_schedule_restricted(user):
     role = getattr(user, 'role', '') or ''
     if role in ('admin', 'director'):
         return False
+    # Начальник ТС (Ruslan) — не ограничивается графиком
+    try:
+        from security import is_head_of_ts
+        if is_head_of_ts(user):
+            return False
+    except Exception:
+        pass
     if role == 'technician':
         return True
     # Пользователь, привязанный к профилю механика (Monteur)
