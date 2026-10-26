@@ -17,6 +17,13 @@ from utils import role_required, log_audit, create_notification, safe_commit, sa
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
 
+
+@bp.after_request
+def _gas_no_cache(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    return response
+
 # Working set (норма): 1 in_use + 1 ready full spare per gas type
 WORKING_IN_USE = 1
 WORKING_READY_FULL = 1
