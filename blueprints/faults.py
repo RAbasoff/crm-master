@@ -469,12 +469,25 @@ def fault_new():
             db.session.flush()
 
             tech_ids = request.form.getlist('technician_ids')
-            for tid in tech_ids:
-                tech = User.query.get(int(tid))
-                if tech:
-                    f.assigned_technicians.append(tech)
-            if tech_ids:
-                f.technician_id = int(tech_ids[0])
+            # dedupe + safe assign (avoid UNIQUE + autoflush)
+            seen_tech = set()
+            first_tech = None
+            with db.session.no_autoflush:
+                for tid in tech_ids:
+                    try:
+                        tid_i = int(tid)
+                    except (TypeError, ValueError):
+                        continue
+                    if tid_i in seen_tech:
+                        continue
+                    seen_tech.add(tid_i)
+                    tech = User.query.get(tid_i)
+                    if tech and tech not in f.assigned_technicians:
+                        f.assigned_technicians.append(tech)
+                        if first_tech is None:
+                            first_tech = tech
+            if first_tech is not None:
+                f.technician_id = first_tech.id
                 f.status = 'accepted'
                 f.accepted_at = now_local()
 
@@ -522,13 +535,19 @@ def fault_new():
                 import threading
                 from notify import notify_fault_created
                 from security import is_head_of_ts
-                _techs = list(f.assigned_technicians or [])
-                _heads = [u for u in User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all()]
-                def _send_notify(_f=f, _t=_techs, _h=_heads):
+                _tech_ids = [getattr(u, 'id', None) for u in (f.assigned_technicians or []) if getattr(u, 'id', None)]
+                _head_ids = [u.id for u in User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all()]
+                _fid = f.id
+                def _send_notify(_fid=_fid, _tids=_tech_ids, _hids=_head_ids):
                     try:
                         from app import app as _app
                         with _app.app_context():
-                            notify_fault_created(_f, _t, _h)
+                            from models import User as _U, FaultReport as _FR
+                            _f = _FR.query.get(_fid)
+                            _t = _U.query.filter(_U.id.in_(_tids)).all() if _tids else []
+                            _h = _U.query.filter(_U.id.in_(_hids)).all() if _hids else []
+                            if _f:
+                                notify_fault_created(_f, _t, _h)
                     except Exception as _e:
                         print('notify bg', _e)
                 threading.Thread(target=_send_notify, daemon=True).start()
