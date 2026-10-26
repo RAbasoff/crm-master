@@ -79,16 +79,7 @@ loadSms(); setInterval(loadSms, 30000);
             <div style="font-size:22px;font-weight:800;margin-bottom:4px">{{ current_user.display_name or current_user.username }}</div>
             <div style="font-size:13px;color:rgba(255,255,255,0.5)">{{ now.strftime('%A, %d %B %Y') if now else '' }}</div>
         </div>
-        {% if can_use_sms %}
-        <div style="margin-left:auto;margin-right:48px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:12px 22px;text-align:center;min-width:200px;cursor:pointer" data-sms-open="1" onclick="openSmsModal(); return false;" title="{{ _("Send SMS") }}">
-            <div style="font-size:11px;opacity:.75;letter-spacing:.5px">📱 SMS</div>
-            <div style="font-size:18px;font-weight:800">
-                <span id="smsToday">{{ sms_stats.today if sms_stats else 0 }}</span> {{ _('today') }}
-                · <span id="smsMonth">{{ sms_stats.month if sms_stats else 0 }}</span>/350
-            </div>
-            <div style="font-size:11px;opacity:.8">{{ _('Left') }}: <b id="smsLeft">{{ sms_stats.left_month if sms_stats else 350 }}</b></div>
-        </div>
-        {% endif %}
+        
     </div>
 </div>
 

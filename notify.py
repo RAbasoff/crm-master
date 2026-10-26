@@ -61,7 +61,7 @@ def email_configured():
 
 
 def sms_configured():
-    return _env('SMS_ENABLED', '0') in ('1', 'true', 'yes') and bool(_env('SMS_API_KEY'))
+    return False  # SMS TEMPORARILY DISABLED
 
 
 def send_email(to_addr, subject, body_html):
@@ -100,102 +100,8 @@ def send_email(to_addr, subject, body_html):
 
 
 def send_sms(phone, text):
-    """SMS через провайдера из .env. Возвращает True/False."""
-    import base64 as _b64
-    if not sms_configured():
-        log.info('SMS не настроен (SMS_ENABLED/SMS_API_KEY)')
-        return False
-    if not phone:
-        return False
-    phone = str(phone).strip().replace(' ', '')
-    provider = _env('SMS_PROVIDER', 'sms_ru').lower()
-    try:
-        if provider in ('sms_ru', 'smsru'):
-            import urllib.parse
-            import urllib.request
-            data = urllib.parse.urlencode({
-                'api_id': _env('SMS_API_KEY'),
-                'to': phone,
-                'text': (text or '')[:160],
-                'from': _env('SMS_FROM', 'ProMaster'),
-            }).encode()
-            urllib.request.urlopen('https://sms.ru/sms/send', data=data, timeout=20)
-            log.info(f'SMS отправлено: {phone}')
-            try:
-                from sms_counter import sms_count_add
-                sms_count_add()
-            except Exception:
-                pass
-            return True
-        if provider == 'twilio':
-            import urllib.parse
-            import urllib.request
-            import base64
-            # Account SID (AC...) for URL; API Key SID (SK...) or Account SID for Basic auth
-            key = _env('SMS_API_KEY')
-            account_sid = _env('SMS_ACCOUNT_SID') or (key if key.startswith('AC') else '')
-            api_key_sid = _env('SMS_API_KEY_SID') or (key if key.startswith('SK') else '')
-            secret = _env('SMS_API_SECRET') or _env('SMS_AUTH_TOKEN') or _env('SMS_CLIENT_SECRET')
-            auth_user = api_key_sid or account_sid
-            if not account_sid or not auth_user or not secret:
-                log.error(f'Twilio config incomplete: account_sid={bool(account_sid)} auth_user={bool(auth_user)} secret={bool(secret)}')
-                return False
-            from_num = _env('SMS_FROM')
-            url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json'
-            auth = base64.b64encode(f'{auth_user}:{secret}'.encode()).decode()
-            data = urllib.parse.urlencode({
-                'To': phone, 'From': from_num, 'Body': (text or '')[:160],
-            }).encode()
-            req = urllib.request.Request(url, data=data, headers={'Authorization': f'Basic {auth}'})
-            urllib.request.urlopen(req, timeout=20)
-            log.info(f'SMS (twilio) отправлено: {phone}')
-            try:
-                from sms_counter import sms_count_add
-                sms_count_add()
-            except Exception:
-                pass
-            return True
-        if provider in ('gatewayapi', 'gateway', 'app.gatewayapi.com'):
-            import urllib.parse
-            import urllib.request
-            import json as _json
-            token = _env('SMS_API_KEY')
-            sender = _env('SMS_FROM', 'ProMaster')
-            payload = _json.dumps({
-                'recipients': [{'msisdn': phone}],
-                'message': (text or '')[:160],
-                'sender': sender,
-            }).encode()
-            req = urllib.request.Request(
-                'https://gatewayapi.com/rest/mtsms',
-                data=payload,
-                headers={
-                    'Authorization': 'Basic ' + _b64.b64encode((token + ':').encode()).decode(),
-                    'Content-Type': 'application/json',
-                },
-                method='POST',
-            )
-            urllib.request.urlopen(req, timeout=20)
-            log.info(f'SMS (gatewayapi) отправлено: {phone}')
-            try:
-                from sms_counter import sms_count_add
-                sms_count_add()
-            except Exception:
-                pass
-            return True
-        log.warning(f'Неизвестный SMS_PROVIDER: {provider}')
-        return False
-    except Exception as e:
-        global SMS_LAST_ERROR
-        body = ''
-        try:
-            if hasattr(e, 'read'):
-                body = e.read().decode('utf-8', 'replace')[:300]
-        except Exception:
-            pass
-        SMS_LAST_ERROR = (body or str(e))
-        log.error(f'SMS ошибка: {e} {body}')
-        return False
+    """SMS MODULE TEMPORARILY DISABLED. Will be restored later."""
+    return False
 
 
 def _name_of(u):

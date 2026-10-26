@@ -598,8 +598,7 @@ def api_user_object_access(user_id):
 
 
 def _sms_allowed():
-    from security import can_use_sms
-    return can_use_sms(current_user)
+    return False  # SMS TEMPORARILY DISABLED
 
 @bp.route('/api/settings/sms-stats')
 @login_required
