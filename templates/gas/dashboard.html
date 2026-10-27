@@ -169,11 +169,11 @@
                 <line x1="115" y1="98" x2="115" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 <line x1="265" y1="98" x2="265" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 {% if MU %}
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="88" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ n2a[0].id if n2a|length > 0 else 0 }}" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '' }}" data-type="nitrogen" data-num="" data-status="in_use" x="88" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
                 <text x="115" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
                 <text x="115" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if L else 'FULL' }}</text>
                 <text x="115" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="238" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ n2a[1].id if n2a|length > 1 else 0 }}" data-num="{{ n2a[1].cylinder_number if n2a|length > 1 else '' }}" data-type="nitrogen" data-num="" data-status="in_use" x="238" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
                 <text x="265" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
                 <text x="265" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
                 <text x="265" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
@@ -187,9 +187,9 @@
                 <text x="190" y="272" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ mixed_active.cylinder_number if mixed_active else '—' }}</text>
                 </g>
                 {% else %}
-                <rect class="cylinder-card" data-type="nitrogen" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="107" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ n2a[0].id if n2a|length > 0 else 0 }}" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '' }}" data-type="nitrogen" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="107" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
                 <rect x="104" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="88" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ n2a[0].id if n2a|length > 0 else 0 }}" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '' }}" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="88" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
                 <rect x="88" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
                 <text x="115" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
                 <text x="115" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
@@ -201,7 +201,7 @@
                 </g>
                 <rect x="257" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
                 <rect x="254" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="238" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ n2a[1].id if n2a|length > 1 else 0 }}" data-num="{{ n2a[1].cylinder_number if n2a|length > 1 else '' }}" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="238" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
                 <rect x="238" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
                 <text x="265" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
                 <text x="265" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
@@ -267,11 +267,11 @@
                 <line x1="115" y1="98" x2="115" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 <line x1="265" y1="98" x2="265" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 {% if MU %}
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="88" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ co2a[0].id if co2a|length > 0 else 0 }}" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '' }}" data-type="nitrogen" data-num="" data-status="in_use" x="88" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
                 <text x="115" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
                 <text x="115" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if L else 'FULL' }}</text>
                 <text x="115" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="in_use" x="238" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ co2a[1].id if co2a|length > 1 else 0 }}" data-num="{{ co2a[1].cylinder_number if co2a|length > 1 else '' }}" data-type="co2" data-num="" data-status="in_use" x="238" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
                 <text x="265" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
                 <text x="265" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
                 <text x="265" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
@@ -285,9 +285,9 @@
                 <text x="190" y="272" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ mixed_active.cylinder_number if mixed_active else '—' }}</text>
                 </g>
                 {% else %}
-                <rect class="cylinder-card" data-type="co2" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="107" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ co2a[0].id if co2a|length > 0 else 0 }}" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '' }}" data-type="co2" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="107" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
                 <rect x="104" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="88" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ co2a[0].id if co2a|length > 0 else 0 }}" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '' }}" data-type="co2" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="88" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
                 <rect x="88" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
                 <text x="115" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
                 <text x="115" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
@@ -299,7 +299,7 @@
                 </g>
                 <rect x="257" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
                 <rect x="254" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="238" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-id="{{ co2a[1].id if co2a|length > 1 else 0 }}" data-num="{{ co2a[1].cylinder_number if co2a|length > 1 else '' }}" data-type="co2" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="238" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
                 <rect x="238" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
                 <text x="265" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
                 <text x="265" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
