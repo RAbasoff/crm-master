@@ -137,30 +137,27 @@
             {% if stats.n2_received_month > 0 %}
             <div style="background:#e8f8e8;border:1px solid #27ae60;border-radius:4px;padding:2px 4px;margin-bottom:4px;font-size:9px;color:#27ae60;width:100%;text-align:center">📦 {{ stats.n2_received_month }} {{ _('received') }}</div>
             {% endif %}
-            <div style="font-weight:700;color:#3498db;margin-bottom:4px;font-size:10px;width:100%">{{ _('In Work') }}: {{ n2_active|length }}</div>
-            {% for cyl in n2_active %}
-            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-                 style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% else %}#f0fff0{% endif %};font-size:9px;margin-bottom:2px"
-                 onmouseover="this.style.borderColor='#3498db'" onmouseout="this.style.borderColor='{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}'">
-                {{ cyl.cylinder_number }}
-                <span style="font-size:8px;padding:0 3px;border-radius:2px;color:white;background:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">{% if cyl.status=='in_use' %}USE{% else %}FULL{% endif %}</span>
+            <div style="font-weight:700;color:#3498db;margin-bottom:4px;font-size:10px;width:100%">{% set _full = [] %}{% for c in n2_cylinders if c.status == 'full' %}{% if _full.append(c) %}{% endif %}{% endfor %}{% set _inst = [] %}{% for c in n2_cylinders if c.status == 'in_use' %}{% if _inst.append(c) %}{% endif %}{% endfor %}
+            <div style="font-weight:700;color:#27ae60;margin-bottom:4px;font-size:10px;width:100%">{{ _("Full") }}: {{ _full|length }}</div>
+            {% for cyl in _full %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="full" style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #27ae60;background:#f0fff0;font-size:9px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+                <b>{{ cyl.cylinder_number }}</b>
+                <span style="font-size:8px;padding:0 3px;border-radius:2px;color:white;background:#27ae60">{{ _("Full") }}</span>
+            </div>
+            {% endfor %}
+            <div style="font-weight:700;color:#e65100;margin:6px 0 4px;font-size:10px;width:100%">{{ _("Installed") }}: {{ _inst|length }}</div>
+            {% for cyl in _inst %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="in_use" style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #f39c12;background:#fff8f0;font-size:9px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+                <b>{{ cyl.cylinder_number }}</b>
+                <span style="font-size:8px;padding:0 3px;border-radius:2px;color:white;background:#f39c12">{{ _("In use") }}</span>
             </div>
             {% endfor %}
             {% if n2_empty_list %}
-            <div style="font-weight:700;color:#c0392b;margin:6px 0 4px;font-size:10px;width:100%">
-                {{ _('Empty') }}: <b style="font-size:12px">{{ n2_empty_list|length }}</b>
-            </div>
-            <div style="width:100%;display:flex;flex-wrap:wrap;gap:3px">
-            {% for cyl in n2_empty_list %}
-            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="empty"
-                 style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #c0392b;background:#fdecea;font-size:9px">
-                <b>{{ cyl.cylinder_number }}</b>
-            </div>
-            {% endfor %}
-            </div>
+            
             {% endif %}
         </div>
         <!-- CENTER: SVG -->
+        {% set mixed_in_use = (mixed_cylinders | selectattr('status', 'equalto', 'in_use') | list | length) > 0 %}
         {% set n2_active_left = n2a|length > 0 and n2a[0].status == 'in_use' %}
         {% set n2_active_right = n2a|length > 1 and n2a[1].status == 'in_use' %}
         <svg viewBox="0 0 300 160" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
@@ -214,6 +211,10 @@
             <text x="195" y="128" text-anchor="middle" font-size="5" fill="{% if n2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if n2_active_right %}USE{% else %}FULL{% endif %}</text>
             <!-- номер ПОД баллоном -->
             <text x="195" y="152" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+        
+            <rect x="133" y="112" width="34" height="32" rx="5" fill="{% if mixed_in_use %}#f3e5f5{% else %}#fafafa{% endif %}" stroke="#9575cd" stroke-width="1.5"/>
+            <text x="150" y="126" text-anchor="middle" font-size="6" font-weight="bold" fill="#5e35b1">MIX</text>
+            <text x="150" y="137" text-anchor="middle" font-size="5" fill="#7e57c2">{% if mixed_in_use %}ACTIVE{% else %}gas{% endif %}</text>
         </svg>
         <!-- RIGHT: Counts -->
         <div class="gas-counts" style="font-size:10px;padding-top:10px">
@@ -221,7 +222,7 @@
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ stats.n2_in_use }}</b> {{ _('Use') }}</div>
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#c0392b"></div><b style="color:#c0392b">{{ stats.n2_empty }}</b> {{ _('Empty') }}</div>
             <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin-top:3px">{{ _('Total') }}: {{ stats.n2_full + stats.n2_in_use + stats.n2_empty }}</div>
-        </div>
+        </div>{% set n2_cylinders_empty = [] %}{% for c in n2_cylinders if c.status == 'empty' %}{% if n2_cylinders_empty.append(c) %}{% endif %}{% endfor %}{% if n2_cylinders_empty %}<div style="font-weight:700;color:#c0392b;margin:8px 0 4px;font-size:10px">{{ _("Empty") }}: {{ n2_cylinders_empty|length }}</div>{% for cyl in n2_cylinders_empty %}<div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #c0392b;background:#fdecea;font-size:9px;margin-bottom:2px"><b style="color:#c0392b">{{ cyl.cylinder_number }}</b></div>{% endfor %}{% endif %}
     </div>
     <div class="gas-cards" style="display:flex;gap:6px;justify-content:center;margin-top:6px">
         {% for cyl in n2_cylinders if cyl.status in ('in_use','full') %}{% if loop.index <= 2 %}
@@ -247,29 +248,26 @@
             {% if stats.co2_received_month > 0 %}
             <div style="background:#fde8e8;border:1px solid #e74c3c;border-radius:4px;padding:2px 4px;margin-bottom:4px;font-size:9px;color:#e74c3c;width:100%;text-align:center">📦 {{ stats.co2_received_month }} {{ _('received') }}</div>
             {% endif %}
-            <div style="font-weight:700;color:#e74c3c;margin-bottom:4px;font-size:10px;width:100%">{{ _('In Work') }}: {{ co2_active|length }}</div>
-            {% for cyl in co2_active %}
-            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="{{ cyl.status }}"
-                 style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid {% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %};background:{% if cyl.status=='in_use' %}#fff8f0{% else %}#f0fff0{% endif %};font-size:9px;margin-bottom:2px"
-                 onmouseover="this.style.borderColor='#e74c3c'" onmouseout="this.style.borderColor='{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}'">
-                {{ cyl.cylinder_number }}
-                <span style="font-size:8px;padding:0 3px;border-radius:2px;color:white;background:{% if cyl.status=='in_use' %}#f39c12{% else %}#27ae60{% endif %}">{% if cyl.status=='in_use' %}USE{% else %}FULL{% endif %}</span>
+            <div style="font-weight:700;color:#e74c3c;margin-bottom:4px;font-size:10px;width:100%">{% set _full = [] %}{% for c in co2_cylinders if c.status == 'full' %}{% if _full.append(c) %}{% endif %}{% endfor %}{% set _inst = [] %}{% for c in co2_cylinders if c.status == 'in_use' %}{% if _inst.append(c) %}{% endif %}{% endfor %}
+            <div style="font-weight:700;color:#27ae60;margin-bottom:4px;font-size:10px;width:100%">{{ _("Full") }}: {{ _full|length }}</div>
+            {% for cyl in _full %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="full" style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #27ae60;background:#f0fff0;font-size:9px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+                <b>{{ cyl.cylinder_number }}</b>
+                <span style="font-size:8px;padding:0 3px;border-radius:2px;color:white;background:#27ae60">{{ _("Full") }}</span>
+            </div>
+            {% endfor %}
+            <div style="font-weight:700;color:#e65100;margin:6px 0 4px;font-size:10px;width:100%">{{ _("Installed") }}: {{ _inst|length }}</div>
+            {% for cyl in _inst %}
+            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="in_use" style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #f39c12;background:#fff8f0;font-size:9px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center">
+                <b>{{ cyl.cylinder_number }}</b>
+                <span style="font-size:8px;padding:0 3px;border-radius:2px;color:white;background:#f39c12">{{ _("In use") }}</span>
             </div>
             {% endfor %}
             {% if co2_empty_list %}
-            <div style="font-weight:700;color:#c0392b;margin:6px 0 4px;font-size:10px;width:100%">
-                {{ _('Empty') }}: <b style="font-size:12px">{{ co2_empty_list|length }}</b>
-            </div>
-            <div style="width:100%;display:flex;flex-wrap:wrap;gap:3px">
-            {% for cyl in co2_empty_list %}
-            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="empty"
-                 style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #c0392b;background:#fdecea;font-size:9px">
-                <b>{{ cyl.cylinder_number }}</b>
-            </div>
-            {% endfor %}
-            </div>
+            
             {% endif %}
         </div>
+        {% set mixed_in_use = (mixed_cylinders | selectattr('status', 'equalto', 'in_use') | list | length) > 0 %}
         {% set co2_active_left = co2a|length > 0 and co2a[0].status == 'in_use' %}
         {% set co2_active_right = co2a|length > 1 and co2a[1].status == 'in_use' %}
         <svg viewBox="0 0 300 160" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
@@ -320,13 +318,17 @@
             <text x="195" y="116" text-anchor="middle" font-size="6" fill="#e74c3c" font-weight="bold">CO2</text>
             <text x="195" y="128" text-anchor="middle" font-size="5" fill="{% if co2_active_right %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if co2_active_right %}USE{% else %}FULL{% endif %}</text>
             <text x="195" y="152" text-anchor="middle" font-size="8" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+        
+            <rect x="133" y="112" width="34" height="32" rx="5" fill="{% if mixed_in_use %}#f3e5f5{% else %}#fafafa{% endif %}" stroke="#9575cd" stroke-width="1.5"/>
+            <text x="150" y="126" text-anchor="middle" font-size="6" font-weight="bold" fill="#5e35b1">MIX</text>
+            <text x="150" y="137" text-anchor="middle" font-size="5" fill="#7e57c2">{% if mixed_in_use %}ACTIVE{% else %}gas{% endif %}</text>
         </svg>
         <div class="gas-counts" style="font-size:10px;padding-top:10px">
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ stats.co2_full }}</b> {{ _('Full') }}</div>
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ stats.co2_in_use }}</b> {{ _('Use') }}</div>
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#c0392b"></div><b style="color:#c0392b">{{ stats.co2_empty }}</b> {{ _('Empty') }}</div>
             <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin-top:3px">{{ _('Total') }}: {{ stats.co2_full + stats.co2_in_use + stats.co2_empty }}</div>
-        </div>
+        </div>{% set co2_cylinders_empty = [] %}{% for c in co2_cylinders if c.status == 'empty' %}{% if co2_cylinders_empty.append(c) %}{% endif %}{% endfor %}{% if co2_cylinders_empty %}<div style="font-weight:700;color:#c0392b;margin:8px 0 4px;font-size:10px">{{ _("Empty") }}: {{ co2_cylinders_empty|length }}</div>{% for cyl in co2_cylinders_empty %}<div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:2px 5px;border-radius:3px;border:1px solid #c0392b;background:#fdecea;font-size:9px;margin-bottom:2px"><b style="color:#c0392b">{{ cyl.cylinder_number }}</b></div>{% endfor %}{% endif %}
     </div>
     <div class="gas-cards" style="display:flex;gap:6px;justify-content:center;margin-top:6px">
         {% for cyl in co2_cylinders if cyl.status in ('in_use','full') %}{% if loop.index <= 2 %}
