@@ -458,18 +458,27 @@ def cylinder_status(cyl_id):
         if new_status == 'in_use' and not c.installed_at:
             c.installed_at = datetime.utcnow()
 
-    # Max 1 in_use per gas type (норма). If another is active → it leaves as empty.
+    # Only ONE gas can be in use at a time (N2 or CO2 or MIX).
+    # When activating a new one, others go back to full (installed, waiting) — not empty.
     if new_status == 'in_use':
         others = GasCylinder.query.filter(
-            GasCylinder.gas_type == c.gas_type,
             GasCylinder.status == 'in_use',
             GasCylinder.id != c.id
-        ).order_by(GasCylinder.installed_at.asc().nullslast()).all()
-        for oldest in others:
-            _mark_empty_leaves_site(
-                oldest, user_id=current_user.id,
-                note='Auto-emptied: replaced by %s (working set = 1 in_use)' % c.cylinder_number
-            )
+        ).all()
+        for other in others:
+            other.status = 'full'
+            if not other.installed_at:
+                other.installed_at = datetime.utcnow()
+            try:
+                from models import CylinderLog
+                db.session.add(CylinderLog(
+                    cylinder_id=other.id,
+                    action='in_use_to_full',
+                    user_id=current_user.id if isinstance(current_user.id, int) else None,
+                    note=f'Standby: switched to {c.cylinder_number} ({c.gas_type})',
+                ))
+            except Exception:
+                pass
 
     # When an in_use cylinder empties → promote one full spare into service
     if old_status == 'in_use' and new_status == 'empty':
