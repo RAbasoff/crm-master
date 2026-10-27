@@ -1061,15 +1061,8 @@ def work_report_new(fault_id):
         except (ValueError, KeyError, TypeError):
             db.session.rollback()
 
-        # Статус — через общую машину переходов (история + проверка прав)
-        ok_st, err_st = _set_fault_status(f, 'resolved', current_user,
-                                          reason=f'work report #{wr.id}')
-        if not ok_st:
-            flash(_('Work report saved but status update failed') + f': {err_st}', 'warning')
-            return redirect(url_for('faults.fault_detail', fault_id=f.id))
-        if not safe_commit():
-            flash(_('Work report saved but status update failed'), 'warning')
-            return redirect(url_for('faults.fault_detail', fault_id=f.id))
+        # Статус заявки НЕ меняем при сохранении рапорта/фото.
+        # Отметка «Решено» ставится только кнопкой Resolve самим механиком.
 
         log_audit('create', 'work_report', wr.id, f'Отчёт по поломке #{f.id}: {f.title} ({wr.time_spent_hours}ч)')
         add_work_report(f"{_('Work report')}: #{f.id} {f.title} ({wr.time_spent_hours}h)")
