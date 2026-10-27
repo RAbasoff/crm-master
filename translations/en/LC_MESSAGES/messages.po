@@ -6501,3 +6501,6 @@ msgstr "Extra remarks"
 
 msgid "Please select a machine or equipment"
 msgstr "Please select a machine or equipment"
+
+msgid "8 digits"
+msgstr "8 digits"

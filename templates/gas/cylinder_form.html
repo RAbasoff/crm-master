@@ -16,8 +16,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>{{ _('Cylinder Number') }} * (Z + 6 digits)</label>
-                <input type="text" name="cylinder_number" value="{{ cylinder.cylinder_number if cylinder else '' }}" required placeholder="e.g. Z123456" pattern="Z\d{6}" title="Must start with Z followed by 6 digits (e.g. Z123456)">
+                <label>{{ _('Cylinder Number') }} * ({{ _("8 digits") }})</label>
+                <input type="text" name="cylinder_number" value="{{ cylinder.cylinder_number if cylinder else '' }}" required placeholder="e.g. 58562820" pattern="\d{8}|Z\d{6}" title="Must start with Z followed by 6 digits (e.g. 58562820)">
             </div>
         </div>
         <div class="form-row">

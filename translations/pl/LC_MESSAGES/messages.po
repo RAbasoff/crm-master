@@ -6313,3 +6313,6 @@ msgstr "Dodatkowe uwagi"
 
 msgid "Please select a machine or equipment"
 msgstr "Wybierz maszynę lub urządzenie"
+
+msgid "8 digits"
+msgstr "8 cyfr"

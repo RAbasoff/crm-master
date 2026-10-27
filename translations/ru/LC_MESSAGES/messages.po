@@ -6742,3 +6742,6 @@ msgstr "Доп. замечания"
 
 msgid "Please select a machine or equipment"
 msgstr "Выберите станок или оборудование"
+
+msgid "8 digits"
+msgstr "8 цифр"

@@ -6556,3 +6556,6 @@ msgstr "Extra opmerkingen"
 
 msgid "Please select a machine or equipment"
 msgstr "Selecteer een machine of apparatuur"
+
+msgid "8 digits"
+msgstr "8 cijfers"
