@@ -27,6 +27,8 @@ def _gas_no_cache(response):
 # Working set (норма): 1 in_use + 1 ready full spare per gas type
 WORKING_IN_USE = 1
 WORKING_READY_FULL = 1
+# Минимум полных баллонов: смешанный газ — от 3, иначе заказ
+MIN_FULL = {'nitrogen': 1, 'co2': 1, 'mixed': 3}
 GAS_TYPES = ('nitrogen', 'co2', 'mixed')
 GAS_LABELS = {'nitrogen': 'N₂', 'co2': 'CO₂', 'mixed': 'Mixed gas'}
 
@@ -89,10 +91,10 @@ def _inventory_balance():
             'total': total,
             'pending_scans': int(pending),
             'identity_ok': True,
-            'has_working_pair': (in_use >= WORKING_IN_USE and full >= WORKING_READY_FULL),
+            'has_working_pair': (in_use >= WORKING_IN_USE and full >= MIN_FULL.get(gt, WORKING_READY_FULL)) if gt != 'mixed' else (full >= MIN_FULL['mixed']),
             'ready_full': full,
             'spare_full': max(0, full - WORKING_READY_FULL),
-            'need_order': (in_use < WORKING_IN_USE or full < WORKING_READY_FULL),
+            'need_order': (full < MIN_FULL.get(gt, WORKING_READY_FULL)) if gt == 'mixed' else (in_use < WORKING_IN_USE or full < MIN_FULL.get(gt, WORKING_READY_FULL)),
             'ordered_qty': int(ordered_month),
             'delivered_qty': int(delivered_month),
             'month_label': now.strftime('%Y-%m'),
