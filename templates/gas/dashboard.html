@@ -160,7 +160,7 @@
                 <circle cx="195" cy="36" r="11" fill="white" stroke="#2196f3" stroke-width="1.5"/><text x="195" y="39" text-anchor="middle" font-size="5" fill="#2196f3" font-weight="bold">BAR</text>
                 <circle cx="150" cy="36" r="11" fill="white" stroke="#f39c12" stroke-width="2"/><text x="150" y="39" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
                 <line x1="116" y1="36" x2="139" y2="36" stroke="#555"/><line x1="161" y1="36" x2="184" y2="36" stroke="#555"/>
-                {% if L %}<polygon points="116,36 130,30 130,42" fill="#27ae60"/><line x1="130" y1="36" x2="139" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="184,36 170,30 170,42" fill="#27ae60"/><line x1="161" y1="36" x2="170" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
+                {% if MU %}<line x1="150" y1="48" x2="150" y2="118" stroke="#9575cd" stroke-width="2.5"/><polygon points="150,132 143,116 157,116" fill="#9575cd"/>{% elif L %}<polygon points="116,36 130,30 130,42" fill="#27ae60"/><line x1="130" y1="36" x2="139" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="184,36 170,30 170,42" fill="#27ae60"/><line x1="161" y1="36" x2="170" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
                 <rect x="90" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#2196f3"/><text x="105" y="62" text-anchor="middle" font-size="7">🔥</text>
                 <rect x="180" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#2196f3"/><text x="195" y="62" text-anchor="middle" font-size="7">🔥</text>
                 <line x1="105" y1="66" x2="105" y2="80" stroke="#2196f3" stroke-width="2.5"/><line x1="195" y1="66" x2="195" y2="80" stroke="#2196f3" stroke-width="2.5"/>
@@ -168,17 +168,41 @@
                 <circle cx="195" cy="90" r="8" fill="white" stroke="#2196f3" stroke-width="1.5"/><circle cx="195" cy="90" r="3" fill="#2196f3"/>
                 <line x1="105" y1="98" x2="105" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 <line x1="195" y1="98" x2="195" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
-                <rect x="50" y="122" width="110" height="72" rx="8" fill="{% if L %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if L %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="2"/>
-                <text x="105" y="152" text-anchor="middle" font-size="14" fill="#2196f3" font-weight="bold">N2</text>
-                <text x="105" y="172" text-anchor="middle" font-size="11" fill="{% if L %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if L %}USE{% else %}FULL{% endif %}</text>
-                <text x="105" y="208" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
-                <rect x="152" y="138" width="36" height="32" rx="5" fill="{% if MU %}#f3e5f5{% else %}#fafafa{% endif %}" stroke="#9575cd" stroke-width="1.5"/>
+                {% if MU %}
+                <rect x="88" y="182" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="115" y="202" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
+                <text x="115" y="216" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if L else 'FULL' }}</text>
+                <text x="115" y="242" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
+                <rect x="223" y="182" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="250" y="202" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
+                <text x="250" y="216" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="250" y="242" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+                <rect x="174" y="155" width="14" height="8" rx="2" fill="#b39ddb" stroke="#7e57c2"/>
+                <rect x="170" y="161" width="22" height="10" rx="3" fill="#d1c4e9" stroke="#9575cd"/>
+                <rect x="157" y="170" width="50" height="90" rx="16" fill="#f3e5f5" stroke="#9575cd" stroke-width="2.5"/>
+                <rect x="157" y="180" width="50" height="5" rx="2" fill="#9575cd" opacity="0.3"/>
+                <text x="182" y="205" text-anchor="middle" font-size="11" fill="#5e35b1" font-weight="bold">MIX</text>
+                <text x="182" y="222" text-anchor="middle" font-size="9" fill="#8e24aa" font-weight="bold">USE</text>
+                <text x="182" y="278" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">—</text>
+                {% else %}
+                <rect x="97" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b"/>
+                <rect x="93" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c"/>
+                <rect x="80" y="128" width="50" height="90" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2"/>
+                <rect x="80" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
+                <text x="105" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
+                <text x="105" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
+                <text x="105" y="238" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
+                <rect x="152" y="138" width="36" height="30" rx="5" fill="#fafafa" stroke="#9575cd" stroke-width="1.5"/>
                 <text x="170" y="155" text-anchor="middle" font-size="7" font-weight="bold" fill="#5e35b1">MIX</text>
-                <text x="170" y="167" text-anchor="middle" font-size="5" fill="#7e57c2">{% if MU %}ACTIVE{% else %}gas{% endif %}</text>
-                <rect x="140" y="122" width="110" height="72" rx="8" fill="{% if R %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if R %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="2"/>
-                <text x="195" y="152" text-anchor="middle" font-size="14" fill="#2196f3" font-weight="bold">N2</text>
-                <text x="195" y="172" text-anchor="middle" font-size="11" fill="{% if R %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if R %}USE{% else %}FULL{% endif %}</text>
-                <text x="195" y="208" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+                <text x="170" y="165" text-anchor="middle" font-size="5" fill="#7e57c2">gas</text>
+                <rect x="222" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b"/>
+                <rect x="218" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c"/>
+                <rect x="205" y="128" width="50" height="90" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2"/>
+                <rect x="205" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
+                <text x="230" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
+                <text x="230" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="230" y="238" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+                {% endif %}
             </svg>
         </div>
         <div style="width:130px;flex-shrink:0;font-size:10px">
@@ -230,7 +254,7 @@
                 <circle cx="195" cy="36" r="11" fill="white" stroke="#e53935" stroke-width="1.5"/><text x="195" y="39" text-anchor="middle" font-size="5" fill="#e53935" font-weight="bold">BAR</text>
                 <circle cx="150" cy="36" r="11" fill="white" stroke="#f39c12" stroke-width="2"/><text x="150" y="39" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
                 <line x1="116" y1="36" x2="139" y2="36" stroke="#555"/><line x1="161" y1="36" x2="184" y2="36" stroke="#555"/>
-                {% if L %}<polygon points="116,36 130,30 130,42" fill="#27ae60"/><line x1="130" y1="36" x2="139" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="184,36 170,30 170,42" fill="#27ae60"/><line x1="161" y1="36" x2="170" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
+                {% if MU %}<line x1="150" y1="48" x2="150" y2="118" stroke="#9575cd" stroke-width="2.5"/><polygon points="150,132 143,116 157,116" fill="#9575cd"/>{% elif L %}<polygon points="116,36 130,30 130,42" fill="#27ae60"/><line x1="130" y1="36" x2="139" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="184,36 170,30 170,42" fill="#27ae60"/><line x1="161" y1="36" x2="170" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
                 <rect x="90" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#e53935"/><text x="105" y="62" text-anchor="middle" font-size="7">🔥</text>
                 <rect x="180" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#e53935"/><text x="195" y="62" text-anchor="middle" font-size="7">🔥</text>
                 <line x1="105" y1="66" x2="105" y2="80" stroke="#e53935" stroke-width="2.5"/><line x1="195" y1="66" x2="195" y2="80" stroke="#e53935" stroke-width="2.5"/>
@@ -238,17 +262,41 @@
                 <circle cx="195" cy="90" r="8" fill="white" stroke="#e53935" stroke-width="1.5"/><circle cx="195" cy="90" r="3" fill="#e53935"/>
                 <line x1="105" y1="98" x2="105" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 <line x1="195" y1="98" x2="195" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
-                <rect x="50" y="122" width="110" height="72" rx="8" fill="{% if L %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if L %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="2"/>
-                <text x="105" y="152" text-anchor="middle" font-size="14" fill="#e53935" font-weight="bold">CO2</text>
-                <text x="105" y="172" text-anchor="middle" font-size="11" fill="{% if L %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if L %}USE{% else %}FULL{% endif %}</text>
-                <text x="105" y="208" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
-                <rect x="152" y="138" width="36" height="32" rx="5" fill="{% if MU %}#f3e5f5{% else %}#fafafa{% endif %}" stroke="#9575cd" stroke-width="1.5"/>
+                {% if MU %}
+                <rect x="88" y="182" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="115" y="202" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
+                <text x="115" y="216" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if L else 'FULL' }}</text>
+                <text x="115" y="242" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
+                <rect x="223" y="182" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5"/>
+                <text x="250" y="202" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
+                <text x="250" y="216" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="250" y="242" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+                <rect x="174" y="155" width="14" height="8" rx="2" fill="#b39ddb" stroke="#7e57c2"/>
+                <rect x="170" y="161" width="22" height="10" rx="3" fill="#d1c4e9" stroke="#9575cd"/>
+                <rect x="157" y="170" width="50" height="90" rx="16" fill="#f3e5f5" stroke="#9575cd" stroke-width="2.5"/>
+                <rect x="157" y="180" width="50" height="5" rx="2" fill="#9575cd" opacity="0.3"/>
+                <text x="182" y="205" text-anchor="middle" font-size="11" fill="#5e35b1" font-weight="bold">MIX</text>
+                <text x="182" y="222" text-anchor="middle" font-size="9" fill="#8e24aa" font-weight="bold">USE</text>
+                <text x="182" y="278" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">—</text>
+                {% else %}
+                <rect x="97" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b"/>
+                <rect x="93" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c"/>
+                <rect x="80" y="128" width="50" height="90" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2"/>
+                <rect x="80" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
+                <text x="105" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
+                <text x="105" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
+                <text x="105" y="238" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
+                <rect x="152" y="138" width="36" height="30" rx="5" fill="#fafafa" stroke="#9575cd" stroke-width="1.5"/>
                 <text x="170" y="155" text-anchor="middle" font-size="7" font-weight="bold" fill="#5e35b1">MIX</text>
-                <text x="170" y="167" text-anchor="middle" font-size="5" fill="#7e57c2">{% if MU %}ACTIVE{% else %}gas{% endif %}</text>
-                <rect x="140" y="122" width="110" height="72" rx="8" fill="{% if R %}#fff8f0{% else %}#f0fff0{% endif %}" stroke="{% if R %}#f39c12{% else %}#27ae60{% endif %}" stroke-width="2"/>
-                <text x="195" y="152" text-anchor="middle" font-size="14" fill="#e53935" font-weight="bold">CO2</text>
-                <text x="195" y="172" text-anchor="middle" font-size="11" fill="{% if R %}#f39c12{% else %}#27ae60{% endif %}" font-weight="bold">{% if R %}USE{% else %}FULL{% endif %}</text>
-                <text x="195" y="208" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+                <text x="170" y="165" text-anchor="middle" font-size="5" fill="#7e57c2">gas</text>
+                <rect x="222" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b"/>
+                <rect x="218" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c"/>
+                <rect x="205" y="128" width="50" height="90" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2"/>
+                <rect x="205" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
+                <text x="230" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
+                <text x="230" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="230" y="238" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+                {% endif %}
             </svg>
         </div>
         <div style="width:130px;flex-shrink:0;font-size:10px">
