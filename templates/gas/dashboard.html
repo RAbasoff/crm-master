@@ -152,60 +152,60 @@
             {% set L = n2a|length > 0 and n2a[0].status == 'in_use' %}
             {% set R = n2a|length > 1 and n2a[1].status == 'in_use' %}
             {% set _mixact = (mixed_cylinders | selectattr('status', 'equalto', 'in_use') | list) %}{% set MU = _mixact|length > 0 %}{% set mixed_active = _mixact[0] if _mixact else None %}
-            <svg viewBox="0 0 300 280" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
-                <line x1="85" y1="12" x2="215" y2="12" stroke="#2196f3" stroke-width="4" stroke-linecap="round"/>
-                <text x="150" y="11" text-anchor="middle" font-size="6" font-weight="bold" fill="#2196f3">PIPELINE</text>
-                <line x1="105" y1="12" x2="105" y2="26" stroke="#2196f3" stroke-width="1.5"/><line x1="195" y1="12" x2="195" y2="26" stroke="#2196f3" stroke-width="1.5"/>
-                <circle cx="105" cy="36" r="11" fill="white" stroke="#2196f3" stroke-width="1.5"/><text x="105" y="39" text-anchor="middle" font-size="5" fill="#2196f3" font-weight="bold">BAR</text>
-                <circle cx="195" cy="36" r="11" fill="white" stroke="#2196f3" stroke-width="1.5"/><text x="195" y="39" text-anchor="middle" font-size="5" fill="#2196f3" font-weight="bold">BAR</text>
-                <circle cx="150" cy="36" r="11" fill="white" stroke="#f39c12" stroke-width="2"/><text x="150" y="39" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
-                <line x1="116" y1="36" x2="139" y2="36" stroke="#555"/><line x1="161" y1="36" x2="184" y2="36" stroke="#555"/>
-                {% if MU %}<line x1="150" y1="48" x2="150" y2="118" stroke="#9575cd" stroke-width="2.5"/><polygon points="150,132 143,116 157,116" fill="#9575cd"/>{% elif L %}<polygon points="116,36 130,30 130,42" fill="#27ae60"/><line x1="130" y1="36" x2="139" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="184,36 170,30 170,42" fill="#27ae60"/><line x1="161" y1="36" x2="170" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
-                <rect x="90" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#2196f3"/><text x="105" y="62" text-anchor="middle" font-size="7">🔥</text>
-                <rect x="180" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#2196f3"/><text x="195" y="62" text-anchor="middle" font-size="7">🔥</text>
-                <line x1="105" y1="66" x2="105" y2="80" stroke="#2196f3" stroke-width="2.5"/><line x1="195" y1="66" x2="195" y2="80" stroke="#2196f3" stroke-width="2.5"/>
-                <circle cx="105" cy="90" r="8" fill="white" stroke="#2196f3" stroke-width="1.5"/><circle cx="105" cy="90" r="3" fill="#2196f3"/>
-                <circle cx="195" cy="90" r="8" fill="white" stroke="#2196f3" stroke-width="1.5"/><circle cx="195" cy="90" r="3" fill="#2196f3"/>
-                <line x1="105" y1="98" x2="105" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
-                <line x1="195" y1="98" x2="195" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+            <svg viewBox="0 0 380 280" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+                <line x1="85" y1="12" x2="295" y2="12" stroke="#2196f3" stroke-width="4" stroke-linecap="round"/>
+                <text x="190" y="11" text-anchor="middle" font-size="6" font-weight="bold" fill="#2196f3">PIPELINE</text>
+                <line x1="115" y1="12" x2="115" y2="26" stroke="#2196f3" stroke-width="1.5"/><line x1="265" y1="12" x2="265" y2="26" stroke="#2196f3" stroke-width="1.5"/>
+                <circle cx="115" cy="36" r="11" fill="white" stroke="#2196f3" stroke-width="1.5"/><text x="115" y="39" text-anchor="middle" font-size="5" fill="#2196f3" font-weight="bold">BAR</text>
+                <circle cx="265" cy="36" r="11" fill="white" stroke="#2196f3" stroke-width="1.5"/><text x="265" y="39" text-anchor="middle" font-size="5" fill="#2196f3" font-weight="bold">BAR</text>
+                <circle cx="190" cy="36" r="11" fill="white" stroke="#f39c12" stroke-width="2"/><text x="190" y="39" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
+                <line x1="126" y1="36" x2="179" y2="36" stroke="#555"/><line x1="201" y1="36" x2="254" y2="36" stroke="#555"/>
+                {% if MU %}<line x1="190" y1="48" x2="190" y2="118" stroke="#9575cd" stroke-width="2.5"/><polygon points="190,132 183,116 197,116" fill="#9575cd"/>{% elif L %}<polygon points="126,36 140,30 140,42" fill="#27ae60"/><line x1="140" y1="36" x2="179" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="254,36 240,30 240,42" fill="#27ae60"/><line x1="201" y1="36" x2="240" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
+                <rect x="100" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#2196f3"/><text x="115" y="62" text-anchor="middle" font-size="7">🔥</text>
+                <rect x="250" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#2196f3"/><text x="265" y="62" text-anchor="middle" font-size="7">🔥</text>
+                <line x1="115" y1="66" x2="115" y2="80" stroke="#2196f3" stroke-width="2.5"/><line x1="265" y1="66" x2="265" y2="80" stroke="#2196f3" stroke-width="2.5"/>
+                <circle cx="115" cy="90" r="8" fill="white" stroke="#2196f3" stroke-width="1.5"/><circle cx="115" cy="90" r="3" fill="#2196f3"/>
+                <circle cx="265" cy="90" r="8" fill="white" stroke="#2196f3" stroke-width="1.5"/><circle cx="265" cy="90" r="3" fill="#2196f3"/>
+                <line x1="115" y1="98" x2="115" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+                <line x1="265" y1="98" x2="265" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 {% if MU %}
                 <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="88" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
                 <text x="115" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
                 <text x="115" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if L else 'FULL' }}</text>
                 <text x="115" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="168" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
-                <text x="195" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
-                <text x="195" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
-                <text x="195" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="238" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
+                <text x="265" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">N2</text>
+                <text x="265" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="265" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
                 <g class="cylinder-card" data-type="mixed" data-id="{{ mixed_active.id if mixed_active else 0 }}" data-status="in_use" data-num="{{ mixed_active.cylinder_number if mixed_active else '' }}" style="cursor:pointer">
-                <rect x="176" y="148" width="14" height="8" rx="2" fill="#b39ddb" stroke="#7e57c2"/>
-                <rect x="171" y="154" width="24" height="11" rx="3" fill="#d1c4e9" stroke="#9575cd"/>
-                <rect x="157" y="164" width="50" height="95" rx="16" fill="#f3e5f5" stroke="#9575cd" stroke-width="2.5"/>
-                <rect x="157" y="175" width="50" height="5" rx="2" fill="#9575cd" opacity="0.3"/>
-                <text x="182" y="205" text-anchor="middle" font-size="11" fill="#5e35b1" font-weight="bold">MIX</text>
-                <text x="182" y="222" text-anchor="middle" font-size="9" fill="#8e24aa" font-weight="bold">USE</text>
-                <text x="182" y="272" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ mixed_active.cylinder_number if mixed_active else '—' }}</text>
+                <rect x="182" y="148" width="16" height="8" rx="2" fill="#b39ddb" stroke="#7e57c2"/>
+                <rect x="179" y="154" width="22" height="11" rx="3" fill="#d1c4e9" stroke="#9575cd"/>
+                <rect x="163" y="164" width="54" height="95" rx="16" fill="#f3e5f5" stroke="#9575cd" stroke-width="2.5"/>
+                <rect x="163" y="175" width="54" height="5" rx="2" fill="#9575cd" opacity="0.3"/>
+                <text x="190" y="205" text-anchor="middle" font-size="11" fill="#5e35b1" font-weight="bold">MIX</text>
+                <text x="190" y="222" text-anchor="middle" font-size="9" fill="#8e24aa" font-weight="bold">USE</text>
+                <text x="190" y="272" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ mixed_active.cylinder_number if mixed_active else '—' }}</text>
                 </g>
                 {% else %}
-                <rect class="cylinder-card" data-type="nitrogen" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="97" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="" x="93" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="80" y="128" width="50" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
-                <rect x="80" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
-                <text x="105" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
-                <text x="105" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
-                <text x="105" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="107" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="" x="104" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="88" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect x="88" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
+                <text x="115" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
+                <text x="115" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
+                <text x="115" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ n2a[0].cylinder_number if n2a|length > 0 else '—' }}</text>
                 <g class="cylinder-card" data-type="mixed" data-id="{{ (mixed_cylinders|selectattr('status','equalto','full')|list)[0].id if (mixed_cylinders|selectattr('status','equalto','full')|list) else 0 }}" data-status="full" style="cursor:pointer">
-                <rect x="152" y="145" width="36" height="30" rx="5" fill="#fafafa" stroke="#9575cd" stroke-width="1.5"/>
-                <text x="170" y="162" text-anchor="middle" font-size="7" font-weight="bold" fill="#5e35b1">MIX</text>
-                <text x="170" y="172" text-anchor="middle" font-size="5" fill="#7e57c2">gas</text>
+                <rect x="163" y="138" width="54" height="44" rx="5" fill="#fafafa" stroke="#9575cd" stroke-width="1.5"/>
+                <text x="190" y="160" text-anchor="middle" font-size="7" font-weight="bold" fill="#5e35b1">MIX</text>
+                <text x="190" y="174" text-anchor="middle" font-size="5" fill="#7e57c2">gas</text>
                 </g>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="188" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="" x="184" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="170" y="128" width="50" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
-                <rect x="170" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
-                <text x="195" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
-                <text x="195" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
-                <text x="195" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="257" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="" x="254" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="238" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect x="238" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
+                <text x="265" y="165" text-anchor="middle" font-size="11" fill="#2196f3" font-weight="bold">N2</text>
+                <text x="265" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="265" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ n2a[1].cylinder_number if n2a|length > 1 else '—' }}</text>
                 {% endif %}
             </svg>
         </div>
@@ -250,60 +250,60 @@
             {% set L = co2a|length > 0 and co2a[0].status == 'in_use' %}
             {% set R = co2a|length > 1 and co2a[1].status == 'in_use' %}
             {% set _mixact = (mixed_cylinders | selectattr('status', 'equalto', 'in_use') | list) %}{% set MU = _mixact|length > 0 %}{% set mixed_active = _mixact[0] if _mixact else None %}
-            <svg viewBox="0 0 300 280" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
-                <line x1="85" y1="12" x2="215" y2="12" stroke="#e53935" stroke-width="4" stroke-linecap="round"/>
-                <text x="150" y="11" text-anchor="middle" font-size="6" font-weight="bold" fill="#e53935">PIPELINE</text>
-                <line x1="105" y1="12" x2="105" y2="26" stroke="#e53935" stroke-width="1.5"/><line x1="195" y1="12" x2="195" y2="26" stroke="#e53935" stroke-width="1.5"/>
-                <circle cx="105" cy="36" r="11" fill="white" stroke="#e53935" stroke-width="1.5"/><text x="105" y="39" text-anchor="middle" font-size="5" fill="#e53935" font-weight="bold">BAR</text>
-                <circle cx="195" cy="36" r="11" fill="white" stroke="#e53935" stroke-width="1.5"/><text x="195" y="39" text-anchor="middle" font-size="5" fill="#e53935" font-weight="bold">BAR</text>
-                <circle cx="150" cy="36" r="11" fill="white" stroke="#f39c12" stroke-width="2"/><text x="150" y="39" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
-                <line x1="116" y1="36" x2="139" y2="36" stroke="#555"/><line x1="161" y1="36" x2="184" y2="36" stroke="#555"/>
-                {% if MU %}<line x1="150" y1="48" x2="150" y2="118" stroke="#9575cd" stroke-width="2.5"/><polygon points="150,132 143,116 157,116" fill="#9575cd"/>{% elif L %}<polygon points="116,36 130,30 130,42" fill="#27ae60"/><line x1="130" y1="36" x2="139" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="184,36 170,30 170,42" fill="#27ae60"/><line x1="161" y1="36" x2="170" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
-                <rect x="90" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#e53935"/><text x="105" y="62" text-anchor="middle" font-size="7">🔥</text>
-                <rect x="180" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#e53935"/><text x="195" y="62" text-anchor="middle" font-size="7">🔥</text>
-                <line x1="105" y1="66" x2="105" y2="80" stroke="#e53935" stroke-width="2.5"/><line x1="195" y1="66" x2="195" y2="80" stroke="#e53935" stroke-width="2.5"/>
-                <circle cx="105" cy="90" r="8" fill="white" stroke="#e53935" stroke-width="1.5"/><circle cx="105" cy="90" r="3" fill="#e53935"/>
-                <circle cx="195" cy="90" r="8" fill="white" stroke="#e53935" stroke-width="1.5"/><circle cx="195" cy="90" r="3" fill="#e53935"/>
-                <line x1="105" y1="98" x2="105" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
-                <line x1="195" y1="98" x2="195" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+            <svg viewBox="0 0 380 280" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+                <line x1="85" y1="12" x2="295" y2="12" stroke="#e53935" stroke-width="4" stroke-linecap="round"/>
+                <text x="190" y="11" text-anchor="middle" font-size="6" font-weight="bold" fill="#e53935">PIPELINE</text>
+                <line x1="115" y1="12" x2="115" y2="26" stroke="#e53935" stroke-width="1.5"/><line x1="265" y1="12" x2="265" y2="26" stroke="#e53935" stroke-width="1.5"/>
+                <circle cx="115" cy="36" r="11" fill="white" stroke="#e53935" stroke-width="1.5"/><text x="115" y="39" text-anchor="middle" font-size="5" fill="#e53935" font-weight="bold">BAR</text>
+                <circle cx="265" cy="36" r="11" fill="white" stroke="#e53935" stroke-width="1.5"/><text x="265" y="39" text-anchor="middle" font-size="5" fill="#e53935" font-weight="bold">BAR</text>
+                <circle cx="190" cy="36" r="11" fill="white" stroke="#f39c12" stroke-width="2"/><text x="190" y="39" text-anchor="middle" font-size="5" fill="#f39c12" font-weight="bold">SW</text>
+                <line x1="126" y1="36" x2="179" y2="36" stroke="#555"/><line x1="201" y1="36" x2="254" y2="36" stroke="#555"/>
+                {% if MU %}<line x1="190" y1="48" x2="190" y2="118" stroke="#9575cd" stroke-width="2.5"/><polygon points="190,132 183,116 197,116" fill="#9575cd"/>{% elif L %}<polygon points="126,36 140,30 140,42" fill="#27ae60"/><line x1="140" y1="36" x2="179" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% elif R %}<polygon points="254,36 240,30 240,42" fill="#27ae60"/><line x1="201" y1="36" x2="240" y2="36" stroke="#27ae60" stroke-width="2.5"/>{% endif %}
+                <rect x="100" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#e53935"/><text x="115" y="62" text-anchor="middle" font-size="7">🔥</text>
+                <rect x="250" y="52" width="30" height="14" rx="3" fill="#e8f4fd" stroke="#e53935"/><text x="265" y="62" text-anchor="middle" font-size="7">🔥</text>
+                <line x1="115" y1="66" x2="115" y2="80" stroke="#e53935" stroke-width="2.5"/><line x1="265" y1="66" x2="265" y2="80" stroke="#e53935" stroke-width="2.5"/>
+                <circle cx="115" cy="90" r="8" fill="white" stroke="#e53935" stroke-width="1.5"/><circle cx="115" cy="90" r="3" fill="#e53935"/>
+                <circle cx="265" cy="90" r="8" fill="white" stroke="#e53935" stroke-width="1.5"/><circle cx="265" cy="90" r="3" fill="#e53935"/>
+                <line x1="115" y1="98" x2="115" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
+                <line x1="265" y1="98" x2="265" y2="118" stroke="#888" stroke-width="2" stroke-dasharray="4,2"/>
                 {% if MU %}
                 <rect class="cylinder-card" data-type="nitrogen" data-num="" data-status="in_use" x="88" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
                 <text x="115" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
                 <text x="115" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if L else 'FULL' }}</text>
                 <text x="115" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="in_use" x="168" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
-                <text x="195" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
-                <text x="195" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
-                <text x="195" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+                <rect class="cylinder-card" data-type="co2" data-num="" data-status="in_use" x="238" y="188" width="54" height="42" rx="7" fill="#fafafa" stroke="#95a5a6" stroke-width="1.5" style="cursor:pointer"/>
+                <text x="265" y="208" text-anchor="middle" font-size="9" font-weight="bold" fill="#78909c">CO2</text>
+                <text x="265" y="222" text-anchor="middle" font-size="7" fill="#95a5a6">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="265" y="248" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
                 <g class="cylinder-card" data-type="mixed" data-id="{{ mixed_active.id if mixed_active else 0 }}" data-status="in_use" data-num="{{ mixed_active.cylinder_number if mixed_active else '' }}" style="cursor:pointer">
-                <rect x="176" y="148" width="14" height="8" rx="2" fill="#b39ddb" stroke="#7e57c2"/>
-                <rect x="171" y="154" width="24" height="11" rx="3" fill="#d1c4e9" stroke="#9575cd"/>
-                <rect x="157" y="164" width="50" height="95" rx="16" fill="#f3e5f5" stroke="#9575cd" stroke-width="2.5"/>
-                <rect x="157" y="175" width="50" height="5" rx="2" fill="#9575cd" opacity="0.3"/>
-                <text x="182" y="205" text-anchor="middle" font-size="11" fill="#5e35b1" font-weight="bold">MIX</text>
-                <text x="182" y="222" text-anchor="middle" font-size="9" fill="#8e24aa" font-weight="bold">USE</text>
-                <text x="182" y="272" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ mixed_active.cylinder_number if mixed_active else '—' }}</text>
+                <rect x="182" y="148" width="16" height="8" rx="2" fill="#b39ddb" stroke="#7e57c2"/>
+                <rect x="179" y="154" width="22" height="11" rx="3" fill="#d1c4e9" stroke="#9575cd"/>
+                <rect x="163" y="164" width="54" height="95" rx="16" fill="#f3e5f5" stroke="#9575cd" stroke-width="2.5"/>
+                <rect x="163" y="175" width="54" height="5" rx="2" fill="#9575cd" opacity="0.3"/>
+                <text x="190" y="205" text-anchor="middle" font-size="11" fill="#5e35b1" font-weight="bold">MIX</text>
+                <text x="190" y="222" text-anchor="middle" font-size="9" fill="#8e24aa" font-weight="bold">USE</text>
+                <text x="190" y="272" text-anchor="middle" font-size="9" font-weight="bold" fill="#2c3e50">{{ mixed_active.cylinder_number if mixed_active else '—' }}</text>
                 </g>
                 {% else %}
-                <rect class="cylinder-card" data-type="co2" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="97" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="" x="93" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="80" y="128" width="50" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
-                <rect x="80" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
-                <text x="105" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
-                <text x="105" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
-                <text x="105" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
+                <rect class="cylinder-card" data-type="co2" data-num="{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}" data-status="{{ 'in_use' if L else 'full' }}" x="107" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="co2" data-num="" data-status="" x="104" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if L else 'full' }}" x="88" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if L else '#f0fff0' }}" stroke="{{ '#f39c12' if L else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect x="88" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if L else '#27ae60' }}" opacity="0.25"/>
+                <text x="115" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
+                <text x="115" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if L else '#27ae60' }}" font-weight="bold">{{ 'USE' if L else 'FULL' }}</text>
+                <text x="115" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ co2a[0].cylinder_number if co2a|length > 0 else '—' }}</text>
                 <g class="cylinder-card" data-type="mixed" data-id="{{ (mixed_cylinders|selectattr('status','equalto','full')|list)[0].id if (mixed_cylinders|selectattr('status','equalto','full')|list) else 0 }}" data-status="full" style="cursor:pointer">
-                <rect x="152" y="145" width="36" height="30" rx="5" fill="#fafafa" stroke="#9575cd" stroke-width="1.5"/>
-                <text x="170" y="162" text-anchor="middle" font-size="7" font-weight="bold" fill="#5e35b1">MIX</text>
-                <text x="170" y="172" text-anchor="middle" font-size="5" fill="#7e57c2">gas</text>
+                <rect x="163" y="138" width="54" height="44" rx="5" fill="#fafafa" stroke="#9575cd" stroke-width="1.5"/>
+                <text x="190" y="160" text-anchor="middle" font-size="7" font-weight="bold" fill="#5e35b1">MIX</text>
+                <text x="190" y="174" text-anchor="middle" font-size="5" fill="#7e57c2">gas</text>
                 </g>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="188" y="112" width="14" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="" x="184" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
-                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="170" y="128" width="50" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
-                <rect x="170" y="138" width="50" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
-                <text x="195" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
-                <text x="195" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
-                <text x="195" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
+                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="257" y="112" width="16" height="9" rx="2" fill="#90a4ae" stroke="#607d8b" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="co2" data-num="" data-status="" x="254" y="119" width="22" height="11" rx="3" fill="#cfd8dc" stroke="#78909c" style="cursor:pointer"/>
+                <rect class="cylinder-card" data-type="co2" data-num="" data-status="{{ 'in_use' if R else 'full' }}" x="238" y="128" width="54" height="95" rx="16" fill="{{ '#fff8f0' if R else '#f0fff0' }}" stroke="{{ '#f39c12' if R else '#27ae60' }}" stroke-width="2" style="cursor:pointer"/>
+                <rect x="238" y="138" width="54" height="5" rx="2" fill="{{ '#f39c12' if R else '#27ae60' }}" opacity="0.25"/>
+                <text x="265" y="165" text-anchor="middle" font-size="11" fill="#e53935" font-weight="bold">CO2</text>
+                <text x="265" y="182" text-anchor="middle" font-size="9" fill="{{ '#f39c12' if R else '#27ae60' }}" font-weight="bold">{{ 'USE' if R else 'FULL' }}</text>
+                <text x="265" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#2c3e50">{{ co2a[1].cylinder_number if co2a|length > 1 else '—' }}</text>
                 {% endif %}
             </svg>
         </div>
