@@ -6745,3 +6745,9 @@ msgstr "Выберите станок или оборудование"
 
 msgid "8 digits"
 msgstr "8 цифр"
+
+msgid "Select equipment"
+msgstr "Выберите оборудование"
+
+msgid "Description of work for this equipment..."
+msgstr "Описание работ по этому оборудованию..."

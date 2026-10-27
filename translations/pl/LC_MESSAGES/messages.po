@@ -6316,3 +6316,9 @@ msgstr "Wybierz maszynę lub urządzenie"
 
 msgid "8 digits"
 msgstr "8 cyfr"
+
+msgid "Select equipment"
+msgstr "Wybierz urządzenie"
+
+msgid "Description of work for this equipment..."
+msgstr "Opis pracy dla tego urządzenia..."

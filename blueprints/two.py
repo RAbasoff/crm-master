@@ -8,7 +8,7 @@ from flask import (Blueprint, request, redirect, url_for, flash, render_template
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOAssignment,
+from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOAssignment, Equipment,
                     two_workers, Monteur, Machine, FactorySection, User, FaultReport,
                     WorkSchedule, WeekendShift, Vacation, MaintenancePlan, PartMaintenanceLog,
                     ResponsibleGroup, TWOPhoto, now_local)
@@ -211,6 +211,34 @@ def two_new():
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(request.referrer or '/')
+        # Process equipment assignments (Other equipment)
+        equipment_ids = request.form.getlist('equipment_ids')
+        equipment_descs = request.form.getlist('equipment_descriptions')
+        for i, eid in enumerate(equipment_ids):
+            work_items = request.form.getlist(f'equipment_work_{i}')
+            if not eid:
+                for j, text in enumerate(work_items):
+                    if text.strip():
+                        db.session.add(TWOChecklistItem(
+                            two_id=two.id, assignment_id=None,
+                            text=text.strip(), sort_order=j
+                        ))
+                continue
+            assignment = TWOAssignment(
+                two_id=two.id,
+                equipment_id=int(eid),
+                description=equipment_descs[i] if i < len(equipment_descs) else '',
+                sort_order=i
+            )
+            db.session.add(assignment)
+            db.session.flush()
+            for j, text in enumerate(work_items):
+                if text.strip():
+                    db.session.add(TWOChecklistItem(
+                        two_id=two.id, assignment_id=assignment.id,
+                        text=text.strip(), sort_order=j
+                    ))
+
         # Handle photos
         if 'photos' in request.files:
             saved = 0
@@ -238,8 +266,9 @@ def two_new():
         ))
     ).order_by(Monteur.naam).all()
     machines = Machine.query.order_by(Machine.name).all()
+    equipment_list = Equipment.query.order_by(Equipment.name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
-    return render_template('two_form.html', two=None, faults=faults, workers=workers, machines=machines, sections=sections)
+    return render_template('two_form.html', two=None, faults=faults, workers=workers, machines=machines, equipment_list=equipment_list, sections=sections)
 
 @bp.route('/api/check-worker-availability')
 @login_required

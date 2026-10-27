@@ -1175,10 +1175,12 @@ class TWOAssignment(db.Model):
     two_id = db.Column(db.Integer, db.ForeignKey('technical_work_order.id'), nullable=False)
     section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'))
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'))
     description = db.Column(db.Text)
     sort_order = db.Column(db.Integer, default=0)
     section = db.relationship('FactorySection', backref='two_assignments')
     machine = db.relationship('Machine', backref='two_assignments')
+    equipment = db.relationship('Equipment', backref='two_assignments')
     checklist_items = db.relationship('TWOChecklistItem', backref='assignment',
         lazy=True, order_by='TWOChecklistItem.sort_order',
         primaryjoin='TWOChecklistItem.assignment_id == TWOAssignment.id',

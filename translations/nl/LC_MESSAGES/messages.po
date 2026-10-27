@@ -6559,3 +6559,9 @@ msgstr "Selecteer een machine of apparatuur"
 
 msgid "8 digits"
 msgstr "8 cijfers"
+
+msgid "Select equipment"
+msgstr "Selecteer apparatuur"
+
+msgid "Description of work for this equipment..."
+msgstr "Beschrijving van werkzaamheden voor deze apparatuur..."
