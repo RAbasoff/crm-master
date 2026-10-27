@@ -531,7 +531,10 @@ def fault_new():
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
-                # SMS/email — в фоне, чтобы не блокировать ответ (заявка уже сохранена)
+                # SMS/email — в фоне; если SMS выключен — не трогаем БД из другого потока
+                from notify import sms_configured
+                if not sms_configured():
+                    raise RuntimeError('skip-notify')
                 import threading
                 from notify import notify_fault_created
                 from security import is_head_of_ts
@@ -540,14 +543,17 @@ def fault_new():
                 _fid = f.id
                 def _send_notify(_fid=_fid, _tids=_tech_ids, _hids=_head_ids):
                     try:
+                        import time as _tmod
+                        _tmod.sleep(0.5)  # дать запросу завершиться и освободить сессию
                         from app import app as _app
                         with _app.app_context():
-                            from models import User as _U, FaultReport as _FR
+                            from models import User as _U, FaultReport as _FR, db as _db
                             _f = _FR.query.get(_fid)
                             _t = _U.query.filter(_U.id.in_(_tids)).all() if _tids else []
                             _h = _U.query.filter(_U.id.in_(_hids)).all() if _hids else []
                             if _f:
                                 notify_fault_created(_f, _t, _h)
+                            _db.session.remove()
                     except Exception as _e:
                         print('notify bg', _e)
                 threading.Thread(target=_send_notify, daemon=True).start()

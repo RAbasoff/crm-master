@@ -604,7 +604,7 @@ def _sms_allowed():
 @login_required
 def api_sms_stats():
     if not _sms_allowed():
-        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        return jsonify({'ok': True, 'today': 0, 'month': 0, 'left_month': 0, 'disabled': True})
     from sms_counter import sms_stats
     return jsonify(sms_stats())
 
