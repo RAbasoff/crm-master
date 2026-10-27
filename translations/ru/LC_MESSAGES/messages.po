@@ -6751,3 +6751,6 @@ msgstr "Выберите оборудование"
 
 msgid "Description of work for this equipment..."
 msgstr "Описание работ по этому оборудованию..."
+
+msgid "Type to search parts..."
+msgstr "Введите для поиска запчастей..."

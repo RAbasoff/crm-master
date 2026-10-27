@@ -291,6 +291,12 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 
 <script>
+document.addEventListener('submit', function(e){
+  var f = e.target;
+  if (f.dataset.submitted === '1') { e.preventDefault(); return; }
+  f.dataset.submitted = '1';
+  setTimeout(function(){ f.dataset.submitted = ''; }, 4000);
+});
 (function () {
   function showErr(msg) {
     var box = document.getElementById('formValidateMsg');

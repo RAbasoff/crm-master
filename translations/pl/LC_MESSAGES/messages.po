@@ -6322,3 +6322,6 @@ msgstr "Wybierz urządzenie"
 
 msgid "Description of work for this equipment..."
 msgstr "Opis pracy dla tego urządzenia..."
+
+msgid "Type to search parts..."
+msgstr "Wpisz, aby szukać części..."

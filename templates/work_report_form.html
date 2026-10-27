@@ -146,3 +146,34 @@ try {
 {% endif %}
 </script>
 {% endblock %}
+
+<script>
+(function(){
+  function makeSearchable(sel){
+    if(!sel || sel.dataset.searchable) return;
+    sel.dataset.searchable = '1';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '{{ _("Type to search parts...") }}';
+    input.style.cssText = 'width:100%;padding:8px 10px;border:1px solid #3498db;border-radius:8px;margin-bottom:4px;font-size:13px';
+    sel.parentNode.insertBefore(input, sel);
+    input.addEventListener('input', function(){
+      var q = this.value.toLowerCase();
+      var opts = sel.options;
+      for (var i = 0; i < opts.length; i++){
+        var o = opts[i];
+        if (i === 0) { continue; }
+        o.hidden = q && o.text.toLowerCase().indexOf(q) === -1;
+      }
+    });
+    // scroll list into view when typing
+    input.addEventListener('focus', function(){ sel.size = Math.min(8, sel.options.length); });
+  }
+  function init(){
+    document.querySelectorAll('.part-select, select[name="machine_ids"], select[name="equipment_ids"], select#targetSelect').forEach(makeSearchable);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else { init(); }
+})();
+</script>

@@ -6565,3 +6565,6 @@ msgstr "Selecteer apparatuur"
 
 msgid "Description of work for this equipment..."
 msgstr "Beschrijving van werkzaamheden voor deze apparatuur..."
+
+msgid "Type to search parts..."
+msgstr "Typ om onderdelen te zoeken..."

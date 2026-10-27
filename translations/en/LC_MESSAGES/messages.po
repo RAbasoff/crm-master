@@ -6510,3 +6510,6 @@ msgstr "Select equipment"
 
 msgid "Description of work for this equipment..."
 msgstr "Description of work for this equipment..."
+
+msgid "Type to search parts..."
+msgstr "Type to search parts..."

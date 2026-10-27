@@ -398,3 +398,35 @@ function selectAltWorker(userId) {
 }
 </script>
 {% endblock %}
+
+<script>
+(function(){
+  function makeSearchable(sel){
+    if(!sel || sel.dataset.searchable) return;
+    sel.dataset.searchable = '1';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '{{ _("Type to search parts...") }}';
+    input.style.cssText = 'width:100%;padding:6px 8px;border:1px solid #3498db;border-radius:6px;margin-bottom:4px;font-size:12px';
+    sel.parentNode.insertBefore(input, sel);
+    input.addEventListener('input', function(){
+      var q = this.value.toLowerCase();
+      Array.from(sel.options).forEach(function(o, i){
+        if (i === 0) return;
+        o.hidden = q && o.text.toLowerCase().indexOf(q) === -1;
+      });
+    });
+    input.addEventListener('focus', function(){ sel.size = Math.min(8, sel.options.length); });
+    input.addEventListener('blur', function(){ sel.size = 1; });
+  }
+  function initAll(){
+    document.querySelectorAll('.part-select, select[name="machine_ids"], select[name="equipment_ids"]').forEach(makeSearchable);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else { initAll(); }
+  // dynamic selects
+  var mo = new MutationObserver(initAll);
+  mo.observe(document.body, {childList: true, subtree: true});
+})();
+</script>
