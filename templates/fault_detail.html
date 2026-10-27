@@ -403,14 +403,14 @@ function endWorkById(faultId) {
 </div>
 {% endif %}
 
-{% if fault.work_report %}
 <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 style="margin:0">📝 {{ _('Work Reports') }} ({{ fault.work_report|length }})</h2>
-        {% if current_user.has_role('technician', 'admin') %}
+        <h2 style="margin:0">📝 {{ _('Work Reports') }} ({{ fault.work_report|length if fault.work_report else 0 }})</h2>
+        {% if current_user.has_role('technician', 'admin', 'director') and fault.status not in ('closed',) %}
         <a href="/faults/{{ fault.id }}/work-report" class="btn btn-sm btn-primary">+ {{ _('Add Entry') }}</a>
         {% endif %}
     </div>
+    {% if fault.work_report %}
     
     {% set ns = namespace(last_date='') %}
     {% for report in fault.work_report|sort(attribute='created_at', reverse=true) %}
