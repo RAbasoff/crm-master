@@ -6344,11 +6344,27 @@ msgstr "Test"
 msgid "Send test message"
 msgstr "Wyślij test"
 
-msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
-msgstr "Wiadomość zostanie wysłana do wszystkich użytkowników. Każdy otrzyma powiadomienie, dźwięk i wibrację."
+msgid ""
+"The message will be sent to all users. Each user receives a popup, sound and"
+" vibration."
+msgstr ""
+"Wiadomość zostanie wysłana do wszystkich użytkowników. Każdy otrzyma "
+"powiadomienie, dźwięk i wibrację."
 
 msgid "User language (auto)"
 msgstr "Język użytkownika (auto)"
 
 msgid "Message text is required"
 msgstr "Tekst wiadomości jest wymagany"
+
+msgid "Enable notifications"
+msgstr "Włącz powiadomienia"
+
+msgid "Notifications enabled"
+msgstr "Powiadomienia włączone"
+
+msgid "Notifications blocked"
+msgstr "Powiadomienia zablokowane"
+
+msgid "Allow notifications in the browser settings"
+msgstr "Zezwól na powiadomienia w ustawieniach przeglądarki"

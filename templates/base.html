@@ -1102,7 +1102,11 @@
                 }).then(() => {
                     try { localStorage.setItem('push_enabled', '1'); } catch (e) {}
                     const b = document.getElementById('pushEnableBtn');
-                    if (b) b.remove();
+                    if (b) {
+                        b.style.background = '#27ae60';
+                        b.textContent = '✓ {{ _("Notifications enabled") }}';
+                        setTimeout(function(){ if (b.parentNode) b.remove(); }, 4000);
+                    }
                 }).catch(() => {});
             }
 
@@ -1135,6 +1139,9 @@
                 }).catch(() => {});
             }
 
+            // Доступно другим страницам: подписать/переподписать push
+            window.__pushSubscribe = subscribeNow;
+
             if (Notification.permission === 'granted') {
                 subscribeNow();
                 return;
@@ -1151,7 +1158,13 @@
                     b.onclick = function() {
                         Notification.requestPermission().then((perm) => {
                             if (perm === 'granted') {
+                                b.style.background = '#27ae60';
+                                b.textContent = '✓ {{ _("Notifications enabled") }}';
                                 subscribeNow().then(function(){ showToast('✓ {{ _("Notifications enabled") }}'); });
+                            } else if (perm === 'denied') {
+                                b.style.background = '#c0392b';
+                                b.textContent = '✕ {{ _("Notifications blocked") }}';
+                                showToast('{{ _("Allow notifications in the browser settings") }}', 'error');
                             }
                         });
                     };

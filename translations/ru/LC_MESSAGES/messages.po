@@ -6773,11 +6773,27 @@ msgstr "Тестовое сообщение"
 msgid "Send test message"
 msgstr "Отправить тест"
 
-msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
-msgstr "Сообщение будет отправлено всем пользователям. Каждый получит попап, звук и вибрацию."
+msgid ""
+"The message will be sent to all users. Each user receives a popup, sound and"
+" vibration."
+msgstr ""
+"Сообщение будет отправлено всем пользователям. Каждый получит попап, звук и "
+"вибрацию."
 
 msgid "User language (auto)"
 msgstr "Язык пользователя (авто)"
 
 msgid "Message text is required"
 msgstr "Введите текст сообщения"
+
+msgid "Enable notifications"
+msgstr "Включить уведомления"
+
+msgid "Notifications enabled"
+msgstr "Уведомления включены"
+
+msgid "Notifications blocked"
+msgstr "Уведомления заблокированы"
+
+msgid "Allow notifications in the browser settings"
+msgstr "Разрешите уведомления в настройках браузера"

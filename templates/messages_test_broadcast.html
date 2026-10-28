@@ -27,7 +27,47 @@
         </div>
         <div style="background:#fff3e0;border:1px solid #f39c12;border-radius:8px;padding:10px;margin:10px 0;font-size:12px">
             {{ _('For sound, vibration and lock-screen alerts: enable notifications') }}.
-            <button type="button" onclick="if(Notification && Notification.requestPermission){Notification.requestPermission().then(function(p){alert(p);});}else{alert('n/a')}" class="btn btn-sm" style="background:#f39c12;color:#fff;margin-left:6px">{{ _('Enable notifications') }}</button>
+            <button type="button" id="enableNotifBtn" class="btn btn-sm" style="background:#f39c12;color:#fff;margin-left:6px">{{ _('Enable notifications') }}</button>
+            <script>
+                (function () {
+                    var b = document.getElementById('enableNotifBtn');
+                    if (!b) return;
+                    function setEnabled() {
+                        b.style.background = '#27ae60';
+                        b.textContent = '✓ {{ _("Notifications enabled") }}';
+                    }
+                    function setBlocked() {
+                        b.style.background = '#c0392b';
+                        b.textContent = '✕ {{ _("Notifications blocked") }}';
+                    }
+                    if (!('Notification' in window)) {
+                        b.style.background = '#c0392b';
+                        b.textContent = '✕ {{ _("Notifications blocked") }}';
+                        return;
+                    }
+                    if (Notification.permission === 'granted') {
+                        setEnabled();
+                        if (window.__pushSubscribe) window.__pushSubscribe();
+                    } else if (Notification.permission === 'denied') {
+                        setBlocked();
+                    }
+                    b.onclick = function () {
+                        Notification.requestPermission().then(function (p) {
+                            if (p === 'granted') {
+                                setEnabled();
+                                if (window.__pushSubscribe) {
+                                    window.__pushSubscribe().then(function () {
+                                        if (typeof showToast === 'function') showToast('✓ {{ _("Notifications enabled") }}');
+                                    });
+                                }
+                            } else if (p === 'denied') {
+                                setBlocked();
+                                if (typeof showToast === 'function') showToast('{{ _("Allow notifications in the browser settings") }}', 'error');
+                            }
+                        });
+                    };
+                })();
+            </script>
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px">📤 {{ _('Send test message') }}</button>
     </form>

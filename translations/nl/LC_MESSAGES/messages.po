@@ -6587,11 +6587,27 @@ msgstr "Testbericht"
 msgid "Send test message"
 msgstr "Testbericht verzenden"
 
-msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
-msgstr "Het bericht wordt naar alle gebruikers verzonden. Elke gebruiker krijgt een pop-up, geluid en trilling."
+msgid ""
+"The message will be sent to all users. Each user receives a popup, sound and"
+" vibration."
+msgstr ""
+"Het bericht wordt naar alle gebruikers verzonden. Elke gebruiker krijgt een "
+"pop-up, geluid en trilling."
 
 msgid "User language (auto)"
 msgstr "Taal gebruiker (auto)"
 
 msgid "Message text is required"
 msgstr "Berichttekst is verplicht"
+
+msgid "Enable notifications"
+msgstr "Meldingen inschakelen"
+
+msgid "Notifications enabled"
+msgstr "Meldingen ingeschakeld"
+
+msgid "Notifications blocked"
+msgstr "Meldingen geblokkeerd"
+
+msgid "Allow notifications in the browser settings"
+msgstr "Sta meldingen toe in de browserinstellingen"
