@@ -22,8 +22,19 @@ def notifications_list():
 @bp.route('/notifications/unread')
 @login_required
 def notifications_unread():
-    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-    return jsonify({'count': count})
+    q = Notification.query.filter_by(user_id=current_user.id, is_read=False)
+    count = q.count()
+    latest = q.order_by(Notification.id.desc()).first()
+    return jsonify({
+        'count': count,
+        'latest': {
+            'id': latest.id,
+            'title': latest.title,
+            'message': latest.message,
+            'link': latest.link,
+            'type': latest.type or 'info',
+        } if latest else None,
+    })
 
 @bp.route('/notifications/<int:notif_id>/read', methods=['POST'])
 @login_required
@@ -202,3 +213,18 @@ def consumable_reminders():
     return render_template('consumable_reminders.html', 
         overdue=overdue, soon=soon_list, today=today)
 
+@bp.route('/notifications/test', methods=['POST', 'GET'])
+@login_required
+def notifications_test():
+    """Тестовое уведомление текущему пользователю."""
+    create_notification(
+        current_user.id,
+        'Test notification',
+        'Привет! Это тестовое уведомление из ProMaster. Если видите его — попап, звук и вибрация работают.',
+        'info',
+        '/',
+    )
+    if request.method == 'POST' or request.headers.get('X-Requested-With') or request.is_json:
+        return jsonify({'ok': True, 'message': 'Test notification sent'})
+    flash(_('Test notification sent'), 'success')
+    return redirect(url_for('notifications.notifications_list') if 'notifications_list' in [r.endpoint for r in __import__('flask').current_app.url_map.iter_rules()] else '/')

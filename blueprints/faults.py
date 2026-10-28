@@ -316,6 +316,29 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
         reason=reason, changed_by=user.id,
     )
     db.session.add(history)
+
+    # Уведомляем создателя заявки о смене статуса (прочитана / пауза / решена / закрыта)
+    try:
+        labels = {
+            'accepted': 'прочитана',
+            'paused': 'на паузе',
+            'testing': 'на проверке',
+            'resolved': 'неисправность устранена',
+            'closed': 'заявка закрыта',
+            'reopened': 'переоткрыта',
+            'rejected': 'отклонена',
+            'open': 'открыта заново',
+        }
+        if new_status != old_status and new_status in labels and f.reporter_id:
+            msg = f'Заявка #{f.id} ({f.title}): {labels[new_status]}'
+            if new_status == 'paused' and (reason or pause_reason):
+                msg += f'. Причина: {reason or pause_reason}'
+            if pause_comment:
+                msg += f' ({pause_comment})'
+            create_notification(f.reporter_id, 'Обновление заявки', msg, 'fault', f'/faults/{f.id}')
+    except Exception:
+        pass
+
     return True, ''
 
 _FAULTS_EAGER = (
@@ -521,13 +544,22 @@ def fault_new():
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
-            if not f.assigned_technicians:
-                for tech in User.query.filter_by(role='technician', is_active_user=True).all():
-                    create_notification(tech.id, 'New fault report',
-                        f"{_('Machine')}: {target} - {f.title} ({_('Reporter')}: {who})",
-                        'fault',
-                        url_for('faults.fault_detail', fault_id=f.id)
-                    )
+            # Уведомляем: механиков + начальника ТС + админ + Peter
+            notify_ids = set()
+            for tech in User.query.filter(User.is_active_user == True, User.role.in_(('technician', 'admin', 'director'))).all():
+                notify_ids.add(tech.id)
+            for u in User.query.filter(User.is_active_user == True).all():
+                n = ((u.display_name or '') + ' ' + (u.username or '')).lower()
+                if 'peter' in n or 'petr' in n:
+                    notify_ids.add(u.id)
+                if 'ruslan' in n or 'abasoff' in n:
+                    notify_ids.add(u.id)
+            for tid in notify_ids:
+                create_notification(tid, 'New fault report',
+                    f"{_('Machine')}: {target} - {f.title} ({_('Reporter')}: {who})",
+                    'fault',
+                    url_for('faults.fault_detail', fault_id=f.id)
+                )
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
