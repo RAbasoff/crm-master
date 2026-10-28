@@ -6611,3 +6611,9 @@ msgstr "Meldingen geblokkeerd"
 
 msgid "Allow notifications in the browser settings"
 msgstr "Sta meldingen toe in de browserinstellingen"
+
+msgid "Subscription active"
+msgstr "Abonnement actief"
+
+msgid "No subscription — open the app from the home screen icon"
+msgstr "Geen abonnement — open de app via het startscherm-icoon"

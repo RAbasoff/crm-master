@@ -6368,3 +6368,9 @@ msgstr "Powiadomienia zablokowane"
 
 msgid "Allow notifications in the browser settings"
 msgstr "Zezwól na powiadomienia w ustawieniach przeglądarki"
+
+msgid "Subscription active"
+msgstr "Subskrypcja aktywna"
+
+msgid "No subscription — open the app from the home screen icon"
+msgstr "Brak subskrypcji — otwórz aplikację z ikony na ekranie głównym"

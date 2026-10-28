@@ -1107,7 +1107,7 @@
                         b.textContent = '✓ {{ _("Notifications enabled") }}';
                         setTimeout(function(){ if (b.parentNode) b.remove(); }, 4000);
                     }
-                }).catch(() => {});
+                });
             }
 
             function subscribeNow() {
@@ -1136,14 +1136,14 @@
                         }
                         return doSub();
                     });
-                }).catch(() => {});
+                });
             }
 
             // Доступно другим страницам: подписать/переподписать push
             window.__pushSubscribe = subscribeNow;
 
             if (Notification.permission === 'granted') {
-                subscribeNow();
+                subscribeNow().catch(function(){});
                 return;
             }
 
@@ -1160,7 +1160,7 @@
                             if (perm === 'granted') {
                                 b.style.background = '#27ae60';
                                 b.textContent = '✓ {{ _("Notifications enabled") }}';
-                                subscribeNow().then(function(){ showToast('✓ {{ _("Notifications enabled") }}'); });
+                                subscribeNow().then(function(){ showToast('✓ {{ _("Notifications enabled") }}'); }, function(){ showToast('{{ _("No subscription — open the app from the home screen icon") }}', 'error'); });
                             } else if (perm === 'denied') {
                                 b.style.background = '#c0392b';
                                 b.textContent = '✕ {{ _("Notifications blocked") }}';
