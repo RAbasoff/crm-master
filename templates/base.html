@@ -995,7 +995,9 @@
         function playNotifSound() {
             vibrateNotif();
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const ctx = window.__audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') { ctx.resume(); }
+                window.__audioCtx = ctx;
                 // Double-chime like incoming message
                 [880, 1100].forEach((freq, i) => {
                     const osc = ctx.createOscillator();
@@ -1348,6 +1350,33 @@
             document.querySelector('.dark-toggle').textContent = '☀️';
         }
         
+        
+        // Audio unlock: browsers block sound until user gesture
+        (function(){
+            var unlocked = false;
+            function unlockAudio(){
+                if (unlocked) return;
+                unlocked = true;
+                try {
+                    var Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (Ctx) {
+                        var c = new Ctx();
+                        if (c.state === 'suspended') { c.resume(); }
+                        // silent blip to prime
+                        var o = c.createOscillator();
+                        var g = c.createGain();
+                        g.gain.value = 0;
+                        o.connect(g); g.connect(c.destination);
+                        o.start(0); o.stop(0.01);
+                        window.__audioCtx = c;
+                    }
+                } catch (e) {}
+            }
+            ['click', 'touchstart', 'keydown'].forEach(function(ev){
+                document.addEventListener(ev, unlockAudio, {once: true, passive: true});
+            });
+        })();
+
         // Toast Notifications
         function showToast(message, type = 'info') {
             const container = document.querySelector('.toast-container') || createToastContainer();

@@ -1507,7 +1507,7 @@ def gas_quality_edit(check_id):
         flash(_('Saved'), 'success')
         return redirect(url_for('gas.gas_quality_list'))
     users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
-    return render_template('gas_quality_form.html', check=chk, users=users, editing=True)
+    return render_template('gas_quality_form.html', check=chk, users=users, editing=True, now=now_local())
 
 
 @bp.route('/quality/<int:check_id>/delete', methods=['POST'])
