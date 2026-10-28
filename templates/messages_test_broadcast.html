@@ -25,6 +25,10 @@
             <label>{{ _('Message') }}</label>
             <textarea name="text" rows="4" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Type your message') }}"></textarea>
         </div>
+        <div style="background:#fff3e0;border:1px solid #f39c12;border-radius:8px;padding:10px;margin:10px 0;font-size:12px">
+            {{ _('For sound, vibration and lock-screen alerts: enable notifications') }}.
+            <button type="button" onclick="if(Notification && Notification.requestPermission){Notification.requestPermission().then(function(p){alert(p);});}else{alert('n/a')}" class="btn btn-sm" style="background:#f39c12;color:#fff;margin-left:6px">{{ _('Enable notifications') }}</button>
+        </div>
         <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px">📤 {{ _('Send test message') }}</button>
     </form>
 </div>

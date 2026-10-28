@@ -363,6 +363,27 @@
       · {{ _('full') }} <b>{{ b.full }}</b>
       {% if b.defect or b.maintenance %}· {{ _('Defects') }} <b>{{ b.defect + b.maintenance }}</b>{% endif %}
     </div>
+    {% set _cyls = mixed_cylinders if gt == 'mixed' else (n2_cylinders if gt == 'nitrogen' else co2_cylinders) %}
+    <div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;font-size:10px">
+      <div>
+        <b style="color:#27ae60">{{ _('Full') }}</b>
+        {% for c in _cyls if c.status == 'full' %}
+        <div class="cylinder-card" data-id="{{ c.id }}" data-type="{{ gt }}" data-num="{{ c.cylinder_number }}" data-status="full" style="cursor:pointer;padding:1px 5px;border:1px solid #27ae60;background:#f0fff0;border-radius:3px;margin:2px 0">{{ c.cylinder_number }}</div>
+        {% endfor %}
+      </div>
+      <div>
+        <b style="color:#e65100">{{ _('In use') }}</b>
+        {% for c in _cyls if c.status == 'in_use' %}
+        <div class="cylinder-card" data-id="{{ c.id }}" data-type="{{ gt }}" data-num="{{ c.cylinder_number }}" data-status="in_use" style="cursor:pointer;padding:1px 5px;border:1px solid #f39c12;background:#fff8f0;border-radius:3px;margin:2px 0">{{ c.cylinder_number }}</div>
+        {% endfor %}
+      </div>
+      <div>
+        <b style="color:#c62828">{{ _('Empty') }}</b>
+        {% for c in _cyls if c.status == 'empty' %}
+        <div class="cylinder-card" data-id="{{ c.id }}" data-type="{{ gt }}" data-num="{{ c.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:1px 5px;border:1px solid #c62828;background:#fdecea;border-radius:3px;margin:2px 0">{{ c.cylinder_number }}</div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
   {% endfor %}
 </div>
