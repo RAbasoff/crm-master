@@ -1111,29 +1111,26 @@
                     const key = d.publicKey || d.key;
                     if (!key) return null;
                     const appKey = urlBase64ToUint8Array(key);
+                    const keySig = key.slice(-24);
                     return reg.pushManager.getSubscription().then((sub) => {
+                        function doSub() {
+                            return reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: appKey
+                            }).then(function (s) {
+                                try { localStorage.setItem('push_key_sig', keySig); } catch (e) {}
+                                return syncPushSub(s);
+                            });
+                        }
                         if (sub) {
                             // Если подписка создана с другим VAPID-ключом — переподписываемся
                             // (иначе Apple отвергает push с BadJwtToken)
-                            var oldKey = null;
-                            try { oldKey = sub.options && sub.options.applicationServerKey; } catch (e) {}
-                            if (oldKey) {
-                                var oldArr = new Uint8Array(oldKey);
-                                var same = oldArr.length === appKey.length && oldArr.every(function (v, i) { return v === appKey[i]; });
-                                if (same) return syncPushSub(sub);
-                                return sub.unsubscribe().then(function () {
-                                    return reg.pushManager.subscribe({
-                                        userVisibleOnly: true,
-                                        applicationServerKey: appKey
-                                    }).then(syncPushSub);
-                                });
-                            }
-                            return syncPushSub(sub);
+                            var savedSig = null;
+                            try { savedSig = localStorage.getItem('push_key_sig'); } catch (e) {}
+                            if (savedSig === keySig) return syncPushSub(sub);
+                            return sub.unsubscribe().then(doSub).catch(doSub);
                         }
-                        return reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: appKey
-                        }).then(syncPushSub);
+                        return doSub();
                     });
                 }).catch(() => {});
             }
