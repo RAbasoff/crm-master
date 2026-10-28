@@ -939,6 +939,29 @@
                     countEl.style.display = 'block';
                     if (window.lastNotifCount !== undefined && d.count > window.lastNotifCount) {
                         playNotifSound();
+                        try { if (navigator.vibrate) navigator.vibrate([200,100,200]); } catch(e){}
+                        var n = d.latest;
+                        if (n) {
+                            var msg = (n.title || 'Notification');
+                            if (n.message) msg += ': ' + n.message;
+                            if (typeof showToast === 'function') {
+                                showToast(msg, n.type === 'error' ? 'error' : 'info');
+                            } else {
+                                alert(msg);
+                            }
+                            if (n.link) {
+                                try {
+                                    var box = document.querySelector('.toast-container .toast:last-child');
+                                    if (box) {
+                                        box.style.cursor = 'pointer';
+                                        box.title = '{{ _("Open") }}';
+                                        box.onclick = function(){ window.location.href = n.link; };
+                                    }
+                                } catch (e) {}
+                            }
+                        } else if (typeof showToast === 'function') {
+                            showToast('{{ _("New notification") }}', 'info');
+                        }
                     }
                 } else {
                     btn.classList.remove('has-notif');
@@ -962,7 +985,15 @@
             });
         }
         
+        function vibrateNotif() {
+            try {
+                // Android Chrome / Firefox — вибрация без разрешений
+                if (navigator.vibrate) { navigator.vibrate([200, 100, 200]); }
+                // iOS Safari не поддерживает vibrate() — там вибрирует системный Web Push
+            } catch (e) {}
+        }
         function playNotifSound() {
+            vibrateNotif();
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 // Double-chime like incoming message
@@ -988,7 +1019,7 @@
         }
         
         updateNotifCount();
-        setInterval(updateNotifCount, 30000);
+        setInterval(updateNotifCount, 15000);
 
         // Admin: switch user
         function switchUser(userId) {
