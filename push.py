@@ -17,7 +17,8 @@ def _vapid_keys():
         return _VAPID_CACHE
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', '.vapid.json')
     try:
-        with open(path, 'r', encoding='utf-8') as f:
+        # utf-8-sig: файл мог быть сохранён с BOM (Windows) — иначе json падает
+        with open(path, 'r', encoding='utf-8-sig') as f:
             data = json.load(f)
         _VAPID_CACHE = (data['public'], data['private'])
     except Exception:

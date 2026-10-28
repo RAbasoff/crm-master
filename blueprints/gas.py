@@ -1459,7 +1459,7 @@ def gas_quality_new():
         chk = GasQualityCheck(
             check_date=d,
             check_time=now,
-            sampled_by_id=safe_int(request.form.get('sampled_by_id')),
+            sampled_by_id=safe_int(request.form.get('sampled_by_id'), default=None),
             o2_percent=o2,
             co2_percent=co2,
             notes=request.form.get('notes', ''),
@@ -1498,6 +1498,7 @@ def gas_quality_edit(check_id):
         chk.co2_percent = co2
         chk.notes = request.form.get('notes', '') or ''
         chk.mixed_gas_used = bool(request.form.get('mixed_gas_used'))
+        chk.sampled_by_id = safe_int(request.form.get('sampled_by_id'), default=None)
         d = safe_date(request.form.get('check_date'))
         if d:
             chk.check_date = d

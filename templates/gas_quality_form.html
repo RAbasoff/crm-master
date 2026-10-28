@@ -24,7 +24,7 @@
             <select name="sampled_by_id">
                 <option value="">{{ _('Select') }}…</option>
                 {% for u in mechanics %}
-                <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
+                <option value="{{ u.id }}" {% if editing and check and check.sampled_by_id == u.id %}selected{% elif not editing and current_user.is_authenticated and current_user.id == u.id %}selected{% endif %}>{{ u.display_name or u.username }}</option>
                 {% endfor %}
             </select>
         </div>
