@@ -60,9 +60,11 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
         )
         return bool(resp and resp.status_code < 300)
     except WebPushException as e:
-        # 404/410 — подписка протухла; остальное не трогаем
+        # 404/410 — подписка протухла; 403 BadJwtToken — подписка создана с другим
+        # VAPID-ключом и не вылечится сама. Такие удаляем — клиент переподпишется.
         code = getattr(getattr(e, 'response', None), 'status_code', None)
-        if code in (404, 410):
+        dead = code in (404, 410) or (code == 403 and 'BadJwtToken' in str(e))
+        if dead:
             try:
                 from models import PushSubscription, db
                 PushSubscription.query.filter_by(

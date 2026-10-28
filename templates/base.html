@@ -1110,11 +1110,29 @@
                 return fetch('/api/push/vapid-public-key').then(r => r.json()).then((d) => {
                     const key = d.publicKey || d.key;
                     if (!key) return null;
+                    const appKey = urlBase64ToUint8Array(key);
                     return reg.pushManager.getSubscription().then((sub) => {
-                        if (sub) return syncPushSub(sub);
+                        if (sub) {
+                            // Если подписка создана с другим VAPID-ключом — переподписываемся
+                            // (иначе Apple отвергает push с BadJwtToken)
+                            var oldKey = null;
+                            try { oldKey = sub.options && sub.options.applicationServerKey; } catch (e) {}
+                            if (oldKey) {
+                                var oldArr = new Uint8Array(oldKey);
+                                var same = oldArr.length === appKey.length && oldArr.every(function (v, i) { return v === appKey[i]; });
+                                if (same) return syncPushSub(sub);
+                                return sub.unsubscribe().then(function () {
+                                    return reg.pushManager.subscribe({
+                                        userVisibleOnly: true,
+                                        applicationServerKey: appKey
+                                    }).then(syncPushSub);
+                                });
+                            }
+                            return syncPushSub(sub);
+                        }
                         return reg.pushManager.subscribe({
                             userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(key)
+                            applicationServerKey: appKey
                         }).then(syncPushSub);
                     });
                 }).catch(() => {});
