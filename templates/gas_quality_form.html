@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{{ _('New Measurement') }} — ProMaster{% endblock %}
+{% block title %}{{ _('Edit Measurement') if editing else _('New Measurement') }} — ProMaster{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>🧪 {{ _('New Measurement') }}</h1>
+    <h1>🧪 {{ _("Edit Measurement") if editing else _("New Measurement") }}</h1>
     <a href="/gas/quality" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
 </div>
 <div class="card" style="max-width:560px">
@@ -11,7 +11,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label>{{ _('Date') }}</label>
-                <input type="date" name="check_date" value="{{ now.strftime('%Y-%m-%d') }}">
+                <input type="date" name="check_date" value="{{ check.check_date.strftime('%Y-%m-%d') if editing and check else (now.strftime('%Y-%m-%d') if now else '') }}">
             </div>
             <div class="form-group">
                 <label>{{ _('Time') }}</label>
@@ -31,11 +31,11 @@
         <div class="form-row">
             <div class="form-group">
                 <label>O₂ % *</label>
-                <input type="number" name="o2_percent" step="0.01" min="0" max="100" required placeholder="20.9">
+                <input type="number" name="o2_percent" value="{{ check.o2_percent if editing and check else '' }}" step="0.01" min="0" max="100" required placeholder="20.9">
             </div>
             <div class="form-group">
                 <label>CO₂ % *</label>
-                <input type="number" name="co2_percent" step="0.01" min="0" max="100" required placeholder="0.04">
+                <input type="number" name="co2_percent" value="{{ check.co2_percent if editing and check else '' }}" step="0.01" min="0" max="100" required placeholder="0.04">
             </div>
         </div>
         <div class="form-group">
@@ -54,6 +54,14 @@
             <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
             <a href="/gas/quality" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
         </div>
-    </form>
+    
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" name="mixed_gas_used" value="1" {% if editing and check and check.mixed_gas_used %}checked{% endif %} style="width:18px;height:18px">
+                {{ _('Mixed gas used') }}
+            </label>
+            <small style="color:#888">{{ _('Check if the measurement was taken while mixed gas was in use') }}</small>
+        </div>
+</form>
 </div>
 {% endblock %}

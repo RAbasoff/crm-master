@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Test message') }} — ProMaster{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📤 {{ _('Test message') }}</h1>
+    <a href="/messages" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
+</div>
+<div class="card" style="max-width:560px">
+    <p style="color:#666;font-size:13px;margin-bottom:12px">
+        {{ _('The message will be sent to all users. Each user receives a popup, sound and vibration.') }}
+    </p>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label>{{ _('Language') }}</label>
+            <select name="lang" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px">
+                <option value="auto">{{ _('User language (auto)') }}</option>
+                <option value="nl">Nederlands</option>
+                <option value="en">English</option>
+                <option value="pl">Polski</option>
+                <option value="ru">Русский</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ _('Message') }}</label>
+            <textarea name="text" rows="4" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px" placeholder="{{ _('Type your message') }}"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px">📤 {{ _('Send test message') }}</button>
+    </form>
+</div>
+{% endblock %}

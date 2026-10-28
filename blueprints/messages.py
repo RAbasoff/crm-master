@@ -132,3 +132,43 @@ def message_delete(message_id):
     flash(_('Message deleted'), 'success')
     return redirect(url_for('messages.messages_list'))
 
+@bp.route('/messages/test-broadcast', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def test_broadcast():
+    """Тестовое сообщение всем пользователям. Язык: auto = язык пользователя."""
+    from models import User
+    from utils import create_notification
+    if request.method == 'POST':
+        text = (request.form.get('text') or '').strip()
+        lang = (request.form.get('lang') or 'auto').strip()
+        if not text:
+            flash(_('Message text is required'), 'error')
+            return redirect(url_for('messages.test_broadcast'))
+        users = User.query.filter(User.is_active_user == True).all()
+        sent = 0
+        # перевод по языкам, если выбран auto
+        templates = {
+            'nl': 'Testbericht: ',
+            'en': 'Test message: ',
+            'pl': 'Test: ',
+            'ru': 'Тестовое сообщение: ',
+        }
+        for u in users:
+            if lang == 'auto':
+                ul = (getattr(u, 'preferred_language', '') or 'nl').lower()
+                prefix = templates.get(ul, templates['nl'])
+            else:
+                prefix = templates.get(lang, '') or ''
+            create_notification(
+                u.id,
+                'Testbericht' if (getattr(u, 'preferred_language', 'nl') or 'nl') == 'nl' else 'Test message',
+                prefix + text,
+                'info',
+                '/messages',
+            )
+            sent += 1
+        flash(_('%(n)s test messages sent', n=sent), 'success')
+        return redirect(url_for('messages.messages_list'))
+    return render_template('messages_test_broadcast.html')
+

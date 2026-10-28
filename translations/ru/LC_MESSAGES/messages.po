@@ -6754,3 +6754,30 @@ msgstr "Описание работ по этому оборудованию..."
 
 msgid "Type to search parts..."
 msgstr "Введите для поиска запчастей..."
+
+msgid "New notification"
+msgstr "Новое уведомление"
+
+msgid "Edit Measurement"
+msgstr "Редактировать замер"
+
+msgid "Mixed gas used"
+msgstr "Использован смешанный газ"
+
+msgid "Check if the measurement was taken while mixed gas was in use"
+msgstr "Отметьте, если замер делался при работающем смешанном газе"
+
+msgid "Test message"
+msgstr "Тестовое сообщение"
+
+msgid "Send test message"
+msgstr "Отправить тест"
+
+msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
+msgstr "Сообщение будет отправлено всем пользователям. Каждый получит попап, звук и вибрацию."
+
+msgid "User language (auto)"
+msgstr "Язык пользователя (авто)"
+
+msgid "Message text is required"
+msgstr "Введите текст сообщения"

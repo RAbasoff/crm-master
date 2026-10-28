@@ -6513,3 +6513,30 @@ msgstr "Description of work for this equipment..."
 
 msgid "Type to search parts..."
 msgstr "Type to search parts..."
+
+msgid "New notification"
+msgstr "New notification"
+
+msgid "Edit Measurement"
+msgstr "Edit Measurement"
+
+msgid "Mixed gas used"
+msgstr "Mixed gas used"
+
+msgid "Check if the measurement was taken while mixed gas was in use"
+msgstr "Check if the measurement was taken while mixed gas was in use"
+
+msgid "Test message"
+msgstr "Test message"
+
+msgid "Send test message"
+msgstr "Send test message"
+
+msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
+msgstr "The message will be sent to all users. Each user receives a popup, sound and vibration."
+
+msgid "User language (auto)"
+msgstr "User language (auto)"
+
+msgid "Message text is required"
+msgstr "Message text is required"

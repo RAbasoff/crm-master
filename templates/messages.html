@@ -3,6 +3,9 @@
 {% block content %}
 <div class="page-header">
     <h1>💬 {{ _('Messages') }}</h1>
+    {% if current_user.has_role('admin') %}
+    <a href="/messages/test-broadcast" class="btn btn-sm" style="background:#8e24aa;color:white">📤 {{ _('Test message') }}</a>
+    {% endif %}
     <a href="/messages/new" class="btn btn-primary">+ {{ _('New Message') }}</a>
 </div>
 

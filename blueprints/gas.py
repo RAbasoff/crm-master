@@ -1463,6 +1463,7 @@ def gas_quality_new():
             o2_percent=o2,
             co2_percent=co2,
             notes=request.form.get('notes', ''),
+            mixed_gas_used=bool(request.form.get('mixed_gas_used')),
             created_by=current_user.id if isinstance(current_user.id, int) else None,
         )
         if 'photo' in request.files and request.files['photo'].filename:
@@ -1478,6 +1479,35 @@ def gas_quality_new():
     mechanics = User.query.filter(User.role == 'technician', User.is_active_user == True).order_by(User.display_name).all()
     now = now_local()
     return render_template('gas_quality_form.html', mechanics=mechanics, now=now)
+
+
+@bp.route('/quality/<int:check_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def gas_quality_edit(check_id):
+    """Администратор может править замер качества газа."""
+    chk = GasQualityCheck.query.get_or_404(check_id)
+    if request.method == 'POST':
+        try:
+            o2 = float(request.form.get('o2_percent') or '')
+            co2 = float(request.form.get('co2_percent') or '')
+        except ValueError:
+            flash(_('O2 and CO2 must be numbers'), 'error')
+            return redirect(url_for('gas.gas_quality_edit', check_id=check_id))
+        chk.o2_percent = o2
+        chk.co2_percent = co2
+        chk.notes = request.form.get('notes', '') or ''
+        chk.mixed_gas_used = bool(request.form.get('mixed_gas_used'))
+        d = safe_date(request.form.get('check_date'))
+        if d:
+            chk.check_date = d
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('gas.gas_quality_edit', check_id=check_id))
+        flash(_('Saved'), 'success')
+        return redirect(url_for('gas.gas_quality_list'))
+    users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
+    return render_template('gas_quality_form.html', check=chk, users=users, editing=True)
 
 
 @bp.route('/quality/<int:check_id>/delete', methods=['POST'])

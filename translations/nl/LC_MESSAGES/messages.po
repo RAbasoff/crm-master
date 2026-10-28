@@ -6568,3 +6568,30 @@ msgstr "Beschrijving van werkzaamheden voor deze apparatuur..."
 
 msgid "Type to search parts..."
 msgstr "Typ om onderdelen te zoeken..."
+
+msgid "New notification"
+msgstr "Nieuwe melding"
+
+msgid "Edit Measurement"
+msgstr "Meting bewerken"
+
+msgid "Mixed gas used"
+msgstr "Menggas gebruikt"
+
+msgid "Check if the measurement was taken while mixed gas was in use"
+msgstr "Vink aan als de meting is gedaan terwijl menggas in gebruik was"
+
+msgid "Test message"
+msgstr "Testbericht"
+
+msgid "Send test message"
+msgstr "Testbericht verzenden"
+
+msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
+msgstr "Het bericht wordt naar alle gebruikers verzonden. Elke gebruiker krijgt een pop-up, geluid en trilling."
+
+msgid "User language (auto)"
+msgstr "Taal gebruiker (auto)"
+
+msgid "Message text is required"
+msgstr "Berichttekst is verplicht"

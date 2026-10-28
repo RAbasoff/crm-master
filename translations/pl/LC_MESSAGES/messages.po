@@ -6325,3 +6325,30 @@ msgstr "Opis pracy dla tego urządzenia..."
 
 msgid "Type to search parts..."
 msgstr "Wpisz, aby szukać części..."
+
+msgid "New notification"
+msgstr "Nowe powiadomienie"
+
+msgid "Edit Measurement"
+msgstr "Edytuj pomiar"
+
+msgid "Mixed gas used"
+msgstr "Użyto gazu mieszanego"
+
+msgid "Check if the measurement was taken while mixed gas was in use"
+msgstr "Zaznacz, jeśli pomiar wykonano przy użyciu gazu mieszanego"
+
+msgid "Test message"
+msgstr "Test"
+
+msgid "Send test message"
+msgstr "Wyślij test"
+
+msgid "The message will be sent to all users. Each user receives a popup, sound and vibration."
+msgstr "Wiadomość zostanie wysłana do wszystkich użytkowników. Każdy otrzyma powiadomienie, dźwięk i wibrację."
+
+msgid "User language (auto)"
+msgstr "Język użytkownika (auto)"
+
+msgid "Message text is required"
+msgstr "Tekst wiadomości jest wymagany"

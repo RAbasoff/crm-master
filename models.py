@@ -930,6 +930,7 @@ class GasQualityCheck(db.Model):
     o2_percent = db.Column(db.Numeric(5, 2))
     co2_percent = db.Column(db.Numeric(5, 2))
     photo = db.Column(db.String(300))
+    mixed_gas_used = db.Column(db.Boolean, default=False)  # использовался ли смешанный газ
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=now_local)
