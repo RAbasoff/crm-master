@@ -2,6 +2,9 @@
 <html lang="{{ g.lang }}">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#1a1a2e">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -992,6 +995,41 @@
                 // iOS Safari не поддерживает vibrate() — там вибрирует системный Web Push
             } catch (e) {}
         }
+                // Audio unlock for browser autoplay policy
+        (function(){
+            var unlocked = false;
+            function unlockAudio(){
+                if (unlocked) return; unlocked = true;
+                try {
+                    var Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return;
+                    var c = new Ctx();
+                    if (c.state === 'suspended') c.resume();
+                    window.__audioCtx = c;
+                } catch(e) {}
+            }
+            ['click','touchstart','keydown'].forEach(function(ev){
+                document.addEventListener(ev, unlockAudio, {once:true, passive:true});
+            });
+        })();
+        
+        // Audio unlock for autoplay policy
+        (function(){
+            var unlocked = false;
+            function unlockAudio(){
+                if (unlocked) return; unlocked = true;
+                try {
+                    var Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return;
+                    var c = new Ctx();
+                    if (c.state === 'suspended') c.resume();
+                    window.__audioCtx = c;
+                } catch(e) {}
+            }
+            ['click','touchstart','keydown'].forEach(function(ev){
+                document.addEventListener(ev, unlockAudio, {once:true, passive:true});
+            });
+        })();
         function playNotifSound() {
             vibrateNotif();
             try {
