@@ -1175,15 +1175,24 @@
                 document.body.appendChild(b);
             };
 
+            function pushEverEnabled() {
+                try { return localStorage.getItem('push_enabled') === '1'; } catch (e) { return false; }
+            }
+
             if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
                 if (Notification.permission === 'granted') {
-                    subscribeNow().catch(function(){ window.__showPushEnable(); });
-                    // если подписки нет — показать кнопку как цель для нажатия (жест)
-                    fetch('/api/push/status').then(function(r){ return r.json(); }).then(function(d){
-                        if (!d.subscribed) window.__showPushEnable();
-                    }).catch(function(){ window.__showPushEnable(); });
+                    // уже разрешено — подписываемся молча, кнопка не нужна
+                    subscribeNow().then(function(){
+                        try { localStorage.setItem('push_enabled', '1'); } catch (e) {}
+                    }).catch(function(){
+                        // iOS может требовать нажатие — покажем кнопку, только если ещё ни разу не включали
+                        if (!pushEverEnabled()) window.__showPushEnable();
+                    });
                 } else {
-                    setTimeout(window.__showPushEnable, 1500);
+                    // первое включение: одно нажатие — и подписка сохраняется для всей программы
+                    if (!pushEverEnabled()) {
+                        setTimeout(window.__showPushEnable, 1500);
+                    }
                     // В PWA — сразу просим разрешение
                     if (window.navigator.standalone === true ||
                         window.matchMedia('(display-mode: standalone)').matches) {
