@@ -1100,7 +1100,10 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({subscription: sub.toJSON()})
                 }).then(() => {
-                    try { localStorage.setItem('push_enabled', '1'); } catch (e) {}
+                    try {
+                        localStorage.setItem('push_enabled', '1');
+                        localStorage.setItem('push_synced_at', String(Date.now()));
+                    } catch (e) {}
                     const b = document.getElementById('pushEnableBtn');
                     if (b) {
                         b.style.background = '#27ae60';
@@ -1122,16 +1125,27 @@
                                 userVisibleOnly: true,
                                 applicationServerKey: appKey
                             }).then(function (s) {
-                                try { localStorage.setItem('push_key_sig', keySig); } catch (e) {}
+                                try {
+                                    localStorage.setItem('push_key_sig', keySig);
+                                    localStorage.setItem('push_synced_at', String(Date.now()));
+                                } catch (e) {}
                                 return syncPushSub(s);
                             });
                         }
                         if (sub) {
                             // Если подписка создана с другим VAPID-ключом — переподписываемся
-                            // (иначе Apple отвергает push с BadJwtToken)
-                            var savedSig = null;
-                            try { savedSig = localStorage.getItem('push_key_sig'); } catch (e) {}
-                            if (savedSig === keySig) return syncPushSub(sub);
+                            // (иначе Apple отвергает push с BadJwtToken).
+                            // Синхронизацию с сервером ограничиваем разом в сутки —
+                            // раньше POST уходил на КАЖДОЙ странице.
+                            var savedSig = null, syncedAt = 0;
+                            try {
+                                savedSig = localStorage.getItem('push_key_sig');
+                                syncedAt = parseInt(localStorage.getItem('push_synced_at') || '0', 10) || 0;
+                            } catch (e) {}
+                            if (savedSig === keySig) {
+                                if (Date.now() - syncedAt < 86400000) return Promise.resolve();
+                                return syncPushSub(sub);
+                            }
                             return sub.unsubscribe().then(doSub).catch(doSub);
                         }
                         return doSub();

@@ -4,6 +4,12 @@ from flask_login import current_user
 from models import db, Notification, AuditLog, UserActivityLog, SystemLog
 from schema import safe_commit
 
+# Push отправляем в фоне: синхронная отправка (HTTPS к FCM/Apple на каждую
+# подписку) блокировала ответ на 5–30 секунд — «кнопки откликаются медленно».
+import threading
+from concurrent.futures import ThreadPoolExecutor
+_push_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='webpush')
+
 
 def _user_language(user_id):
     """Язык пользователя для уведомлений."""
@@ -19,23 +25,41 @@ def _user_language(user_id):
     return session.get('lang', 'ru') or 'ru'
 
 
+def _send_push_job(user_id, title, message, ntype, link):
+    """Фоновая задача: Web Push на языке получателя (свой app_context)."""
+    try:
+        from app import app as _app
+        with _app.app_context():
+            try:
+                from flask_babel import force_locale, gettext as _t
+                from push import push_to_user
+                lang = _user_language(user_id)
+                with force_locale(lang):
+                    push_to_user(user_id, _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
+            except Exception:
+                try:
+                    from push import push_to_user
+                    push_to_user(user_id, title, message or '', url=link, tag=ntype or 'info')
+                except Exception:
+                    pass
+            finally:
+                try:
+                    db.session.remove()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
 def _notify_one(user_id, title, message, ntype, link):
-    """Вставить уведомление + Web Push на языке получателя."""
+    """Вставить уведомление (быстро) + Web Push в фоне."""
     n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
     db.session.add(n)
     safe_commit()
     try:
-        from flask_babel import force_locale, gettext as _t
-        from push import push_to_user
-        lang = _user_language(user_id)
-        with force_locale(lang):
-            push_to_user(user_id, _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
+        _push_pool.submit(_send_push_job, user_id, title, message, ntype, link)
     except Exception:
-        try:
-            from push import push_to_user
-            push_to_user(user_id, title, message or '', url=link, tag=ntype or 'info')
-        except Exception:
-            pass
+        pass
 
 
 def create_notification(user_id, title, message, ntype='info', link=None):

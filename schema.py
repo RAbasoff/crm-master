@@ -126,6 +126,38 @@ def _ensure_model_columns(cur):
     return changed, errors
 
 
+def ensure_perf():
+    """Производительность: WAL-журнал + индексы.
+
+    DELETE-журнал давал 2 fsync на каждый коммит (а коммит — на каждый
+    переход по странице и каждое уведомление) — кнопки отвечали секундами.
+    """
+    try:
+        from models import db
+        conn = db.engine.raw_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("PRAGMA journal_mode=WAL")
+            cur.execute("PRAGMA synchronous=NORMAL")
+            cur.execute("PRAGMA temp_store=MEMORY")
+            print('ensure_perf: journal_mode ->', cur.fetchone() if False else 'wal')
+            indexes = [
+                "CREATE INDEX IF NOT EXISTS ix_notification_user_read ON notification (user_id, is_read, created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_notification_created ON notification (created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_push_sub_user ON push_subscription (user_id)",
+                "CREATE INDEX IF NOT EXISTS ix_fault_report_status ON fault_report (status, created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_fault_report_reporter ON fault_report (reporter_id, status)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_log_created ON audit_log (created_at)",
+            ]
+            for sql in indexes:
+                cur.execute(sql)
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        print('ensure_perf error:', e)
+
+
 def ensure_schema():
     """Idempotent schema reconciliation. ALWAYS safe and cheap to call.
 

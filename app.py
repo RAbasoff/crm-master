@@ -78,6 +78,9 @@ from security import enforce_mechanic_access, is_mechanic, is_floor_user, enforc
 
 from logs_util import setup_file_logging, log_info, log_error
 app = Flask(__name__)
+# /faults и /faults/ — один маршрут без 308-редиректа (каждый переход
+# на страницу раньше ждал лишний круг запроса)
+app.url_map.strict_slashes = False
 
 @app.template_filter('workers_for_user')
 def _workers_for_user(workers, user=None):
@@ -331,16 +334,17 @@ def send_email(to_email, subject, body):
 
 # Auto-create database tables and seed data on import (for WSGI deployment)
 with app.app_context():
-    # Clean up WAL/SHM files from previous sessions (causes crashes on PA)
+    # Раньше -wal/-shm удалялись («causes crashes on PA») — это отбрасывало
+    # последние транзакции и ломало WAL-режим. Теперь — контрольная точка.
+    import sqlite3 as _diag_sqlite3
     _db_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
-    for _ext in ('-wal', '-shm'):
-        _wal = _db_file + _ext
-        if os.path.exists(_wal):
-            try:
-                os.remove(_wal)
-                print(f"STARTUP: removed {_ext} file")
-            except Exception:
-                pass
+    if os.path.exists(_db_file):
+        try:
+            _wc = _diag_sqlite3.connect(_db_file)
+            _wc.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            _wc.close()
+        except Exception:
+            pass
     # Compact startup diagnostic (no per-table row counts — those ran on every import)
     import sqlite3 as _diag_sqlite3
     _diag_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
@@ -364,7 +368,8 @@ with app.app_context():
     run_migrations()
     run_data_migrations()
     try:
-        from schema import ensure_floor_users, ensure_plan_windows, ensure_head_of_ts
+        from schema import ensure_floor_users, ensure_plan_windows, ensure_head_of_ts, ensure_perf
+        ensure_perf()
         ensure_floor_users()
         ensure_plan_windows()
         ensure_head_of_ts()
@@ -704,6 +709,9 @@ def inject_sms_access():
     return {'can_use_sms': sms_ok}
 
 
+_reminder_cache = {'at': 0.0, 'val': 0}
+
+
 @app.context_processor
 def inject_section_access():
     """Make user_has_section_access available in all templates"""
@@ -724,25 +732,33 @@ def inject_section_access():
         except Exception:
             return True
 
-    # Reminder count for sidebar badge
+    # Reminder count for sidebar badge (кеш 60 сек — раньше 2 COUNT-запроса
+    # шли на КАЖДОМ рендере страницы)
     reminder_count = 0
     chat_unread = 0
     if current_user.is_authenticated and request.endpoint not in ('static',):
         try:
-            today = now_local().date()
-            soon = today + timedelta(days=7)
-            reminder_count = MachinePart.query.filter(
-                db.or_(
-                    MachinePart.next_replacement <= soon,
-                    MachinePart.next_maintenance <= soon
-                )
-            ).count()
-            # Add overdue consumables
-            reminder_count += VoorraadItem.query.filter(
-                VoorraadItem.consumable_type.isnot(None),
-                VoorraadItem.next_replacement.isnot(None),
-                VoorraadItem.next_replacement <= soon
-            ).count()
+            import time as _time
+            global _reminder_cache
+            now_ts = _time.time()
+            if now_ts - _reminder_cache['at'] > 60:
+                today = now_local().date()
+                soon = today + timedelta(days=7)
+                cnt = MachinePart.query.filter(
+                    db.or_(
+                        MachinePart.next_replacement <= soon,
+                        MachinePart.next_maintenance <= soon
+                    )
+                ).count()
+                # Add overdue consumables
+                cnt += VoorraadItem.query.filter(
+                    VoorraadItem.consumable_type.isnot(None),
+                    VoorraadItem.next_replacement.isnot(None),
+                    VoorraadItem.next_replacement <= soon
+                ).count()
+                _reminder_cache['at'] = now_ts
+                _reminder_cache['val'] = cnt
+            reminder_count = _reminder_cache['val']
         except Exception:
             pass
         try:
