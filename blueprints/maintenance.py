@@ -447,6 +447,29 @@ def maintenance_calendar():
         weekend_work_days=weekend_work_days,
         equipment_unscheduled=equipment_unscheduled)
 
+def _log_equipment_oh(plan, ev_d, user):
+    """Отметка ТО плана «Прочее оборудование» (без машины).
+
+    В maintenance_record.machine_id NOT NULL — поэтому такие планы
+    отмечаются записью в журнале оборудования (EquipmentMaintenance).
+    """
+    from models import EquipmentMaintenance
+    d = ev_d.date() if hasattr(ev_d, 'date') else ev_d
+    step = {'weekly': 7, 'biweekly': 14, 'monthly': 30, 'quarterly': 91,
+            'semiannual': 182, 'yearly': 365}.get(getattr(plan, 'recurrence', None) or '', 90)
+    db.session.add(EquipmentMaintenance(
+        number=f'OH-{plan.id}-{d:%Y%m%d}',
+        name=(plan.title or 'OH')[:200],
+        machine_id=plan.machine_id,
+        date=d,
+        reason=f'{plan.title} — completed from calendar by {user.display_name or user.username}',
+        next_date=d + timedelta(days=step),
+        periodicity=plan.recurrence,
+        status='completed',
+        created_by=user.id if isinstance(user.id, int) else None,
+    ))
+
+
 @bp.route('/maintenance-calendar/complete', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
@@ -468,51 +491,57 @@ def maintenance_calendar_complete():
                 ev_d = event_dt.date() if hasattr(event_dt, 'date') else event_dt
                 if plan.recurrence and plan.recurrence != 'none':
                     # Recurring plan — mark only THIS occurrence as done
-                    mr = MaintenanceRecord(
-                        machine_id=plan.machine_id,
-                        maintenance_type=plan.maintenance_type,
-                        description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
-                        performed_by=current_user.id,
-                        date_performed=event_dt,
-                        next_maintenance=event_dt,
-                        cost=0
-                    )
-                    db.session.add(mr)
-                    # также в журнал — чтобы событие осталось зелёным в календаре
-                    first_part = MachinePart.query.filter_by(machine_id=plan.machine_id).first()
-                    if first_part:
-                        db.session.add(PartMaintenanceLog(
-                            part_id=first_part.id,
-                            action='maintenance',
-                            description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                    if plan.machine_id:
+                        mr = MaintenanceRecord(
+                            machine_id=plan.machine_id,
+                            maintenance_type=plan.maintenance_type,
+                            description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
                             performed_by=current_user.id,
-                            date=event_dt
-                        ))
+                            date_performed=event_dt,
+                            next_maintenance=event_dt,
+                            cost=0
+                        )
+                        db.session.add(mr)
+                        # также в журнал — чтобы событие осталось зелёным в календаре
+                        first_part = MachinePart.query.filter_by(machine_id=plan.machine_id).first()
+                        if first_part:
+                            db.session.add(PartMaintenanceLog(
+                                part_id=first_part.id,
+                                action='maintenance',
+                                description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                                performed_by=current_user.id,
+                                date=event_dt
+                            ))
+                    else:
+                        # План по «прочему оборудованию» (без машины) —
+                        # журнал оборудования, иначе NOT NULL по machine_id
+                        _log_equipment_oh(plan, ev_d, current_user)
                     db.session.commit()
                     flash(_('Occurrence marked as completed'), 'success')
                 else:
                     # Non-recurring plan — mark whole plan done
                     plan.status = 'completed'
                     plan.actual_end = ev_d
-                    mr = MaintenanceRecord(
-                        machine_id=plan.machine_id,
-                        maintenance_type=plan.maintenance_type,
-                        description=f'{plan.title} — completed by {current_user.display_name or current_user.username}',
-                        performed_by=current_user.id,
-                        date_performed=event_dt,
-                        next_maintenance=event_dt,
-                        cost=0
-                    )
-                    db.session.add(mr)
-                    first_part = MachinePart.query.filter_by(machine_id=plan.machine_id).first()
-                    if first_part:
-                        db.session.add(PartMaintenanceLog(
-                            part_id=first_part.id,
-                            action='maintenance',
-                            description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                    if plan.machine_id:
+                        mr = MaintenanceRecord(
+                            machine_id=plan.machine_id,
+                            maintenance_type=plan.maintenance_type,
+                            description=f'{plan.title} — completed by {current_user.display_name or current_user.username}',
                             performed_by=current_user.id,
-                            date=event_dt
-                        ))
+                            date_performed=event_dt,
+                            next_maintenance=event_dt,
+                            cost=0
+                        )
+                        db.session.add(mr)
+                        first_part = MachinePart.query.filter_by(machine_id=plan.machine_id).first()
+                        if first_part:
+                            db.session.add(PartMaintenanceLog(
+                                part_id=first_part.id,
+                                action='maintenance',
+                                description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
+                                performed_by=current_user.id,
+                                date=event_dt
+                            ))
                     db.session.commit()
                     flash(_('Plan marked as completed'), 'success')
             else:
