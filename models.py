@@ -150,7 +150,16 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def has_role(self, *roles):
-        return self.role in roles
+        if self.role in roles:
+            return True
+        # Начальник ТС (Руслан, аккаунт director) — полный доступ везде:
+        # проходит любые проверки роли admin. Механик-аккаунт не затрагивается.
+        if 'admin' in roles and self.role == 'director':
+            nm = ((self.display_name or '') + ' ' + (self.username or '')).lower()
+            if ('ruslan' in nm or 'abasoff' in nm or 'абасов' in nm or 'руслан' in nm
+                    or (self.username or '').lower() == 'director'):
+                return True
+        return False
 
     def has_section_access(self, section_key):
         """Check if user has access to a specific section."""
