@@ -19,16 +19,11 @@ def _user_language(user_id):
     return session.get('lang', 'ru') or 'ru'
 
 
-def create_notification(user_id, title, message, ntype='info', link=None):
-    """Создать уведомление.
-
-    title/message хранятся как msgid (англ.) — перевод при показе
-    на языке текущего пользователя. Push — на языке получателя.
-    """
+def _notify_one(user_id, title, message, ntype, link):
+    """Вставить уведомление + Web Push на языке получателя."""
     n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
     db.session.add(n)
     safe_commit()
-    # Web Push на языке получателя
     try:
         from flask_babel import force_locale, gettext as _t
         from push import push_to_user
@@ -41,6 +36,35 @@ def create_notification(user_id, title, message, ntype='info', link=None):
             push_to_user(user_id, title, message or '', url=link, tag=ntype or 'info')
         except Exception:
             pass
+
+
+def create_notification(user_id, title, message, ntype='info', link=None):
+    """Создать уведомление.
+
+    title/message хранятся как msgid (англ.) — перевод при показе
+    на языке текущего пользователя. Push — на языке получателя.
+    Директор получает копию всех уведомлений (кроме личных сообщений/чата).
+    """
+    if not user_id:
+        return
+    _notify_one(user_id, title, message, ntype, link)
+    # Зеркало директору: «получать все уведомления»
+    try:
+        if ntype not in ('message', 'chat'):
+            from datetime import datetime, timedelta
+            from models import User
+            for d in User.query.filter(User.role == 'director', User.is_active_user == True).all():
+                if d.id == user_id:
+                    continue
+                # дедупликация: одинаковые события при массовых рассылках не плодят копии
+                recent = Notification.query.filter_by(
+                    user_id=d.id, title=title, message=message, link=link
+                ).filter(Notification.created_at >= datetime.utcnow() - timedelta(seconds=15)).first()
+                if recent:
+                    continue
+                _notify_one(d.id, title, message, ntype, link)
+    except Exception:
+        db.session.rollback()
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:

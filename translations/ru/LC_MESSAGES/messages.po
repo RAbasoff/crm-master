@@ -6827,3 +6827,15 @@ msgstr "Этот замер уже сохранён"
 
 msgid "Saving..."
 msgstr "Сохранение..."
+
+msgid "CREATED"
+msgstr "ЗАЯВКА СОЗДАНА"
+
+msgid "ACCEPTED"
+msgstr "ЗАЯВКА ПРОЧИТАНА"
+
+msgid "RESOLVED"
+msgstr "РЕШЕНО"
+
+msgid "CLOSED"
+msgstr "ЗАЯВКА ЗАКРЫТА"

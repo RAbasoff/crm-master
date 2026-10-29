@@ -1702,7 +1702,9 @@ def ensure_floor_users():
     except Exception as e:
         db.session.rollback()
         print(f"ensure_floor_users bad-username: {e}")
-    floor_names = ['Bartek', 'Hashem', 'Safa', 'Pablo', 'Paulina', 'Peter', 'Thijs', 'Tim', 'Aris', 'Javier', 'Filip', 'Maico']
+    # Механики (Aristidis, Filip, Maico…) и уволенные НЕ входят — иначе
+    # при каждом старте создаются дубли учёток и реактивируются уволенные.
+    floor_names = ['Bartek', 'Hashem', 'Safa', 'Pablo', 'Peter', 'Thijs', 'Tim', 'Javier']
     try:
         for pname in floor_names:
             person = Verantwoordelijke.query.filter(

@@ -200,11 +200,6 @@ def notify_fault_done(fault, reporter_user=None, head_users=None):
             sent += 1
         if email and send_email(email, title, body):
             sent += 1
-        try:
-            from app import create_notification
-            create_notification(u.id, title, sms_text, 'fault', f'/faults/{fault.id}')
-        except Exception:
-            pass
     return sent
 
 

@@ -99,6 +99,12 @@ def mobile_fault_new():
                 'fault',
                 url_for('faults.fault_detail', fault_id=fault.id)
             )
+        # Заявитель получает подтверждение: «ЗАЯВКА СОЗДАНА: … — время»
+        try:
+            from blueprints.faults import _notify_reporter_status
+            _notify_reporter_status(fault, 'created')
+        except Exception:
+            pass
 
         flash(_('Fault reported'), 'success')
         return redirect(url_for('mobile.mobile_dashboard'))

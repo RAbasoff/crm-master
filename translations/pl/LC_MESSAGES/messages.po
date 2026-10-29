@@ -6398,3 +6398,18 @@ msgstr "Ten pomiar został już zapisany"
 
 msgid "Saving..."
 msgstr "Zapisywanie..."
+
+msgid "Fault created"
+msgstr "Zgłoszenie utworzone"
+
+msgid "CREATED"
+msgstr "ZGŁOSZENIE UTWORZONE"
+
+msgid "ACCEPTED"
+msgstr "ZGŁOSZENIE PRZYJĘTE"
+
+msgid "RESOLVED"
+msgstr "ROZWIĄZANE"
+
+msgid "CLOSED"
+msgstr "ZGŁOSZENIE ZAMKNIĘTE"

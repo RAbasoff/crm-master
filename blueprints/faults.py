@@ -317,29 +317,49 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
     )
     db.session.add(history)
 
-    # Уведомляем создателя заявки о смене статуса (прочитана / пауза / решена / закрыта)
+    # Уведомляем создателя заявки: создана / прочитана / решена / закрыта —
+    # на языке заявителя, с временем и результатом (директору уходит зеркало)
     try:
-        labels = {
-            'accepted': 'прочитана',
-            'paused': 'на паузе',
-            'testing': 'на проверке',
-            'resolved': 'неисправность устранена',
-            'closed': 'заявка закрыта',
-            'reopened': 'переоткрыта',
-            'rejected': 'отклонена',
-            'open': 'открыта заново',
-        }
-        if new_status != old_status and new_status in labels and f.reporter_id:
-            msg = f'Заявка #{f.id} ({f.title}): {labels[new_status]}'
-            if new_status == 'paused' and (reason or pause_reason):
-                msg += f'. Причина: {reason or pause_reason}'
-            if pause_comment:
-                msg += f' ({pause_comment})'
-            create_notification(f.reporter_id, 'Обновление заявки', msg, 'fault', f'/faults/{f.id}')
+        if new_status != old_status and new_status in ('accepted', 'resolved', 'closed'):
+            detail = reason if (new_status == 'closed' and reason and reason != 'closed by head') else None
+            _notify_reporter_status(f, new_status, detail=detail)
     except Exception:
         pass
 
     return True, ''
+
+
+def _notify_reporter_status(f, kind, detail=None):
+    """Уведомление заявителю о событии жизненного цикла заявки.
+
+    kind: 'created' | 'accepted' | 'resolved' | 'closed'
+    Текст — на языке заявителя: РЕШЕНО: <заголовок> — <дата время>
+    """
+    from flask_babel import force_locale, gettext as _f
+    from logs import _user_language
+    if not getattr(f, 'reporter_id', None):
+        return
+    words = {
+        'created':  ('Fault created',  'CREATED'),
+        'accepted': ('Fault accepted', 'ACCEPTED'),
+        'resolved': ('Fault resolved', 'RESOLVED'),
+        'closed':   ('Fault closed',   'CLOSED'),
+    }
+    if kind not in words:
+        return
+    title_msgid, word_msgid = words[kind]
+    when = now_local().strftime('%d.%m.%Y %H:%M')
+    try:
+        lang = _user_language(f.reporter_id)
+    except Exception:
+        lang = 'ru'
+    with force_locale(lang):
+        title = _f(title_msgid)
+        word = _f(word_msgid)
+        msg = f'{word}: {f.title} — {when}'
+        if detail:
+            msg += f'. {detail}'
+    create_notification(f.reporter_id, title, msg, 'fault', f'/faults/{f.id}')
 
 _FAULTS_EAGER = (
     joinedload(FaultReport.machine),
@@ -560,6 +580,8 @@ def fault_new():
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
+            # Заявитель получает подтверждение: «ЗАЯВКА СОЗДАНА: … — время»
+            _notify_reporter_status(f, 'created')
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
@@ -839,11 +861,6 @@ def fault_accept(fault_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('accept', 'fault', f.id, f'{f.title} — {f.target_name}')
-    create_notification(f.reporter_id, 'Fault accepted',
-        f"{_('Technician')} {current_user.display_name} {_('accepted your fault report')}: {f.title}",
-        'info',
-        url_for('faults.fault_detail', fault_id=f.id)
-    )
     flash(_('Fault report accepted'), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
@@ -889,11 +906,6 @@ def fault_assign(fault_id):
             'fault',
             url_for('faults.fault_detail', fault_id=f.id)
         )
-    create_notification(f.reporter_id, 'Fault assigned',
-        f"{_('Your fault assigned to')} {', '.join(names)}: {f.title}",
-        'info',
-        url_for('faults.fault_detail', fault_id=f.id)
-    )
     log_audit('assign', 'fault', f.id, f'{f.title} → {", ".join(names)}')
     flash(_('Fault assigned to') + ' ' + (', '.join(names)), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -913,12 +925,7 @@ def fault_resolve(fault_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('resolve', 'fault', f.id, f'{f.title} — {f.target_name}')
-    create_notification(f.reporter_id, 'Fault resolved',
-        f"{_('Your fault report has been resolved')}: {f.title}",
-        'info',
-        url_for('faults.fault_detail', fault_id=f.id)
-    )
-    # Уведомить начальство: заявка ждёт закрытия
+    # Уведомить начальство: заявка ждёт закрытия (заявителю уходит «РЕШЕНО» из _set_fault_status)
     for head in User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all():
         if head.id != current_user.id:
             create_notification(head.id, 'Fault resolved — awaiting close',
@@ -996,11 +1003,6 @@ def fault_close(fault_id):
         notify_fault_done(f, ru, heads)
     except Exception as _ne:
         print('notify done', _ne)
-    create_notification(f.reporter_id, 'Fault closed',
-        f"{_('Your fault report has been closed')}: {f.title}. {close_notes}",
-        'success',
-        url_for('faults.fault_detail', fault_id=f.id)
-    )
     log_audit('close', 'fault', f.id, close_notes)
     add_work_report(f"#{f.id} {f.title} — {_('Closed')}. {close_notes}")
     flash(_('Fault report closed'), 'success')
@@ -1039,11 +1041,6 @@ def fault_reopen(fault_id):
             return jsonify({'error': 'Save failed'}), 500
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
-    create_notification(f.reporter_id, 'Fault reopened',
-        f"{_('Fault reopened')}: {f.title}. {reason}",
-        'warning',
-        url_for('faults.fault_detail', fault_id=f.id)
-    )
     log_audit('reopen', 'fault', f.id, f'{old_status} → reopened: {reason} ({reopen_date})')
     add_work_report(f"#{f.id} {f.title} — {_('Reopened')}. {_('Reason')}: {reason}")
     if request.is_json:

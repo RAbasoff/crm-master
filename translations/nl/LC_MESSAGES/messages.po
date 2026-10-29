@@ -6641,3 +6641,18 @@ msgstr "Deze meting is al opgeslagen"
 
 msgid "Saving..."
 msgstr "Opslaan..."
+
+msgid "Fault created"
+msgstr "Melding aangemaakt"
+
+msgid "CREATED"
+msgstr "MELDING AANGEMAAKT"
+
+msgid "ACCEPTED"
+msgstr "MELDING GELEZEN"
+
+msgid "RESOLVED"
+msgstr "OPGELOST"
+
+msgid "CLOSED"
+msgstr "MELDING GESLOTEN"
