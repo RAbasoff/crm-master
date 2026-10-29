@@ -6839,3 +6839,9 @@ msgstr "РЕШЕНО"
 
 msgid "CLOSED"
 msgstr "ЗАЯВКА ЗАКРЫТА"
+
+msgid "Fault paused"
+msgstr "Заявка на паузе"
+
+msgid "PAUSED"
+msgstr "НА ПАУЗЕ"

@@ -101,8 +101,9 @@ def mobile_fault_new():
             )
         # Заявитель получает подтверждение: «ЗАЯВКА СОЗДАНА: … — время»
         try:
-            from blueprints.faults import _notify_reporter_status
+            from blueprints.faults import _notify_reporter_status, _notify_director_status
             _notify_reporter_status(fault, 'created')
+            _notify_director_status(fault, 'created')
         except Exception:
             pass
 

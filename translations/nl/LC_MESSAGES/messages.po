@@ -6656,3 +6656,9 @@ msgstr "OPGELOST"
 
 msgid "CLOSED"
 msgstr "MELDING GESLOTEN"
+
+msgid "Fault paused"
+msgstr "Melding gepauzeerd"
+
+msgid "PAUSED"
+msgstr "GEPAUZEERD"

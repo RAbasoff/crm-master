@@ -318,48 +318,90 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
     db.session.add(history)
 
     # Уведомляем создателя заявки: создана / прочитана / решена / закрыта —
-    # на языке заявителя, с временем и результатом (директору уходит зеркало)
+    # на языке заявителя, с временем и результатом
     try:
         if new_status != old_status and new_status in ('accepted', 'resolved', 'closed'):
             detail = reason if (new_status == 'closed' and reason and reason != 'closed by head') else None
             _notify_reporter_status(f, new_status, detail=detail)
+        # Директор: только создание / пауза (с причиной) / решение / закрытие
+        if new_status != old_status and new_status in ('paused', 'resolved', 'closed'):
+            detail = None
+            if new_status == 'paused':
+                r = reason or pause_reason or ''
+                if pause_comment:
+                    r = (r + f' ({pause_comment})').strip()
+                detail = r or None
+            elif new_status == 'closed' and reason and reason != 'closed by head':
+                detail = reason
+            _notify_director_status(f, new_status, detail=detail)
     except Exception:
         pass
 
     return True, ''
 
 
-def _notify_reporter_status(f, kind, detail=None):
-    """Уведомление заявителю о событии жизненного цикла заявки.
+_LIFECYCLE_WORDS = {
+    'created':  ('Fault created',  'CREATED'),
+    'accepted': ('Fault accepted', 'ACCEPTED'),
+    'paused':   ('Fault paused',   'PAUSED'),
+    'resolved': ('Fault resolved', 'RESOLVED'),
+    'closed':   ('Fault closed',   'CLOSED'),
+}
 
-    kind: 'created' | 'accepted' | 'resolved' | 'closed'
-    Текст — на языке заявителя: РЕШЕНО: <заголовок> — <дата время>
-    """
+
+def _lifecycle_msg(f, kind, detail=None, lang='ru'):
+    """Локализованный текст: СЛОВО: <заголовок> — <дата время>[. причина]"""
     from flask_babel import force_locale, gettext as _f
-    from logs import _user_language
-    if not getattr(f, 'reporter_id', None):
-        return
-    words = {
-        'created':  ('Fault created',  'CREATED'),
-        'accepted': ('Fault accepted', 'ACCEPTED'),
-        'resolved': ('Fault resolved', 'RESOLVED'),
-        'closed':   ('Fault closed',   'CLOSED'),
-    }
-    if kind not in words:
-        return
-    title_msgid, word_msgid = words[kind]
+    title_msgid, word_msgid = _LIFECYCLE_WORDS[kind]
     when = now_local().strftime('%d.%m.%Y %H:%M')
-    try:
-        lang = _user_language(f.reporter_id)
-    except Exception:
-        lang = 'ru'
     with force_locale(lang):
         title = _f(title_msgid)
         word = _f(word_msgid)
         msg = f'{word}: {f.title} — {when}'
         if detail:
-            msg += f'. {detail}'
+            if kind == 'paused':
+                msg += f'. {_f("Reason")}: {detail}'
+            else:
+                msg += f'. {detail}'
+    return title, msg
+
+
+def _lang_for(f):
+    try:
+        from logs import _user_language
+        return _user_language(f.reporter_id) if getattr(f, 'reporter_id', None) else 'ru'
+    except Exception:
+        return 'ru'
+
+
+def _notify_reporter_status(f, kind, detail=None):
+    """Заявитель: создана / прочитана / решена / закрыта — на его языке."""
+    if not getattr(f, 'reporter_id', None) or kind not in ('created', 'accepted', 'resolved', 'closed'):
+        return
+    title, msg = _lifecycle_msg(f, kind, detail=detail, lang=_lang_for(f))
     create_notification(f.reporter_id, title, msg, 'fault', f'/faults/{f.id}')
+
+
+def _notify_director_status(f, kind, detail=None):
+    """Директор: только создание / пауза (с причиной) / решение / закрытие.
+
+    Назначения, склад, отпуска, личные — директору НЕ шлются.
+    """
+    if kind not in ('created', 'paused', 'resolved', 'closed'):
+        return
+    try:
+        from logs import _user_language
+    except Exception:
+        _user_language = lambda uid: 'ru'
+    for d in User.query.filter(User.role == 'director', User.is_active_user == True).all():
+        if getattr(f, 'reporter_id', None) and d.id == f.reporter_id:
+            continue
+        try:
+            lang = _user_language(d.id)
+        except Exception:
+            lang = 'ru'
+        title, msg = _lifecycle_msg(f, kind, detail=detail, lang=lang)
+        create_notification(d.id, title, msg, 'fault', f'/faults/{f.id}')
 
 _FAULTS_EAGER = (
     joinedload(FaultReport.machine),
@@ -564,11 +606,14 @@ def fault_new():
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
-            # Уведомляем: механиков + начальника ТС + админ + Peter
+            # Уведомляем: механиков + админ (+ Peter/Ruslan по имени).
+            # Директорам идёт отдельное «ЗАЯВКА СОЗДАНА» — без лишних сообщений.
             notify_ids = set()
-            for tech in User.query.filter(User.is_active_user == True, User.role.in_(('technician', 'admin', 'director'))).all():
+            for tech in User.query.filter(User.is_active_user == True, User.role.in_(('technician', 'admin'))).all():
                 notify_ids.add(tech.id)
             for u in User.query.filter(User.is_active_user == True).all():
+                if u.role == 'director':
+                    continue
                 n = ((u.display_name or '') + ' ' + (u.username or '')).lower()
                 if 'peter' in n or 'petr' in n:
                     notify_ids.add(u.id)
@@ -580,8 +625,9 @@ def fault_new():
                     'fault',
                     url_for('faults.fault_detail', fault_id=f.id)
                 )
-            # Заявитель получает подтверждение: «ЗАЯВКА СОЗДАНА: … — время»
+            # Заявитель: «ЗАЯВКА СОЗДАНА: … — время»; директору — то же
             _notify_reporter_status(f, 'created')
+            _notify_director_status(f, 'created')
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
@@ -925,8 +971,8 @@ def fault_resolve(fault_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('resolve', 'fault', f.id, f'{f.title} — {f.target_name}')
-    # Уведомить начальство: заявка ждёт закрытия (заявителю уходит «РЕШЕНО» из _set_fault_status)
-    for head in User.query.filter(User.role.in_(['admin', 'director']), User.is_active_user == True).all():
+    # Уведомить админов: заявка ждёт закрытия (директору идёт «РЕШЕНО» из _set_fault_status)
+    for head in User.query.filter(User.role == 'admin', User.is_active_user == True).all():
         if head.id != current_user.id:
             create_notification(head.id, 'Fault resolved — awaiting close',
                 f"#{f.id} {f.title} — {_('Resolved by')} {current_user.display_name or current_user.username}. {_('Please verify and close')}.",

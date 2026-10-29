@@ -43,28 +43,11 @@ def create_notification(user_id, title, message, ntype='info', link=None):
 
     title/message хранятся как msgid (англ.) — перевод при показе
     на языке текущего пользователя. Push — на языке получателя.
-    Директор получает копию всех уведомлений (кроме личных сообщений/чата).
+    Директору отдельные события шлют вызывающие маршруты (см. faults.py).
     """
     if not user_id:
         return
     _notify_one(user_id, title, message, ntype, link)
-    # Зеркало директору: «получать все уведомления»
-    try:
-        if ntype not in ('message', 'chat'):
-            from datetime import datetime, timedelta
-            from models import User
-            for d in User.query.filter(User.role == 'director', User.is_active_user == True).all():
-                if d.id == user_id:
-                    continue
-                # дедупликация: одинаковые события при массовых рассылках не плодят копии
-                recent = Notification.query.filter_by(
-                    user_id=d.id, title=title, message=message, link=link
-                ).filter(Notification.created_at >= datetime.utcnow() - timedelta(seconds=15)).first()
-                if recent:
-                    continue
-                _notify_one(d.id, title, message, ntype, link)
-    except Exception:
-        db.session.rollback()
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:

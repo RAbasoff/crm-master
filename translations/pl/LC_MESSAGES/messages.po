@@ -6413,3 +6413,9 @@ msgstr "ROZWIĄZANE"
 
 msgid "CLOSED"
 msgstr "ZGŁOSZENIE ZAMKNIĘTE"
+
+msgid "Fault paused"
+msgstr "Zgłoszenie wstrzymane"
+
+msgid "PAUSED"
+msgstr "WSTRZYMANE"
