@@ -1,27 +1,56 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Quarterly TO plan') }} {{ year }} — CRM{% endblock %}
 {% block content %}
+<style id="pageSetup">@page { size: A4 portrait; margin: 8mm; }</style>
+<style>
+    /* на экране этой страницы нижний баннер установки не нужен */
+    #pwaInstallBanner { display: none !important; }
+    .to-year-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+    .to-year-table th, .to-year-table td { border: 1px solid #ccd !important; }
+    .to-year-table th:nth-child(1) { width: 4%; }
+    .to-year-table th:nth-child(2) { width: 18%; }
+    .to-year-table th:nth-child(3) { width: 40%; }
+    .to-year-table th:nth-child(4), .to-year-table th:nth-child(5),
+    .to-year-table th:nth-child(6), .to-year-table th:nth-child(7) { width: 9.5%; }
+    @media print {
+        .sidebar, .topbar, .notif-panel, .no-print,
+        .page-header .btn, .to-year-table .btn, #pwaInstallBanner, #twModal,
+        .install-hint { display: none !important; }
+        .page-header { margin: 0 0 6px 0 !important; }
+        .page-header h1 { font-size: 15px; margin: 0 0 4px 0; }
+        .card { border: none !important; box-shadow: none !important; padding: 0 !important; }
+        body { background: #fff !important; }
+        .to-year-table { font-size: 9.5px !important; }
+        .to-year-table th, .to-year-table td { padding: 3px 4px !important; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+        body { padding: 0 !important; margin: 0 !important; }
+    }
+</style>
+
 <div class="page-header" style="page-break-after:avoid">
     <h1>🗓️ {{ _('Quarterly TO plan') }} — {{ year }}</h1>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a class="btn btn-sm" style="background:#eee" href="/maintenance/yearly-plan?year={{ year - 1 }}">◀ {{ year - 1 }}</a>
         <a class="btn btn-sm" style="background:#eee" href="/maintenance/yearly-plan?year={{ year + 1 }}">{{ year + 1 }} ▶</a>
+        <button class="btn btn-sm" style="background:#2c3e50;color:white" onclick="setPaper('A4')">A4</button>
+        <button class="btn btn-sm" style="background:#2c3e50;color:white" onclick="setPaper('A3')">A3</button>
         <button class="btn btn-sm" style="background:#3498db;color:white" onclick="window.print()">🖨 {{ _('Print') }}</button>
         <a class="btn btn-sm" style="background:#eee" href="/maintenance-calendar">{{ _('Back') }}</a>
     </div>
 </div>
 
 <div class="card" style="padding:0">
-    <table class="to-year-table" style="width:100%;border-collapse:collapse;font-size:12px">
+    <table class="to-year-table">
         <thead>
             <tr style="background:#2c3e50;color:#fff">
-                <th style="padding:8px;width:32px;border:1px solid #ccd">№</th>
-                <th style="padding:8px;width:170px;border:1px solid #ccd;text-align:left">{{ _('Machine') }}</th>
+                <th style="padding:8px;border:1px solid #ccd">№</th>
+                <th style="padding:8px;border:1px solid #ccd;text-align:left">{{ _('Machine') }}</th>
                 <th style="padding:8px;border:1px solid #ccd;text-align:left">{{ _('Work items') }} (Omschrijving)</th>
-                <th style="padding:8px;width:92px;border:1px solid #ccd">Q1</th>
-                <th style="padding:8px;width:92px;border:1px solid #ccd">Q2</th>
-                <th style="padding:8px;width:92px;border:1px solid #ccd">Q3</th>
-                <th style="padding:8px;width:92px;border:1px solid #ccd">Q4</th>
+                <th style="padding:8px;border:1px solid #ccd">Q1</th>
+                <th style="padding:8px;border:1px solid #ccd">Q2</th>
+                <th style="padding:8px;border:1px solid #ccd">Q3</th>
+                <th style="padding:8px;border:1px solid #ccd">Q4</th>
             </tr>
         </thead>
         <tbody>
@@ -60,7 +89,7 @@
     </table>
 </div>
 
-<p style="color:#888;font-size:12px;margin-top:10px">
+<p style="color:#888;font-size:12px;margin-top:10px" class="no-print">
     {{ _('Dates are proposed automatically — edit as needed. Machines with plans use real dates; empty quarters are spread evenly.') }}
 </p>
 
@@ -79,6 +108,10 @@
     </div>
 </div>
 <script>
+function setPaper(size) {
+    document.getElementById('pageSetup').textContent = '@page { size: ' + size + ' portrait; margin: 8mm; }';
+    setTimeout(function () { window.print(); }, 60);
+}
 var twMachine = null, twItems = [];
 function editTasks(mid, tasks, name) {
     twMachine = mid;
@@ -127,14 +160,4 @@ function twSave() {
     }).catch(function () { alert('{{ _("Save failed") }}'); });
 }
 </script>
-<style>
-@media print {
-    .page-header .btn, .sidebar, .topbar, .notif-panel { display: none !important; }
-    .card { border: none !important; box-shadow: none !important; }
-    body { background: #fff !important; }
-    .to-year-table { font-size: 10.5px !important; }
-    @page { size: A4 landscape; margin: 10mm; }
-}
-.to-year-table th, .to-year-table td { border: 1px solid #ccd !important; }
-</style>
 {% endblock %}
