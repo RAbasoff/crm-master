@@ -737,7 +737,12 @@ def _yearly_to_chart(year):
     однотипно: общий список работ из maintenance_notes оборудования.
     """
     machines = Machine.query.filter(Machine.status == 'active').all()
-    doors = Equipment.query.filter(Equipment.equipment_type == 'Snelport').all()
+    # скоростные ворота: Snelport / DYNACO D-3xx (в т.ч. записи вида «Snelport - KB2»)
+    doors = Equipment.query.filter(db.or_(
+        Equipment.equipment_type == 'Snelport',
+        Equipment.name.like('%Snelport%'),
+        Equipment.equipment_type.like('D-3%'),
+    )).all()
     plans = [p for p in MaintenancePlan.query.all() if p.machine_id and p.planned_start]
     schedules = MaintenanceSchedule.query.filter_by(is_active=True).all()
     y_lo, y_hi = datetime(year, 1, 1).date(), datetime(year, 12, 31).date()
