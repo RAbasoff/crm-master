@@ -6374,3 +6374,21 @@ msgstr "Subskrypcja aktywna"
 
 msgid "No subscription — open the app from the home screen icon"
 msgstr "Brak subskrypcji — otwórz aplikację z ikony na ekranie głównym"
+
+msgid "Priority check"
+msgstr "Sprawdzanie priorytetu"
+
+msgid "Is the machine powered?"
+msgstr "CZY MASZYNA JEST ZASILANA?"
+
+msgid "Does the machine start?"
+msgstr "CZY MASZYNA SIĘ URUCHAMIA?"
+
+msgid "Does the machine work incorrectly but still produce?"
+msgstr "Czy maszyna działa nieprawidłowo, ale wciąż produkuje?"
+
+msgid "Step"
+msgstr "Krok"
+
+msgid "Priority set to"
+msgstr "Ustawiono priorytet:"

@@ -6617,3 +6617,21 @@ msgstr "Abonnement actief"
 
 msgid "No subscription — open the app from the home screen icon"
 msgstr "Geen abonnement — open de app via het startscherm-icoon"
+
+msgid "Priority check"
+msgstr "Prioriteitscontrole"
+
+msgid "Is the machine powered?"
+msgstr "IS DE MACHINE OP NETSPANNING?"
+
+msgid "Does the machine start?"
+msgstr "START DE MACHINE?"
+
+msgid "Does the machine work incorrectly but still produce?"
+msgstr "Werkt de machine verkeerd maar produceert ze nog?"
+
+msgid "Step"
+msgstr "Stap"
+
+msgid "Priority set to"
+msgstr "Prioriteit ingesteld op:"

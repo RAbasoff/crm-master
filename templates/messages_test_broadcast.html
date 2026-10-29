@@ -44,6 +44,11 @@
                     function refreshStatus() {
                         var el = document.getElementById('pushStatusLine');
                         if (!el) return;
+                        if (!('PushManager' in window)) {
+                            el.style.color = '#e67e22';
+                            el.textContent = '⚠️ {{ _("No subscription — open the app from the home screen icon") }}';
+                            return;
+                        }
                         fetch('/api/push/status').then(function (r) { return r.json(); }).then(function (d) {
                             if (d.subscribed) {
                                 el.style.color = '#27ae60';

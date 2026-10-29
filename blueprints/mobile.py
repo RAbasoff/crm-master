@@ -65,7 +65,7 @@ def mobile_fault_new():
         description = (request.form.get('description') or '').strip()
         machine_id = safe_int(request.form.get('machine_id'))
         priority = request.form.get('priority', 'normal')
-        if priority not in ('normal', 'high', 'critical'):
+        if priority not in ('low', 'normal', 'high', 'critical'):
             priority = 'normal'
 
         if not title or not description:

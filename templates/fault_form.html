@@ -110,6 +110,28 @@
     </form>
 </div>
 
+<script>
+window.PRIORITY_WIZARD = {
+    title: "{{ _('Priority check') }}",
+    q1: "{{ _('Is the machine powered?') }}",
+    q2: "{{ _('Does the machine start?') }}",
+    q3: "{{ _('Does the machine work incorrectly but still produce?') }}",
+    yes: "{{ _('Yes') }}",
+    no: "{{ _('No') }}",
+    done: "{{ _('Done') }}",
+    step: "{{ _('Step') }}",
+    result: "{{ _('Priority set to') }}",
+    crit: "{{ _('Critical') }}",
+    high: "{{ _('High') }}",
+    norm: "{{ _('Normal') }}",
+    low: "{{ _('Low') }}"
+};
+</script>
+<script src="/static/js/priority-wizard.js?v=1"></script>
+<script>
+PriorityWizard.attachSelect(document.querySelector('select[name="priority"]'));
+</script>
+
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 let scannerInstance = null;

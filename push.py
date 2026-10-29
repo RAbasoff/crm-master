@@ -55,7 +55,8 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
             subscription_info=subscription_info,
             data=json.dumps(payload, ensure_ascii=False),
             vapid_private_key=_private_key_for_webpush(priv),
-            vapid_claims={'sub': 'mailto:admin@promaster.local'},
+            # Apple требует валидный контакт в sub; https-URL надёжнее mailto с .local
+            vapid_claims={'sub': 'https://rabasoff.pythonanywhere.com'},
             ttl=60 * 60 * 6,
         )
         return bool(resp and resp.status_code < 300)

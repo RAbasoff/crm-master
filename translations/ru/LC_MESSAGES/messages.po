@@ -6803,3 +6803,21 @@ msgstr "Подписка активна"
 
 msgid "No subscription — open the app from the home screen icon"
 msgstr "Нет подписки — откройте приложение с иконки на главном экране"
+
+msgid "Priority check"
+msgstr "Проверка приоритета"
+
+msgid "Is the machine powered?"
+msgstr "ЭЛЕКТРОПИТАНИЕ СТАНКА ЕСТЬ?"
+
+msgid "Does the machine start?"
+msgstr "МАШИНА ЗАПУСКАЕТСЯ?"
+
+msgid "Does the machine work incorrectly but still produce?"
+msgstr "Машина работает некорректно, но выпускает продукцию?"
+
+msgid "Step"
+msgstr "Шаг"
+
+msgid "Priority set to"
+msgstr "Приоритет установлен:"

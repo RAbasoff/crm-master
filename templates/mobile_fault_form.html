@@ -17,9 +17,10 @@
         .field input,.field select,.field textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;outline:none;transition:border-color .2s;background:white;-webkit-appearance:none}
         .field input:focus,.field select:focus,.field textarea:focus{border-color:#3498db}
         .field textarea{resize:vertical;min-height:120px;font-family:inherit}
-        .priority-row{display:flex;gap:8px}
+        .priority-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
         .priority-btn{flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:10px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;background:white;transition:all .2s}
         .priority-btn.sel{border-color:currentColor;transform:scale(1.02)}
+        .priority-btn.p-low{color:#27ae60}
         .priority-btn.p-normal{color:#3498db}
         .priority-btn.p-high{color:#e67e22}
         .priority-btn.p-critical{color:#e74c3c}
@@ -59,7 +60,8 @@
         <div class="field">
             <label>{{ _('Priority') }}</label>
             <div class="priority-row">
-                <div class="priority-btn p-normal sel" data-val="normal" onclick="selPriority(this)">🟢 {{ _('Normal') }}</div>
+                <div class="priority-btn p-low" data-val="low" onclick="selPriority(this)">🟢 {{ _('Low') }}</div>
+                <div class="priority-btn p-normal sel" data-val="normal" onclick="selPriority(this)">🔵 {{ _('Normal') }}</div>
                 <div class="priority-btn p-high" data-val="high" onclick="selPriority(this)">🟠 {{ _('High') }}</div>
                 <div class="priority-btn p-critical" data-val="critical" onclick="selPriority(this)">🔴 {{ _('Critical') }}</div>
             </div>
@@ -69,11 +71,25 @@
         <div id="formMsg" style="display:none;padding:12px;margin-top:12px;border-radius:10px;font-size:14px"></div>
     </form>
     <script>
-    function selPriority(el){
-        document.querySelectorAll('.priority-btn').forEach(function(b){b.classList.remove('sel')});
-        el.classList.add('sel');
-        document.getElementById('priorityInput').value = el.dataset.val;
-    }
+    window.PRIORITY_WIZARD = {
+        title: "{{ _('Priority check') }}",
+        q1: "{{ _('Is the machine powered?') }}",
+        q2: "{{ _('Does the machine start?') }}",
+        q3: "{{ _('Does the machine work incorrectly but still produce?') }}",
+        yes: "{{ _('Yes') }}",
+        no: "{{ _('No') }}",
+        done: "{{ _('Done') }}",
+        step: "{{ _('Step') }}",
+        result: "{{ _('Priority set to') }}",
+        crit: "{{ _('Critical') }}",
+        high: "{{ _('High') }}",
+        norm: "{{ _('Normal') }}",
+        low: "{{ _('Low') }}"
+    };
+    </script>
+    <script src="/static/js/priority-wizard.js?v=1"></script>
+    <script>
+    PriorityWizard.attachButtons(document.getElementById('priorityInput'));
     function showMsg(text, isError){
         var el = document.getElementById('formMsg');
         el.textContent = text;
