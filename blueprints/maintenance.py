@@ -13,7 +13,7 @@ import os
 import io
 
 from models import (db, now_local, MaintenancePlan, MaintenanceSchedule, MaintenanceRecord, MaintenancePhoto,
-                    MachinePart, PartMaintenanceLog, Machine, Monteur, FactorySection, User,
+                    MachinePart, PartMaintenanceLog, MachineTOChecklist, Machine, Monteur, FactorySection, User,
                     Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem, WorkEvent)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    create_notification, log_audit, log_system, save_uploaded_file,
@@ -674,6 +674,135 @@ def maintenance_calendar_complete():
 
     month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
     return redirect(url_for('maintenance.maintenance_calendar', month=month))
+
+# ── Квартальный график ТО на год (по каждой машине) ──────────────
+
+_TO_DEFAULT_TASKS = [
+    'Vervang verbruiksartikelen volgens schema',
+    'Controleer hydrauliek / pneumatiek',
+    "Onderhoudsact + foto's",
+]
+
+_TO_REC_DAYS = {
+    'weekly': 7, 'biweekly': 14, 'monthly': 30, 'quarterly': 91,
+    'semiannual': 182, 'yearly': 365,
+}
+
+
+def _add_months(d, k):
+    """d + k месяцев (календарно, без сдвига на 30-дневные месяцы)."""
+    y = d.year + (d.month - 1 + k) // 12
+    m = (d.month - 1 + k) % 12 + 1
+    import calendar
+    day = min(d.day, calendar.monthrange(y, m)[1])
+    return d.replace(year=y, month=m, day=day)
+
+
+def _occurrences(start, recurrence, lo, hi, limit=40):
+    """Даты повторов события в диапазоне [lo, hi]."""
+    if not start:
+        return []
+    rec = (recurrence or '').lower()
+    step_days = {'weekly': 7, 'biweekly': 14}.get(rec)
+    month_step = {'monthly': 1, 'quarterly': 3, 'semiannual': 6, 'yearly': 12}.get(rec)
+    if not step_days and not month_step:
+        return [start] if lo <= start <= hi else []
+    out = []
+    d = start
+    n = 0
+    while d <= hi and n < limit:
+        if d >= lo:
+            out.append(d)
+        if step_days:
+            d = d + timedelta(days=step_days)
+        else:
+            d = _add_months(d, month_step)
+        n += 1
+    return out
+
+
+def _yearly_to_chart(year):
+    """Строки графика: машина, работы, даты ТО по кварталам.
+
+    Даты: из планов и шаблонов (с повторами в нужный год); пустые
+    кварталы заполняются равномерной растяжкой — пользователь правит.
+    """
+    machines = Machine.query.filter(Machine.status == 'active').order_by(Machine.id).all()
+    plans = [p for p in MaintenancePlan.query.all() if p.machine_id and p.planned_start]
+    schedules = MaintenanceSchedule.query.filter_by(is_active=True).all()
+    y_lo, y_hi = datetime(year, 1, 1).date(), datetime(year, 12, 31).date()
+    q_lo = [datetime(year, 1, 1).date(), datetime(year, 4, 1).date(),
+            datetime(year, 7, 1).date(), datetime(year, 10, 1).date()]
+    q_hi = [datetime(year, 3, 31).date(), datetime(year, 6, 30).date(),
+            datetime(year, 9, 30).date(), datetime(year, 12, 31).date()]
+    rec_days = _TO_REC_DAYS
+
+    def quarter_of(d):
+        return (d.month - 1) // 3
+
+    rows = []
+    for idx, m in enumerate(machines):
+        q_plan = {0: set(), 1: set(), 2: set(), 3: set()}
+        q_sched = {0: set(), 1: set(), 2: set(), 3: set()}
+        for p in plans:
+            if p.machine_id != m.id:
+                continue
+            rec = (p.recurrence or 'none').lower()
+            if rec in ('weekly', 'biweekly'):
+                continue  # частые операции — не квартальный выезд
+            if p.recurrence and p.recurrence != 'none':
+                start = datetime.combine(p.planned_start, datetime.min.time()).date() if isinstance(p.planned_start, datetime) else p.planned_start
+                occ = _occurrences(start, p.recurrence, y_lo, y_hi)
+            else:
+                d0 = p.planned_start.date() if isinstance(p.planned_start, datetime) else p.planned_start
+                occ = [d0] if y_lo <= d0 <= y_hi else []
+            for d in occ:
+                q_plan[quarter_of(d)].add(d)
+        for s in schedules:
+            if s.machine_id != m.id:
+                continue
+            rec = (s.recurrence or 'monthly').lower()
+            if rec in ('weekly', 'biweekly'):
+                continue
+            occ = _occurrences(y_lo, s.recurrence or 'monthly', y_lo, y_hi)
+            for d in occ:
+                q_sched[quarter_of(d)].add(d)
+        q_dates = {0: set(), 1: set(), 2: set(), 3: set()}
+        for q in range(4):
+            # приоритет: план (реальная дата) → шаблон → равномерная растяжка
+            if q_plan[q]:
+                q_dates[q] = {min(q_plan[q])}
+            elif q_sched[q]:
+                q_dates[q] = {min(q_sched[q])}
+            else:
+                offset = 7 + (idx * 7) % 78
+                d = q_lo[q] + timedelta(days=offset)
+                while d.weekday() >= 5:
+                    d += timedelta(days=1)
+                if d > q_hi[q]:
+                    d = q_hi[q] - timedelta(days=q_hi[q].weekday())
+                q_dates[q] = {d}
+        tasks = [t.text for t in MachineTOChecklist.query.filter_by(machine_id=m.id).filter(
+            MachineTOChecklist.period.in_(('quarterly', 'semiannual', 'yearly'))
+        ).order_by(MachineTOChecklist.period, MachineTOChecklist.id).all()] or list(_TO_DEFAULT_TASKS)
+        rows.append({
+            'machine': m,
+            'tasks': tasks,
+            'quarters': [[d.strftime('%d.%m') for d in sorted(q_dates[q])] for q in range(4)],
+        })
+    return rows
+
+
+@bp.route('/maintenance/yearly-plan')
+@login_required
+@role_required('admin', 'director', 'technician', 'user', 'responsible')
+def maintenance_yearly_plan():
+    """Квартальный график ТО на следующий год (по каждой машине)."""
+    today = datetime.utcnow().date()
+    year = safe_int(request.args.get('year')) or (today.year + 1)
+    rows = _yearly_to_chart(year)
+    return render_template('maintenance_yearly_plan.html', rows=rows, year=year)
+
 
 @bp.route('/maintenance-calendar/debug')
 @login_required

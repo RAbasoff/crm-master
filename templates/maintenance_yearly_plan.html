@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Quarterly TO plan') }} {{ year }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header" style="page-break-after:avoid">
+    <h1>🗓️ {{ _('Quarterly TO plan') }} — {{ year }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn btn-sm" style="background:#eee" href="/maintenance/yearly-plan?year={{ year - 1 }}">◀ {{ year - 1 }}</a>
+        <a class="btn btn-sm" style="background:#eee" href="/maintenance/yearly-plan?year={{ year + 1 }}">{{ year + 1 }} ▶</a>
+        <button class="btn btn-sm" style="background:#3498db;color:white" onclick="window.print()">🖨 {{ _('Print') }}</button>
+        <a class="btn btn-sm" style="background:#eee" href="/maintenance-calendar">{{ _('Back') }}</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    <table class="to-year-table" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+            <tr style="background:#2c3e50;color:#fff">
+                <th style="padding:8px;width:32px;border:1px solid #ccd">№</th>
+                <th style="padding:8px;width:170px;border:1px solid #ccd;text-align:left">{{ _('Machine') }}</th>
+                <th style="padding:8px;border:1px solid #ccd;text-align:left">{{ _('Work items') }} (Omschrijving)</th>
+                <th style="padding:8px;width:92px;border:1px solid #ccd">Q1</th>
+                <th style="padding:8px;width:92px;border:1px solid #ccd">Q2</th>
+                <th style="padding:8px;width:92px;border:1px solid #ccd">Q3</th>
+                <th style="padding:8px;width:92px;border:1px solid #ccd">Q4</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in rows %}
+            {% set bg = '#fafbfc' if loop.index0 % 2 else '#fff' %}
+            <tr style="background:{{ bg }}">
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px 4px;text-align:center;vertical-align:top">{{ loop.index }}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;vertical-align:top">
+                    <strong>{{ r.machine.name }}</strong>
+                    {% if r.machine.machine_type %}<br><small style="color:#888">{{ r.machine.machine_type }}</small>{% endif %}
+                </td>
+                <td style="border:1px solid #ccd;padding:5px 8px">{{ r.tasks[0] }}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[0] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[1] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[2] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[3] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+            </tr>
+            {% for t in r.tasks[1:] %}
+            <tr style="background:{{ bg }}">
+                <td style="border:1px solid #ccd;padding:5px 8px">{{ t }}</td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:10px">
+    {{ _('Dates are proposed automatically — edit as needed. Machines with plans use real dates; empty quarters are spread evenly.') }}
+</p>
+
+<style>
+@media print {
+    .page-header .btn, .sidebar, .topbar, .notif-panel { display: none !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    body { background: #fff !important; }
+    .to-year-table { font-size: 10.5px !important; }
+    @page { size: A4 landscape; margin: 10mm; }
+}
+.to-year-table th, .to-year-table td { border: 1px solid #ccd !important; }
+</style>
+{% endblock %}

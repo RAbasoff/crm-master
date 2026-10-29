@@ -6662,3 +6662,16 @@ msgstr "Melding gepauzeerd"
 
 msgid "PAUSED"
 msgstr "GEPAUZEERD"
+
+msgid "Quarterly TO plan"
+msgstr "Kwartaal onderhoudsplanning"
+
+msgid "Work items"
+msgstr "Werkzaamheden"
+
+msgid ""
+"Dates are proposed automatically — edit as needed. Machines with plans use "
+"real dates; empty quarters are spread evenly."
+msgstr ""
+"Data zijn automatisch voorgesteld — pas aan waar nodig. Machines met plannen"
+" gebruiken echte data; lege kwartalen zijn gelijkmatig verdeeld."

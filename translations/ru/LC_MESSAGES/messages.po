@@ -6845,3 +6845,16 @@ msgstr "Заявка на паузе"
 
 msgid "PAUSED"
 msgstr "НА ПАУЗЕ"
+
+msgid "Quarterly TO plan"
+msgstr "Квартальный график ТО"
+
+msgid "Work items"
+msgstr "Виды работ"
+
+msgid ""
+"Dates are proposed automatically — edit as needed. Machines with plans use "
+"real dates; empty quarters are spread evenly."
+msgstr ""
+"Даты предложены автоматически — правьте при необходимости. По машинам с "
+"планами стоят реальные даты; пустые кварталы разнесены равномерно."

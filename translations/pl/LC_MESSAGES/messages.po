@@ -6419,3 +6419,16 @@ msgstr "Zgłoszenie wstrzymane"
 
 msgid "PAUSED"
 msgstr "WSTRZYMANE"
+
+msgid "Quarterly TO plan"
+msgstr "Kwartalny plan przeglądów"
+
+msgid "Work items"
+msgstr "Zakres prac"
+
+msgid ""
+"Dates are proposed automatically — edit as needed. Machines with plans use "
+"real dates; empty quarters are spread evenly."
+msgstr ""
+"Daty zaproponowano automatycznie — popraw w razie potrzeby. Maszyny z "
+"planami mają prawdziwe daty; puste kwartały rozłożono równomiernie."
