@@ -25,30 +25,58 @@ def _user_language(user_id):
     return session.get('lang', 'ru') or 'ru'
 
 
-def _send_push_job(user_id, title, message, ntype, link):
-    """Фоновая задача: Web Push на языке получателя (свой app_context)."""
+def _send_push_job(row, title, message, ntype, link, lang='ru'):
+    """Фоновая задача: ТОЛЬКО сетевая отправка (без БД!).
+
+    Любая работа с БД в потоках держит sqlite-лок и тормозит основной
+    запрос (было 20–90 сек на сохранение заявки).
+    """
+    sid, endpoint, p256dh, auth, user_id = row
+    try:
+        from app import app as _app
+        from push import send_web_push
+        from flask_babel import force_locale, gettext as _t
+        with _app.app_context():  # контекст приложения — без БД
+            with force_locale(lang):
+                res = send_web_push(
+                    {'endpoint': endpoint, 'keys': {'p256dh': p256dh, 'auth': auth}},
+                    _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
+    except Exception:
+        res = 'error'
+    if res == 'dead':
+        # мёртвую подписку удаляем отдельной короткой задачей
+        _push_pool.submit(_cleanup_dead_sub, sid)
+    elif res == 'ok':
+        _push_pool.submit(_touch_sub, sid)
+
+
+def _cleanup_dead_sub(sid):
     try:
         from app import app as _app
         with _app.app_context():
-            try:
-                from flask_babel import force_locale, gettext as _t
-                from push import push_to_user
-                lang = _user_language(user_id)
-                with force_locale(lang):
-                    push_to_user(user_id, _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
-            except Exception:
-                try:
-                    from push import push_to_user
-                    push_to_user(user_id, title, message or '', url=link, tag=ntype or 'info')
-                except Exception:
-                    pass
-            finally:
-                try:
-                    db.session.remove()
-                except Exception:
-                    pass
+            from models import PushSubscription, db
+            PushSubscription.query.filter_by(id=sid).delete(synchronize_session=False)
+            db.session.commit()
     except Exception:
-        pass
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+
+def _touch_sub(sid):
+    try:
+        from app import app as _app
+        with _app.app_context():
+            from models import PushSubscription, db, now_local
+            PushSubscription.query.filter_by(id=sid).update(
+                {'last_used_at': now_local()}, synchronize_session=False)
+            db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
 
 def _notify_one(user_id, title, message, ntype, link):
@@ -57,7 +85,13 @@ def _notify_one(user_id, title, message, ntype, link):
     db.session.add(n)
     safe_commit()
     try:
-        _push_pool.submit(_send_push_job, user_id, title, message, ntype, link)
+        # снимок подписок и языка — в контексте запроса; потоки получают готовые данные
+        from models import PushSubscription
+        lang = _user_language(user_id)
+        rows = [(s.id, s.endpoint, s.p256dh, s.auth, s.user_id)
+                for s in PushSubscription.query.filter_by(user_id=user_id).all()]
+        for row in rows:
+            _push_pool.submit(_send_push_job, row, title, message, ntype, link, lang)
     except Exception:
         pass
 
