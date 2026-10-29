@@ -334,17 +334,10 @@ def send_email(to_email, subject, body):
 
 # Auto-create database tables and seed data on import (for WSGI deployment)
 with app.app_context():
-    # Раньше -wal/-shm удалялись («causes crashes on PA») — это отбрасывало
-    # последние транзакции и ломало WAL-режим. Теперь — контрольная точка.
+    # Раньше -wal/-shm удалялись («causes crashes on PA») — теперь их и не
+    # должно быть: журнал TRUNCATE (см. schema.ensure_perf), не WAL.
     import sqlite3 as _diag_sqlite3
     _db_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
-    if os.path.exists(_db_file):
-        try:
-            _wc = _diag_sqlite3.connect(_db_file)
-            _wc.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            _wc.close()
-        except Exception:
-            pass
     # Compact startup diagnostic (no per-table row counts — those ran on every import)
     import sqlite3 as _diag_sqlite3
     _diag_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')

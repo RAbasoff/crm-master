@@ -127,33 +127,42 @@ def _ensure_model_columns(cur):
 
 
 def ensure_perf():
-    """Производительность: WAL-журнал + индексы.
+    """Производительность и совместимость: журнал TRUNCATE + индексы.
 
-    DELETE-журнал давал 2 fsync на каждый коммит (а коммит — на каждый
-    переход по странице и каждое уведомление) — кнопки отвечали секундами.
+    ВАЖНО: НЕ WAL! На файловой системе PythonAnywhere WAL-файл -shm
+    (mmap) даёт sqlite3.OperationalError: disk I/O error — программа
+    падает с «что-то пошло не так». TRUNCATE — тот же rollback-журнал,
+    но без unlink на каждом коммите: быстрее DELETE и работает везде.
     """
+    import time as _time
     try:
         from models import db
-        conn = db.engine.raw_connection()
-        try:
-            cur = conn.cursor()
-            cur.execute("PRAGMA journal_mode=WAL")
-            cur.execute("PRAGMA synchronous=NORMAL")
-            cur.execute("PRAGMA temp_store=MEMORY")
-            print('ensure_perf: journal_mode ->', cur.fetchone() if False else 'wal')
-            indexes = [
-                "CREATE INDEX IF NOT EXISTS ix_notification_user_read ON notification (user_id, is_read, created_at)",
-                "CREATE INDEX IF NOT EXISTS ix_notification_created ON notification (created_at)",
-                "CREATE INDEX IF NOT EXISTS ix_push_sub_user ON push_subscription (user_id)",
-                "CREATE INDEX IF NOT EXISTS ix_fault_report_status ON fault_report (status, created_at)",
-                "CREATE INDEX IF NOT EXISTS ix_fault_report_reporter ON fault_report (reporter_id, status)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_log_created ON audit_log (created_at)",
-            ]
-            for sql in indexes:
-                cur.execute(sql)
-            conn.commit()
-        finally:
-            conn.close()
+        for _attempt in range(5):
+            try:
+                conn = db.engine.raw_connection()
+                try:
+                    cur = conn.cursor()
+                    mode = cur.execute("PRAGMA journal_mode=TRUNCATE").fetchone()
+                    cur.execute("PRAGMA synchronous=NORMAL")
+                    cur.execute("PRAGMA temp_store=MEMORY")
+                    indexes = [
+                        "CREATE INDEX IF NOT EXISTS ix_notification_user_read ON notification (user_id, is_read, created_at)",
+                        "CREATE INDEX IF NOT EXISTS ix_notification_created ON notification (created_at)",
+                        "CREATE INDEX IF NOT EXISTS ix_push_sub_user ON push_subscription (user_id)",
+                        "CREATE INDEX IF NOT EXISTS ix_fault_report_status ON fault_report (status, created_at)",
+                        "CREATE INDEX IF NOT EXISTS ix_fault_report_reporter ON fault_report (reporter_id, status)",
+                        "CREATE INDEX IF NOT EXISTS ix_audit_log_created ON audit_log (created_at)",
+                    ]
+                    for sql in indexes:
+                        cur.execute(sql)
+                    conn.commit()
+                    print('ensure_perf: journal_mode ->', mode[0] if mode else '?')
+                    break
+                finally:
+                    conn.close()
+            except Exception as e:
+                print(f'ensure_perf retry {_attempt + 1}: {e}')
+                _time.sleep(2)
     except Exception as e:
         print('ensure_perf error:', e)
 
