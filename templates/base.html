@@ -1136,10 +1136,9 @@
                             });
                         }
                         if (sub) {
-                            // Если подписка создана с другим VAPID-ключом — переподписываемся
-                            // (иначе Apple отвергает push с BadJwtToken).
-                            // Синхронизацию ограничиваем разом в сутки И при смене
-                            // пользователя — иначе уведомления уходят старому аккаунту.
+                            // Если подписка создана с другим VAPID-ключом — переподписываемся.
+                            // Если подписка мёртва на сервере (или привязана к другому
+                            // пользователю) — получаем НОВУЮ, иначе Android/iOS не получают push.
                             var savedSig = null, syncedAt = 0, syncedUser = null;
                             try {
                                 savedSig = localStorage.getItem('push_key_sig');
@@ -1147,11 +1146,16 @@
                                 syncedUser = localStorage.getItem('push_user');
                             } catch (e) {}
                             var userId = String(window.APP_USER_ID || '');
-                            if (savedSig === keySig) {
-                                if (syncedUser === userId && Date.now() - syncedAt < 86400000) return Promise.resolve();
-                                return syncPushSub(sub);
+                            if (savedSig === keySig && syncedUser === userId && Date.now() - syncedAt < 3600000) {
+                                return Promise.resolve();
                             }
-                            return sub.unsubscribe().then(doSub).catch(doSub);
+                            return fetch('/api/push/status').then(function (r) { return r.json(); }).then(function (st) {
+                                if (st && st.subscribed) {
+                                    return syncPushSub(sub); // перепривязка к текущему пользователю
+                                }
+                                // подписка мёртва или не привязана к текущему — новая подписка
+                                return sub.unsubscribe().then(doSub).catch(doSub);
+                            }).catch(function () { return syncPushSub(sub); });
                         }
                         return doSub();
                     });
