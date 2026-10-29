@@ -721,6 +721,14 @@ def _occurrences(start, recurrence, lo, hi, limit=40):
     return out
 
 
+def _period_label(d0, span):
+    """Период 2-4 дня: '12.04-14.04' (span = кол-во дней включительно)."""
+    span = max(2, min(4, int(span or 3)))
+    d1 = d0 + timedelta(days=span - 1)
+    s0, s1 = d0.strftime('%d.%m'), d1.strftime('%d.%m')
+    return s0 if s1 == s0 else f'{s0}-{s1}'
+
+
 def _yearly_to_chart(year):
     """Строки графика: машина, работы, даты ТО по кварталам.
 
@@ -748,6 +756,7 @@ def _yearly_to_chart(year):
     rows = []
     for idx, m in enumerate(machines):
         q_plan = {0: set(), 1: set(), 2: set(), 3: set()}
+        q_plan_win = {0: {}, 1: {}, 2: {}, 3: {}}
         q_sched = {0: set(), 1: set(), 2: set(), 3: set()}
         for p in plans:
             if p.machine_id != m.id:
@@ -763,6 +772,7 @@ def _yearly_to_chart(year):
                 occ = [d0] if y_lo <= d0 <= y_hi else []
             for d in occ:
                 q_plan[quarter_of(d)].add(d)
+                q_plan_win[quarter_of(d)][d] = max(2, min(4, p.window_days or 3))
         for s in schedules:
             if s.machine_id != m.id:
                 continue
@@ -801,7 +811,8 @@ def _yearly_to_chart(year):
             'machine': m,
             'section': sec_name,
             'tasks': tasks,
-            'quarters': [[d.strftime('%d.%m') for d in sorted(q_dates[q])] for q in range(4)],
+            'quarters': [_period_label(sorted(q_dates[q])[0], q_plan_win[q].get(sorted(q_dates[q])[0]) or 3)
+                         for q in range(4)],
         })
     return rows
 

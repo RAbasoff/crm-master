@@ -41,10 +41,10 @@
                     {% if r.machine.machine_type %}<br><small style="color:#888">{{ r.machine.machine_type }}</small>{% endif %}
                 </td>
                 <td style="border:1px solid #ccd;padding:5px 8px">{{ r.tasks[0] }}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[0] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[1] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[2] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{% for d in r.quarters[3] %}{{ d }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[0] }}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[1] }}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[2] }}</td>
+                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[3] }}</td>
             </tr>
             {% for t in r.tasks[1:] %}
             <tr style="background:{{ bg }}">
