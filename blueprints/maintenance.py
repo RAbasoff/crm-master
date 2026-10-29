@@ -15,6 +15,7 @@ import io
 from models import (db, now_local, MaintenancePlan, MaintenanceSchedule, MaintenanceRecord, MaintenancePhoto,
                     MachinePart, PartMaintenanceLog, MachineTOChecklist, Machine, Monteur, FactorySection, User,
                     Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem, WorkEvent)
+from security import director_only
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    create_notification, log_audit, log_system, save_uploaded_file,
                    find_pdf_font, ensure_fpdf)
@@ -797,9 +798,11 @@ def _yearly_to_chart(year):
                 if d > q_hi[q]:
                     d = q_hi[q] - timedelta(days=q_hi[q].weekday())
                 q_dates[q] = {d}
-        tasks = [t.text for t in MachineTOChecklist.query.filter_by(machine_id=m.id).filter(
+        _tqs = MachineTOChecklist.query.filter_by(machine_id=m.id).filter(
             MachineTOChecklist.period.in_(('quarterly', 'semiannual', 'yearly'))
-        ).order_by(MachineTOChecklist.period, MachineTOChecklist.id).all()] or list(_TO_DEFAULT_TASKS)
+        ).order_by(MachineTOChecklist.period, MachineTOChecklist.id).all()
+        tasks = [{'id': x.id, 'text': x.text} for x in _tqs] or [
+            {'id': None, 'text': x} for x in _TO_DEFAULT_TASKS]
         if m.section and m.section.name:
             sec_name = m.section.name
         else:
@@ -826,6 +829,46 @@ def maintenance_yearly_plan():
     year = safe_int(request.args.get('year')) or (today.year + 1)
     rows = _yearly_to_chart(year)
     return render_template('maintenance_yearly_plan.html', rows=rows, year=year)
+
+
+@bp.route('/maintenance/yearly-plan/tasks/<int:machine_id>', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
+def maintenance_yearly_tasks_save(machine_id):
+    """Сохранить список работ по машине (редактирование из графика ТО).
+
+    Правится набор чек-листа машины с периодами quarterly/semiannual/yearly —
+    именно он показан в графике. Новые позиции сохраняются как quarterly.
+    """
+    machine = Machine.query.get_or_404(machine_id)
+    data = request.get_json() or {}
+    items = data.get('items') or []
+    chart_periods = ('quarterly', 'semiannual', 'yearly')
+    existing = MachineTOChecklist.query.filter(
+        MachineTOChecklist.machine_id == machine_id,
+        MachineTOChecklist.period.in_(chart_periods),
+    ).all()
+    by_id = {e.id: e for e in existing}
+    keep = set()
+    for it in items:
+        iid = it.get('id')
+        text = (it.get('text') or '').strip()
+        if not text:
+            continue
+        if iid in by_id:
+            by_id[iid].text = text[:500]
+            keep.add(iid)
+        else:
+            db.session.add(MachineTOChecklist(
+                machine_id=machine_id, period='quarterly', text=text[:500]))
+    for eid, ent in by_id.items():
+        if eid not in keep:
+            db.session.delete(ent)
+    if not safe_commit():
+        return jsonify({'error': _('Save failed')}), 500
+    log_audit('update', 'machine', machine_id, f'TO works edited ({machine.name})')
+    return jsonify({'ok': True})
 
 
 @bp.route('/maintenance-calendar/debug')

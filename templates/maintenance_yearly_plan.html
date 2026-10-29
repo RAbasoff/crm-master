@@ -39,8 +39,12 @@
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;vertical-align:top">
                     <strong>{{ r.machine.name }}</strong>
                     {% if r.machine.machine_type %}<br><small style="color:#888">{{ r.machine.machine_type }}</small>{% endif %}
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
+                    <br><button type="button" class="btn btn-sm" style="background:#eee;font-size:10px;padding:2px 6px;margin-top:3px"
+                        onclick='editTasks({{ r.machine.id }}, {{ r.tasks|tojson }}, {{ r.machine.name|tojson }})'>✏️ {{ _('Edit') }}</button>
+                    {% endif %}
                 </td>
-                <td style="border:1px solid #ccd;padding:5px 8px">{{ r.tasks[0] }}</td>
+                <td style="border:1px solid #ccd;padding:5px 8px">{{ r.tasks[0].text }}</td>
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[0] }}</td>
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[1] }}</td>
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[2] }}</td>
@@ -48,7 +52,7 @@
             </tr>
             {% for t in r.tasks[1:] %}
             <tr style="background:{{ bg }}">
-                <td style="border:1px solid #ccd;padding:5px 8px">{{ t }}</td>
+                <td style="border:1px solid #ccd;padding:5px 8px">{{ t.text }}</td>
             </tr>
             {% endfor %}
             {% endfor %}
@@ -60,6 +64,69 @@
     {{ _('Dates are proposed automatically — edit as needed. Machines with plans use real dates; empty quarters are spread evenly.') }}
 </p>
 
+<div id="twModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);padding:16px;overflow:auto">
+    <div style="background:#fff;border-radius:14px;max-width:520px;margin:30px auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 id="twTitle" style="margin:0;font-size:16px"></h3>
+            <button type="button" onclick="closeTw()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+        </div>
+        <div id="twList"></div>
+        <button type="button" class="btn btn-sm" style="background:#eee;margin:10px 0" onclick="twAddRow()">＋ {{ _('Add') }}</button>
+        <div style="display:flex;gap:8px;margin-top:8px">
+            <button type="button" class="btn" style="flex:1;background:#27ae60;color:white;padding:12px" onclick="twSave()">{{ _('Save') }}</button>
+            <button type="button" class="btn" style="flex:1;background:#eee;padding:12px" onclick="closeTw()">{{ _('Cancel') }}</button>
+        </div>
+    </div>
+</div>
+<script>
+var twMachine = null, twItems = [];
+function editTasks(mid, tasks, name) {
+    twMachine = mid;
+    twItems = (tasks || []).map(function (t) { return { id: t.id, text: t.text }; });
+    document.getElementById('twTitle').textContent = '✏️ ' + name;
+    twRender();
+    document.getElementById('twModal').style.display = 'block';
+}
+function twRender() {
+    var box = document.getElementById('twList');
+    box.innerHTML = '';
+    twItems.forEach(function (it, i) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = it.text;
+        inp.style.cssText = 'flex:1;padding:9px;border:1px solid #ddd;border-radius:8px;font-size:13px';
+        inp.oninput = function () { twItems[i].text = inp.value; };
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = '✕';
+        del.style.cssText = 'padding:9px 12px;border:none;border-radius:8px;background:#fdecea;color:#c0392b;cursor:pointer';
+        del.onclick = function () { twItems.splice(i, 1); twRender(); };
+        row.appendChild(inp);
+        row.appendChild(del);
+        box.appendChild(row);
+    });
+}
+function twAddRow() {
+    twItems.push({ id: null, text: '' });
+    twRender();
+}
+function closeTw() {
+    document.getElementById('twModal').style.display = 'none';
+}
+function twSave() {
+    var payload = { items: twItems.filter(function (t) { return (t.text || '').trim(); }) };
+    csrfFetch('/maintenance/yearly-plan/tasks/' + twMachine, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(function (r) {
+        if (r.ok) { location.reload(); }
+        else { alert('{{ _("Save failed") }}'); }
+    }).catch(function () { alert('{{ _("Save failed") }}'); });
+}
+</script>
 <style>
 @media print {
     .page-header .btn, .sidebar, .topbar, .notif-panel { display: none !important; }
