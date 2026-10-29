@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Quarterly TO plan') }} {{ year }} — CRM{% endblock %}
 {% block content %}
-<style id="pageSetup">@page { size: A4 portrait; margin: 8mm; }</style>
+<style id="pageSetup">@page { size: A4 portrait; margin: 6mm; }</style>
 <style>
     /* на экране этой страницы нижний баннер установки не нужен */
     #pwaInstallBanner { display: none !important; }
@@ -13,18 +13,24 @@
     .to-year-table th:nth-child(4), .to-year-table th:nth-child(5),
     .to-year-table th:nth-child(6), .to-year-table th:nth-child(7) { width: 9.5%; }
     @media print {
-        .sidebar, .topbar, .notif-panel, .no-print,
-        .page-header .btn, .to-year-table .btn, #pwaInstallBanner, #twModal,
-        .install-hint { display: none !important; }
-        .page-header { margin: 0 0 6px 0 !important; }
-        .page-header h1 { font-size: 15px; margin: 0 0 4px 0; }
-        .card { border: none !important; box-shadow: none !important; padding: 0 !important; }
-        body { background: #fff !important; }
-        .to-year-table { font-size: 9.5px !important; }
-        .to-year-table th, .to-year-table td { padding: 3px 4px !important; }
+        /* интерфейс и все иконки — не печатаем */
+        .sidebar, .sidebar-overlay, .topbar, .notif-panel, .offline-panel,
+        .offline-toast-wrap, .toast-container, .bottom-nav, .no-print,
+        .install-hint, #pwaInstallBanner, #pwaIosHelp, #twModal,
+        #pushEnableBtn, .page-header .btn, .to-year-table .btn,
+        button, select, input, textarea, [style*="position:fixed"],
+        [style*="position: fixed"] { display: none !important; }
+        .page-header { margin: 0 0 4px 0 !important; padding: 0 !important; }
+        .page-header h1 { font-size: 13px; margin: 0 0 2px 0; }
+        .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+        .content, .main, main { padding: 0 !important; margin: 0 !important; }
+        body { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+        /* компактно и во весь лист */
+        .to-year-table { font-size: 9.5px !important; width: 100% !important; }
+        .to-year-table th, .to-year-table td { padding: 2px 3px !important; line-height: 1.25 !important; }
+        .to-year-table th { background: #2c3e50 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
-        body { padding: 0 !important; margin: 0 !important; }
     }
 </style>
 
@@ -109,7 +115,7 @@
 </div>
 <script>
 function setPaper(size) {
-    document.getElementById('pageSetup').textContent = '@page { size: ' + size + ' portrait; margin: 8mm; }';
+    document.getElementById('pageSetup').textContent = '@page { size: ' + size + ' portrait; margin: 6mm; }';
     setTimeout(function () { window.print(); }, 60);
 }
 var twMachine = null, twKind = 'machine', twItems = [];
