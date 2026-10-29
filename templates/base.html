@@ -1092,6 +1092,8 @@
         }
 
         function initWebPush(reg) {
+            // текущий пользователь — для перепривязки подписки при смене аккаунта
+            window.APP_USER_ID = {{ current_user.id if current_user.is_authenticated else 'null' }};
             if (!('PushManager' in window) || !('Notification' in window)) return;
 
             function syncPushSub(sub) {
@@ -1103,6 +1105,7 @@
                     try {
                         localStorage.setItem('push_enabled', '1');
                         localStorage.setItem('push_synced_at', String(Date.now()));
+                        localStorage.setItem('push_user', String(window.APP_USER_ID || ''));
                     } catch (e) {}
                     const b = document.getElementById('pushEnableBtn');
                     if (b) {
@@ -1135,15 +1138,17 @@
                         if (sub) {
                             // Если подписка создана с другим VAPID-ключом — переподписываемся
                             // (иначе Apple отвергает push с BadJwtToken).
-                            // Синхронизацию с сервером ограничиваем разом в сутки —
-                            // раньше POST уходил на КАЖДОЙ странице.
-                            var savedSig = null, syncedAt = 0;
+                            // Синхронизацию ограничиваем разом в сутки И при смене
+                            // пользователя — иначе уведомления уходят старому аккаунту.
+                            var savedSig = null, syncedAt = 0, syncedUser = null;
                             try {
                                 savedSig = localStorage.getItem('push_key_sig');
                                 syncedAt = parseInt(localStorage.getItem('push_synced_at') || '0', 10) || 0;
+                                syncedUser = localStorage.getItem('push_user');
                             } catch (e) {}
+                            var userId = String(window.APP_USER_ID || '');
                             if (savedSig === keySig) {
-                                if (Date.now() - syncedAt < 86400000) return Promise.resolve();
+                                if (syncedUser === userId && Date.now() - syncedAt < 86400000) return Promise.resolve();
                                 return syncPushSub(sub);
                             }
                             return sub.unsubscribe().then(doSub).catch(doSub);
