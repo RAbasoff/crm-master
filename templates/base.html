@@ -1074,7 +1074,7 @@
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=5').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } })
+                navigator.serviceWorker.register('/static/sw.js?v=5').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
                     .then(reg => {
                         console.log('SW registered:', reg.scope);
                         initWebPush(reg);
@@ -1142,45 +1142,58 @@
             // Доступно другим страницам: подписать/переподписать push
             window.__pushSubscribe = subscribeNow;
 
-            if (Notification.permission === 'granted') {
-                subscribeNow().catch(function(){});
-                return;
-            }
-
-            // Кнопка «Включить уведомления» — видна, пока нет разрешения
-            if (Notification.permission !== 'denied') {
-                window.__showPushEnable = function() {
-                    if (document.getElementById('pushEnableBtn')) return;
-                    const b = document.createElement('button');
-                    b.id = 'pushEnableBtn';
-                    b.textContent = '🔔 {{ _("Enable notifications") }}';
-                    b.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9000;padding:12px 22px;font-size:14px;font-weight:700;background:#5b9cf6;color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)';
-                    b.onclick = function() {
-                        Notification.requestPermission().then((perm) => {
-                            if (perm === 'granted') {
-                                b.style.background = '#27ae60';
-                                b.textContent = '✓ {{ _("Notifications enabled") }}';
-                                subscribeNow().then(function(){ showToast('✓ {{ _("Notifications enabled") }}'); }, function(){ showToast('{{ _("No subscription — open the app from the home screen icon") }}', 'error'); });
-                            } else if (perm === 'denied') {
-                                b.style.background = '#c0392b';
-                                b.textContent = '✕ {{ _("Notifications blocked") }}';
-                                showToast('{{ _("Allow notifications in the browser settings") }}', 'error');
-                            }
-                        });
-                    };
-                    document.body.appendChild(b);
-                };
-                setTimeout(window.__showPushEnable, 1500);
-
-                // В PWA — сразу просим разрешение
-                if (window.navigator.standalone === true ||
-                    window.matchMedia('(display-mode: standalone)').matches) {
-                    try {
-                        if (localStorage.getItem('push_asked') !== '1') {
-                            localStorage.setItem('push_asked', '1');
-                            setTimeout(function(){ Notification.requestPermission().then(function(p){ if (p==='granted') subscribeNow(); }); }, 2500);
+            // Кнопка «Включить уведомления» — жест для браузера (iOS требует нажатие)
+            window.__showPushEnable = function() {
+                if (document.getElementById('pushEnableBtn')) return;
+                if (typeof Notification === 'undefined' || Notification.permission === 'denied') return;
+                const b = document.createElement('button');
+                b.id = 'pushEnableBtn';
+                b.textContent = '🔔 {{ _("Enable notifications") }}';
+                b.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9000;padding:12px 22px;font-size:14px;font-weight:700;background:#5b9cf6;color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+                function run() {
+                    subscribeNow().then(function() {
+                        b.style.background = '#27ae60';
+                        b.textContent = '✓ {{ _("Notifications enabled") }}';
+                        showToast('✓ {{ _("Notifications enabled") }}');
+                    }, function() {
+                        showToast('{{ _("No subscription — open the app from the home screen icon") }}', 'error');
+                    });
+                }
+                b.onclick = function() {
+                    // разрешение уже есть — подписываемся СРАЗУ (в контексте нажатия)
+                    if (Notification.permission === 'granted') { run(); return; }
+                    Notification.requestPermission().then(function(perm) {
+                        if (perm === 'granted') {
+                            run();
+                        } else if (perm === 'denied') {
+                            b.style.background = '#c0392b';
+                            b.textContent = '✕ {{ _("Notifications blocked") }}';
+                            showToast('{{ _("Allow notifications in the browser settings") }}', 'error');
                         }
-                    } catch (e) {}
+                    });
+                };
+                document.body.appendChild(b);
+            };
+
+            if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
+                if (Notification.permission === 'granted') {
+                    subscribeNow().catch(function(){ window.__showPushEnable(); });
+                    // если подписки нет — показать кнопку как цель для нажатия (жест)
+                    fetch('/api/push/status').then(function(r){ return r.json(); }).then(function(d){
+                        if (!d.subscribed) window.__showPushEnable();
+                    }).catch(function(){ window.__showPushEnable(); });
+                } else {
+                    setTimeout(window.__showPushEnable, 1500);
+                    // В PWA — сразу просим разрешение
+                    if (window.navigator.standalone === true ||
+                        window.matchMedia('(display-mode: standalone)').matches) {
+                        try {
+                            if (localStorage.getItem('push_asked') !== '1') {
+                                localStorage.setItem('push_asked', '1');
+                                setTimeout(function(){ Notification.requestPermission().then(function(p){ if (p==='granted') subscribeNow().catch(function(){}); }); }, 2500);
+                            }
+                        } catch (e) {}
+                    }
                 }
             }
         }

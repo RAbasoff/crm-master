@@ -1455,7 +1455,20 @@ def gas_quality_new():
             flash(_('Percent must be 0–100'), 'error')
             return redirect(url_for('gas.gas_quality_new'))
         now = now_local()
-        d = safe_date(request.form.get('check_date')) or now.date()
+        d = safe_date(request.form.get('check_date')) or now
+        # safe_date возвращает datetime — для Date-колонки нужен date
+        d = d.date() if isinstance(d, datetime) else d
+        # защита от дублей: повторный POST тех же значений (двойное нажатие, медленная сеть).
+        # сравниваем в Python — Numeric-колонки в SQLite хранятся как текст, float в SQL не матчит
+        recent = GasQualityCheck.query.filter(
+            GasQualityCheck.check_date == d,
+            GasQualityCheck.created_at >= now - timedelta(seconds=120),
+        ).order_by(GasQualityCheck.id.desc()).first()
+        if recent is not None and \
+                float(recent.o2_percent if recent.o2_percent is not None else -1) == o2 and \
+                float(recent.co2_percent if recent.co2_percent is not None else -1) == co2:
+            flash(_('This measurement was already saved'), 'info')
+            return redirect(url_for('gas.gas_quality_list', month=d.strftime('%Y-%m')))
         chk = GasQualityCheck(
             check_date=d,
             check_time=now,

@@ -6821,3 +6821,9 @@ msgstr "Шаг"
 
 msgid "Priority set to"
 msgstr "Приоритет установлен:"
+
+msgid "This measurement was already saved"
+msgstr "Этот замер уже сохранён"
+
+msgid "Saving..."
+msgstr "Сохранение..."

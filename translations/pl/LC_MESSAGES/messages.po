@@ -6392,3 +6392,9 @@ msgstr "Krok"
 
 msgid "Priority set to"
 msgstr "Ustawiono priorytet:"
+
+msgid "This measurement was already saved"
+msgstr "Ten pomiar został już zapisany"
+
+msgid "Saving..."
+msgstr "Zapisywanie..."

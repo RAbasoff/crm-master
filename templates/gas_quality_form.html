@@ -54,7 +54,7 @@
             <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
             <a href="/gas/quality" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
         </div>
-    
+
         <div class="form-group">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input type="checkbox" name="mixed_gas_used" value="1" {% if editing and check and check.mixed_gas_used %}checked{% endif %} style="width:18px;height:18px">
@@ -64,4 +64,19 @@
         </div>
 </form>
 </div>
+<script>
+// Защита от двойного нажатия «Сохранить» (медленная сеть → дубли записей)
+document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f.tagName !== 'FORM') return;
+    if (f.dataset.submitted === '1') { e.preventDefault(); return; }
+    f.dataset.submitted = '1';
+    var btn = f.querySelector('button[type="submit"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.textContent = '{{ _("Saving...") }}';
+    }
+});
+</script>
 {% endblock %}

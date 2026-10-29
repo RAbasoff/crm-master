@@ -65,9 +65,16 @@
                         return;
                     }
                     if (Notification.permission === 'granted') {
-                        setEnabled();
-                        if (window.__pushSubscribe) window.__pushSubscribe().then(refreshStatus);
-                        else refreshStatus();
+                        if (window.__pushSubscribe) {
+                            window.__pushSubscribe().then(function () {
+                                setEnabled();
+                                refreshStatus();
+                            }, function () {
+                                refreshStatus();
+                            });
+                        } else {
+                            refreshStatus();
+                        }
                     } else if (Notification.permission === 'denied') {
                         setBlocked();
                         refreshStatus();
@@ -77,12 +84,15 @@
                     b.onclick = function () {
                         Notification.requestPermission().then(function (p) {
                             if (p === 'granted') {
-                                setEnabled();
                                 var done = function () {
+                                    setEnabled();
                                     if (typeof showToast === 'function') showToast('✓ {{ _("Notifications enabled") }}');
                                     refreshStatus();
                                 };
-                                if (window.__pushSubscribe) window.__pushSubscribe().then(done, done);
+                                if (window.__pushSubscribe) window.__pushSubscribe().then(done, function () {
+                                    refreshStatus();
+                                    if (typeof showToast === 'function') showToast('{{ _("No subscription — open the app from the home screen icon") }}', 'error');
+                                });
                                 else done();
                             } else if (p === 'denied') {
                                 setBlocked();

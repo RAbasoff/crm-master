@@ -6635,3 +6635,9 @@ msgstr "Stap"
 
 msgid "Priority set to"
 msgstr "Prioriteit ingesteld op:"
+
+msgid "This measurement was already saved"
+msgstr "Deze meting is al opgeslagen"
+
+msgid "Saving..."
+msgstr "Opslaan..."
