@@ -66,11 +66,11 @@
             <tr style="background:{{ bg }}">
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px 4px;text-align:center;vertical-align:top">{{ loop.index }}</td>
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;vertical-align:top">
-                    <strong>{{ r.machine.name }}</strong>
-                    {% if r.machine.machine_type %}<br><small style="color:#888">{{ r.machine.machine_type }}</small>{% endif %}
+                    <strong>{{ r.name }}</strong>
+                    {% if r.sub %}<br><small style="color:#888">{{ r.sub }}</small>{% endif %}
                     {% if current_user.has_role('admin', 'director', 'technician') %}
                     <br><button type="button" class="btn btn-sm" style="background:#eee;font-size:10px;padding:2px 6px;margin-top:3px"
-                        onclick='editTasks({{ r.machine.id }}, {{ r.tasks|tojson }}, {{ r.machine.name|tojson }})'>✏️ {{ _('Edit') }}</button>
+                        onclick='editTasks({{ r.tid }}, {{ r.tasks|tojson }}, {{ r.name|tojson }}, "{{ r.kind }}")'>✏️ {{ _('Edit') }}</button>
                     {% endif %}
                 </td>
                 <td style="border:1px solid #ccd;padding:5px 8px">{{ r.tasks[0].text }}</td>
@@ -112,9 +112,10 @@ function setPaper(size) {
     document.getElementById('pageSetup').textContent = '@page { size: ' + size + ' portrait; margin: 8mm; }';
     setTimeout(function () { window.print(); }, 60);
 }
-var twMachine = null, twItems = [];
-function editTasks(mid, tasks, name) {
+var twMachine = null, twKind = 'machine', twItems = [];
+function editTasks(mid, tasks, name, kind) {
     twMachine = mid;
+    twKind = kind || 'machine';
     twItems = (tasks || []).map(function (t) { return { id: t.id, text: t.text }; });
     document.getElementById('twTitle').textContent = '✏️ ' + name;
     twRender();
@@ -149,7 +150,7 @@ function closeTw() {
     document.getElementById('twModal').style.display = 'none';
 }
 function twSave() {
-    var payload = { items: twItems.filter(function (t) { return (t.text || '').trim(); }) };
+    var payload = { kind: twKind, items: twItems.filter(function (t) { return (t.text || '').trim(); }) };
     csrfFetch('/maintenance/yearly-plan/tasks/' + twMachine, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

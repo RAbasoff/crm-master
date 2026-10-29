@@ -731,17 +731,13 @@ def _period_label(d0, span):
 
 
 def _yearly_to_chart(year):
-    """Строки графика: машина, работы, даты ТО по кварталам.
+    """Строки графика: машины + скоростные ворота (Snelport).
 
-    Даты: из планов и шаблонов (с повторами в нужный год); пустые
-    кварталы заполняются равномерной растяжкой — пользователь правит.
+    Сортировка — по цехам, внутри цеха по алфавиту. Ворота обслуживаются
+    однотипно: общий список работ из maintenance_notes оборудования.
     """
     machines = Machine.query.filter(Machine.status == 'active').all()
-    # по цехам, внутри цеха — по алфавиту; без цеха — в конце
-    machines.sort(key=lambda m: (
-        ((m.section.name if m.section else '') or 'яяя').lower(),
-        (m.name or '').lower(),
-    ))
+    doors = Equipment.query.filter(Equipment.equipment_type == 'Snelport').all()
     plans = [p for p in MaintenancePlan.query.all() if p.machine_id and p.planned_start]
     schedules = MaintenanceSchedule.query.filter_by(is_active=True).all()
     y_lo, y_hi = datetime(year, 1, 1).date(), datetime(year, 12, 31).date()
@@ -749,47 +745,73 @@ def _yearly_to_chart(year):
             datetime(year, 7, 1).date(), datetime(year, 10, 1).date()]
     q_hi = [datetime(year, 3, 31).date(), datetime(year, 6, 30).date(),
             datetime(year, 9, 30).date(), datetime(year, 12, 31).date()]
-    rec_days = _TO_REC_DAYS
 
     def quarter_of(d):
         return (d.month - 1) // 3
 
+    def sec_name_of(obj):
+        s = getattr(obj, 'section', None)
+        if s is not None and getattr(s, 'name', None):
+            return s.name
+        try:
+            return getattr(obj, 'installation_location', None) or _('No section')
+        except Exception:
+            return getattr(obj, 'installation_location', None) or 'No section'
+
+    entries = [('machine', m, sec_name_of(m)) for m in machines]
+    entries += [('equipment', d, sec_name_of(d)) for d in doors]
+    entries.sort(key=lambda e: ((e[2] or 'яяя').lower(), (e[1].name or '').lower()))
+
     rows = []
-    for idx, m in enumerate(machines):
-        q_plan = {0: set(), 1: set(), 2: set(), 3: set()}
-        q_plan_win = {0: {}, 1: {}, 2: {}, 3: {}}
+    for idx, (kind, obj, sec) in enumerate(entries):
+        q_plan = {0: {}, 1: {}, 2: {}, 3: {}}
         q_sched = {0: set(), 1: set(), 2: set(), 3: set()}
-        for p in plans:
-            if p.machine_id != m.id:
-                continue
-            rec = (p.recurrence or 'none').lower()
-            if rec in ('weekly', 'biweekly'):
-                continue  # частые операции — не квартальный выезд
-            if p.recurrence and p.recurrence != 'none':
-                start = datetime.combine(p.planned_start, datetime.min.time()).date() if isinstance(p.planned_start, datetime) else p.planned_start
-                occ = _occurrences(start, p.recurrence, y_lo, y_hi)
-            else:
-                d0 = p.planned_start.date() if isinstance(p.planned_start, datetime) else p.planned_start
-                occ = [d0] if y_lo <= d0 <= y_hi else []
-            for d in occ:
-                q_plan[quarter_of(d)].add(d)
-                q_plan_win[quarter_of(d)][d] = max(2, min(4, p.window_days or 3))
-        for s in schedules:
-            if s.machine_id != m.id:
-                continue
-            rec = (s.recurrence or 'monthly').lower()
-            if rec in ('weekly', 'biweekly'):
-                continue
-            occ = _occurrences(y_lo, s.recurrence or 'monthly', y_lo, y_hi)
-            for d in occ:
-                q_sched[quarter_of(d)].add(d)
+        if kind == 'machine':
+            for p in plans:
+                if p.machine_id != obj.id:
+                    continue
+                rec = (p.recurrence or 'none').lower()
+                if rec in ('weekly', 'biweekly'):
+                    continue  # частые операции — не квартальный выезд
+                if p.recurrence and p.recurrence != 'none':
+                    start = datetime.combine(p.planned_start, datetime.min.time()).date() if isinstance(p.planned_start, datetime) else p.planned_start
+                    occ = _occurrences(start, p.recurrence, y_lo, y_hi)
+                else:
+                    d0 = p.planned_start.date() if isinstance(p.planned_start, datetime) else p.planned_start
+                    occ = [d0] if y_lo <= d0 <= y_hi else []
+                for d in occ:
+                    q_plan[quarter_of(d)][d] = max(2, min(4, p.window_days or 3))
+            for s in schedules:
+                if s.machine_id != obj.id:
+                    continue
+                rec = (s.recurrence or 'monthly').lower()
+                if rec in ('weekly', 'biweekly'):
+                    continue
+                for d in _occurrences(y_lo, s.recurrence or 'monthly', y_lo, y_hi):
+                    q_sched[quarter_of(d)].add(d)
+            _tqs = MachineTOChecklist.query.filter_by(machine_id=obj.id).filter(
+                MachineTOChecklist.period.in_(('quarterly', 'semiannual', 'yearly'))
+            ).order_by(MachineTOChecklist.period, MachineTOChecklist.id).all()
+            tasks = [{'id': x.id, 'text': x.text} for x in _tqs] or [
+                {'id': None, 'text': x} for x in _TO_DEFAULT_TASKS]
+            sub = obj.machine_type or ''
+        else:
+            # скоростные ворота: единый список работ (однотипные)
+            lines = [x.strip() for x in (obj.maintenance_notes or '').splitlines() if x.strip()]
+            tasks = [{'id': None, 'text': x} for x in lines] or [
+                {'id': None, 'text': x} for x in _TO_DEFAULT_TASKS]
+            sub = obj.equipment_type or ''
         q_dates = {0: set(), 1: set(), 2: set(), 3: set()}
         for q in range(4):
             # приоритет: план (реальная дата) → шаблон → равномерная растяжка
             if q_plan[q]:
-                q_dates[q] = {min(q_plan[q])}
+                d0 = min(q_plan[q])
+                q_dates[q] = {d0}
+                q_win = q_plan[q][d0]
             elif q_sched[q]:
-                q_dates[q] = {min(q_sched[q])}
+                d0 = min(q_sched[q])
+                q_dates[q] = {d0}
+                q_win = 3
             else:
                 offset = 7 + (idx * 7) % 78
                 d = q_lo[q] + timedelta(days=offset)
@@ -798,24 +820,19 @@ def _yearly_to_chart(year):
                 if d > q_hi[q]:
                     d = q_hi[q] - timedelta(days=q_hi[q].weekday())
                 q_dates[q] = {d}
-        _tqs = MachineTOChecklist.query.filter_by(machine_id=m.id).filter(
-            MachineTOChecklist.period.in_(('quarterly', 'semiannual', 'yearly'))
-        ).order_by(MachineTOChecklist.period, MachineTOChecklist.id).all()
-        tasks = [{'id': x.id, 'text': x.text} for x in _tqs] or [
-            {'id': None, 'text': x} for x in _TO_DEFAULT_TASKS]
-        if m.section and m.section.name:
-            sec_name = m.section.name
-        else:
-            try:
-                sec_name = _('No section')
-            except Exception:
-                sec_name = 'No section'
+                q_win = 3
+        quarters = []
+        for q in range(4):
+            d0 = sorted(q_dates[q])[0]
+            quarters.append(_period_label(d0, 3))
         rows.append({
-            'machine': m,
-            'section': sec_name,
+            'kind': kind,
+            'tid': obj.id,
+            'name': obj.name,
+            'sub': sub,
+            'section': sec,
             'tasks': tasks,
-            'quarters': [_period_label(sorted(q_dates[q])[0], q_plan_win[q].get(sorted(q_dates[q])[0]) or 3)
-                         for q in range(4)],
+            'quarters': quarters,
         })
     return rows
 
@@ -841,9 +858,17 @@ def maintenance_yearly_tasks_save(machine_id):
     Правится набор чек-листа машины с периодами quarterly/semiannual/yearly —
     именно он показан в графике. Новые позиции сохраняются как quarterly.
     """
-    machine = Machine.query.get_or_404(machine_id)
     data = request.get_json() or {}
     items = data.get('items') or []
+    if (data.get('kind') or '') == 'equipment':
+        eq = Equipment.query.get_or_404(machine_id)
+        texts = [(it.get('text') or '').strip() for it in items if (it.get('text') or '').strip()]
+        eq.maintenance_notes = '\n'.join(texts)[:4000]
+        if not safe_commit():
+            return jsonify({'error': _('Save failed')}), 500
+        log_audit('update', 'equipment', eq.id, f'TO works edited ({eq.name})')
+        return jsonify({'ok': True})
+    machine = Machine.query.get_or_404(machine_id)
     chart_periods = ('quarterly', 'semiannual', 'yearly')
     existing = MachineTOChecklist.query.filter(
         MachineTOChecklist.machine_id == machine_id,
