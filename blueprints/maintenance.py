@@ -727,7 +727,12 @@ def _yearly_to_chart(year):
     Даты: из планов и шаблонов (с повторами в нужный год); пустые
     кварталы заполняются равномерной растяжкой — пользователь правит.
     """
-    machines = Machine.query.filter(Machine.status == 'active').order_by(Machine.id).all()
+    machines = Machine.query.filter(Machine.status == 'active').all()
+    # по цехам, внутри цеха — по алфавиту; без цеха — в конце
+    machines.sort(key=lambda m: (
+        ((m.section.name if m.section else '') or 'яяя').lower(),
+        (m.name or '').lower(),
+    ))
     plans = [p for p in MaintenancePlan.query.all() if p.machine_id and p.planned_start]
     schedules = MaintenanceSchedule.query.filter_by(is_active=True).all()
     y_lo, y_hi = datetime(year, 1, 1).date(), datetime(year, 12, 31).date()
@@ -785,8 +790,16 @@ def _yearly_to_chart(year):
         tasks = [t.text for t in MachineTOChecklist.query.filter_by(machine_id=m.id).filter(
             MachineTOChecklist.period.in_(('quarterly', 'semiannual', 'yearly'))
         ).order_by(MachineTOChecklist.period, MachineTOChecklist.id).all()] or list(_TO_DEFAULT_TASKS)
+        if m.section and m.section.name:
+            sec_name = m.section.name
+        else:
+            try:
+                sec_name = _('No section')
+            except Exception:
+                sec_name = 'No section'
         rows.append({
             'machine': m,
+            'section': sec_name,
             'tasks': tasks,
             'quarters': [[d.strftime('%d.%m') for d in sorted(q_dates[q])] for q in range(4)],
         })

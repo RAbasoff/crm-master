@@ -25,7 +25,14 @@
             </tr>
         </thead>
         <tbody>
+            {% set ns = namespace(cur='') %}
             {% for r in rows %}
+            {% if r.section != ns.cur %}
+            {% set ns.cur = r.section %}
+            <tr>
+                <td colspan="7" style="background:#dfe8f0;padding:7px 10px;border:1px solid #ccd;font-weight:800;font-size:13px">🏭 {{ r.section }}</td>
+            </tr>
+            {% endif %}
             {% set bg = '#fafbfc' if loop.index0 % 2 else '#fff' %}
             <tr style="background:{{ bg }}">
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px 4px;text-align:center;vertical-align:top">{{ loop.index }}</td>
