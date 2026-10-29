@@ -43,7 +43,7 @@ def workers_list():
 
 @bp.route('/workers/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def worker_new():
     if request.method == 'POST':
         w = Monteur(naam=request.form['naam'], telefoon=request.form.get('telefoon',''),
@@ -67,7 +67,7 @@ def worker_new():
 
 @bp.route('/workers/<int:worker_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def worker_edit(worker_id):
     w = Monteur.query.get_or_404(worker_id)
     if request.method == 'POST':
@@ -172,7 +172,7 @@ def worker_create_user(worker_id):
 
 @bp.route('/workers/<int:worker_id>/reset-password', methods=['POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def worker_reset_password(worker_id):
     """Reset password for the worker's linked system user."""
     w = Monteur.query.get_or_404(worker_id)

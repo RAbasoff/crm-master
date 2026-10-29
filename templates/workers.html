@@ -7,7 +7,7 @@
         {% if current_user.has_role('admin') %}
         <a href="/monteurs" class="btn btn-sm" style="background:#e67e22;color:white">🔑 {{ _('Access Permissions') }}</a>
         {% endif %}
-        <a href="/workers/new" class="btn btn-primary">+ {{ _('New Worker') }}</a>
+        {% if is_admin %}<a href="/workers/new" class="btn btn-primary">+ {{ _('New Worker') }}</a>{% endif %}
     </div>
 </div>
 <div class="card" style="padding:0">
@@ -25,14 +25,14 @@
             <td>{% if w.actief %}<span class="badge badge-gereed">{{ _('Active') }}</span>{% else %}<span class="badge badge-geannuleerd">{{ _('Inactive') }}</span>{% endif %}</td>
             <td>
                 <div style="display:flex;gap:4px">
-                    <a href="/workers/{{ w.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                    {% if is_admin %}<a href="/workers/{{ w.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>{% endif %}
                     {% if current_user.has_role('admin', 'director') and w.user_id %}
-                    <a href="/workers/{{ w.id }}/edit#reset" class="btn btn-sm" style="background:#e67e22;color:white" title="{{ _('Reset password') }}">{{ '🔑' }}</a>
+                    {% if is_admin %}<a href="/workers/{{ w.id }}/edit#reset" class="btn btn-sm" style="background:#e67e22;color:white" title="{{ _('Reset password') }}">{{ '🔑' }}</a>{% endif %}
                     {% endif %}
                     {% if current_user.has_role('admin') %}
                     <form method="POST" action="/workers/{{ w.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete worker') }} {{ w.naam }}?')">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px">🗑️</button>
+                        {% if is_admin %}<button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px">🗑️</button>{% endif %}
                     </form>
                     {% endif %}
                 </div>

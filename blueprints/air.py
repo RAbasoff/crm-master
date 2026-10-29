@@ -10,6 +10,7 @@ from models import (db, AirConnectionPoint, AirConnectionPhoto,
                     AirLine, AirLineVertex, FactorySection)
 from utils import (role_required, safe_commit, safe_int, safe_float,
                    save_uploaded_file, log_audit)
+from security import director_only
 
 bp = Blueprint('air', __name__, url_prefix='/air')
 
@@ -147,6 +148,7 @@ def point_edit(point_id):
 @bp.route('/points/<int:point_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def point_delete(point_id):
     p = AirConnectionPoint.query.get_or_404(point_id)
     name = f'#{p.number} {p.name}'
@@ -263,6 +265,7 @@ def line_edit(line_id):
 @bp.route('/lines/<int:line_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def line_delete(line_id):
     ln = AirLine.query.get_or_404(line_id)
     name = ln.name

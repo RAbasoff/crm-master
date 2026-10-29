@@ -14,6 +14,7 @@ from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
                     CylinderOrder, EquipmentRepair, User, MonthlyArchive,
                     GasQualityCheck, Monteur, now_local)
 from utils import role_required, log_audit, create_notification, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
+from security import director_only
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
 
@@ -907,6 +908,7 @@ def cylinder_quick_add():
 @bp.route('/api/cylinders/scan-number', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def cylinder_scan_number():
     """Первое сканирование — НОМЕР баллона (главный идентификатор)."""
     data = request.get_json() or {}
@@ -938,6 +940,7 @@ def cylinder_scan_number():
 @bp.route('/api/cylinders/scan-refill', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def cylinder_scan_refill():
     """Второе сканирование — штрихкод с Z = дата заправки (или ввод даты вручную)."""
     data = request.get_json() or {}
@@ -1035,6 +1038,7 @@ def cylinder_scan_list():
 @bp.route('/api/cylinders/scan-list', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def cylinder_scan_list_add():
     """Добавить номер баллона в список приёмки (без требования Z)."""
     data = request.get_json() or {}
@@ -1070,6 +1074,7 @@ def cylinder_scan_list_add():
 @bp.route('/api/cylinders/scan-list/add-stock', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def cylinder_scan_list_add_stock():
     """Ответ «ДА» — добавить баллоны из списка на склад (received)."""
     data = request.get_json() or {}
@@ -1112,6 +1117,7 @@ def _scan_list_pending():
 @bp.route('/api/cylinders/assign-work', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def cylinder_assign_work():
     """Установить баллон на место (left/right).
 
@@ -1439,6 +1445,7 @@ def gas_quality_list():
 @bp.route('/quality/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def gas_quality_new():
     from security import is_head_of_ts
     if not (current_user.has_role('admin', 'technician') or is_head_of_ts(current_user)):
@@ -1527,6 +1534,7 @@ def gas_quality_edit(check_id):
 @bp.route('/quality/<int:check_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def gas_quality_delete(check_id):
     chk = GasQualityCheck.query.get_or_404(check_id)
     month = chk.check_date.strftime('%Y-%m')

@@ -11,6 +11,7 @@ import os, io, json
 
 from models import (db, TimeEntry, User, Vacation, now_local)
 from utils import create_notification, role_required, safe_commit, safe_int
+from security import director_only
 
 bp = Blueprint('timekeeping', __name__)
 
@@ -99,6 +100,7 @@ def clock_out():
 @bp.route('/time-tracking/manual', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def time_tracking_manual():
     try:
         user_id = int(request.form['user_id'])
@@ -189,6 +191,7 @@ def vacation_new():
 @bp.route('/vacations/<int:vacation_id>/approve', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def vacation_approve(vacation_id):
     v = Vacation.query.get_or_404(vacation_id)
     v.status = 'approved'
@@ -204,6 +207,7 @@ def vacation_approve(vacation_id):
 @bp.route('/vacations/<int:vacation_id>/reject', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def vacation_reject(vacation_id):
     v = Vacation.query.get_or_404(vacation_id)
     v.status = 'rejected'
@@ -305,6 +309,7 @@ def team_hours_report():
 @bp.route('/time-report/team/export')
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def team_hours_export():
     """CSV-выгрузка часов команды."""
     import csv, io

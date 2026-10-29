@@ -11,6 +11,7 @@ import os, io, json
 
 from models import (db, FactorySection, Machine, User, Verantwoordelijke)
 from utils import role_required, safe_commit, safe_float, safe_int
+from security import director_only
 
 bp = Blueprint('sections', __name__)
 
@@ -117,6 +118,7 @@ def api_section_info(section_id):
 @bp.route('/sections/<int:section_id>/assign-machine', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only('tim', 'peter')
 def section_assign_machine(section_id):
     section = FactorySection.query.get_or_404(section_id)
     data = request.get_json()
@@ -141,6 +143,7 @@ def section_assign_machine(section_id):
 @bp.route('/sections/<int:section_id>/remove-machine/<int:machine_id>', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only('tim', 'peter')
 def section_remove_machine(section_id, machine_id):
     machine = Machine.query.get_or_404(machine_id)
     if machine.section_id == section_id:

@@ -10,6 +10,7 @@ from flask_babel import gettext as _
 from models import (db, VoorraadItem, VoorraadMutatie, WarehouseGroup, WarehouseReservation,
                     SupplierPrice, Machine, Contractor)
 from utils import role_required, log_audit, sanitize_like, safe_commit, safe_int, safe_float, safe_date
+from security import director_only
 
 bp = Blueprint('warehouse', __name__, url_prefix='/warehouse')
 
@@ -160,6 +161,7 @@ def _get_logistiek_warehouse_group_id():
 @bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def warehouse_new():
     logistiek_wh_id = _get_logistiek_warehouse_group_id()
     if request.method == 'POST':
@@ -212,6 +214,7 @@ def warehouse_new():
 @bp.route('/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def warehouse_edit(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     from utils import acquire_lock, release_lock
@@ -310,6 +313,7 @@ def warehouse_delete(item_id):
 @bp.route('/<int:item_id>/move', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
+@director_only()
 def warehouse_move(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     # Logistiek users can only move items in their group
@@ -391,6 +395,7 @@ def item_available_qty(item):
 @bp.route('/reserve/<int:item_id>', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
+@director_only()
 def warehouse_reserve(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     qty = safe_float(request.form.get('quantity'), 1)
@@ -415,6 +420,7 @@ def warehouse_reserve(item_id):
 @bp.route('/reserve/<int:res_id>/release', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
+@director_only()
 def warehouse_release(res_id):
     r = WarehouseReservation.query.get_or_404(res_id)
     db.session.delete(r)
@@ -430,6 +436,7 @@ def warehouse_release(res_id):
 @bp.route('/inventory')
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def warehouse_inventory():
     items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
     return render_template('warehouse_inventory.html', items=items)
@@ -438,6 +445,7 @@ def warehouse_inventory():
 @bp.route('/inventory/check', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def warehouse_inventory_check():
     data = request.get_json()
     item_id = data.get('item_id')
@@ -475,6 +483,7 @@ def warehouse_prices(item_id):
 @bp.route('/<int:item_id>/prices/add', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def warehouse_price_add(item_id):
     try:
         price = float(request.form.get('price', 0))
@@ -627,6 +636,7 @@ def warehouse_search_report():
 @bp.route('/api/qty', methods=['POST'])
 @login_required
 @role_required('admin', 'technician')
+@director_only()
 def warehouse_qty_update():
     from flask import jsonify
     data = request.get_json()
@@ -693,6 +703,7 @@ def warehouse_transfer_print():
 @bp.route('/<int:item_id>/transfer', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'technician')
+@director_only()
 def warehouse_transfer(item_id):
     """Transfer item quantity to a responsible person."""
     from models import Verantwoordelijke
@@ -788,6 +799,7 @@ def _notify_logistiek_low_stock(item):
 @bp.route('/transfer-to-oktopus', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def warehouse_transfer_to_oktopus():
     """Transfer items from main warehouse to Logistiek-Oktopus."""
     ids = request.form.get('ids', '')
@@ -815,6 +827,7 @@ def warehouse_transfer_to_oktopus():
 @bp.route('/transfer-from-oktopus', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def warehouse_transfer_from_oktopus():
     """Transfer items from Logistiek-Oktopus back to main warehouse."""
     ids = request.form.get('ids', '')

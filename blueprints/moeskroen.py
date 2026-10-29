@@ -13,6 +13,7 @@ from models import (db, MoeskroenZone, MoeskroenMarker, MoeskroenMarkerPhoto,
                     MoeskroenLine, MoeskroenLineVertex)
 from utils import (role_required, safe_commit, safe_int, safe_float,
                    save_uploaded_file, log_audit)
+from security import director_only
 
 bp = Blueprint('moeskroen', __name__, url_prefix='/moeskroen')
 
@@ -139,6 +140,7 @@ def zone_edit(zone_id):
 @bp.route('/zones/<int:zone_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def zone_delete(zone_id):
     z = MoeskroenZone.query.get_or_404(zone_id)
     name = z.name
@@ -287,6 +289,7 @@ def marker_edit(marker_id):
 @bp.route('/markers/<int:marker_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def marker_delete(marker_id):
     m = MoeskroenMarker.query.get_or_404(marker_id)
     name = m.name
@@ -353,6 +356,7 @@ def line_edit(line_id):
 @bp.route('/lines/<int:line_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def line_delete(line_id):
     ln = MoeskroenLine.query.get_or_404(line_id)
     name = ln.name

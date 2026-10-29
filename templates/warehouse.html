@@ -12,13 +12,13 @@
         <a href="/warehouse/labels" class="btn btn-sm" style="background:#8e44ad;color:white" target="_blank">🏷️ {{ _('Print all labels') }}</a>
         {% if current_user.has_role('admin') %}
         <a href="/warehouse/duplicates" class="btn btn-sm" style="background:#e67e22;color:white">🔍 {{ _('Duplicates') }}</a>
-        <a href="/warehouse/inventory" class="btn btn-sm" style="background:#27ae60;color:white">📋 {{ _('Inventory') }}</a>
-        <a href="/warehouse/import" class="btn btn-sm" style="background:#9b59b6;color:white">📥 {{ _('Import CSV') }}</a>
+        {% if can_operate() %}<a href="/warehouse/inventory" class="btn btn-sm" style="background:#27ae60;color:white">📋 {{ _('Inventory') }}</a>{% endif %}
+        {% if is_admin %}<a href="/warehouse/import" class="btn btn-sm" style="background:#9b59b6;color:white">📥 {{ _('Import CSV') }}</a>{% endif %}
         {% endif %}
         {% if current_user.has_role('admin', 'director') and logistiek_group_id %}
         <a href="/warehouse?group={{ logistiek_group_id }}" class="btn btn-sm" style="background:#e67e22;color:white">📦 Logistiek-Oktopus</a>
         {% endif %}
-        <a href="/warehouse/new" class="btn btn-primary">+ {{ _('New Item') }}</a>
+        {% if can_operate() %}<a href="/warehouse/new" class="btn btn-primary">+ {{ _('New Item') }}</a>{% endif %}
     </div>
 </div>
 
@@ -38,7 +38,7 @@
         <tr><th>{{ _('Name') }}</th><th>{{ _('Quantity') }}</th><th>{{ _('Minimum') }}</th><th></th></tr>
         {% for i in low_stock %}
         <tr><td>{{ i.naam }}</td><td style="color:#e74c3c;font-weight:bold">{{ i.hoeveelheid }} {{ i.eenheid }}</td><td>{{ i.minimum }}</td>
-            <td><a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a></td></tr>
+            <td>{% if can_operate() %}<a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>{% endif %}</td></tr>
         {% endfor %}
     </table></div>
 </div>
@@ -100,7 +100,7 @@
             <td class="hide-mobile">{% if i.locatie %}📍 {{ i.locatie }}{% else %}—{% endif %}</td>
             <td style="{% if i.hoeveelheid <= i.minimum %}color:#e74c3c;font-weight:bold{% endif %}">
                 <span id="qty-display-{{ i.id }}">{{ i.hoeveelheid }}</span>
-                <button class="btn btn-sm" style="background:#f0f2f5;padding:2px 6px;font-size:11px;margin-left:4px" onclick="editQty({{ i.id }})" title="{{ _('Edit quantity') }}">✏️</button>
+                {% if can_operate() %}<button class="btn btn-sm" style="background:#f0f2f5;padding:2px 6px;font-size:11px;margin-left:4px" onclick="editQty({{ i.id }})" title="{{ _('Edit quantity') }}">✏️</button>{% endif %}
             </td>
             <td>{{ i.eenheid }}</td>
             {% if not is_mechanic %}
@@ -108,11 +108,11 @@
             {% endif %}
             <td style="white-space:nowrap">
                 <div style="display:inline-flex;gap:2px;flex-wrap:nowrap">
-                {% if not is_mechanic %}
+                {% if not is_mechanic and can_operate() %}
                 <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary" style="padding:3px 5px;font-size:11px">{{ _('Edit') }}</a>
-                {% endif %}
                 <a href="/warehouse/{{ i.id }}/transfer" class="btn btn-sm" style="background:#8e44ad;color:white;padding:3px 5px;font-size:11px" title="{{ _('Transfer') }}">📦</a>
                 <button class="btn btn-sm btn-success" style="padding:3px 5px;font-size:11px" onclick="document.getElementById('mv-{{ i.id }}').style.display='table-row'">+</button>
+                {% endif %}
                 <div class="dropdown" style="display:inline-block;position:relative">
                     <button class="btn btn-sm" style="background:#6c757d;color:white;padding:3px 5px;font-size:11px" onclick="toggleDrop(this)">⋯</button>
                     <div class="drop-menu" style="display:none;position:absolute;right:0;top:100%;background:white;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:140px;padding:4px 0">
@@ -121,9 +121,9 @@
                         <a href="/warehouse/labels?ids={{ i.id }}" target="_blank" style="display:block;padding:6px 12px;font-size:12px;color:#333;text-decoration:none">🏷️ {{ _('Label') }}</a>
                         {% if not is_mechanic %}
                         <a href="/warehouse/{{ i.id }}/prices" style="display:block;padding:6px 12px;font-size:12px;color:#333;text-decoration:none">💰 {{ _('Prices') }}</a>
-                        <form method="POST" action="/warehouse/{{ i.id }}/delete" style="margin:0" onsubmit="return confirm('{{ _('Delete') }} {{ i.naam }}?')">
+                        {% if can_operate() %}<form method="POST" action="/warehouse/{{ i.id }}/delete" style="margin:0" onsubmit="return confirm('{{ _('Delete') }} {{ i.naam }}?')">
                             <button type="submit" style="display:block;width:100%;padding:6px 12px;font-size:12px;color:#e74c3c;background:none;border:none;text-align:left;cursor:pointer">🗑 {{ _('Delete') }}</button>
-                        </form>
+                        </form>{% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -155,7 +155,7 @@
             <a href="/warehouse?group={{ logistiek_group_id }}" class="btn btn-sm" style="background:#e67e22;color:white">{{ _('Open all') }}</a>
             <form method="POST" action="/warehouse/transfer-from-oktopus" style="display:inline" id="returnForm">
                 <input type="hidden" name="ids" id="returnIds">
-                <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" onclick="returnSelectedFromOktopus()">← {{ _('Return to main') }}</button>
+                {% if can_operate() %}<button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" onclick="returnSelectedFromOktopus()">← {{ _('Return to main') }}</button>{% endif %}
             </form>
         </div>
     </div>
@@ -171,11 +171,11 @@
             <td>{{ i.eenheid }}</td>
             <td>€{{ "%.2f"|format(i.prijs) }}</td>
             <td style="white-space:nowrap">
-                <a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                {% if can_operate() %}<a href="/warehouse/{{ i.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
                 <form method="POST" action="/warehouse/transfer-from-oktopus" style="display:inline">
                     <input type="hidden" name="ids" value="{{ i.id }}">
                     <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;padding:4px 8px" title="{{ _('Return to main warehouse') }}">←</button>
-                </form>
+                </form>{% endif %}
             </td>
         </tr>
         {% endfor %}

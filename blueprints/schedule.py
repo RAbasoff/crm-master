@@ -12,6 +12,7 @@ import os, io, json
 from models import (db, Monteur, User, WeekendShift, WorkSchedule, now_local)
 from utils import (get_belgian_holidays, role_required, safe_commit, safe_int,
                    log_audit, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift)
+from security import director_only
 
 bp = Blueprint('schedule', __name__)
 
@@ -29,6 +30,7 @@ def _tech_monteurs():
 @bp.route('/schedule')
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def schedule_list():
     monteurs = Monteur.query.filter_by(actief=True).order_by(Monteur.naam).all()
     # Only monteurs with linked user accounts can have schedules
@@ -110,6 +112,7 @@ def schedule_user(user_id):
 @bp.route('/schedule/<int:user_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def schedule_delete(user_id):
     user = User.query.get_or_404(user_id)
     deleted = WorkSchedule.query.filter_by(user_id=user.id).delete()
@@ -123,6 +126,7 @@ def schedule_delete(user_id):
 @bp.route('/schedule/item/<int:item_id>/update', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def schedule_item_update(item_id):
     """Правка одного графика механика (когда планов несколько)."""
     s = WorkSchedule.query.get_or_404(item_id)
@@ -150,6 +154,7 @@ def schedule_item_update(item_id):
 @bp.route('/schedule/item/<int:item_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def schedule_item_delete(item_id):
     s = WorkSchedule.query.get_or_404(item_id)
     uid = s.user_id
@@ -230,6 +235,7 @@ def schedule_monthly():
 @bp.route('/schedule/monthly/shift', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def schedule_monthly_shift():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -257,6 +263,7 @@ def schedule_monthly_shift():
 @bp.route('/schedule/monthly/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def schedule_monthly_delete():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -282,6 +289,7 @@ def schedule_monthly_delete():
 @bp.route('/schedule/saturdays')
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def saturdays():
     """Страница рабочих суббот.
 
@@ -344,6 +352,7 @@ def saturdays():
 @bp.route('/schedule/saturdays/set', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def saturdays_set():
     """Установить/снять рабочую субботу. Только начальник ТС / админ.
 

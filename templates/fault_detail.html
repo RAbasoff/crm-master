@@ -4,18 +4,18 @@
 <div class="page-header">
     <h1>⚠️ {{ _('Fault') }} #{{ fault.id }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-        {% if fault.status == 'open' and current_user.has_role('technician') %}
+        {% if fault.status == 'open' and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <form method="POST" action="/faults/{{ fault.id }}/accept" style="display:inline">
             <button type="submit" class="btn btn-sm btn-success">{{ _('Accept') }}</button>
         </form>
         {% endif %}
-        {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') %}
+        {% if fault.status not in ['closed'] and current_user.has_role('admin', 'director') and can_operate() %}
         <button type="button" class="btn btn-sm btn-warning" onclick="document.getElementById('assignForm').style.display='block'">{{ _('Assign technicians') }}</button>
         {% endif %}
-        {% if fault.status in ['accepted', 'in_progress', 'parts_ordered', 'waiting_parts'] and current_user.has_role('technician', 'admin') %}
+        {% if fault.status in ['accepted', 'in_progress', 'parts_ordered', 'waiting_parts'] and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <a href="/faults/{{ fault.id }}/work-report" class="btn btn-sm btn-primary">{{ _('Create Work Report') }}</a>
         {% endif %}
-        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin', 'director') %}
+        {% if fault.status not in ['closed'] and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <div style="position:relative;display:inline-block">
             <select id="statusSelect" onchange="changeFaultStatus(this.value)" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer;padding:6px 10px;border-radius:6px;border:none;font-size:12px">
                 <option value="" style="background:white;color:#333">{{ _('Change status') }}...</option>
@@ -31,13 +31,13 @@
             </select>
         </div>
         {% endif %}
-        {% if fault.status not in ['closed', 'resolved'] and current_user.has_role('technician', 'admin', 'director') %}
+        {% if fault.status not in ['closed', 'resolved'] and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="setStatus('resolved')">✅ {{ _('Resolved') }}</button>
         {% endif %}
-        {% if fault.status in ['paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') %}
+        {% if fault.status in ['paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <button type="button" class="btn btn-sm" style="background:#27ae60;color:white" onclick="setStatus('in_progress')">▶ {{ _('Resume work') }}</button>
         {% endif %}
-        {% if fault.status not in ['closed', 'resolved', 'paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') %}
+        {% if fault.status not in ['closed', 'resolved', 'paused', 'waiting_parts', 'parts_ordered'] and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <button type="button" class="btn btn-sm" style="background:#f39c12;color:white" onclick="openPauseModal('paused')">⏸ {{ _('Pause') }}</button>
         {% endif %}
         {% if fault.status not in ['closed'] and can_close %}
@@ -406,7 +406,7 @@ function endWorkById(faultId) {
 <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h2 style="margin:0">📝 {{ _('Work Reports') }} ({{ fault.work_report|length if fault.work_report else 0 }})</h2>
-        {% if current_user.has_role('technician', 'admin', 'director') and fault.status not in ('closed',) %}
+        {% if current_user.has_role('technician', 'admin', 'director') and can_operate() and fault.status not in ('closed',) %}
         <a href="/faults/{{ fault.id }}/work-report" class="btn btn-sm btn-primary">+ {{ _('Add Entry') }}</a>
         {% endif %}
     </div>

@@ -34,7 +34,7 @@ def users_list():
 
 @bp.route('/users/<int:user_id>')
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def user_cabinet(user_id):
     u = User.query.get_or_404(user_id)
     return render_template('user_cabinet.html', user=u)

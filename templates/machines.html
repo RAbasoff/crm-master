@@ -36,13 +36,13 @@
         {% if current_user.has_role('admin', 'director') %}
         <a href="/machines/report" class="btn btn-sm" style="background:#9b59b6;color:white">📊 {{ _('Report') }}</a>
         {% endif %}
-        <button id="btnPrintLabels" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="printSelectedLabels()">🖨 {{ _('Print Labels') }} (<span id="selectedCount">0</span>)</button>
-        <button id="btnBulkPlan" class="btn btn-sm" style="background:#3498db;color:white;display:none" onclick="openBulkPlan()">📋 {{ _('Plan TO') }}</button>
-        <button id="btnBulkStatus" class="btn btn-sm" style="background:#e67e22;color:white;display:none" onclick="openBulkStatus()">🔁 {{ _('Status') }}</button>
-        <button id="btnBulkExport" class="btn btn-sm" style="background:#16a085;color:white;display:none" onclick="bulkExport()">📊 {{ _('Export') }}</button>
+        {% if can_operate('tim', 'peter') %}<button id="btnPrintLabels" class="btn btn-sm" style="background:#27ae60;color:white;display:none" onclick="printSelectedLabels()">🖨 {{ _('Print Labels') }} (<span id="selectedCount">0</span>)</button>{% endif %}
+        {% if can_operate('tim', 'peter') %}<button id="btnBulkPlan" class="btn btn-sm" style="background:#3498db;color:white;display:none" onclick="openBulkPlan()">📋 {{ _('Plan TO') }}</button>{% endif %}
+        {% if can_operate('tim', 'peter') %}<button id="btnBulkStatus" class="btn btn-sm" style="background:#e67e22;color:white;display:none" onclick="openBulkStatus()">🔁 {{ _('Status') }}</button>{% endif %}
+        {% if can_operate('tim', 'peter') %}<button id="btnBulkExport" class="btn btn-sm" style="background:#16a085;color:white;display:none" onclick="bulkExport()">📊 {{ _('Export') }}</button>{% endif %}
         <button id="btnSelectAll" class="btn btn-sm" style="background:#eee" onclick="toggleSelectAll()">{{ _('Select All') }}</button>
         {% if current_user.has_role('admin', 'director') %}
-        <a href="/machines/new" class="btn btn-sm btn-primary">+ {{ _('New Machine') }}</a>
+        {% if can_operate('tim', 'peter') %}<a href="/machines/new" class="btn btn-sm btn-primary">+ {{ _('New Machine') }}</a>{% endif %}
         {% endif %}
     </div>
 </div>
@@ -110,7 +110,7 @@
             <td class="m-actions">
                 <a href="/machines/{{ m.id }}" class="btn btn-sm btn-primary">{{ _('View') }}</a>
                 {% if current_user.has_role('admin', 'director') %}
-                <a href="/machines/{{ m.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>
+                {% if can_operate('tim', 'peter') %}<a href="/machines/{{ m.id }}/edit" class="btn btn-sm" style="background:#eee">{{ _('Edit') }}</a>{% endif %}
                 {% endif %}
             </td>
         </tr>
@@ -124,7 +124,7 @@
         <h3 style="margin-bottom:10px;color:#666">{{ _('No Machines') }}</h3>
         <p>{{ _('Add your first machine to get started') }}</p>
         {% if current_user.has_role('admin') %}
-        <a href="/machines/new" class="btn btn-primary" style="margin-top:20px">{{ _('Add Machine') }}</a>
+        {% if can_operate('tim', 'peter') %}<a href="/machines/new" class="btn btn-primary" style="margin-top:20px">{{ _('Add Machine') }}</a>{% endif %}
         {% endif %}
     </div>
 </div>

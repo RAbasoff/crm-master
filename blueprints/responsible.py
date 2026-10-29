@@ -154,7 +154,7 @@ def group_permissions(group_id):
 
 @bp.route('/responsible/new', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def responsible_new():
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
@@ -223,7 +223,7 @@ def responsible_detail(resp_id):
 
 @bp.route('/responsible/<int:resp_id>/assign-group', methods=['POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def responsible_assign_group(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
     data = request.get_json()
@@ -235,7 +235,7 @@ def responsible_assign_group(resp_id):
 
 @bp.route('/responsible/<int:resp_id>/assign-sections', methods=['POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def responsible_assign_sections(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
     data = request.get_json()
@@ -252,7 +252,7 @@ def responsible_assign_sections(resp_id):
 
 @bp.route('/responsible/<int:resp_id>/quick-edit', methods=['POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def responsible_quick_edit(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
     # Update name from first_name field (inline form sends just first_name)
@@ -338,7 +338,7 @@ def responsible_delete(resp_id):
 
 @bp.route('/responsible/quick-add', methods=['POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def responsible_quick_add():
     naam = request.form.get('naam', '').strip()
     if naam:
@@ -363,7 +363,7 @@ def responsible_quick_add():
 
 @bp.route('/responsible/<int:resp_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'director')
+@role_required('admin')
 def responsible_edit(resp_id):
     c = Verantwoordelijke.query.get_or_404(resp_id)
     if request.method == 'POST':

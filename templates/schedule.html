@@ -91,7 +91,7 @@ function sendTestPush() {
                 {% endif %}
                 {% if current_user.has_role('admin', 'director') and m.user_id %}
                 <form method="POST" action="/schedule/{{ m.user_id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete schedule for') }} {{ m.naam }}?')">
-                    <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px">🗑️</button>
+                    {% if can_operate() %}<button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white;padding:4px 8px">🗑️</button>{% endif %}
                 </form>
                 {% endif %}
             </td>

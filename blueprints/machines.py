@@ -18,6 +18,7 @@ from models import (db, Machine, MachinePart, PartMaintenanceLog, MachineDocumen
 from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
                    safe_int, safe_float, safe_date, sanitize_like,
                    find_pdf_font, ensure_fpdf)
+from security import director_only
 
 bp = Blueprint('machines', __name__, url_prefix='/machines')
 
@@ -252,6 +253,7 @@ def machines_list():
 @bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only('tim', 'peter')
 def machine_new():
     if request.method == 'POST':
         m = Machine(
@@ -330,6 +332,7 @@ def machine_detail(machine_id):
 @bp.route('/<int:machine_id>/to-checklist/add', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
 def machine_to_checklist_add(machine_id):
     from models import MachineTOChecklist
     m = Machine.query.get_or_404(machine_id)
@@ -351,6 +354,7 @@ def machine_to_checklist_add(machine_id):
 @bp.route('/to-checklist/<int:item_id>/update', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
 def machine_to_checklist_update(item_id):
     from models import MachineTOChecklist
     it = MachineTOChecklist.query.get_or_404(item_id)
@@ -365,6 +369,7 @@ def machine_to_checklist_update(item_id):
 @bp.route('/to-checklist/<int:item_id>/toggle', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
 def machine_to_checklist_toggle(item_id):
     from models import MachineTOChecklist
     it = MachineTOChecklist.query.get_or_404(item_id)
@@ -377,6 +382,7 @@ def machine_to_checklist_toggle(item_id):
 @bp.route('/to-checklist/<int:item_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
 def machine_to_checklist_delete(item_id):
     from models import MachineTOChecklist
     it = MachineTOChecklist.query.get_or_404(item_id)
@@ -492,6 +498,7 @@ def machine_timeline(machine_id):
 @bp.route('/<int:machine_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only('tim', 'peter')
 def machine_edit(machine_id):
     m = Machine.query.get_or_404(machine_id)
     if request.method == 'POST':
@@ -769,6 +776,7 @@ def machine_transfer_act(machine_id):
 @bp.route('/<int:machine_id>/transfer-act/save', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
 def machine_transfer_act_save(machine_id):
     """Сохранить заполненный акт передачи (form-data + CSRF)."""
     from models import SavedDocument
@@ -1123,6 +1131,7 @@ def machines_export(format_type):
 @bp.route('/bulk', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only('tim', 'peter')
 def machines_bulk():
     """Bulk actions for selected machines: plan TO, set status, export."""
     action = request.form.get('action', '')

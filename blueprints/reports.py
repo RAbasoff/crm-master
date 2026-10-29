@@ -11,6 +11,7 @@ import os, io, json
 
 from models import (db, AuditLog, CylinderLog, CylinderOrder, FactorySection, FaultReport, GasCylinder, Machine, Monteur, Opdracht, SystemLog, User, UserActivityLog, Verantwoordelijke, VoorraadMutatie)
 from utils import role_required, safe_date, safe_int
+from security import director_only
 
 bp = Blueprint('reports', __name__)
 
@@ -24,6 +25,7 @@ def reports():
 @bp.route('/reports/advanced')
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def reports_advanced():
     report_type = request.args.get('type', 'activity')
     date_from = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
@@ -200,6 +202,7 @@ def reports_advanced():
 @bp.route('/reports/advanced/export')
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def reports_export():
     report_type = request.args.get('type', 'activity')
     format_type = request.args.get('format', 'csv')

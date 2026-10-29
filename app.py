@@ -715,6 +715,15 @@ def inject_section_access():
             return section_key in ('faults', 'two', 'messages', 'floor', 'chat')
         return user_has_section_access(section_key, action)
 
+    def can_operate(*names):
+        """Есть ли право ВЫПОЛНЯТЬ действие (для кнопок).
+        У простых директоров — только просмотр: кнопки им не показываем."""
+        try:
+            from security import director_can
+            return director_can(*names)
+        except Exception:
+            return True
+
     # Reminder count for sidebar badge
     reminder_count = 0
     chat_unread = 0
@@ -743,7 +752,7 @@ def inject_section_access():
         except Exception:
             pass
 
-    return dict(has_access=has_access, reminder_count=reminder_count, chat_unread=chat_unread,
+    return dict(has_access=has_access, can_operate=can_operate, reminder_count=reminder_count, chat_unread=chat_unread,
                 APP_VERSION=getattr(__import__('config'), 'APP_VERSION', '2.15.4'),
                 impersonate_admin_id=session.get('impersonate_admin_id'),
                 impersonate_admin=db.session.get(User, session['impersonate_admin_id']) if session.get('impersonate_admin_id') else None,

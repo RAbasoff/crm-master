@@ -27,6 +27,58 @@ def role_required(*roles):
         return decorated_function
     return decorator
 
+
+# ── Права внутри роли Director (Тим, Питер, Тис, Хавьер, Руслан) ──
+# У каждого директора — один из аккаунтов. Полный доступ у Начальника ТС
+# (is_head_of_ts: Руслан / аккаунт director / admin). У остальных директоров
+# — только просмотр, кроме явно разрешённых действий (по именам).
+
+def _name_words(user):
+    return ((getattr(user, 'display_name', '') or '') + ' ' +
+            (getattr(user, 'username', '') or '')).lower()
+
+
+def name_matches(user, *words):
+    """Совпадение по имени с границами слова («tim» не найдёт «martin»)."""
+    nm = _name_words(user)
+    for w in words:
+        if re.search(r'(^|[^a-z])' + re.escape(w.lower()) + r'([^a-z]|$)', nm):
+            return True
+    return False
+
+
+def director_can(*names, user=None):
+    """Может ли пользователь ВЫПОЛНЯТЬ действие (не только смотреть)
+    в модуле, где простым директорам доступен только просмотр.
+
+    admin и Начальник ТС — всегда; простой director — только если его имя
+    в списке names (напр. director_can('tim', 'peter')); механики и прочие
+    роли проходят (их фильтрует role_required на маршруте).
+    """
+    u = user or current_user
+    if not (u and getattr(u, 'is_authenticated', False)):
+        return False
+    if u.has_role('admin') or is_head_of_ts(u):
+        return True
+    if u.has_role('director'):
+        return bool(names) and name_matches(u, *names)
+    return True
+
+
+def director_only(*names):
+    """Декоратор: фильтр прав внутри роли Director (см. director_can)."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('login'))
+            if not director_can(*names):
+                flash(_('Access denied. Insufficient rights.'), 'error')
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 def get_user_group_permissions(user):
     """Get permissions from user's group (via person_id link or role fallback)"""
     if user.person_id:

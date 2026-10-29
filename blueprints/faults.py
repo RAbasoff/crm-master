@@ -13,6 +13,7 @@ from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie, FaultWorkSession, now_local)
 from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
+from security import director_only
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
 
@@ -894,6 +895,7 @@ def fault_work_end(fault_id):
 @bp.route('/<int:fault_id>/accept', methods=['POST'])
 @login_required
 @role_required('technician', 'admin', 'director')
+@director_only()
 def fault_accept(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     ok, err = _set_fault_status(f, 'accepted', current_user, reason='accepted')
@@ -914,6 +916,7 @@ def fault_accept(fault_id):
 @bp.route('/<int:fault_id>/assign', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def fault_assign(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     tech_ids = request.form.getlist('technician_ids')
@@ -960,6 +963,7 @@ def fault_assign(fault_id):
 @bp.route('/<int:fault_id>/resolve', methods=['POST'])
 @login_required
 @role_required('technician', 'admin', 'director')
+@director_only()
 def fault_resolve(fault_id):
     """RESOLVED — механик после ремонта (закрыть может только начальство)."""
     f = FaultReport.query.get_or_404(fault_id)
@@ -986,6 +990,7 @@ def fault_resolve(fault_id):
 @bp.route('/<int:fault_id>/status', methods=['POST'])
 @login_required
 @role_required('technician', 'admin', 'director')
+@director_only()
 def fault_status_change(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     data = request.get_json() or {}
@@ -1098,6 +1103,7 @@ def fault_reopen(fault_id):
 @bp.route('/<int:fault_id>/work-report', methods=['GET', 'POST'])
 @login_required
 @role_required('technician', 'admin', 'director')
+@director_only()
 def work_report_new(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     # Каждый механик ведёт свой отчёт (диагностика, ход работ, результат)
@@ -1156,6 +1162,7 @@ def work_report_new(fault_id):
 @bp.route('/<int:fault_id>/work-report/<int:report_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('technician', 'admin', 'director')
+@director_only()
 def work_report_edit(fault_id, report_id):
     f = FaultReport.query.get_or_404(fault_id)
     wr = WorkReport.query.get_or_404(report_id)

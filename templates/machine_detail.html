@@ -19,23 +19,23 @@
     <h1>⚙️ {{ machine.name }}</h1>
     <div class="page-actions">
         {% if current_user.has_role('admin', 'director') %}
-        <a href="/machines/{{ machine.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+        {% if can_operate('tim', 'peter') %}<a href="/machines/{{ machine.id }}/edit" class="btn btn-sm btn-primary">{{ _('Edit') }}</a>{% endif %}
         {% endif %}
         {% if current_user.has_role('admin') %}
         <form method="POST" action="/machines/{{ machine.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete this machine? All maintenance records will be removed.') }}')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-danger">🗑 {{ _('Delete') }}</button>
+            {% if is_admin %}<button type="submit" class="btn btn-sm btn-danger">🗑 {{ _('Delete') }}</button>{% endif %}
         </form>
         {% endif %}
         <a href="/machines/{{ machine.id }}/parts" class="btn btn-sm" style="background:#8e44ad;color:white">⚙️ {{ _('Parts') }}</a>
         <a href="/machines/{{ machine.id }}/transfer-act" target="_blank" class="btn btn-sm" style="background:#16a085;color:white" title="{{ _('Transfer Act of Material Assets') }}">📜 {{ _('Transfer Act') }}</a>
         <a href="/machines/{{ machine.id }}/documents/acts" class="btn btn-sm" style="background:#8e44ad;color:white" title="{{ _('Saved acts') }}">📁 {{ _('Saved acts') }}</a>
         {% if current_user.has_role('admin', 'technician') %}
-        <a href="/machines/{{ machine.id }}/add-maintenance" class="btn btn-sm btn-success">🔧 {{ _('Add Maintenance') }}</a>
-        <button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="document.getElementById('uploadDoc').style.display='block'">📄 {{ _('Upload Document') }}</button>
+        {% if can_operate('tim', 'peter') %}<a href="/machines/{{ machine.id }}/add-maintenance" class="btn btn-sm btn-success">🔧 {{ _('Add Maintenance') }}</a>{% endif %}
+        {% if can_operate('tim', 'peter') %}<button class="btn btn-sm" style="background:#9b59b6;color:white" onclick="document.getElementById('uploadDoc').style.display='block'">📄 {{ _('Upload Document') }}</button>{% endif %}
         {% endif %}
         <a href="/faults/new?machine={{ machine.id }}" class="btn btn-sm btn-warning">⚠️ {{ _('Report Fault') }}</a>
-        <a href="/purchase-requests/new?machine={{ machine.id }}" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Request Part') }}</a>
+        {% if can_operate('tim') %}<a href="/purchase-requests/new?machine={{ machine.id }}" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Request Part') }}</a>{% endif %}
         <a href="/machines" class="btn btn-sm" style="background:#eee">{{ _('Back') }}</a>
     </div>
 </div>
@@ -159,13 +159,13 @@
                     <form method="POST" action="/machines/to-checklist/{{ it.id }}/update" style="margin:0;display:none;flex:1;gap:4px" id="chk-edit-{{ it.id }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="text" name="text" value="{{ it.text }}" style="flex:1;padding:4px 8px;border:1px solid #3498db;border-radius:6px;font-size:12px">
-                        <button class="btn btn-sm" style="background:#27ae60;color:#fff;padding:2px 8px">✓</button>
+                        {% if can_operate('tim', 'peter') %}<button class="btn btn-sm" style="background:#27ae60;color:#fff;padding:2px 8px">✓</button>{% endif %}
                         <button type="button" class="btn btn-sm" style="background:#eee;padding:2px 8px" onclick="document.getElementById('chk-edit-{{ it.id }}').style.display='none';document.getElementById('chk-text-{{ it.id }}').style.display='';">✕</button>
                     </form>
                     <button type="button" class="btn btn-sm" title="{{ _('Edit') }}" style="padding:2px 8px;font-size:11px" onclick="document.getElementById('chk-edit-{{ it.id }}').style.display='flex';document.getElementById('chk-text-{{ it.id }}').style.display='none';">✏️</button>
                     <form method="POST" action="/machines/to-checklist/{{ it.id }}/delete" style="margin:0">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px">✕</button>
+                        {% if can_operate('tim', 'peter') %}<button class="btn btn-sm" style="padding:2px 8px;font-size:11px">✕</button>{% endif %}
                     </form>
                 </li>
                 {% else %}
@@ -176,7 +176,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="period" value="{{ key }}">
                 <input type="text" name="text" placeholder="{{ _('Add item') }}" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px">
-                <button class="btn btn-sm" style="background:#27ae60;color:#fff">＋</button>
+                {% if can_operate('tim', 'peter') %}<button class="btn btn-sm" style="background:#27ae60;color:#fff">＋</button>{% endif %}
             </form>
         </div>
     </details>
@@ -266,7 +266,7 @@
                 <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/update-date" style="display:inline-flex;gap:4px;align-items:center">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="date" name="last_issued_at" value="{{ mc.last_issued_at.strftime('%Y-%m-%d') if mc.last_issued_at else '' }}" style="padding:3px;border:1px solid #ddd;border-radius:4px;font-size:11px;width:130px">
-                    <button type="submit" class="btn btn-sm" style="padding:3px 6px;min-height:auto;font-size:11px;background:#eee">✓</button>
+                    {% if can_operate('tim', 'peter') %}<button type="submit" class="btn btn-sm" style="padding:3px 6px;min-height:auto;font-size:11px;background:#eee">✓</button>{% endif %}
                 </form>
                 {% elif mc.last_issued_at %}
                 {{ mc.last_issued_at.strftime('%d-%m-%Y') }}
@@ -279,12 +279,12 @@
                 <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/consume" style="display:inline-flex;gap:4px;align-items:center">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="number" name="quantity" value="{{ mc.quantity_per_use }}" min="0.01" step="0.01" style="width:70px;padding:4px;border:1px solid #ddd;border-radius:4px;font-size:12px">
-                    <button type="submit" class="btn btn-sm btn-warning" style="padding:4px 10px;min-height:auto;font-size:12px">📤 {{ _('Write Off') }}</button>
+                    {% if can_operate('tim', 'peter') %}<button type="submit" class="btn btn-sm btn-warning" style="padding:4px 10px;min-height:auto;font-size:12px">📤 {{ _('Write Off') }}</button>{% endif %}
                 </form>
                 {% if current_user.has_role('admin', 'technician') %}
                 <form method="POST" action="/machines/{{ machine.id }}/consumables/{{ mc.id }}/unlink" style="display:inline" onsubmit="return confirm('{{ _('Unlink this consumable?') }}')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;min-height:auto;font-size:12px">✕</button>
+                    {% if can_operate('tim', 'peter') %}<button type="submit" class="btn btn-sm btn-danger" style="padding:4px 8px;min-height:auto;font-size:12px">✕</button>{% endif %}
                 </form>
                 {% endif %}
             </td>
@@ -314,7 +314,7 @@
             <div class="form-group" style="margin:0;width:180px">
                 <input type="text" name="notes" placeholder="{{ _('Notes') }}" style="width:100%">
             </div>
-            <button type="submit" class="btn btn-sm btn-primary">{{ _('Link') }}</button>
+            {% if can_operate('tim', 'peter') %}<button type="submit" class="btn btn-sm btn-primary">{{ _('Link') }}</button>{% endif %}
         </form>
     </div>
     {% endif %}

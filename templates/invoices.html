@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-header">
     <h1>📄 {{ _('Invoices') }}</h1>
-    <a href="/invoices/new" class="btn btn-primary">+ {{ _('New invoice') }}</a>
+    {% if can_operate() %}<a href="/invoices/new" class="btn btn-primary">+ {{ _('New invoice') }}</a>{% endif %}
 </div>
 
 <div class="stats">

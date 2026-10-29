@@ -12,6 +12,7 @@ import os, io, json
 from config import SECTIONS_TREE
 from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog, FloorMapLine, SystemLog)
 from utils import log_audit, role_required, safe_commit
+from security import director_only
 from sqlalchemy import func, case
 
 bp = Blueprint('settings', __name__)
@@ -347,6 +348,7 @@ def map_line_meta(line_id):
 @bp.route('/api/map/lines/<int:line_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def map_line_delete(line_id):
     ln = FloorMapLine.query.get_or_404(line_id)
     db.session.delete(ln)

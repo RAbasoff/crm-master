@@ -10,7 +10,7 @@
         <a href="/responsible/groups" class="btn btn-sm btn-ghost">👥 {{ _('Groups') }}</a>
         <button class="btn btn-sm" style="background:#3498db;color:white" onclick="printList()">🖨️ {{ _('Print') }}</button>
         <button class="btn btn-sm" style="background:#e67e22;color:white" onclick="exportPDF()">📄 PDF</button>
-        <button class="btn btn-primary" onclick="document.getElementById('addPersonModal').style.display='flex'">+ {{ _('Add Person') }}</button>
+        {% if is_admin %}<button class="btn btn-primary" onclick="document.getElementById('addPersonModal').style.display='flex'">+ {{ _('Add Person') }}</button>{% endif %}
     </div>
 </div>
 
@@ -137,14 +137,14 @@
                 <!-- ACTIONS -->
                 <div style="display:flex;gap:8px;justify-content:space-between">
                     <div>
-                        <a href="/responsible/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;font-size:11px">✏️ {{ _('Full Edit') }}</a>
+                        {% if is_admin %}<a href="/responsible/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;font-size:11px">✏️ {{ _('Full Edit') }}</a>{% endif %}
                         <form method="POST" action="/responsible/{{ c.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ c.naam }}?')">
                             <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
                         </form>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px">
                         <span id="save-status-{{ c.id }}" style="font-size:12px;color:#27ae60;display:none">✓ {{ _('Saved') }}</span>
-                        <button type="submit" class="btn btn-sm btn-primary" style="font-size:12px">💾 {{ _('Save') }}</button>
+                        {% if is_admin %}<button type="submit" class="btn btn-sm btn-primary" style="font-size:12px">💾 {{ _('Save') }}</button>{% endif %}
                     </div>
                 </div>
             </form>
@@ -241,12 +241,12 @@
                 </div>
                 <div style="display:flex;gap:8px;justify-content:space-between">
                     <div>
-                        <a href="/responsible/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;font-size:11px">✏️ {{ _('Full Edit') }}</a>
+                        {% if is_admin %}<a href="/responsible/{{ c.id }}/edit" class="btn btn-sm" style="background:#eee;font-size:11px">✏️ {{ _('Full Edit') }}</a>{% endif %}
                         <form method="POST" action="/responsible/{{ c.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete') }} {{ c.naam }}?')">
                             <button type="submit" class="btn btn-sm btn-danger" style="font-size:11px">🗑</button>
                         </form>
                     </div>
-                    <button type="submit" class="btn btn-sm btn-primary" style="font-size:12px">💾 {{ _('Save') }}</button>
+                    {% if is_admin %}<button type="submit" class="btn btn-sm btn-primary" style="font-size:12px">💾 {{ _('Save') }}</button>{% endif %}
                 </div>
             </form>
         </div>
@@ -269,7 +269,7 @@
     <div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:90%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 style="margin:0;font-size:16px">{{ _('Add Person') }}</h2>
-            <button onclick="document.getElementById('addPersonModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+            {% if is_admin %}<button onclick="document.getElementById('addPersonModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>{% endif %}
         </div>
         <form method="POST" action="/responsible/quick-add">
             <div class="form-row">
@@ -294,8 +294,8 @@
                 </select>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('addPersonModal').style.display='none'">{{ _('Cancel') }}</button>
-                <button type="submit" class="btn btn-primary">{{ _('Add') }}</button>
+                {% if is_admin %}<button type="button" class="btn btn-ghost" onclick="document.getElementById('addPersonModal').style.display='none'">{{ _('Cancel') }}</button>{% endif %}
+                {% if is_admin %}<button type="submit" class="btn btn-primary">{{ _('Add') }}</button>{% endif %}
             </div>
         </form>
     </div>

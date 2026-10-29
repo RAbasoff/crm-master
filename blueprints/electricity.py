@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 
 from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument, PowerOutlet, PowerOutletPhoto, FactorySection
 from utils import role_required, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file, log_audit
+from security import director_only
 from sqlalchemy.orm import subqueryload, joinedload
 
 bp = Blueprint('electricity', __name__, url_prefix='/electricity')
@@ -126,6 +127,7 @@ def cabinet_edit(cabinet_id):
 @bp.route('/cabinet/<int:cabinet_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin')
+@director_only()
 def cabinet_delete(cabinet_id):
     c = ElectricalCabinet.query.get_or_404(cabinet_id)
     c.is_active = False
@@ -206,6 +208,7 @@ def breaker_toggle(breaker_id):
 @bp.route('/breaker/<int:breaker_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin')
+@director_only()
 def breaker_delete(breaker_id):
     b = CircuitBreaker.query.get_or_404(breaker_id)
     cabinet_id = b.cabinet_id
@@ -291,6 +294,7 @@ def switch_log_add(cabinet_id):
 @bp.route('/switch-log/<int:log_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin')
+@director_only()
 def switch_log_delete(log_id):
     log = ElectricalSwitchLog.query.get_or_404(log_id)
     db.session.delete(log)
@@ -334,6 +338,7 @@ def document_upload(cabinet_id):
 @bp.route('/document/<int:doc_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin')
+@director_only()
 def document_delete(doc_id):
     doc = ElectricalDocument.query.get_or_404(doc_id)
     filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], doc.filename)
@@ -566,6 +571,7 @@ def outlet_toggle_status(outlet_id):
 @bp.route('/outlets/<int:outlet_id>/delete', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def outlet_delete(outlet_id):
     o = PowerOutlet.query.get_or_404(outlet_id)
     for p in list(o.photos):

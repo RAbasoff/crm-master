@@ -11,12 +11,14 @@ import os, io, json
 
 from models import (db, Invoice, InvoiceItem, VoorraadItem)
 from utils import role_required, safe_commit, safe_date, safe_float
+from security import director_only
 
 bp = Blueprint('invoices', __name__)
 
 @bp.route('/invoices')
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoices_list():
     if current_user.has_role('admin', 'director'):
         invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
@@ -28,6 +30,7 @@ def invoices_list():
 @bp.route('/invoices/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoice_new():
     if request.method == 'POST':
         try:
@@ -74,6 +77,7 @@ def invoice_new():
 @bp.route('/invoices/<int:invoice_id>')
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoice_detail(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     return render_template('invoice_detail.html', invoice=inv)
@@ -82,6 +86,7 @@ def invoice_detail(invoice_id):
 @bp.route('/invoices/<int:invoice_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoice_edit(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     if request.method == 'POST':
@@ -121,6 +126,7 @@ def invoice_edit(invoice_id):
 @bp.route('/invoices/<int:invoice_id>/approve', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoice_approve(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     inv.status = 'approved'
@@ -136,6 +142,7 @@ def invoice_approve(invoice_id):
 @bp.route('/invoices/<int:invoice_id>/reject', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoice_reject(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     inv.status = 'rejected'
@@ -152,6 +159,7 @@ def invoice_reject(invoice_id):
 @bp.route('/invoices/<int:invoice_id>/pay', methods=['POST'])
 @login_required
 @role_required('admin', 'director')
+@director_only()
 def invoice_pay(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     inv.status = 'paid'
