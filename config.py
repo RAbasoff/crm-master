@@ -39,6 +39,9 @@ class Config:
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Не перечитывать объекты после каждого commit — иначе шаблоны генерируют
+    # сотни лишних SELECT (кнопки/страницы тормозили)
+    SQLALCHEMY_SESSION_OPTIONS = {'expire_on_commit': False}
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
     }

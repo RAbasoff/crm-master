@@ -72,6 +72,13 @@ def parse_license(key: str, secret: str = None):
 
 
 def license_file_path():
+    # instance/ САМОГО проекта (раньше путь уходил на уровень выше —
+    # скопированная установка теряла лицензию и блокировалась)
+    base = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, 'instance', '.license')
+
+
+def _legacy_license_path():
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, 'instance', '.license')
 
@@ -79,6 +86,18 @@ def license_file_path():
 def load_license():
     p = license_file_path()
     if not os.path.exists(p):
+        # миграция со старого пути (не теряем действующую лицензию)
+        legacy = _legacy_license_path()
+        try:
+            if os.path.exists(legacy):
+                os.makedirs(os.path.dirname(p), exist_ok=True)
+                with open(legacy, 'r', encoding='utf-8') as f:
+                    data = f.read()
+                with open(p, 'w', encoding='utf-8') as f:
+                    f.write(data)
+                return data.strip()
+        except Exception:
+            pass
         return ''
     try:
         return open(p, 'r', encoding='utf-8').read().strip()

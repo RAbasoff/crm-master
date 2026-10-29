@@ -577,11 +577,16 @@ def before_request():
         maybe_evening_backup()
     except Exception as _be:
         print(f'EVENING BACKUP SKIP: {_be}')
-    # Лицензия: без ключа — только /license, /static
+    # Лицензия: без ключа — только /license, /static (проверка кешируется —
+    # раньше файл читался и парсился на КАЖДОМ запросе)
     if request.endpoint not in ('license_page', 'static') and not (request.path or '').startswith('/static'):
-        from license import load_license, parse_license
-        ok, _info = parse_license(load_license())
-        if not ok:
+        global _license_cache
+        import time as _lt
+        if _lt.time() - _license_cache['at'] > 60:
+            from license import load_license, parse_license
+            _license_cache['ok'], _license_cache['info'] = parse_license(load_license())
+            _license_cache['at'] = _lt.time()
+        if not _license_cache['ok']:
             return redirect(url_for('license_page'))
     if 'lang' not in session:
         session['lang'] = 'nl'
@@ -710,6 +715,7 @@ def inject_sms_access():
 
 
 _reminder_cache = {'at': 0.0, 'val': 0}
+_license_cache = {'at': 0.0, 'ok': True, 'info': None}
 
 
 @app.context_processor
@@ -1068,7 +1074,7 @@ def login():
                 log_system('INFO', 'auth', f'User {username} logged in', source='login')
                 # Auto-backup DB on login — saves all changes from previous session
                 try:
-                    backup_database(force=True)
+                    backup_database()  # не форсировать: полная копия БД на каждый логин тормозила вход
                 except Exception as be:
                     print(f'LOGIN BACKUP WARNING: {be}')
                 # Reminders on login (tool wear etc.) for admin/director/masters/responsible
@@ -1114,7 +1120,7 @@ def login():
                 log_user_activity('login', page='/login', details=f'Responsible {username} logged in')
                 log_system('INFO', 'auth', f'Responsible {username} logged in', source='login')
                 try:
-                    backup_database(force=True)
+                    backup_database()  # не форсировать: полная копия БД на каждый логин тормозила вход
                 except Exception as be:
                     print(f'LOGIN BACKUP WARNING: {be}')
                 try:

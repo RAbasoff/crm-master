@@ -39,11 +39,15 @@ def _private_key_for_webpush(priv_b64):
 
 
 def send_web_push(subscription_info, title, body, url=None, tag=None):
-    """Один Web Push. True — доставлено в push-сервис."""
+    """Один Web Push. Возвращает 'ok' | 'dead' | 'error'.
+
+    НЕ трогает БД: сетевой вызов не должен держать транзакцию открытой —
+    иначе остальные запросы ждут sqlite-лок секундами (кнопки тормозили).
+    """
     from pywebpush import webpush, WebPushException
     pub, priv = _vapid_keys()
     if not pub or not priv:
-        return False
+        return 'error'
     payload = {
         'title': title or 'ProMaster',
         'body': body or '',
@@ -59,40 +63,54 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
             vapid_claims={'sub': 'https://rabasoff.pythonanywhere.com'},
             ttl=60 * 60 * 6,
         )
-        return bool(resp and resp.status_code < 300)
+        return 'ok' if (resp and resp.status_code < 300) else 'error'
     except WebPushException as e:
         # 404/410 — подписка протухла; 403 BadJwtToken — подписка создана с другим
-        # VAPID-ключом и не вылечится сама. Такие удаляем — клиент переподпишется.
+        # VAPID-ключом и не вылечится сама. Такие помечаем мёртвыми — клиент переподпишется.
         code = getattr(getattr(e, 'response', None), 'status_code', None)
-        dead = code in (404, 410) or (code == 403 and 'BadJwtToken' in str(e))
-        if dead:
-            try:
-                from models import PushSubscription, db
-                PushSubscription.query.filter_by(
-                    endpoint=subscription_info.get('endpoint')
-                ).delete()
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-        return False
+        if code in (404, 410) or (code == 403 and 'BadJwtToken' in str(e)):
+            return 'dead'
+        return 'error'
     except Exception:
-        return False
+        return 'error'
 
 
 def push_to_user(user_id, title, body, url=None, tag=None):
-    """Отправить всем подпискам пользователя. Возвращает число успешных."""
+    """Отправить всем подпискам пользователя. Возвращает число успешных.
+
+    Сначала читаем подписки и ЗАКРЫВАЕМ транзакцию, потом шлём (без БД),
+    и только в конце — короткая запись last_used_at / удаление мёртвых.
+    """
     from models import PushSubscription, db, now_local
-    subs = PushSubscription.query.filter_by(user_id=user_id).all()
-    ok = 0
-    for s in subs:
-        info = {
-            'endpoint': s.endpoint,
-            'keys': {'p256dh': s.p256dh, 'auth': s.auth},
-        }
-        if send_web_push(info, title, body, url=url, tag=tag):
-            ok += 1
-            s.last_used_at = now_local()
-    return ok
+    rows = [(s.id, s.endpoint, s.p256dh, s.auth)
+            for s in PushSubscription.query.filter_by(user_id=user_id).all()]
+    try:
+        db.session.commit()  # не держим транзакцию на время HTTPS-отправок
+    except Exception:
+        db.session.rollback()
+    ok_ids = []
+    dead_ids = []
+    for sid, endpoint, p256dh, auth in rows:
+        res = send_web_push(
+            {'endpoint': endpoint, 'keys': {'p256dh': p256dh, 'auth': auth}},
+            title, body, url=url, tag=tag)
+        if res == 'ok':
+            ok_ids.append(sid)
+        elif res == 'dead':
+            dead_ids.append(sid)
+    try:
+        if dead_ids:
+            PushSubscription.query.filter(
+                PushSubscription.id.in_(dead_ids)
+            ).delete(synchronize_session=False)
+        if ok_ids:
+            PushSubscription.query.filter(
+                PushSubscription.id.in_(ok_ids)
+            ).update({'last_used_at': now_local()}, synchronize_session=False)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return len(ok_ids)
 
 
 def notify_and_push(user_id, title, message, ntype='info', link=None):
