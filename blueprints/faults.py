@@ -554,28 +554,8 @@ def fault_new():
             db.session.add(f)
             db.session.flush()
 
-            tech_ids = request.form.getlist('technician_ids')
-            # dedupe + safe assign (avoid UNIQUE + autoflush)
-            seen_tech = set()
-            first_tech = None
-            with db.session.no_autoflush:
-                for tid in tech_ids:
-                    try:
-                        tid_i = int(tid)
-                    except (TypeError, ValueError):
-                        continue
-                    if tid_i in seen_tech:
-                        continue
-                    seen_tech.add(tid_i)
-                    tech = User.query.get(tid_i)
-                    if tech and tech not in f.assigned_technicians:
-                        f.assigned_technicians.append(tech)
-                        if first_tech is None:
-                            first_tech = tech
-            if first_tech is not None:
-                f.technician_id = first_tech.id
-                f.status = 'accepted'
-                f.accepted_at = now_local()
+            # Механика при создании НЕ выбирают: уведомление получают все
+            # механики, назначает начальник ТС (маршрут /assign).
 
             if not safe_commit():
                 db.session.rollback()
