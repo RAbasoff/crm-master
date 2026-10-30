@@ -25,12 +25,21 @@
         .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
         .content, .main, main { padding: 0 !important; margin: 0 !important; }
         body { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+        html, body, .card, .table-wrap, .to-year-table { width: 100% !important; max-width: 100% !important; }
+        /* ВАЖНО: overflow-контейнер ломает разбивку на листы и повтор шапки */
+        .table-wrap { overflow: visible !important; }
         /* компактно и во весь лист */
         .to-year-table { font-size: 9.5px !important; width: 100% !important; }
         .to-year-table th, .to-year-table td { padding: 2px 3px !important; line-height: 1.25 !important; }
         .to-year-table th { background: #2c3e50 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        thead { display: table-header-group; }
-        tr { page-break-inside: avoid; }
+        /* шапка таблицы — на каждом листе */
+        thead { display: table-header-group !important; }
+        tfoot { display: table-footer-group; }
+        thead tr { page-break-inside: avoid; break-inside: avoid; }
+        /* строки идут потоком и заполняют лист до конца — без пустых «хвостов» */
+        tr, td, th { page-break-inside: auto !important; break-inside: auto !important; }
+        /* заголовок цеха — не оставлять внизу листа одного */
+        tr.to-group { page-break-after: avoid; break-after: avoid; }
     }
 </style>
 
@@ -64,7 +73,7 @@
             {% for r in rows %}
             {% if r.section != ns.cur %}
             {% set ns.cur = r.section %}
-            <tr>
+            <tr class="to-group">
                 <td colspan="7" style="background:#dfe8f0;padding:7px 10px;border:1px solid #ccd;font-weight:800;font-size:13px">🏭 {{ r.section }}</td>
             </tr>
             {% endif %}
