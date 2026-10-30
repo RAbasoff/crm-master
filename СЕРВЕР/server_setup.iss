@@ -2,7 +2,7 @@
 ; Сборка: ISCC.exe server_setup.iss  (из папки СЕРВЕР)
 
 #define MyAppName "ProMaster Server"
-#define MyAppVersion "2.15.7"
+#define MyAppVersion "2.16.0"
 #define MyAppPublisher "A.B.A.S.O.F.F."
 #define SrcDir "CRM_Server"
 

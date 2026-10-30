@@ -18,6 +18,7 @@ INCLUDE = [
     'notify.py', 'sms_counter.py', 'wsgi.py',
     'run_server.py',
     'license.py',
+    'maintenance_jobs.py',
     'github_update.py',
     'requirements.txt', 'runtime.txt',
     'blueprints', 'templates', 'translations', 'vendor_fpdf',
