@@ -12,6 +12,17 @@
     .to-year-table th:nth-child(3) { width: 40%; }
     .to-year-table th:nth-child(4), .to-year-table th:nth-child(5),
     .to-year-table th:nth-child(6), .to-year-table th:nth-child(7) { width: 9.5%; }
+    /* каждый станок — своя таблица: при переносе строк на новый лист
+       шапка (название станка + кварталы) повторяется автоматически */
+    .to-cols-print { display: none; }
+    .to-item td { vertical-align: top; }
+    .to-item .to-owner td { background: #f4f7fa; }
+    .to-item .to-q { text-align: center; font-weight: 700; color: #1a6b3c; }
+    .to-group-row {
+        background: #dfe8f0; padding: 7px 10px; border: 1px solid #ccd;
+        border-top: none; font-weight: 800; font-size: 13px;
+    }
+    .to-item { margin-top: -1px; }
     @media print {
         /* интерфейс и все иконки — не печатаем */
         .sidebar, .sidebar-overlay, .topbar, .notif-panel, .offline-panel,
@@ -32,14 +43,17 @@
         .to-year-table { font-size: 9.5px !important; width: 100% !important; }
         .to-year-table th, .to-year-table td { padding: 2px 3px !important; line-height: 1.25 !important; }
         .to-year-table th { background: #2c3e50 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        /* шапка таблицы — на каждом листе */
+        .to-item .to-owner td { background: #f4f7fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        /* шапка (колонки + название станка) — на каждом листе */
+        .to-cols-screen { display: none !important; }
+        .to-cols-print { display: table-row; }
         thead { display: table-header-group !important; }
         tfoot { display: table-footer-group; }
         thead tr { page-break-inside: avoid; break-inside: avoid; }
         /* строки идут потоком и заполняют лист до конца — без пустых «хвостов» */
         tr, td, th { page-break-inside: auto !important; break-inside: auto !important; }
         /* заголовок цеха — не оставлять внизу листа одного */
-        tr.to-group { page-break-after: avoid; break-after: avoid; }
+        tr.to-group, .to-group-row { page-break-after: avoid; break-after: avoid; }
     }
 </style>
 
@@ -56,7 +70,8 @@
 </div>
 
 <div class="card" style="padding:0">
-    <table class="to-year-table">
+    <!-- Заголовки колонок на экране; в печати шапка живёт в каждой таблице станка -->
+    <table class="to-year-table to-cols-screen">
         <thead>
             <tr style="background:#2c3e50;color:#fff">
                 <th style="padding:8px;border:1px solid #ccd">№</th>
@@ -68,41 +83,59 @@
                 <th style="padding:8px;border:1px solid #ccd">Q4</th>
             </tr>
         </thead>
-        <tbody>
-            {% set ns = namespace(cur='') %}
-            {% for r in rows %}
-            {% if r.section != ns.cur %}
-            {% set ns.cur = r.section %}
-            <tr class="to-group">
-                <td colspan="7" style="background:#dfe8f0;padding:7px 10px;border:1px solid #ccd;font-weight:800;font-size:13px">🏭 {{ r.section }}</td>
+    </table>
+
+    {% set ns = namespace(cur='') %}
+    {% for r in rows %}
+    {% if r.section != ns.cur %}
+    {% set ns.cur = r.section %}
+    <div class="to-group-row">🏭 {{ r.section }}</div>
+    {% endif %}
+    <table class="to-year-table to-item">
+        <colgroup>
+            <col style="width:4%"><col style="width:18%"><col style="width:40%">
+            <col style="width:9.5%"><col style="width:9.5%"><col style="width:9.5%"><col style="width:9.5%">
+        </colgroup>
+        <thead>
+            <!-- печатная шапка: повторяется на каждом листе, куда перенеслись строки -->
+            <tr class="to-cols-print" style="background:#2c3e50;color:#fff">
+                <th style="padding:4px 6px;border:1px solid #ccd">№</th>
+                <th style="padding:4px 6px;border:1px solid #ccd;text-align:left">{{ _('Machine') }}</th>
+                <th style="padding:4px 6px;border:1px solid #ccd;text-align:left">{{ _('Work items') }} (Omschrijving)</th>
+                <th style="padding:4px 6px;border:1px solid #ccd">Q1</th>
+                <th style="padding:4px 6px;border:1px solid #ccd">Q2</th>
+                <th style="padding:4px 6px;border:1px solid #ccd">Q3</th>
+                <th style="padding:4px 6px;border:1px solid #ccd">Q4</th>
             </tr>
-            {% endif %}
-            {% set bg = '#fafbfc' if loop.index0 % 2 else '#fff' %}
-            <tr style="background:{{ bg }}">
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px 4px;text-align:center;vertical-align:top">{{ loop.index }}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;vertical-align:top">
+            <tr class="to-owner">
+                <td style="border:1px solid #ccd;padding:6px 4px;text-align:center">{{ loop.index }}</td>
+                <td style="border:1px solid #ccd;padding:6px">
                     <strong>{{ r.name }}</strong>
                     {% if r.loc %}<br><small style="color:#555">📍 {{ r.loc }}</small>{% endif %}
                     {% if r.sub %}<br><small style="color:#888">{{ r.sub }}</small>{% endif %}
                     {% if current_user.has_role('admin', 'director', 'technician') %}
-                    <br><button type="button" class="btn btn-sm" style="background:#eee;font-size:10px;padding:2px 6px;margin-top:3px"
+                    <br><button type="button" class="btn btn-sm no-print" style="background:#eee;font-size:10px;padding:2px 6px;margin-top:3px"
                         onclick='editTasks({{ r.tid }}, {{ r.tasks|tojson }}, {{ r.name|tojson }}, "{{ r.kind }}")'>✏️ {{ _('Edit') }}</button>
                     {% endif %}
                 </td>
-                <td style="border:1px solid #ccd;padding:5px 8px">{{ r.tasks[0].text }}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[0] }}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[1] }}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[2] }}</td>
-                <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;text-align:center;vertical-align:top;font-weight:700;color:#1a6b3c">{{ r.quarters[3] }}</td>
+                <td style="border:1px solid #ccd;padding:6px 8px;color:#888">{{ r.tasks|length }} × {{ _('Work items') }}</td>
+                <td class="to-q" style="border:1px solid #ccd;padding:6px">{{ r.quarters[0] }}</td>
+                <td class="to-q" style="border:1px solid #ccd;padding:6px">{{ r.quarters[1] }}</td>
+                <td class="to-q" style="border:1px solid #ccd;padding:6px">{{ r.quarters[2] }}</td>
+                <td class="to-q" style="border:1px solid #ccd;padding:6px">{{ r.quarters[3] }}</td>
             </tr>
-            {% for t in r.tasks[1:] %}
-            <tr style="background:{{ bg }}">
+        </thead>
+        <tbody>
+            {% for t in r.tasks %}
+            <tr>
+                <td colspan="2" style="border:1px solid #ccd"></td>
                 <td style="border:1px solid #ccd;padding:5px 8px">{{ t.text }}</td>
+                <td colspan="4" style="border:1px solid #ccd"></td>
             </tr>
-            {% endfor %}
             {% endfor %}
         </tbody>
     </table>
+    {% endfor %}
 </div>
 
 <p style="color:#888;font-size:12px;margin-top:10px" class="no-print">
