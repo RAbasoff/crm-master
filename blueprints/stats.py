@@ -312,7 +312,7 @@ def stats_export():
             lines.append(f'{m["name"]:<25} {m["type"]:<15} {m["section"]:<15} {m["total"]:>6} {m["period"]:>7} {m["open"]:>5} {m["critical"]:>5}')
         lines.append('')
         lines.append('=' * 60)
-        lines.append('CRM Мастерская — Статистика')
+        lines.append('ProMaster CRM - TechnicheDienst — Статистика')
         
         from flask import Response
         return Response('\n'.join(lines), mimetype='text/plain',
@@ -323,7 +323,7 @@ def stats_export():
         import csv, io
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['CRM Мастерская — Статистика', stats['period'], stats['date']])
+        writer.writerow(['ProMaster CRM - TechnicheDienst — Статистика', stats['period'], stats['date']])
         writer.writerow([])
         writer.writerow(['ЗАЯВКИ', 'Количество'])
         writer.writerow(['Всего', stats['faults']['total']])
@@ -369,7 +369,7 @@ def stats_export():
         section_font = Font(bold=True, size=12, color='2C3E50')
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
         
-        ws['A1'] = 'Статистика — CRM Мастерская'
+        ws['A1'] = 'Статистика — ProMaster CRM - TechnicheDienst'
         ws['A1'].font = title_font
         ws['A2'] = f'Период: {stats["period"]}'
         ws['A3'] = f'Дата: {stats["date"]}'
@@ -446,7 +446,7 @@ def stats_export():
         from docx import Document
         from docx.shared import Pt, RGBColor
         doc = Document()
-        doc.add_heading('Статистика — CRM Мастерская', level=1)
+        doc.add_heading('Статистика — ProMaster CRM - TechnicheDienst', level=1)
         doc.add_paragraph(f'Период: {stats["period"]}')
         doc.add_paragraph(f'Дата: {stats["date"]}')
         
@@ -519,7 +519,7 @@ def stats_export():
             def header(self):
                 fn = 'AppFont' if unicode_font else 'Helvetica'
                 self.set_font(fn, 'B', 14)
-                self.cell(0, 8, pdf_text('Статистика — CRM Мастерская'), new_x='LMARGIN', new_y='NEXT')
+                self.cell(0, 8, pdf_text('Статистика — ProMaster CRM - TechnicheDienst'), new_x='LMARGIN', new_y='NEXT')
                 self.set_font(fn, '', 9)
                 self.cell(0, 5, pdf_text(f'{stats["period"]} | {stats["date"]}'), new_x='LMARGIN', new_y='NEXT')
                 self.ln(2)

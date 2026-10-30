@@ -1,5 +1,5 @@
 """
-CRM-система для мастерской с производственным модулем
+CRM-система для технической службы с производственным модулем
 Авторизация · Роли · Карта цеха · Заявки · Уведомления · Отчёты
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session, g

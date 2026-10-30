@@ -1,7 +1,7 @@
 {
     "id": "/",
-    "name": "Technische Dienst",
-    "short_name": "Technische Dienst",
+    "name": "ProMaster CRM - TechnicheDienst",
+    "short_name": "TechnicheDienst",
     "description": "CRM voor de technische dienst — meldingen, voorraad, machines, rapporten",
     "start_url": "/?source=pwa",
     "scope": "/",
