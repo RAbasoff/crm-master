@@ -62,7 +62,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
 
-LANGUAGES = {'nl': 'Nederlands', 'en': 'English', 'ru': 'Русский', 'pl': 'Polski'}
+LANGUAGES = {'nl': 'Nederlands', 'ru': 'Русский'}
 
 SECTION_KEYS = [
     # Production

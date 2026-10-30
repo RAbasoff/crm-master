@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Уведомления ProMaster: email + SMS (как в Рекламации, через .env).
+"""Уведомления ProMaster: email + Web Push (SMS полностью удалён).
 
 .env (рядом с программой или в окружении):
   SMTP_HOST=smtp.yandex.ru
@@ -9,18 +9,12 @@
   SMTP_FROM=robot@domain.ru
   SMTP_TLS=1
   LOG_EMAIL=robot@domain.ru          # куда слать логи (опционально)
-
-  SMS_PROVIDER=sms_ru                 # sms_ru | twilio | disabled
-  SMS_API_KEY=...
-  SMS_FROM=ProMaster
-  SMS_ENABLED=1
 """
 import os
 import logging
 from datetime import datetime
 
 log = logging.getLogger('app.notify')
-SMS_LAST_ERROR = ''
 
 def _load_dotenv():
     """Прочитать .env рядом с программой в os.environ (без внешних зависимостей)."""
@@ -60,10 +54,6 @@ def email_configured():
     return bool(_env('SMTP_USER') and _env('SMTP_PASSWORD') and _env('SMTP_HOST'))
 
 
-def sms_configured():
-    return False  # SMS TEMPORARILY DISABLED
-
-
 def send_email(to_addr, subject, body_html):
     """SMTP email. Возвращает True/False."""
     if not email_configured():
@@ -99,17 +89,12 @@ def send_email(to_addr, subject, body_html):
         return False
 
 
-def send_sms(phone, text):
-    """SMS MODULE TEMPORARILY DISABLED. Will be restored later."""
-    return False
-
-
 def _name_of(u):
     return ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
 
 
 def fault_sms_recipients():
-    """Кому слать SMS о новой заявке:
+    """Кому слать уведомления о новой заявке (email):
     механики + начальник ТС + админ + Peter."""
     from models import User
     from security import is_head_of_ts
@@ -131,7 +116,7 @@ def fault_sms_recipients():
 
 
 def notify_fault_created(fault, mechanics, head_of_ts_users=None):
-    """Новая заявка: механики + начальник ТС — email/SMS."""
+    """Новая заявка: механики + начальник ТС — email (push шлёт faults.py)."""
     title = f"Nieuwe storing #{fault.id}: {fault.title}"
     body = (
         f"<p><b>Storing #{fault.id}</b></p>"
@@ -139,23 +124,6 @@ def notify_fault_created(fault, mechanics, head_of_ts_users=None):
         f"<p>{(fault.description or '')[:300]}</p>"
         f"<p>Prioriteit: {fault.priority}</p>"
         f"<p>Melder: {getattr(fault, 'reporter_name', '') or ''}</p>"
-    )
-    reporter = getattr(fault, 'reporter_label', None) or getattr(fault, 'reporter_name', '') or '—'
-    machine = getattr(fault, 'target_name', None) or '—'
-    loc = ''
-    try:
-        m = getattr(fault, 'machine', None)
-        if m is not None and getattr(m, 'section', None) is not None:
-            loc = m.section.name or ''
-    except Exception:
-        loc = ''
-    prio = {'critical': 'Kritiek', 'high': 'Hoog', 'normal': 'Normaal', 'low': 'Laag'}.get(
-        (fault.priority or '').lower(), fault.priority or '—')
-    sms_text = (
-        f'Gebruiker {reporter} heeft een nieuwe storing gemeld voor machine {machine}'
-        f' in {loc or "—"}. '
-        f'{(fault.title or "")[:100]}. '
-        f'Prioriteit: {prio}'
     )
     sent = 0
     try:
@@ -168,36 +136,21 @@ def notify_fault_created(fault, mechanics, head_of_ts_users=None):
             seen[getattr(u, 'id', None)] = u
     for u in seen.values():
         email = getattr(u, 'email', None)
-        phone = getattr(u, 'phone', None) or getattr(u, 'telefoon', None)
         if email and send_email(email, title, body):
             sent += 1
-        if phone and send_sms(phone, sms_text):
-            sent += 1
-        try:
-            from app import create_notification
-            create_notification(u.id, 'Nieuwe storing', sms_text, 'fault', f'/faults/{fault.id}')
-        except Exception:
-            pass
+        # In-app/push уведомления НЕ создаём здесь: их шлёт faults.py
+        # («New fault report») — раньше каждый получал дубль.
     return sent
 
 
 def notify_fault_done(fault, reporter_user=None, head_users=None):
-    """Выполнено/закрыто: SMS заявителю + начальнику ТС."""
+    """Выполнено/закрыто: email заявителю + начальнику ТС."""
     st = getattr(fault, 'status', '') or ''
     title = f"Заявка #{fault.id}: {st}"
     body = f"<p>Заявка <b>#{fault.id}</b> — {fault.title}</p><p>Статус: <b>{st}</b></p>"
-    st_map = {
-        'open': 'Open', 'accepted': 'Geaccepteerd', 'in_progress': 'In behandeling',
-        'resolved': 'Opgelost', 'closed': 'Gesloten', 'reopened': 'Heropend',
-    }
-    st_nl = st_map.get((st or '').lower(), st or '')
-    sms_text = f'Storing #{fault.id} — {st_nl}: {fault.title[:60]}'
     sent = 0
     for u in list(reporter_user and [reporter_user] or []) + list(head_users or []):
         email = getattr(u, 'email', None)
-        phone = getattr(u, 'phone', None) or getattr(u, 'telefoon', None)
-        if phone and send_sms(phone, sms_text):
-            sent += 1
         if email and send_email(email, title, body):
             sent += 1
     return sent

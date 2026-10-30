@@ -1,17 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Dashboard') }} — ProMaster{% endblock %}
 {% block content %}
-<script>
-function loadSms(){
-  fetch('/api/settings/sms-stats').then(function(r){return r.json();}).then(function(d){
-    var a=document.getElementById('smsToday'); if(a) a.textContent=d.today;
-    var b=document.getElementById('smsMonth'); if(b) b.textContent=d.month;
-    var c=document.getElementById('smsLeft'); if(c) c.textContent=d.left_month;
-  }).catch(function(){});
-}
-loadSms(); setInterval(loadSms, 30000);
-</script>
-
 <!-- MY WORK — механик / начальник ТС / админ (НЕ директор) -->
 {% if current_user.has_role('technician', 'admin') or current_user.worker_profile %}
 {% set has_alert = (my_twos and my_twos|length > 0) or (my_overdue_to and my_overdue_to > 0) %}

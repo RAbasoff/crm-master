@@ -100,9 +100,10 @@
             <label style="margin-left:12px">{{ _('Language') }}:
                 <select name="preferred_language" style="margin-left:4px;padding:4px 8px">
                     <option value="">{{ _('Auto') }}</option>
-                    {% for code, name in [('ru','RU'),('nl','NL'),('en','EN'),('pl','PL')] %}
-                    <option value="{{ code }}" {% if user and user.preferred_language == code %}selected{% endif %}>{{ name }}</option>
-                    {% endfor %}
+                    <option value="nl" {% if user and user.preferred_language == 'nl' %}selected{% endif %}>NL</option>
+                    {% if (user and (user.username or '')|lower in ('admin','director','ruslan.abasoff')) or (user and user.preferred_language == 'ru') %}
+                    <option value="ru" {% if user and user.preferred_language == 'ru' %}selected{% endif %}>RU</option>
+                    {% endif %}
                 </select>
             </label>
         </div>

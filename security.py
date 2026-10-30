@@ -79,7 +79,7 @@ def director_only(*names):
         return decorated_function
     return decorator
 
-_group_perm_cache = {}   # user_id -> (expires_at, {section_key: GroupPermission})
+_group_perm_cache = {}   # user_id -> (expires_at, {section_key: (v,c,e,d)})
 
 
 def invalidate_group_perm_cache(user_id=None):
@@ -91,18 +91,22 @@ def invalidate_group_perm_cache(user_id=None):
 
 
 def _load_user_group_permissions(user):
-    """Get permissions from user's group (via person_id link or role fallback)"""
+    """Права группы пользователя: {section_key: (can_view, can_create, can_edit, can_delete)}.
+
+    Только простые значения — ORM-объекты нельзя хранить между запросами.
+    """
+    def _pack(perms):
+        return {p.section_key: (bool(p.can_view), bool(p.can_create), bool(p.can_edit), bool(p.can_delete))
+                for p in perms}
     if user.person_id:
         person = Verantwoordelijke.query.get(user.person_id)
         if person and person.group_id:
-            perms = GroupPermission.query.filter_by(group_id=person.group_id).all()
-            return {p.section_key: p for p in perms}
+            return _pack(GroupPermission.query.filter_by(group_id=person.group_id).all())
     # Fallback: look up group by role name (e.g. role='technician' -> group 'Technician')
     if user.role and user.role != 'admin':
         group = ResponsibleGroup.query.filter_by(access_level=user.role).first()
         if group:
-            perms = GroupPermission.query.filter_by(group_id=group.id).all()
-            return {p.section_key: p for p in perms}
+            return _pack(GroupPermission.query.filter_by(group_id=group.id).all())
     return {}
 
 
@@ -132,12 +136,12 @@ def user_has_section_access(section_key, action='view'):
     # Check group permissions first
     group_perms = get_user_group_permissions(current_user)
     if section_key in group_perms:
-        perm = group_perms[section_key]
-        if action == 'view': return perm.can_view
-        if action == 'create': return perm.can_create
-        if action == 'edit': return perm.can_edit
-        if action == 'delete': return perm.can_delete
-        return perm.can_view
+        v, c, e, d = group_perms[section_key]
+        if action == 'view': return v
+        if action == 'create': return c
+        if action == 'edit': return e
+        if action == 'delete': return d
+        return v
     # Section not in group permissions — check individual allowed_sections
     # (allowed_sections grant full view+create+edit on top of group permissions)
     if any(s.section_key == section_key for s in current_user.allowed_sections):
@@ -216,6 +220,21 @@ def is_privileged(user=None):
     return bool(u and getattr(u, 'is_authenticated', False) and u.has_role('admin', 'director'))
 
 
+def is_owner_user(user=None):
+    """Владелец системы (Ruslan Abasoff) — единственный, кому доступен русский.
+
+    Его аккаунты: admin, director (начальник ТС), ruslan.abasoff (механик).
+    """
+    u = user or current_user
+    if not u:
+        return False
+    uname = (getattr(u, 'username', '') or '').lower()
+    if uname in ('admin', 'director', 'ruslan.abasoff'):
+        return True
+    name = ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
+    return any(k in name for k in ('ruslan', 'abasoff', 'абасов', 'руслан'))
+
+
 def is_head_of_ts(user=None):
     """Начальник технической службы — Ruslan Abasoff. Только он и админ закрывают/переоткрывают."""
     u = user or current_user
@@ -228,29 +247,6 @@ def is_head_of_ts(user=None):
         return True
     # системный аккаунт director = начальник ТС
     if (getattr(u, 'username', '') or '').lower() == 'director':
-        return True
-    return False
-
-
-def can_use_sms(user=None):
-    """Кто видит SMS-баннер и может слать SMS:
-    админ, директор, начальник ТС (Ruslan), Tim, Thijs, Peter."""
-    u = user or current_user
-    if not (u and getattr(u, 'is_authenticated', False)):
-        return False
-    if (getattr(u, 'role', '') or '').lower() in ('admin', 'director'):
-        return True
-    if (getattr(u, 'username', '') or '').lower() == 'director':
-        return True
-    if is_head_of_ts(u):
-        return True
-    name = ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
-    # word-boundary style match so "tim.jansen" / "Tim Janssen" work, but "martin" does not
-    if re.search(r'(^|[^a-z])tim([^a-z]|$)', name):
-        return True
-    if 'thijs' in name or 'тис' in name or 'тхис' in name:
-        return True
-    if 'peter' in name or 'petr' in name or 'петр' in name or 'питер' in name:
         return True
     return False
 

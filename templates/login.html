@@ -67,11 +67,13 @@
             </div>
             <button type="submit" class="btn">{{ _('Login') }}</button>
         </form>
+        {% if g.LANGUAGES|length > 1 %}
         <div class="lang-switch">
             {% for code, name in g.LANGUAGES.items() %}
                 <a href="/set_language/{{ code }}" class="{% if g.lang == code %}active{% endif %}">{{ code|upper }}</a>
             {% endfor %}
         </div>
+        {% endif %}
     </div>
     <script>
         // PWA: service worker + icons installable

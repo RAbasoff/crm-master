@@ -627,9 +627,9 @@ def fault_new():
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
-                # SMS/email — в фоне; если SMS выключен — не трогаем БД из другого потока
-                from notify import sms_configured
-                if not sms_configured():
+                # Email — в фоне; если SMTP не настроен — не трогаем БД из другого потока
+                from notify import email_configured
+                if not email_configured():
                     raise RuntimeError('skip-notify')
                 import threading
                 from notify import notify_fault_created

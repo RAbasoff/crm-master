@@ -505,18 +505,31 @@ def _bootstrap_password(env_key):
 
 
 def get_current_locale():
-    """Язык: явный выбор пользователя (сессия) > preferred_language > nl."""
+    """Язык: сессия > preferred_language > nl. Русский — только владелец."""
     lang = session.get('lang')
-    if lang in ('nl', 'en', 'ru', 'pl'):
-        return lang
-    try:
-        if current_user.is_authenticated:
-            pl = getattr(current_user, 'preferred_language', None)
-            if pl in ('nl', 'en', 'ru', 'pl'):
-                return pl
-    except Exception:
-        pass
-    return 'nl'
+    if lang not in ('nl', 'ru'):
+        lang = None
+    if lang == 'ru':
+        try:
+            from security import is_owner_user
+            if not is_owner_user():
+                lang = None
+        except Exception:
+            lang = None
+    if not lang:
+        try:
+            if current_user.is_authenticated:
+                pl = getattr(current_user, 'preferred_language', None)
+                if pl == 'ru':
+                    from security import is_owner_user
+                    if is_owner_user():
+                        return 'ru'
+                elif pl == 'nl':
+                    return 'nl'
+        except Exception:
+            pass
+        return 'nl'
+    return lang
 
 babel = Babel(app, locale_selector=get_current_locale)
 
@@ -590,7 +603,15 @@ def before_request():
     if 'lang' not in session:
         session['lang'] = 'nl'
     g.lang = session.get('lang', 'ru')
-    g.LANGUAGES = LANGUAGES
+    # Русский в переключателе — только владельцу; остальным — только NL
+    try:
+        from security import is_owner_user
+        if current_user.is_authenticated and is_owner_user():
+            g.LANGUAGES = LANGUAGES
+        else:
+            g.LANGUAGES = {'nl': 'Nederlands'}
+    except Exception:
+        g.LANGUAGES = {'nl': 'Nederlands'}
 
     # Auto-fix admin role (role-switcher corruption)
     if current_user.is_authenticated and current_user.username == 'admin' and current_user.role != 'admin':
@@ -703,16 +724,6 @@ def log_request_activity(response):
     return response
 
 
-@app.context_processor
-def inject_sms_access():
-    from security import can_use_sms as _cus
-    try:
-        sms_ok = _cus(current_user) if current_user.is_authenticated else False
-    except Exception:
-        sms_ok = False
-    return {'can_use_sms': sms_ok}
-
-
 _reminder_cache = {'at': 0.0, 'val': 0}
 _license_cache = {'at': 0.0, 'ok': True, 'info': None}
 _users_list_cache = {'at': 0.0, 'val': []}
@@ -777,12 +788,9 @@ def inject_section_access():
     _users_list = []
     if current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id')):
         try:
-            import time as _ult
-            global _users_list_cache
-            if _ult.time() - _users_list_cache['at'] > 300:
-                _users_list_cache['val'] = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
-                _users_list_cache['at'] = _ult.time()
-            _users_list = _users_list_cache['val']
+            # Только в рамках запроса: кешировать ORM-объекты между запросами
+            # нельзя — они «отвязываются» от сессии (DetachedInstanceError).
+            _users_list = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
         except Exception:
             _users_list = []
 
@@ -903,6 +911,13 @@ def offline_queue_response(response):
 
 @app.route('/set_language/<lang>')
 def set_language(lang):
+    if lang == 'ru':
+        try:
+            from security import is_owner_user
+            if not is_owner_user():
+                return redirect(request.referrer or url_for('index'))
+        except Exception:
+            return redirect(request.referrer or url_for('index'))
     if lang in LANGUAGES:
         session['lang'] = lang
         session.modified = True
@@ -1816,13 +1831,7 @@ def index():
     except Exception:
         pass
 
-    sms = {}
-    try:
-        from sms_counter import sms_stats as _sms_stats
-        sms = _sms_stats()
-    except Exception:
-        sms = {}
-    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats, sms_stats=sms,
+    return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
                            gas_quality=gas_quality, show_gas_quality=show_gas_quality,
                            my_twos=my_twos, my_overdue_to=my_overdue_to,
                            today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())

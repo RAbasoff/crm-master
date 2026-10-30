@@ -674,11 +674,6 @@
                 {% endif %}
             </div>
             {% endif %}
-            <div class="lang-pills">
-                {% for code, name in g.LANGUAGES.items() %}
-                    <a href="/set_language/{{ code }}" class="lang-pill {% if g.lang == code %}active{% endif %}">{{ code|upper }}</a>
-                {% endfor %}
-            </div>
             <div class="tb-sep"></div>
             <button class="tb-btn" id="installBtn" onclick="installPWA()" style="display:none;color:#27ae60" title="{{ _('Install App') }}">📲</button>
             <button class="tb-btn" id="offlineBtn" onclick="toggleOfflinePanel()" style="display:none" title="{{ _("Offline") }}">
@@ -1760,8 +1755,6 @@
 
 
 
-
-<!-- SMS MODULE DISABLED -->
 
 </body>
 </html>

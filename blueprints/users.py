@@ -238,8 +238,15 @@ def user_edit(user_id):
         u.person_id = safe_int(request.form.get('person_id')) or None
         u.is_active_user = 'is_active' in request.form
         u.work_hours_exempt = 'work_hours_exempt' in request.form
-        u.preferred_language = (request.form.get('preferred_language') or '').strip() or None
-        u.preferred_language = (request.form.get('preferred_language') or '').strip() or None
+        # Язык: RU — только владельцу, остальным только NL
+        _pl = (request.form.get('preferred_language') or '').strip() or None
+        if _pl not in ('nl', 'ru'):
+            _pl = None
+        if _pl == 'ru':
+            from security import is_owner_user
+            if not is_owner_user(u):
+                _pl = 'nl'
+        u.preferred_language = _pl
         u.hire_date = (d := safe_date(request.form.get('hire_date'))) and d.date() or u.hire_date
         u.fire_date = (d := safe_date(request.form.get('fire_date'))) and d.date() or None
         new_pass = request.form.get('password')
