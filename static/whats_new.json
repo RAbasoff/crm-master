@@ -1,4 +1,30 @@
 {
+  "2.16.1": {
+    "ru": [
+      "Исправлена критическая ошибка: страницы (календарь ТО и другие) снова открываются без ошибок",
+      "Языки: нидерландский — основной, русский — по выбору в настройках аккаунта; английский и польский удалены",
+      "SMS полностью удалён — уведомления только push и email",
+      "Тест: начало и окончание работы по заявкам работает стабильно"
+    ],
+    "nl": [
+      "Kritieke fout verholpen: pagina's (Onderhoudskalender en andere) openen weer zonder fouten",
+      "Talen: Nederlands — hoofdtaal, Russisch — keuze in accountinstellingen; Engels en Pools verwijderd",
+      "SMS volledig verwijderd — meldingen alleen push en e-mail",
+      "Getest: starten en stoppen van werk aan meldingen werkt stabiel"
+    ],
+    "en": [
+      "Critical fix: pages (maintenance calendar and others) open without errors again",
+      "Languages: Dutch is primary, Russian by choice in account settings; English and Polish removed",
+      "SMS fully removed — notifications via push and email only",
+      "Tested: start/stop work on faults is stable"
+    ],
+    "pl": [
+      "Krytyczna poprawka: strony (kalendarz przeglądów i inne) otwierają się bez błędów",
+      "Języki: niderlandzki — główny, rosyjski do wyboru w ustawieniach konta; angielski i polski usunięte",
+      "SMS całkowicie usunięty — powiadomienia tylko push i e-mail",
+      "Test: start/stop pracy przy zgłoszeniach działa stabilnie"
+    ]
+  },
   "2.16.0": {
     "ru": [
       "Скорость: настройки загружаются мгновенно (было до 20 сек), все страницы быстрее",
