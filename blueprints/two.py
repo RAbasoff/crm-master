@@ -260,7 +260,8 @@ def two_new():
                         saved += 1
                     else:
                         flash(_('File type not allowed') + f': {photo.filename}', 'error')
-            if saved and not safe_commit():
+            # фиксируем всё: оборудование, чек-листы, фото
+            if not safe_commit():
                 flash(_('Save failed'), 'error')
                 return redirect(url_for('two.two_detail', two_id=two.id))
         log_audit('create', 'two', two.id, two.number)
@@ -710,6 +711,33 @@ def two_edit(two_id):
                         two_id=two.id, assignment_id=assignment.id,
                         text=text.strip(), sort_order=j
                     ))
+        # Process equipment assignments (Other equipment)
+        equipment_ids = request.form.getlist('equipment_ids')
+        equipment_descs = request.form.getlist('equipment_descriptions')
+        for i, eid in enumerate(equipment_ids):
+            work_items = request.form.getlist(f'equipment_work_{i}')
+            if not eid:
+                for j, text in enumerate(work_items):
+                    if text.strip():
+                        db.session.add(TWOChecklistItem(
+                            two_id=two.id, assignment_id=None,
+                            text=text.strip(), sort_order=j
+                        ))
+                continue
+            assignment = TWOAssignment(
+                two_id=two.id,
+                equipment_id=int(eid),
+                description=equipment_descs[i] if i < len(equipment_descs) else '',
+                sort_order=i
+            )
+            db.session.add(assignment)
+            db.session.flush()
+            for j, text in enumerate(work_items):
+                if text.strip():
+                    db.session.add(TWOChecklistItem(
+                        two_id=two.id, assignment_id=assignment.id,
+                        text=text.strip(), sort_order=j
+                    ))
         # Handle photos
         if 'photos' in request.files:
             saved = 0
@@ -721,7 +749,8 @@ def two_edit(two_id):
                         saved += 1
                     else:
                         flash(_('File type not allowed') + f': {photo.filename}', 'error')
-            if saved and not safe_commit():
+            # фиксируем всё: оборудование, чек-листы, фото
+            if not safe_commit():
                 flash(_('Save failed'), 'error')
                 return redirect(url_for('two.two_detail', two_id=two.id))
         if not safe_commit():
