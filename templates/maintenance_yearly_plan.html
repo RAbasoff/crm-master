@@ -73,6 +73,7 @@
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px 4px;text-align:center;vertical-align:top">{{ loop.index }}</td>
                 <td rowspan="{{ r.tasks|length }}" style="border:1px solid #ccd;padding:6px;vertical-align:top">
                     <strong>{{ r.name }}</strong>
+                    {% if r.loc %}<br><small style="color:#555">📍 {{ r.loc }}</small>{% endif %}
                     {% if r.sub %}<br><small style="color:#888">{{ r.sub }}</small>{% endif %}
                     {% if current_user.has_role('admin', 'director', 'technician') %}
                     <br><button type="button" class="btn btn-sm" style="background:#eee;font-size:10px;padding:2px 6px;margin-top:3px"

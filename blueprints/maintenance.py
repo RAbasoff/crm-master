@@ -756,18 +756,40 @@ def _yearly_to_chart(year):
     def quarter_of(d):
         return (d.month - 1) // 3
 
+    # ── Порядок цехов — по расположению на плане фабрики (сверху вниз,
+    # слева направо); строки без цеха уходят в самый низ таблицы.
+    from models import FactorySection
+    _sections = FactorySection.query.all()
+    _sec_rank = {s.id: ((s.floor_y if s.floor_y is not None else 1e9),
+                        (s.floor_x if s.floor_x is not None else 1e9),
+                        s.id) for s in _sections}
+    _sec_names = {s.id: s.name for s in _sections}
+
     def sec_name_of(obj):
-        s = getattr(obj, 'section', None)
-        if s is not None and getattr(s, 'name', None):
-            return s.name
-        try:
-            return getattr(obj, 'installation_location', None) or _('No section')
-        except Exception:
-            return getattr(obj, 'installation_location', None) or 'No section'
+        sid = getattr(obj, 'section_id', None)
+        return _sec_names.get(sid) or _('No section')
+
+    def entry_key(e):
+        """Порядок: цех по плану фабрики → станки → оборудование →
+        по расстановке (координаты плана) → по имени. Без цеха — внизу."""
+        kind, obj = e[0], e[1]
+        sid = getattr(obj, 'section_id', None)
+        if sid in _sec_rank:
+            g = (0,) + _sec_rank[sid]
+        else:
+            g = (1, 0, 0, 0)
+        kind_rank = 0 if kind == 'machine' else 1
+        px = getattr(obj, 'floor_x', None)
+        py = getattr(obj, 'floor_y', None)
+        return (g
+                + (kind_rank,
+                   px if px is not None else 1e9,
+                   py if py is not None else 1e9,
+                   (obj.name or '').lower()))
 
     entries = [('machine', m, sec_name_of(m)) for m in machines]
     entries += [('equipment', d, sec_name_of(d)) for d in doors]
-    entries.sort(key=lambda e: ((e[2] or 'яяя').lower(), (e[1].name or '').lower()))
+    entries.sort(key=entry_key)
 
     rows = []
     for idx, (kind, obj, sec) in enumerate(entries):
@@ -837,6 +859,7 @@ def _yearly_to_chart(year):
             'tid': obj.id,
             'name': obj.name,
             'sub': sub,
+            'loc': getattr(obj, 'installation_location', None),
             'section': sec,
             'tasks': tasks,
             'quarters': quarters,
