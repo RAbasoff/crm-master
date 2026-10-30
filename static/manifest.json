@@ -1,8 +1,8 @@
 {
     "id": "/",
-    "name": "ProMaster CRM — Мастерская",
-    "short_name": "ProMaster",
-    "description": "CRM система для мастерской — заявки, склад, станки, отчёты",
+    "name": "Technische Dienst",
+    "short_name": "Technische Dienst",
+    "description": "CRM voor de technische dienst — meldingen, voorraad, machines, rapporten",
     "start_url": "/?source=pwa",
     "scope": "/",
     "display": "standalone",
