@@ -18,19 +18,69 @@
         <input type="hidden" name="record_type" value="{{ record_type or (eq.record_type if eq else '') or 'maintenance' }}">
         <div class="form-row">
             <div class="form-group"><label>{{ _('Equipment Name') }} *</label><input type="text" name="name" value="{{ eq.name if eq else '' }}" required placeholder="Mule-01, Press-02..."></div>
-            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial" value="{{ eq.serial if eq and eq.serial else '' }}" placeholder="SN-12345"></div>
+            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial" id="eqSerial" value="{{ eq.serial if eq and eq.serial else '' }}" placeholder="SN-12345" autocomplete="off">
+                <small id="serialHint" style="display:block;margin-top:3px;min-height:14px;font-size:11px"></small>
+            </div>
         </div>
         <div class="form-row">
             <div class="form-group"><label>{{ _('Date') }} *</label><input type="date" name="date" value="{{ eq.date.strftime('%Y-%m-%d') if eq else '' }}" required></div>
             <div class="form-group"><label>{{ _('Machine') }}</label>
-                <select name="machine_id">
+                <select name="machine_id" id="eqMachine">
                     <option value="">{{ _('Select Machine') }}</option>
                     {% for m in machines %}
-                    <option value="{{ m.id }}" {% if eq and eq.machine_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                    <option value="{{ m.id }}" {% if eq and eq.machine_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.serial_number %} ({{ m.serial_number }}){% endif %}</option>
                     {% endfor %}
                 </select>
             </div>
         </div>
+        <script>
+        (function () {
+            // Автоподстановка станка по серийному номеру (CAVECO / Skin / Ypsilon)
+            var MACHINES = {{ (machines_json or [])|tojson }};
+            var serialInput = document.getElementById('eqSerial');
+            var nameInput = document.querySelector('input[name="name"]');
+            var sel = document.getElementById('eqMachine');
+            var hint = document.getElementById('serialHint');
+            if (!serialInput || !sel) return;
+            function norm(s) { return (s || '').toString().trim().toLowerCase().replace(/\s+/g, ''); }
+            function findMachine(v) {
+                var q = norm(v);
+                if (!q) return null;
+                var i, m;
+                for (i = 0; i < MACHINES.length; i++) {
+                    if (MACHINES[i].serial && norm(MACHINES[i].serial) === q) return MACHINES[i];
+                }
+                for (i = 0; i < MACHINES.length; i++) {
+                    m = MACHINES[i];
+                    if (m.serial && q.length >= 4 && norm(m.serial).indexOf(q) >= 0) return m;
+                    if (q.length >= 5 && norm(m.name).indexOf(q) >= 0) return m;
+                }
+                return null;
+            }
+            function applySerial() {
+                var m = findMachine(serialInput.value);
+                if (m) {
+                    sel.value = String(m.id);
+                    if (nameInput && !nameInput.value.trim()) nameInput.value = m.name;
+                    if (hint) {
+                        hint.textContent = '✓ {{ _("Machine") }}: ' + m.name + (m.serial ? ' · ' + m.serial : '');
+                        hint.style.color = '#27ae60';
+                    }
+                } else if (serialInput.value.trim()) {
+                    if (hint) {
+                        hint.textContent = '⚠ {{ _("Machine not found") }}';
+                        hint.style.color = '#e67e22';
+                    }
+                } else if (hint) {
+                    hint.textContent = '';
+                }
+            }
+            var t;
+            serialInput.addEventListener('input', function () { clearTimeout(t); t = setTimeout(applySerial, 250); });
+            serialInput.addEventListener('change', applySerial);
+            if (serialInput.value) applySerial();
+        })();
+        </script>
         <div class="form-group"><label>{{ _('Reason') }} *</label><textarea name="reason" rows="3" required placeholder="{{ _('Reason for maintenance...') }}">{{ eq.reason if eq else '' }}</textarea></div>
         <div class="form-row">
             <div class="form-group"><label>{{ _('Next Maintenance Date') }}</label><input type="date" name="next_date" value="{{ eq.next_date.strftime('%Y-%m-%d') if eq and eq.next_date else '' }}"></div>

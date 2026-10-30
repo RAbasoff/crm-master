@@ -16,6 +16,21 @@ from utils import ensure_fpdf, find_pdf_font, log_audit, log_system, role_requir
 
 bp = Blueprint('equipment', __name__)
 
+
+def mule_machines():
+    """Машины модуля Mule (ТО/ремонт): только CAVECO / Skin / Ypsilon."""
+    return Machine.query.filter(db.or_(
+        Machine.name.ilike('%caveco%'),
+        Machine.name.ilike('%skin%'),
+        Machine.name.ilike('%ypsilon%'),
+    )).order_by(Machine.name).all()
+
+
+def mule_machines_json(machines):
+    """Карта для автоподстановки станка по серийному номеру (в форме)."""
+    return [{'id': m.id, 'name': m.name, 'serial': (m.serial_number or '').strip()}
+            for m in machines]
+
 def gen_eq_number(record_type='maintenance'):
     from utils import next_number_suffix
     day = datetime.utcnow().strftime('%Y%m%d')
@@ -50,7 +65,7 @@ def equipment_list():
     repairs_count = repairs_q.count()
     repairs = repairs_q.order_by(EquipmentMaintenance.date.desc()).limit(25).all()
     orders = EquipmentPartOrder.query.order_by(EquipmentPartOrder.created_at.desc()).limit(20).all()
-    machines = Machine.query.order_by(Machine.name).all()
+    machines = mule_machines()
     # Find warehouse items linked to mule maintenance parts that are low or out of stock
     used_wh_ids = db.session.query(EquipmentPart.warehouse_item_id).filter(
         EquipmentPart.warehouse_item_id.isnot(None)).distinct().all()
@@ -519,9 +534,9 @@ def equipment_new():
         log_audit('create', 'equipment', eq.id, f'{eq.number} — {eq.name}')
         flash(_('Equipment maintenance recorded'), 'success')
         return redirect(url_for('equipment.equipment_list'))
-    machines = Machine.query.order_by(Machine.name).all()
+    machines = mule_machines()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
-    return render_template('equipment_form.html', eq=None, machines=machines, warehouse_items=warehouse_items, record_type=request.args.get('type') or request.form.get('record_type') or 'maintenance')
+    return render_template('equipment_form.html', eq=None, machines=machines, machines_json=mule_machines_json(machines), warehouse_items=warehouse_items, record_type=request.args.get('type') or request.form.get('record_type') or 'maintenance')
 
 
 @bp.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
@@ -592,9 +607,9 @@ def equipment_edit(eq_id):
             return redirect(url_for('equipment.equipment_list'))
         flash(_('Equipment maintenance updated'), 'success')
         return redirect(url_for('equipment.equipment_list'))
-    machines = Machine.query.order_by(Machine.name).all()
+    machines = mule_machines()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
-    return render_template('equipment_form.html', eq=eq, machines=machines, warehouse_items=warehouse_items, record_type=eq.record_type or 'maintenance')
+    return render_template('equipment_form.html', eq=eq, machines=machines, machines_json=mule_machines_json(machines), warehouse_items=warehouse_items, record_type=eq.record_type or 'maintenance')
 
 
 @bp.route('/equipment/<int:eq_id>/delete', methods=['POST'])
