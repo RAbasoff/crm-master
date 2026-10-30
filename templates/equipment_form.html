@@ -28,7 +28,7 @@
                 <select name="machine_id" id="eqMachine">
                     <option value="">{{ _('Select Machine') }}</option>
                     {% for m in machines %}
-                    <option value="{{ m.id }}" {% if eq and eq.machine_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.serial_number %} ({{ m.serial_number }}){% endif %}</option>
+                    <option value="{{ m.id }}" {% if eq and eq.machine_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.serial_number and m.serial_number|lower not in ('none','null','-','—') %} ({{ m.serial_number }}){% endif %}</option>
                     {% endfor %}
                 </select>
             </div>

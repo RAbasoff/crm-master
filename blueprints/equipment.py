@@ -28,8 +28,13 @@ def mule_machines():
 
 def mule_machines_json(machines):
     """Карта для автоподстановки станка по серийному номеру (в форме)."""
-    return [{'id': m.id, 'name': m.name, 'serial': (m.serial_number or '').strip()}
-            for m in machines]
+    out = []
+    for m in machines:
+        sn = (m.serial_number or '').strip()
+        if sn.lower() in ('none', 'null', '-', '—'):
+            sn = ''
+        out.append({'id': m.id, 'name': m.name, 'serial': sn})
+    return out
 
 def gen_eq_number(record_type='maintenance'):
     from utils import next_number_suffix
