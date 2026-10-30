@@ -22,8 +22,18 @@ bp = Blueprint('two', __name__)
 def gen_two_number():
     from utils import next_number_suffix
     day = now_local().strftime('%Y%m%d')
-    num = next_number_suffix(TechnicalWorkOrder, 'number', f'TWO-{day}')
-    return f'TWO-{day}-{num:04d}'
+    # Сквозной порядковый номер по всей системе: растёт непрерывно,
+    # НЕ сбрасывается с началом каждого дня (структура TWO-дата-номер сохранена).
+    num = max(
+        next_number_suffix(TechnicalWorkOrder, 'number', 'TWO'),
+        TechnicalWorkOrder.query.count() + 1,
+    )
+    candidate = f'TWO-{day}-{num:04d}'
+    # защита от редкого совпадения с историческими номерами
+    while TechnicalWorkOrder.query.filter_by(number=candidate).first():
+        num += 1
+        candidate = f'TWO-{day}-{num:04d}'
+    return candidate
 
 
 def _load_machine_to_checklist(machine_id, period=None):
