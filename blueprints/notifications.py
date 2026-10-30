@@ -22,7 +22,10 @@ def notifications_list():
 @bp.route('/notifications/unread')
 @login_required
 def notifications_unread():
-    q = Notification.query.filter_by(user_id=current_user.id, is_read=False)
+    # is_read IS NULL — старые строки (не только is_read=0)
+    q = Notification.query.filter(
+        Notification.user_id == current_user.id,
+        db.or_(Notification.is_read == False, Notification.is_read.is_(None)))  # noqa: E712
     count = q.count()
     latest = q.order_by(Notification.id.desc()).first()
     return jsonify({
@@ -49,7 +52,10 @@ def notification_read(notif_id):
 @bp.route('/notifications/read-all', methods=['POST'])
 @login_required
 def notifications_read_all():
-    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    Notification.query.filter(
+        Notification.user_id == current_user.id,
+        db.or_(Notification.is_read == False, Notification.is_read.is_(None))  # noqa: E712
+    ).update({'is_read': True}, synchronize_session=False)
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'success': True})

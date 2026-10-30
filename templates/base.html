@@ -424,22 +424,6 @@
     </style>
 </head>
 <body>
-<script>
-(function () {
-  // Force fresh HTML: kill old PWA caches that keep stale SMS button
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function (regs) {
-      regs.forEach(function (r) { try { r.unregister(); } catch (e) {} });
-    });
-  }
-  if (window.caches && caches.keys) {
-    caches.keys().then(function (keys) {
-      keys.forEach(function (k) { caches.delete(k); });
-    });
-  }
-})();
-</script>
-
     <!-- Toast Container -->
     <div class="toast-container"></div>
     
@@ -922,16 +906,28 @@
                     list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">{{ _("No notifications") }}</div>';
                     return;
                 }
+                // DOM-сборка вместо innerHTML-шаблонов: заголовки/тексты
+                // заявок — пользовательский ввод (XSS + ломалось на кавычках в link)
                 items.forEach(item => {
-                    list.innerHTML += `<div class="notif-item ${item.classList.contains('unread') ? 'unread' : ''}" onclick="markRead(${item.dataset.id}, '${item.dataset.link}')">
-                        <div class="notif-title">${item.querySelector('.notif-title')?.textContent || ''}</div>
-                        <div class="notif-msg">${item.querySelector('.notif-msg')?.textContent || ''}</div>
-                        <div class="notif-time">${item.querySelector('.notif-time')?.textContent || ''}</div>
-                    </div>`;
+                    const row = document.createElement('div');
+                    row.className = 'notif-item' + (item.classList.contains('unread') ? ' unread' : '');
+                    const id = item.dataset.id, link = item.dataset.link || '';
+                    row.addEventListener('click', function () { markRead(id, link); });
+                    const t = document.createElement('div');
+                    t.className = 'notif-title';
+                    t.textContent = item.querySelector('.notif-title')?.textContent || '';
+                    const m = document.createElement('div');
+                    m.className = 'notif-msg';
+                    m.textContent = item.querySelector('.notif-msg')?.textContent || '';
+                    const w = document.createElement('div');
+                    w.className = 'notif-time';
+                    w.textContent = item.querySelector('.notif-time')?.textContent || '';
+                    row.appendChild(t); row.appendChild(m); row.appendChild(w);
+                    list.appendChild(row);
                 });
             });
         }
-        
+
         function updateNotifCount() {
             fetch('/notifications/unread').then(r => r.json()).then(d => {
                 const btn = document.getElementById('notifBtn');
@@ -942,11 +938,12 @@
                     countEl.style.display = 'block';
                     if (window.lastNotifCount !== undefined && d.count > window.lastNotifCount) {
                         playNotifSound();
-                        try { if (navigator.vibrate) navigator.vibrate([200,100,200]); } catch(e){}
                         var n = d.latest;
+                        var added = d.count - (window.lastNotifCount || 0);
                         if (n) {
                             var msg = (n.title || 'Notification');
                             if (n.message) msg += ': ' + n.message;
+                            if (added > 1) msg += ' (+' + (added - 1) + ')';
                             if (typeof showToast === 'function') {
                                 showToast(msg, n.type === 'error' ? 'error' : 'info');
                             } else {
@@ -973,7 +970,7 @@
                 window.lastNotifCount = d.count;
             });
         }
-        
+
         function markRead(id, link) {
             csrfFetch(`/notifications/${id}/read`, {method: 'POST'}).then(() => {
                 if (link) window.location.href = link;
@@ -1031,7 +1028,6 @@
             });
         })();
         function playNotifSound() {
-            vibrateNotif();
             try {
                 const ctx = window.__audioCtx || new (window.AudioContext || window.webkitAudioContext)();
                 if (ctx.state === 'suspended') { ctx.resume(); }
@@ -1185,24 +1181,24 @@
                             });
                         }
                         if (sub) {
-                            // Если подписка создана с другим VAPID-ключом — переподписываемся.
-                            // Если подписка мёртва на сервере (или привязана к другому
-                            // пользователю) — получаем НОВУЮ, иначе Android/iOS не получают push.
-                            var savedSig = null, syncedAt = 0, syncedUser = null;
+                            // Всегда проверяем живость на сервере. Кэш localStorage
+                            // («синхронизировано <1 часа назад») мешал
+                            // самовосстановлению: мёртвая подписка не
+                            // пересоздавалась до часа, в PWA — вообще никогда.
+                            var savedSig = null, syncedUser = null;
                             try {
                                 savedSig = localStorage.getItem('push_key_sig');
-                                syncedAt = parseInt(localStorage.getItem('push_synced_at') || '0', 10) || 0;
                                 syncedUser = localStorage.getItem('push_user');
                             } catch (e) {}
                             var userId = String(window.APP_USER_ID || '');
-                            if (savedSig === keySig && syncedUser === userId && Date.now() - syncedAt < 3600000) {
-                                return Promise.resolve();
-                            }
                             return fetch('/api/push/status').then(function (r) { return r.json(); }).then(function (st) {
                                 if (st && st.subscribed) {
-                                    return syncPushSub(sub); // перепривязка к текущему пользователю
+                                    if (savedSig === keySig && syncedUser === userId) {
+                                        return Promise.resolve(); // жива и привязана — без лишнего POST
+                                    }
+                                    return syncPushSub(sub); // сменился пользователь или VAPID-ключ
                                 }
-                                // подписка мёртва или не привязана к текущему — новая подписка
+                                // подписка мёртва или привязана к другому — новая подписка
                                 return sub.unsubscribe().then(doSub).catch(doSub);
                             }).catch(function () { return syncPushSub(sub); });
                         }

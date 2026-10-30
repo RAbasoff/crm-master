@@ -1,4 +1,34 @@
 {
+  "2.16.0": {
+    "ru": [
+      "Скорость: настройки загружаются мгновенно (было до 20 сек), все страницы быстрее",
+      "Самоочистка: старые логи и уведомления удаляются автоматически ночью",
+      "Фото в заявках: удобная галерея — стрелки, свайп, все фото подряд",
+      "Оповещения: без дублей, на языке каждого пользователя",
+      "Push на телефоны: подписка восстанавливается сама, заявки не схлопываются в одну"
+    ],
+    "nl": [
+      "Snelheid: instellingen laden direct (was tot 20 sec), alle pagina's sneller",
+      "Zelfopschouwing: oude logs en meldingen worden 's nachts automatisch verwijderd",
+      "Foto's in meldingen: handige galerij — pijlen, swipe, alle foto's op volgorde",
+      "Meldingen: geen dubbele meer, in de taal van elke gebruiker",
+      "Push op telefoon: abonnement herstelt zelf, storingen klappen niet meer samen"
+    ],
+    "en": [
+      "Speed: settings load instantly (was up to 20s), all pages faster",
+      "Self-cleanup: old logs and notifications are removed automatically at night",
+      "Photos in fault reports: handy gallery — arrows, swipe, all photos in sequence",
+      "Notifications: no duplicates, in each user's own language",
+      "Phone push: subscription self-heals, faults no longer collapse into one"
+    ],
+    "pl": [
+      "Szybkość: ustawienia ładują się natychmiast (było do 20 s), wszystkie strony szybsze",
+      "Samoczyszczenie: stare logi i powiadomienia są usuwane automatycznie w nocy",
+      "Zdjęcia w zgłoszeniach: wygodna galeria — strzałki, przesuwanie, wszystkie zdjęcia",
+      "Powiadomienia: bez duplikatów, w języku każdego użytkownika",
+      "Push na telefon: subskrypcja sama się naprawia, awarie nie zlewają się w jedną"
+    ]
+  },
   "2.15.8": {
     "ru": [
       "Нумерация TWO теперь сквозная по всей системе — порядковый номер растёт и не сбрасывается",

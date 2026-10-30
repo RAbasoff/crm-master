@@ -383,6 +383,24 @@ def _notify_reporter_status(f, kind, detail=None):
     create_notification(f.reporter_id, title, msg, 'fault', f'/faults/{f.id}')
 
 
+def _notify_i18n(user_id, title_msgid, build_msg, link, ntype='fault'):
+    """Уведомление в локали ПОЛУЧАТЕЛЯ: title и msg строятся в force_locale.
+
+    Раньше сообщения фан-аута собирались на языке отправителя —
+    получатель видел чужой язык и в списке, и в тосте.
+    """
+    from flask_babel import force_locale, gettext as _f
+    try:
+        from logs import _user_language
+        lang = _user_language(user_id)
+    except Exception:
+        lang = 'nl'
+    with force_locale(lang):
+        title = _f(title_msgid)
+        msg = build_msg(_f)
+    create_notification(user_id, title, msg, ntype, link)
+
+
 def _notify_director_status(f, kind, detail=None):
     """Директор: только создание / пауза (с причиной) / решение / закрытие.
 
@@ -581,12 +599,11 @@ def fault_new():
                 if not safe_commit():
                     flash(_('Fault created but video upload failed'), 'warning')
 
+            _link = url_for('faults.fault_detail', fault_id=f.id)
             for tech in f.assigned_technicians:
-                create_notification(tech.id, 'Fault assigned to you',
-                    f"{_('Machine')}: {target} - {f.title} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})",
-                    'fault',
-                    url_for('faults.fault_detail', fault_id=f.id)
-                )
+                _notify_i18n(tech.id, 'Fault assigned to you',
+                    lambda _f: f"{_f('Machine')}: {target} - {f.title} ({_f('Priority')}: {f.priority}, {_f('Reporter')}: {who})",
+                    _link)
             # Уведомляем: механиков + админ (+ Peter/Ruslan по имени).
             # Директорам идёт отдельное «ЗАЯВКА СОЗДАНА» — без лишних сообщений.
             notify_ids = set()
@@ -601,11 +618,9 @@ def fault_new():
                 if 'ruslan' in n or 'abasoff' in n:
                     notify_ids.add(u.id)
             for tid in notify_ids:
-                create_notification(tid, 'New fault report',
-                    f"{_('Machine')}: {target} - {f.title} ({_('Reporter')}: {who})",
-                    'fault',
-                    url_for('faults.fault_detail', fault_id=f.id)
-                )
+                _notify_i18n(tid, 'New fault report',
+                    lambda _f: f"{_f('Machine')}: {target} - {f.title} ({_f('Reporter')}: {who})",
+                    _link)
             # Заявитель: «ЗАЯВКА СОЗДАНА: … — время»; директору — то же
             _notify_reporter_status(f, 'created')
             _notify_director_status(f, 'created')
@@ -930,11 +945,14 @@ def fault_assign(fault_id):
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
     for tech in f.assigned_technicians:
-        create_notification(tech.id, 'Fault assigned to you',
-            f"{_('Admin assigned fault to you')}: {f.title} ({_('Machine')}: {f.target_name})",
-            'fault',
-            url_for('faults.fault_detail', fault_id=f.id)
-        )
+        _notify_i18n(tech.id, 'Fault assigned to you',
+            lambda _f: f"{_f('Admin assigned fault to you')}: {f.title} ({_f('Machine')}: {f.target_name})",
+            url_for('faults.fault_detail', fault_id=f.id))
+    # Заявителю: ПРОЧИТАНА (назначение = заявка принята в работу)
+    try:
+        _notify_reporter_status(f, 'accepted')
+    except Exception:
+        pass
     log_audit('assign', 'fault', f.id, f'{f.title} → {", ".join(names)}')
     flash(_('Fault assigned to') + ' ' + (', '.join(names)), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))

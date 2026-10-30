@@ -120,6 +120,13 @@ def _run_cleanup(force=False, do_vacuum=True):
     except Exception as e:
         stats['system_err'] = str(e)[:120]
     try:
+        # мусор: user_id вида 'r_1' (не число) — никому не показываются
+        res = db.session.execute(db.text(
+            "DELETE FROM notification WHERE user_id IS NOT NULL AND typeof(user_id) != 'integer'"))
+        stats['notif_junk'] = res.rowcount
+    except Exception as e:
+        stats['notif_junk_err'] = str(e)[:120]
+    try:
         n = AuditLog.query.filter(AuditLog.created_at < _cut(days['audit'])).delete(synchronize_session=False)
         stats['audit'] = n
     except Exception as e:

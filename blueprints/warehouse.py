@@ -347,16 +347,8 @@ def warehouse_move(item_id):
     if not safe_commit():
         flash(_('Movement failed. Please try again.'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
-    # Low-stock notification for admin
-    if item.minimum and item.hoeveelheid <= item.minimum:
-        from utils import create_notification
-        from models import User
-        admins = User.query.filter_by(role='admin', is_active_user=True).all()
-        level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
-        msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
-        for a in admins:
-            create_notification(a.id, 'Low stock', msg, 'warning', '/warehouse/')
-        _notify_logistiek_low_stock(item)
+    # Low-stock: одна проверка с анти-спамом (12ч на позицию)
+    _maybe_notify_low_stock(item)
     flash(_('{} {} {} — {}').format(mt.capitalize(), qty, item.eenheid, item.naam), 'success')
     return redirect(url_for('warehouse.warehouse_list'))
 
@@ -660,16 +652,8 @@ def warehouse_qty_update():
         db.session.add(m)
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
-    # Low-stock notification for admin
-    if item.minimum and item.hoeveelheid <= item.minimum:
-        from utils import create_notification
-        from models import User
-        admins = User.query.filter_by(role='admin', is_active_user=True).all()
-        level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
-        msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
-        for a in admins:
-            create_notification(a.id, 'Low stock', msg, 'warning', '/warehouse/')
-        _notify_logistiek_low_stock(item)
+    # Low-stock: одна проверка с анти-спамом (12ч на позицию)
+    _maybe_notify_low_stock(item)
     return jsonify({'ok': True, 'min_warning': qty <= item.minimum})
 
 
@@ -751,15 +735,8 @@ def warehouse_transfer(item_id):
             flash(_('Transfer failed. Please try again.'), 'error')
             return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
 
-        # Low-stock notification
-        if item.minimum and item.hoeveelheid <= item.minimum:
-            from utils import create_notification
-            from models import User
-            admins = User.query.filter_by(role='admin', is_active_user=True).all()
-            level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
-            msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
-            for a in admins:
-                create_notification(a.id, 'Low stock', msg, 'warning', '/warehouse/')
+        # Low-stock: одна проверка с анти-спамом (12ч на позицию)
+        _maybe_notify_low_stock(item)
 
         flash(_('Transferred {} {} {} to {}').format(qty, item.eenheid, item.naam, person.naam), 'success')
         return redirect(url_for('warehouse.warehouse_list'))
@@ -794,6 +771,51 @@ def _notify_logistiek_low_stock(item):
             user = User.query.filter_by(username=p.username).first()
             if user:
                 create_notification(user.id, 'Low stock', f'⚠️ Склад Oktopus: {msg}', 'warning', '/warehouse/')
+
+
+# Анти-спам: «ниже минимума» — одно уведомление на позицию за 12 часов
+# (раньше каждый приход/расход/перенос ниже минимума слал новое).
+_lowstock_cache = {}
+
+
+def _maybe_notify_low_stock(item):
+    if not item or not item.minimum:
+        return
+    try:
+        if float(item.hoeveelheid or 0) > float(item.minimum or 0):
+            return
+    except Exception:
+        return
+    import time as _t
+    from datetime import timedelta
+    now_ts = _t.time()
+    if _lowstock_cache.get(item.id, 0) > now_ts - 12 * 3600:
+        return
+    from models import Notification, User, now_local
+    from utils import create_notification
+    link = f'/warehouse/?item={item.id}'
+    try:
+        cutoff = now_local() - timedelta(hours=12)
+        exists = Notification.query.filter(
+            Notification.title == 'Low stock',
+            Notification.link == link,
+            Notification.created_at >= cutoff
+        ).first()
+        if exists:
+            _lowstock_cache[item.id] = now_ts
+            return
+    except Exception:
+        pass
+    _lowstock_cache[item.id] = now_ts
+    level = 'critical' if float(item.hoeveelheid or 0) <= float(item.minimum or 0) * 0.5 else 'low'
+    msg = f'[{level.upper()}] {item.naam}: {item.hoeveelheid} {item.eenheid} (min: {item.minimum})'
+    try:
+        admins = User.query.filter_by(role='admin', is_active_user=True).all()
+        for a in admins:
+            create_notification(a.id, 'Low stock', msg, 'warning', link)
+        _notify_logistiek_low_stock(item)
+    except Exception:
+        pass
 
 
 @bp.route('/transfer-to-oktopus', methods=['POST'])

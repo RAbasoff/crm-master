@@ -135,7 +135,9 @@ self.addEventListener('push', (event) => {
   } catch (e) {
     try { data.body = event.data ? event.data.text() : ''; } catch (e2) {}
   }
-  const tag = data.tag || 'promaster';
+  // Тег = тип + URL: все «fault» раньше схлопывались в одно уведомление
+  // на экране блокировки (tag=ntype), теперь каждая заявка — своя.
+  const tag = (data.tag || 'promaster') + ':' + (data.url || '');
   event.waitUntil(
     self.registration.showNotification(data.title || 'ProMaster', {
       body: data.body || '',

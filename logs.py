@@ -12,17 +12,22 @@ _push_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='webpush')
 
 
 def _user_language(user_id):
-    """Язык пользователя для уведомлений."""
+    """Язык пользователя для уведомлений.
+
+    Язык только ПОЛУЧАТЕЛЯ: preferred_language → сессия (если это он сам)
+    → 'nl'. Сессионный язык отправителя раньше подставлялся всем остальным —
+    уведомления приходили на чужом языке.
+    """
     try:
         from models import User
         u = db.session.get(User, user_id)
         if u and getattr(u, 'preferred_language', None):
             return u.preferred_language
         if u and u.id == getattr(current_user, 'id', None):
-            return session.get('lang', 'ru')
+            return session.get('lang') or 'nl'
     except Exception:
         pass
-    return session.get('lang', 'ru') or 'ru'
+    return 'nl'
 
 
 def _send_push_job(row, title, message, ntype, link, lang='ru'):
