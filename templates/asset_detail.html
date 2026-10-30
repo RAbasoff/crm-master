@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-header">
     <h1>🏭 {{ eq.name }}</h1>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/assets/{{ eq.id }}/edit" class="btn btn-primary">{{ _('Edit') }}</a>
         {% endif %}

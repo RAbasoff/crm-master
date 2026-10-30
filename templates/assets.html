@@ -1,6 +1,28 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Other Devices') }} — CRM{% endblock %}
 {% block content %}
+<style>
+    /* Компактная таблица: правый столбец «Действия» всегда виден (sticky) */
+    .assets-table th, .assets-table td { padding: 8px 10px; }
+    .assets-table th:last-child, .assets-table td:last-child {
+        position: sticky; right: 0; background: #fff; z-index: 2;
+        box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.18);
+    }
+    .assets-table th:last-child { background: #f8f9fc; z-index: 3; }
+    .assets-table tr:hover td:last-child { background: #f8f9fc; }
+    body.dark-mode .assets-table td:last-child { background: #0d1117; }
+    body.dark-mode .assets-table th:last-child { background: #161b22; }
+    body.dark-mode .assets-table tr:hover td:last-child { background: #161b22; }
+    .assets-actions { display: flex; gap: 4px; flex-wrap: nowrap; }
+    @media (max-width: 1150px) {
+        /* производитель и модель — скрываем, чтобы кнопки справа не уезжали */
+        .assets-table th:nth-child(5), .assets-table td:nth-child(5),
+        .assets-table th:nth-child(6), .assets-table td:nth-child(6) { display: none; }
+    }
+    @media (max-width: 860px) {
+        .assets-table th:nth-child(10), .assets-table td:nth-child(10) { display: none; }
+    }
+</style>
 <div class="page-header">
     <h1>🏭 {{ _('Other Devices') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -48,7 +70,7 @@
 
 <!-- TABLE -->
 <div class="card" style="padding:0">
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table class="assets-table">
         <tr>
             <th style="width:36px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
             <th>{{ _('Photo') }}</th>
@@ -75,10 +97,10 @@
             <td><span class="badge badge-{% if eq.status=='active' %}active{% elif eq.status=='broken' %}critical{% elif eq.status=='maintenance' %}high{% else %}open{% endif %}">{{ eq.status or '—' }}</span></td>
             <td><span class="badge badge-{% if eq.condition in ('excellent', 'good') %}active{% elif eq.condition=='fair' %}high{% else %}critical{% endif %}">{{ eq.condition or '—' }}</span></td>
             <td>
-                <div style="display:flex;gap:4px">
-                    <a href="/assets/{{ eq.id }}" class="btn btn-sm" style="font-size:11px;background:#eee">{{ _('View') }}</a>
+                <div class="assets-actions">
+                    <a href="/assets/{{ eq.id }}" class="btn btn-sm" style="font-size:11px;background:#eee;white-space:nowrap">{{ _('View') }}</a>
                     {% if current_user.has_role('admin', 'director', 'technician') %}
-                    <a href="/assets/{{ eq.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
+                    <a href="/assets/{{ eq.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px;white-space:nowrap">{{ _('Edit') }}</a>
                     {% endif %}
                 </div>
             </td>
