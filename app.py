@@ -570,6 +570,12 @@ def before_request():
         maybe_evening_backup()
     except Exception as _be:
         print(f'EVENING BACKUP SKIP: {_be}')
+    # Самоочистка (старые логи/уведомления, VACUUM) — раз в сутки в свой час
+    try:
+        from maintenance_jobs import maybe_auto_cleanup
+        maybe_auto_cleanup()
+    except Exception as _ce:
+        print(f'AUTO CLEANUP SKIP: {_ce}')
     # Лицензия: без ключа — только /license, /static (проверка кешируется —
     # раньше файл читался и парсился на КАЖДОМ запросе)
     if request.endpoint not in ('license_page', 'static') and not (request.path or '').startswith('/static'):
@@ -709,6 +715,7 @@ def inject_sms_access():
 
 _reminder_cache = {'at': 0.0, 'val': 0}
 _license_cache = {'at': 0.0, 'ok': True, 'info': None}
+_users_list_cache = {'at': 0.0, 'val': []}
 
 
 @app.context_processor
@@ -767,6 +774,18 @@ def inject_section_access():
         except Exception:
             pass
 
+    _users_list = []
+    if current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id')):
+        try:
+            import time as _ult
+            global _users_list_cache
+            if _ult.time() - _users_list_cache['at'] > 300:
+                _users_list_cache['val'] = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
+                _users_list_cache['at'] = _ult.time()
+            _users_list = _users_list_cache['val']
+        except Exception:
+            _users_list = []
+
     return dict(has_access=has_access, can_operate=can_operate, reminder_count=reminder_count, chat_unread=chat_unread,
                 APP_VERSION=getattr(__import__('config'), 'APP_VERSION', '2.15.4'),
                 impersonate_admin_id=session.get('impersonate_admin_id'),
@@ -775,7 +794,7 @@ def inject_section_access():
                 is_mechanic=is_mechanic(),
                 is_floor_user=is_floor_user(),
                 can_view_analytics=(current_user.is_authenticated and (current_user.has_role('admin', 'director') or not is_mechanic()) and not is_floor_user()),
-                all_users_list=User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all() if (current_user.is_authenticated and (current_user.has_role('admin') or session.get('impersonate_admin_id'))) else [])
+                all_users_list=_users_list)
 
 
 @app.after_request

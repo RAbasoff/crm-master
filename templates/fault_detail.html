@@ -376,9 +376,9 @@ function endWorkById(faultId) {
 {% if fault.photos %}
 <div class="card">
     <h2>{{ _('Photos') }}</h2>
-    <div class="photo-grid">
+    <div class="photo-grid" data-gallery>
         {% for p in fault.photos %}
-        <img class="photo-fit" src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="window.open(this.src)" style="cursor:pointer">
+        <img class="photo-fit" src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="openPhotoViewer(this)" style="cursor:pointer">
         {% endfor %}
     </div>
 </div>
@@ -458,9 +458,9 @@ function endWorkById(faultId) {
                 {% endif %}
                 
                 {% if report.photos %}
-                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap" data-gallery>
                     {% for p in report.photos %}
-                    <img src="/static/uploads/{{ p.filename }}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open(this.src)">
+                    <img src="/static/uploads/{{ p.filename }}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openPhotoViewer(this)">
                     {% endfor %}
                 </div>
                 {% endif %}

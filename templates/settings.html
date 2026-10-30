@@ -80,8 +80,9 @@
                         <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px">{{ section.icon }} {{ section.group }}</div>
                         <div style="display:flex;flex-wrap:wrap;gap:2px">
                             {% for key, name, icon in section.entries %}
-                            <label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;max-width:140px;background:{% if u.has_section_access(key) %}#e8f5e9{% else %}#f5f5f5{% endif %};border:1px solid {% if u.has_section_access(key) %}#c8e6c9{% else %}#e8ecf1{% endif %}">
-                                <input type="checkbox" class="user-access-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if u.has_section_access(key) %}checked{% endif %} style="width:12px;height:12px">
+                            {% set sec_ok = u.has_section_access(key) %}
+                            <label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;max-width:140px;background:{% if sec_ok %}#e8f5e9{% else %}#f5f5f5{% endif %};border:1px solid {% if sec_ok %}#c8e6c9{% else %}#e8ecf1{% endif %}">
+                                <input type="checkbox" class="user-access-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if sec_ok %}checked{% endif %} style="width:12px;height:12px">
                                 {{ icon }} {{ name }}
                             </label>
                             {% endfor %}

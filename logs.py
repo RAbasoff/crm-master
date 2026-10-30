@@ -119,29 +119,101 @@ def log_audit(action, entity_type=None, entity_id=None, details=None):
     except Exception:
         db.session.rollback()
 
+# ── Журнал активности: буфер вместо INSERT+COMMIT на каждый запрос ──
+# Один commit на пачку: раньше каждый просмотр страницы делал fsync в SQLite
+# (это заметно тормозило ответ на медленном диске PythonAnywhere).
+_activity_buf = []
+_activity_flushed_at = 0.0
+_ACTIVITY_MAX_AGE = 5.0      # сек: держим буфер не дольше
+_ACTIVITY_MAX_ROWS = 25      # ...или не больше N строк
+
+
 def log_user_activity(action, page=None, method=None, entity_type=None, entity_id=None, details=None, duration_ms=None, status_code=None):
-    """Log user activity (page views, actions, etc.)"""
+    """Log user activity (page views, actions, etc.) — буферизованно."""
+    try:
+        from flask import has_request_context
+        uid = uname = ip = ua = sid = None
+        if has_request_context():
+            if current_user.is_authenticated:
+                uid = current_user.id
+                uname = current_user.username
+            ip = request.remote_addr
+            ua = str(request.user_agent)[:300] if request.user_agent else None
+            sid = session.get('_id', '') if session else None
+            page = page or request.path
+            method = method or request.method
+        row = dict(
+            user_id=uid, username=uname, action=action,
+            page=page, method=method,
+            entity_type=entity_type, entity_id=entity_id, details=details,
+            ip_address=ip, user_agent=ua, session_id=sid,
+            duration_ms=duration_ms, status_code=status_code,
+        )
+        _activity_buf.append(row)
+        flush_activity_buffer(age=_ACTIVITY_MAX_AGE, rows=_ACTIVITY_MAX_ROWS)
+    except Exception as e:
+        print('log_user_activity ERR:', e)
+
+
+def flush_activity_buffer(age=None, rows=None, force=False):
+    """Сброс буфера активности в БД одной вставкой + одним commit.
+
+    force=True — сбросить немедленно (бэкап/выгрузка/тесты).
+    При ошибке строки ВОЗВРАЩАЮТСЯ в буфер (не теряются).
+    """
+    global _activity_flushed_at
+    import time as _time
+    if not _activity_buf:
+        _activity_flushed_at = _time.time()
+        return 0
+    now = _time.time()
+    if not force:
+        too_many = rows is not None and len(_activity_buf) >= rows
+        too_old = age is not None and (now - _activity_flushed_at) >= age and _activity_flushed_at > 0
+        if _activity_flushed_at == 0.0:
+            # первый буфер: ждём наполнения (rows) — иначе засекаем часы
+            if not too_many:
+                _activity_flushed_at = now
+                return 0
+        elif not (too_many or too_old):
+            return 0
+    batch = _activity_buf[:]
     try:
         from models import UserActivityLog
-        log = UserActivityLog(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            username=current_user.username if current_user.is_authenticated else None,
-            action=action,
-            page=page or (request.path if request else None),
-            method=method or (request.method if request else None),
-            entity_type=entity_type,
-            entity_id=entity_id,
-            details=details,
-            ip_address=request.remote_addr if request else None,
-            user_agent=str(request.user_agent)[:300] if request else None,
-            session_id=session.get('_id', '') if session else None,
-            duration_ms=duration_ms,
-            status_code=status_code
-        )
-        db.session.add(log)
-        safe_commit()
-    except Exception:
-        db.session.rollback()
+        from flask import current_app, has_app_context
+        if has_app_context():
+            _flush_batch(batch)
+        else:
+            from app import app as _app
+            with _app.app_context():
+                _flush_batch(batch)
+        del _activity_buf[:len(batch)]
+        _activity_flushed_at = _time.time()
+        return len(batch)
+    except Exception as e:
+        print('flush_activity_buffer ERR:', e)
+        try:
+            from models import db
+            db.session.rollback()
+        except Exception:
+            pass
+        # не теряем строки: возвращаем в начало буфера
+        _activity_buf[:0] = batch
+        # чтобы не копились бесконечно — ограничение
+        if len(_activity_buf) > 5000:
+            del _activity_buf[:-1000]
+        return 0
+
+
+def _flush_batch(batch):
+    from models import UserActivityLog, db
+    from schema import safe_commit
+    if len(batch) == 1:
+        db.session.add(UserActivityLog(**batch[0]))
+    else:
+        db.session.execute(UserActivityLog.__table__.insert(), batch)
+    if not safe_commit():
+        raise RuntimeError('commit failed')
 
 def log_system(level, category, message, details=None, source=None):
     """Log system events (errors, warnings, info)"""

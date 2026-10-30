@@ -198,6 +198,7 @@ def ensure_schema():
         ("warehouse_item.group_id", "ALTER TABLE warehouse_item ADD COLUMN group_id INTEGER REFERENCES warehouse_group(id)"),
         ("responsible_group", "CREATE TABLE IF NOT EXISTS responsible_group (id INTEGER PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT, created_at DATETIME)"),
         ("client.group_id", "ALTER TABLE client ADD COLUMN group_id INTEGER REFERENCES responsible_group(id)"),
+        ("equipment_maintenance.record_type", "ALTER TABLE equipment_maintenance ADD COLUMN record_type VARCHAR(20)"),
         ("client.monteur_id", "ALTER TABLE client ADD COLUMN monteur_id INTEGER REFERENCES worker(id)"),
         ("worker.user_id", "ALTER TABLE worker ADD COLUMN user_id INTEGER REFERENCES user(id)"),
         ("worker.group_id", "ALTER TABLE worker ADD COLUMN group_id INTEGER REFERENCES responsible_group(id)"),

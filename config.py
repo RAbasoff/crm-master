@@ -3,6 +3,10 @@ import os, secrets
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 APP_VERSION = '2.15.8'
 
+# Час самоочистки (0-23, локальное время): старые логи/уведомления + VACUUM.
+# Переопределяется без перезаливки файлом instance/.cleanup_hour (число).
+AUTO_CLEANUP_HOUR = 3
+
 def _get_secret_key():
     # Prefer env var (production: set SECRET_KEY on the server / PA)
     key = os.environ.get('SECRET_KEY')

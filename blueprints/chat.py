@@ -45,8 +45,19 @@ def get_or_create_dm(user1_id, user2_id):
     return room
 
 
+_unread_cache = {}  # user_id -> (expires_at, count)
+
+
 def get_unread_count(user_id):
-    """Count unread messages across all rooms for a user."""
+    """Count unread messages across all rooms for a user.
+
+    Кэш 20 сек: вызывается на каждом рендере страницы (бейдж в sidebar).
+    """
+    import time as _time
+    now = _time.time()
+    hit = _unread_cache.get(user_id)
+    if hit and hit[0] > now:
+        return hit[1]
     total = 0
     participations = ChatParticipant.query.filter_by(user_id=user_id).all()
     for p in participations:
@@ -56,6 +67,9 @@ def get_unread_count(user_id):
             ChatMessage.created_at > (p.last_read_at or datetime.min)
         ).count()
         total += unread
+    if len(_unread_cache) > 500:
+        _unread_cache.clear()
+    _unread_cache[user_id] = (now + 20, total)
     return total
 
 

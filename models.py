@@ -161,46 +161,69 @@ class User(UserMixin, db.Model):
                 return True
         return False
 
+    def _perm_snapshot(self):
+        """Снимок всех прав одним разом (2-3 запроса вместо 4-6 на каждую секцию).
+
+        Раньше has_section_access() дёргал SQL на каждый вызов: страница /settings
+        зывала его 4104 раза = 5604 запроса = 17-40 секунд. Кэш живёт на инстансе
+        (сессия пересоздаётся каждый запрос — устаревание не страшно).
+        """
+        snap = getattr(self, '_perm_snap', None)
+        if snap is not None:
+            return snap
+        group_perms = {}
+        has_group = False
+        if self.person_id:
+            try:
+                person = Verantwoordelijke.query.get(self.person_id)
+            except Exception:
+                person = None
+            if person and person.group_id:
+                perms = GroupPermission.query.filter_by(group_id=person.group_id).all()
+                if perms:
+                    has_group = True
+                    group_perms = {p.section_key: p for p in perms}
+        if not has_group and self.role and self.role != 'admin':
+            try:
+                group = ResponsibleGroup.query.filter_by(access_level=self.role).first()
+            except Exception:
+                group = None
+            if group:
+                perms = GroupPermission.query.filter_by(group_id=group.id).all()
+                if perms:
+                    has_group = True
+                    group_perms = {p.section_key: p for p in perms}
+        individual = set()
+        try:
+            individual = {a.section_key for a in self.allowed_sections}
+        except Exception:
+            pass
+        snap = {'group': group_perms, 'has_group': has_group,
+                'individual': individual, 'access_level': self.access_level}
+        self._perm_snap = snap
+        return snap
+
+    def invalidate_perm_cache(self):
+        self._perm_snap = None
+
     def has_section_access(self, section_key):
         """Check if user has access to a specific section."""
         if self.role == 'admin':
             return True
-        # Check group permissions first (via person_id link)
-        has_group = False
-        if self.person_id:
-            person = Verantwoordelijke.query.get(self.person_id)
-            if person and person.group_id:
-                perm = GroupPermission.query.filter_by(
-                    group_id=person.group_id, section_key=section_key
-                ).first()
-                if perm:
-                    return perm.can_view
-                if GroupPermission.query.filter_by(group_id=person.group_id).first():
-                    has_group = True
-        # Fallback: look up group by role name
-        if not has_group and self.role and self.role != 'admin':
-            group = ResponsibleGroup.query.filter_by(access_level=self.role).first()
-            if group:
-                perm = GroupPermission.query.filter_by(
-                    group_id=group.id, section_key=section_key
-                ).first()
-                if perm:
-                    return perm.can_view
-                if GroupPermission.query.filter_by(group_id=group.id).first():
-                    has_group = True
-        # Check individual allowed_sections (additive on top of group)
-        if any(a.section_key == section_key for a in self.allowed_sections):
+        snap = self._perm_snapshot()
+        perm = snap['group'].get(section_key)
+        if perm is not None:
+            return bool(perm.can_view)
+        if section_key in snap['individual']:
             return True
-        # Has group but section not in group or allowed_sections
-        if has_group:
+        if snap['has_group']:
             return False
-        # Fallback to access_level (only when no group)
-        if self.access_level == 'full':
+        al = snap['access_level']
+        if al == 'full':
             return True
-        if self.access_level == 'limited':
+        if al == 'limited':
             return False
-        # partial or default: check explicit allowed_sections
-        return any(a.section_key == section_key for a in self.allowed_sections)
+        return section_key in snap['individual']
 
 class UserSectionAccess(db.Model):
     __tablename__ = 'user_section_access'
@@ -632,24 +655,35 @@ class ResponsibleAuth(UserMixin):
 
     def has_section_access(self, section_key, action='view'):
         """Check group permissions and individual overrides for this responsible person."""
+        snap = getattr(self, '_perm_snap', None)
+        if snap is None:
+            try:
+                ind = UserSectionAccess.query.filter_by(user_id=0).all()
+                individual = {a.section_key for a in ind if a.section_key.startswith(f'resp_{self._person.id}:')}
+            except Exception:
+                individual = set()
+            group_perms = {}
+            if self._person.group_id:
+                try:
+                    perms = GroupPermission.query.filter_by(group_id=self._person.group_id).all()
+                    group_perms = {p.section_key: p for p in perms}
+                except Exception:
+                    pass
+            snap = {'individual': individual, 'group': group_perms}
+            self._perm_snap = snap
         # 1. Check individual UserSectionAccess (resp_{id}:{section_key})
-        individual_key = f'resp_{self._person.id}:{section_key}'
-        individual = UserSectionAccess.query.filter_by(user_id=0, section_key=individual_key).first()
-        if individual:
+        if f'resp_{self._person.id}:{section_key}' in snap['individual']:
             if action in ('view', 'create', 'edit'):
                 return True
             return False
         # 2. Check group permissions
-        if self._person.group_id:
-            perm = GroupPermission.query.filter_by(
-                group_id=self._person.group_id, section_key=section_key
-            ).first()
-            if perm:
-                if action == 'view': return perm.can_view
-                if action == 'create': return perm.can_create
-                if action == 'edit': return perm.can_edit
-                if action == 'delete': return perm.can_delete
-                return perm.can_view
+        perm = snap['group'].get(section_key)
+        if perm is not None:
+            if action == 'view': return perm.can_view
+            if action == 'create': return perm.can_create
+            if action == 'edit': return perm.can_edit
+            if action == 'delete': return perm.can_delete
+            return perm.can_view
         return False
 
     def check_password(self, password):
@@ -1781,6 +1815,8 @@ class EquipmentMaintenance(db.Model):
     __tablename__ = 'equipment_maintenance'
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(30), unique=True, nullable=False)
+    # 'maintenance' (MULE onderhoud, EQ-) | 'repair' (ремонты, REP-)
+    record_type = db.Column(db.String(20), default='maintenance')
     name = db.Column(db.String(200), nullable=False)
     serial = db.Column(db.String(100))
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))

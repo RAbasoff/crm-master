@@ -8,6 +8,7 @@
         {% if current_user.has_role('admin', 'technician') %}
         <button onclick="document.getElementById('orderModal').style.display='flex'" class="btn btn-sm" style="background:#f39c12;color:white">🛒 {{ _('Order Parts') }}</button>
         <a href="/equipment/new" class="btn btn-primary">+ {{ _('New Record') }}</a>
+        <a href="/equipment/new?type=repair" class="btn btn-primary" style="background:#8e24aa">+ {{ 'New Repair' }}</a>
         {% endif %}
         <button onclick="showReport()" class="btn btn-sm" style="background:#2c3e50;color:white">📊 {{ _('Report') }}</button>
         <button onclick="printSelected()" class="btn btn-sm" style="background:#16a085;color:white">🖨️ {{ _('Print') }}</button>
@@ -137,6 +138,52 @@
                 </div>
             </td>
         </tr>
+        {% endfor %}
+    </table></div>
+</div>
+
+
+<!-- REPAIRS -->
+<div class="card" style="padding:0;margin-top:16px">
+    <div style="padding:12px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0;font-size:15px">🧰 {{ _('Repairs') }} ({{ repairs_count or 0 }})</h2>
+        {% if current_user.has_role('admin', 'technician') %}
+        <a href="/equipment/new?type=repair" class="btn btn-sm" style="background:#8e24aa;color:white">+ {{ _('New Repair') }}</a>
+        {% endif %}
+    </div>
+    <div class="table-wrap"><table>
+        <tr>
+            <th>{{ _('Number') }}</th>
+            <th>{{ _('Date') }}</th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Serial') }}</th>
+            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Reason') }}</th>
+            <th>{{ _('Parts') }}</th>
+            <th>{{ _('Next') }}</th>
+            <th>{{ _('Periodicity') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+        {% for r in repairs %}
+        <tr>
+            <td><a href="/equipment/{{ r.id }}" style="color:#8e24aa;font-weight:600">{{ r.number }}</a></td>
+            <td>{{ r.date.strftime('%d-%m-%Y') if r.date else '—' }}</td>
+            <td>{{ r.name }}</td>
+            <td style="font-size:12px">{{ r.serial or '—' }}</td>
+            <td>{{ r.machine.name if r.machine else '—' }}</td>
+            <td style="font-size:12px">{{ (r.reason or '')[:60] }}{% if r.reason and r.reason|length > 60 %}…{% endif %}</td>
+            <td>{{ r.parts|length if r.parts is defined else '—' }}</td>
+            <td>{{ r.next_date.strftime('%d-%m-%Y') if r.next_date else '—' }}</td>
+            <td>{{ r.periodicity or '—' }}</td>
+            <td style="white-space:nowrap">
+                <a href="/equipment/{{ r.id }}" class="btn btn-sm" style="background:#eee;font-size:11px">👁</a>
+                {% if current_user.has_role('admin', 'technician') %}
+                <a href="/equipment/{{ r.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">✏️</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
         {% endfor %}
     </table></div>
 </div>

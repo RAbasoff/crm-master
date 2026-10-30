@@ -79,7 +79,18 @@ def director_only(*names):
         return decorated_function
     return decorator
 
-def get_user_group_permissions(user):
+_group_perm_cache = {}   # user_id -> (expires_at, {section_key: GroupPermission})
+
+
+def invalidate_group_perm_cache(user_id=None):
+    """Сброс кэша прав (после смены доступов в настройках)."""
+    if user_id is None:
+        _group_perm_cache.clear()
+    else:
+        _group_perm_cache.pop(user_id, None)
+
+
+def _load_user_group_permissions(user):
     """Get permissions from user's group (via person_id link or role fallback)"""
     if user.person_id:
         person = Verantwoordelijke.query.get(user.person_id)
@@ -93,6 +104,26 @@ def get_user_group_permissions(user):
             perms = GroupPermission.query.filter_by(group_id=group.id).all()
             return {p.section_key: p for p in perms}
     return {}
+
+
+def get_user_group_permissions(user):
+    """Get permissions from user's group (via person_id link or role fallback).
+
+    Кэш 30 сек: раньше каждый вызов (30+ на страницу в sidebar) шёл в SQL.
+    """
+    import time as _time
+    uid = getattr(user, 'id', None)
+    now = _time.time()
+    if uid is not None:
+        hit = _group_perm_cache.get(uid)
+        if hit and hit[0] > now:
+            return hit[1]
+    perms = _load_user_group_permissions(user)
+    if uid is not None:
+        if len(_group_perm_cache) > 300:
+            _group_perm_cache.clear()
+        _group_perm_cache[uid] = (now + 30, perms)
+    return perms
 
 def user_has_section_access(section_key, action='view'):
     # Admin always has full access

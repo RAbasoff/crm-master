@@ -92,10 +92,10 @@
 {% if eq.photos %}
 <div class="card" style="margin-top:16px">
     <h2>📷 {{ _('Photos') }} ({{ eq.photos|length }})</h2>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;gap:10px;flex-wrap:wrap" data-gallery>
         {% for p in eq.photos %}
         <div>
-            <img src="/static/uploads/{{ p.filename }}" style="width:140px;height:140px;object-fit:cover;border-radius:10px;border:1px solid #eee;cursor:pointer" onclick="window.open(this.src)" title="{{ p.filename }}">
+            <img src="/static/uploads/{{ p.filename }}" style="width:140px;height:140px;object-fit:cover;border-radius:10px;border:1px solid #eee;cursor:pointer" onclick="openPhotoViewer(this)" title="{{ p.filename }}">
             {% if p.uploaded_at %}<div style="font-size:10px;color:#999;text-align:center;margin-top:2px">{{ p.uploaded_at.strftime('%d.%m.%Y') }}</div>{% endif %}
         </div>
         {% endfor %}

@@ -12,9 +12,10 @@
     .eq-form .form-row { grid-template-columns: 1fr; }
 }
 </style>
-<h1>{{ _('Edit Mule') + ': ' + eq.number if eq else _('New Mule Maintenance') }}</h1>
+<h1>{% if record_type|default('maintenance') == 'repair' %}{{ _('Edit Repair') + ': ' + eq.number if eq else _('New Repair') }}{% else %}{{ _('Edit Mule') + ': ' + eq.number if eq else _('New Mule Maintenance') }}{% endif %}</h1>
 <div class="card eq-form">
     <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="record_type" value="{{ record_type or (eq.record_type if eq else '') or 'maintenance' }}">
         <div class="form-row">
             <div class="form-group"><label>{{ _('Equipment Name') }} *</label><input type="text" name="name" value="{{ eq.name if eq else '' }}" required placeholder="Mule-01, Press-02..."></div>
             <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial" value="{{ eq.serial if eq and eq.serial else '' }}" placeholder="SN-12345"></div>
@@ -119,10 +120,10 @@
                 </label>
             </div>
             {% if eq and eq.photos %}
-            <div id="existingPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <div id="existingPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" data-gallery>
                 {% for p in eq.photos %}
                 <div style="position:relative">
-                    <img src="/static/uploads/{{ p.filename }}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee" onclick="window.open(this.src)" title="{{ p.filename }}">
+                    <img src="/static/uploads/{{ p.filename }}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee" onclick="openPhotoViewer(this)" title="{{ p.filename }}">
                     <button type="button" onclick="deletePhoto({{ p.id }})" style="position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:20px;text-align:center">✕</button>
                 </div>
                 {% endfor %}

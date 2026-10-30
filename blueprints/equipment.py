@@ -16,11 +16,13 @@ from utils import ensure_fpdf, find_pdf_font, log_audit, log_system, role_requir
 
 bp = Blueprint('equipment', __name__)
 
-def gen_eq_number():
+def gen_eq_number(record_type='maintenance'):
     from utils import next_number_suffix
     day = datetime.utcnow().strftime('%Y%m%d')
-    num = next_number_suffix(EquipmentMaintenance, 'number', f'EQ-{day}')
-    return f'EQ-{day}-{num:04d}'
+    # нумерация по подобию MULE onderhoud: EQ-дата-номер / REP-дата-номер
+    prefix = 'REP' if record_type == 'repair' else 'EQ'
+    num = next_number_suffix(EquipmentMaintenance, 'number', f'{prefix}-{day}')
+    return f'{prefix}-{day}-{num:04d}'
 
 
 def gen_eq_order_number():
@@ -34,13 +36,19 @@ def gen_eq_order_number():
 @login_required
 @role_required('admin', 'director', 'technician')
 def equipment_list():
-    q = EquipmentMaintenance.query
+    q = EquipmentMaintenance.query.filter(EquipmentMaintenance.record_type.isnot('repair'))
     serial = request.args.get('serial', '').strip()
     if serial:
         q = q.filter(EquipmentMaintenance.serial.ilike(f'%{sanitize_like(serial)}%'))
     page = request.args.get('page', 1, type=int)
     pagination = q.order_by(EquipmentMaintenance.date.desc()).paginate(page=page, per_page=25, error_out=False)
     records = pagination.items
+    # раздел «Ремонты» — та же информация, что и в обслуживании
+    repairs_q = EquipmentMaintenance.query.filter(EquipmentMaintenance.record_type == 'repair')
+    if serial:
+        repairs_q = repairs_q.filter(EquipmentMaintenance.serial.ilike(f'%{sanitize_like(serial)}%'))
+    repairs_count = repairs_q.count()
+    repairs = repairs_q.order_by(EquipmentMaintenance.date.desc()).limit(25).all()
     orders = EquipmentPartOrder.query.order_by(EquipmentPartOrder.created_at.desc()).limit(20).all()
     machines = Machine.query.order_by(Machine.name).all()
     # Find warehouse items linked to mule maintenance parts that are low or out of stock
@@ -51,7 +59,7 @@ def equipment_list():
         VoorraadItem.id.in_(used_wh_ids),
         VoorraadItem.hoeveelheid <= VoorraadItem.minimum
     ).order_by(VoorraadItem.naam).all() if used_wh_ids else []
-    return render_template('equipment.html', pagination=pagination, records=records, orders=orders, machines=machines, serial=serial, low_stock_parts=low_stock_parts)
+    return render_template('equipment.html', pagination=pagination, records=records, orders=orders, machines=machines, serial=serial, low_stock_parts=low_stock_parts, repairs=repairs, repairs_count=repairs_count)
 
 
 @bp.route('/equipment/report')
@@ -441,8 +449,10 @@ def equipment_new():
         except (ValueError, KeyError):
             flash(_('Invalid date format'), 'error')
             return redirect(url_for('equipment.equipment_new'))
+        rec_type = request.form.get('record_type') or ('repair' if request.args.get('type') == 'repair' else 'maintenance')
         eq = EquipmentMaintenance(
-            number=gen_eq_number(),
+            number=gen_eq_number(rec_type),
+            record_type=rec_type,
             name=request.form['name'],
             serial=request.form.get('serial', ''),
             machine_id=safe_int(request.form.get('machine_id')) or None,
@@ -511,7 +521,7 @@ def equipment_new():
         return redirect(url_for('equipment.equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
-    return render_template('equipment_form.html', eq=None, machines=machines, warehouse_items=warehouse_items)
+    return render_template('equipment_form.html', eq=None, machines=machines, warehouse_items=warehouse_items, record_type=request.args.get('type') or request.form.get('record_type') or 'maintenance')
 
 
 @bp.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
@@ -584,7 +594,7 @@ def equipment_edit(eq_id):
         return redirect(url_for('equipment.equipment_list'))
     machines = Machine.query.order_by(Machine.name).all()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
-    return render_template('equipment_form.html', eq=eq, machines=machines, warehouse_items=warehouse_items)
+    return render_template('equipment_form.html', eq=eq, machines=machines, warehouse_items=warehouse_items, record_type=eq.record_type or 'maintenance')
 
 
 @bp.route('/equipment/<int:eq_id>/delete', methods=['POST'])

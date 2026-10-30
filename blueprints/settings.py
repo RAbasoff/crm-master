@@ -168,6 +168,11 @@ def settings_user_access(user_id):
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(request.referrer or '/')
+    try:
+        from security import invalidate_group_perm_cache
+        invalidate_group_perm_cache(user_id)
+    except Exception:
+        pass
     log_audit('update', 'user_access', u.id, f'Updated access for {u.username}')
     return jsonify({'ok': True})
 
@@ -200,6 +205,11 @@ def settings_responsible_access():
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(request.referrer or '/')
+    try:
+        from security import invalidate_group_perm_cache
+        invalidate_group_perm_cache()
+    except Exception:
+        pass
     log_audit('update', 'responsible_access', 0, f'Updated access for {len(data)} responsible persons')
     return jsonify({'ok': True})
 
