@@ -16,6 +16,34 @@ from sqlalchemy import func, case
 
 bp = Blueprint('api', __name__)
 
+
+@bp.route('/api/version')
+@login_required
+def api_version():
+    """Версия системы и описание обновлений новее since= (для окна обновлений)."""
+    from config import APP_VERSION
+    since = request.args.get('since') or ''
+    lang = getattr(g, 'lang', None) or 'nl'
+
+    def vkey(v):
+        try:
+            return tuple(int(x) for x in str(v).split('.'))
+        except Exception:
+            return ()
+
+    import json as _json
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'whats_new.json')
+    try:
+        data = _json.load(open(path, encoding='utf-8'))
+    except Exception:
+        data = {}
+    updates = []
+    for ver, notes in (data or {}).items():
+        if vkey(ver) > vkey(since):
+            updates.append({'version': ver, 'notes': notes.get(lang) or notes.get('nl') or notes.get('en') or []})
+    updates.sort(key=lambda u: vkey(u['version']))
+    return jsonify({'version': APP_VERSION, 'updates': updates})
+
 @bp.route('/machines/<int:machine_id>/qr')
 @login_required
 def machine_qr_generate(machine_id):

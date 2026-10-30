@@ -6858,3 +6858,18 @@ msgid ""
 msgstr ""
 "Даты предложены автоматически — правьте при необходимости. По машинам с "
 "планами стоят реальные даты; пустые кварталы разнесены равномерно."
+
+msgid "Update available"
+msgstr "Доступно обновление"
+
+msgid "Click to view changes"
+msgstr "Нажмите, чтобы посмотреть изменения"
+
+msgid "New version"
+msgstr "Новая версия"
+
+msgid "Updates take effect after restarting the app"
+msgstr "Обновления вступают в силу после перезагрузки приложения"
+
+msgid "Update"
+msgstr "Обновить"

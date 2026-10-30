@@ -6675,3 +6675,15 @@ msgid ""
 msgstr ""
 "Data zijn automatisch voorgesteld — pas aan waar nodig. Machines met plannen"
 " gebruiken echte data; lege kwartalen zijn gelijkmatig verdeeld."
+
+msgid "Click to view changes"
+msgstr "Klik om wijzigingen te bekijken"
+
+msgid "New version"
+msgstr "Nieuwe versie"
+
+msgid "Updates take effect after restarting the app"
+msgstr "Updates worden actief na herstart van de app"
+
+msgid "Update"
+msgstr "Bijwerken"

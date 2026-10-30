@@ -1061,6 +1061,55 @@
         updateNotifCount();
         setInterval(updateNotifCount, 15000);
 
+        // ── Обновления системы: уведомление → окно с описанием → «Обновить» ──
+        window.APP_VERSION = {{ APP_VERSION|tojson }};
+        function checkAppUpdate() {
+            if (!window.APP_VERSION) return;
+            fetch('/api/version?since=' + encodeURIComponent(window.APP_VERSION))
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d || !d.updates || !d.updates.length) return;
+                    if (document.getElementById('updateToast')) return;
+                    var cont = document.querySelector('.toast-container') || document.body;
+                    var box = document.createElement('div');
+                    box.id = 'updateToast';
+                    box.style.cssText = 'cursor:pointer;background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.28);font-size:13px;max-width:330px;border-left:4px solid #27ae60;text-align:left';
+                    box.textContent = '⬆️ {{ _("Update available") }} — ' + (d.version || '') + '. {{ _("Click to view changes") }}';
+                    box.onclick = function () { openUpdateModal(d); };
+                    cont.appendChild(box);
+                })
+                .catch(function () {});
+        }
+        function openUpdateModal(d) {
+            var m = document.getElementById('updateModal');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'updateModal';
+                m.style.cssText = 'display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px';
+                document.body.appendChild(m);
+            }
+            var html = '<div style="background:#fff;border-radius:16px;max-width:460px;width:100%;padding:22px;text-align:left">'
+                + '<h3 style="margin:0 0 10px">⬆️ {{ _("New version") }} ' + (d.version || '') + '</h3>'
+                + '<div style="max-height:52vh;overflow:auto">';
+            (d.updates || []).forEach(function (u) {
+                html += '<div style="margin:0 0 12px"><b>' + u.version + '</b><ul style="margin:6px 0 0 18px;padding:0">';
+                (u.notes || []).forEach(function (n) { html += '<li style="margin:4px 0">' + n + '</li>'; });
+                html += '</ul></div>';
+            });
+            html += '</div><p style="color:#888;font-size:12px;margin:10px 0">{{ _("Updates take effect after restarting the app") }}</p>'
+                + '<div style="display:flex;gap:8px">'
+                + '<button id="updateDoBtn" style="flex:1;background:#27ae60;color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">{{ _("Update") }}</button>'
+                + '<button id="updateLaterBtn" style="flex:1;background:#eee;border:none;padding:13px;border-radius:10px;font-size:15px;cursor:pointer">{{ _("Later") }}</button>'
+                + '</div></div>';
+            m.innerHTML = html;
+            m.style.display = 'flex';
+            document.getElementById('updateDoBtn').onclick = function () { location.reload(); };
+            document.getElementById('updateLaterBtn').onclick = function () { m.style.display = 'none'; };
+            m.onclick = function (e) { if (e.target === m) m.style.display = 'none'; };
+        }
+        checkAppUpdate();
+        setInterval(checkAppUpdate, 600000);
+
         // Admin: switch user
         function switchUser(userId) {
             if (!userId) return;

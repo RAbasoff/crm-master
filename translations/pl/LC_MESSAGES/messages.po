@@ -6432,3 +6432,18 @@ msgid ""
 msgstr ""
 "Daty zaproponowano automatycznie — popraw w razie potrzeby. Maszyny z "
 "planami mają prawdziwe daty; puste kwartały rozłożono równomiernie."
+
+msgid "Update available"
+msgstr "Dostępna aktualizacja"
+
+msgid "Click to view changes"
+msgstr "Kliknij, aby zobaczyć zmiany"
+
+msgid "New version"
+msgstr "Nowa wersja"
+
+msgid "Updates take effect after restarting the app"
+msgstr "Aktualizacje działają po ponownym uruchomieniu aplikacji"
+
+msgid "Update"
+msgstr "Aktualizuj"

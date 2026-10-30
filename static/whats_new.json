@@ -1,0 +1,54 @@
+{
+  "2.15.8": {
+    "ru": [
+      "Нумерация TWO теперь сквозная по всей системе — порядковый номер растёт и не сбрасывается",
+      "Название приложения: ProMaster CRM - TechnicheDienst",
+      "TWO: список другого оборудования теперь доступен при редактировании",
+      "Уведомления на телефонах: подписка восстанавливается автоматически"
+    ],
+    "nl": [
+      "TWO-nummering is nu doorlopend in het systeem — het volgnummer groeit en wordt niet gereset",
+      "Applicatienaam: ProMaster CRM - TechnicheDienst",
+      "TWO: lijst met overige apparatuur nu ook bij bewerken beschikbaar",
+      "Telefoonmeldingen: abonnement wordt automatisch hersteld"
+    ],
+    "en": [
+      "TWO numbers are now system-wide sequential — never reset",
+      "App name: ProMaster CRM - TechnicheDienst",
+      "TWO: other-equipment list now available when editing",
+      "Phone notifications: subscription recovers automatically"
+    ],
+    "pl": [
+      "Numeracja TWO jest teraz ciągła w całym systemie — numer rośnie i nie jest resetowany",
+      "Nazwa aplikacji: ProMaster CRM - TechnicheDienst",
+      "TWO: lista pozostałego sprzętu dostępna również przy edycji",
+      "Powiadomienia na telefonie: subskrypcja jest automatycznie przywracana"
+    ]
+  },
+  "2.15.7": {
+    "ru": [
+      "Квартальный график ТО на следующий год: по цехам и алфавиту, периоды 2-4 дня, печать A4/A3",
+      "Права доступа: роль Director по матрице, кнопки скрыты при отсутствии прав",
+      "Оповещения: заявителю — создана/прочитана/решена/закрыта, директору — своё",
+      "Ускорение работы: кнопки отвечают мгновенно"
+    ],
+    "nl": [
+      "Kwartaal onderhoudsplanning voor volgend jaar: per afdeling alfabetisch, periodes 2-4 dagen, printen A4/A3",
+      "Toegangsrechten: Director-rol volgens matrix, verborgen knoppen zonder rechten",
+      "Meldingen: aanmelder — aangemaakt/gelezen/opgelost/gesloten, directeur — eigen overzicht",
+      "Snellere werking: knoppen reageren direct"
+    ],
+    "en": [
+      "Quarterly maintenance plan for next year: by workshop, alphabetical, 2-4 day periods, A4/A3 print",
+      "Access rights: Director role by matrix, buttons hidden without permission",
+      "Notifications: reporter lifecycle, director overview",
+      "Faster UI: buttons respond instantly"
+    ],
+    "pl": [
+      "Kwartalny plan przeglądów na przyszły rok: według działów alfabetycznie, okresy 2-4 dni, druk A4/A3",
+      "Uprawnienia: rola Director według macierzy, ukryte przyciski bez uprawnień",
+      "Powiadomienia: cykl zgłoszenia, osobny widok dyrektora",
+      "Szybsze działanie: przyciski reagują natychmiast"
+    ]
+  }
+}
