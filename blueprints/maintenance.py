@@ -854,12 +854,15 @@ def _yearly_to_chart(year):
         for q in range(4):
             d0 = sorted(q_dates[q])[0]
             quarters.append(_period_label(d0, 3))
+        loc = getattr(obj, 'installation_location', None)
+        if loc and str(loc).strip().lower() in ('none', 'null', '-', '—'):
+            loc = None
         rows.append({
             'kind': kind,
             'tid': obj.id,
             'name': obj.name,
             'sub': sub,
-            'loc': getattr(obj, 'installation_location', None),
+            'loc': loc,
             'section': sec,
             'tasks': tasks,
             'quarters': quarters,
