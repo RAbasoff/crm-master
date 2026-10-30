@@ -736,7 +736,7 @@ def two_edit(two_id):
     ).order_by(Monteur.naam).all()
     machines = Machine.query.order_by(Machine.name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
-    return render_template('two_form.html', two=two, faults=faults, workers=workers, machines=machines, sections=sections)
+    return render_template('two_form.html', two=two, faults=faults, workers=workers, machines=machines, equipment_list=Equipment.query.order_by(Equipment.name).all(), sections=sections)
 
 @bp.route('/two/<int:two_id>/complete', methods=['POST'])
 @login_required
