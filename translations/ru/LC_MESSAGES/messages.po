@@ -6873,3 +6873,11 @@ msgstr "Обновления вступают в силу после перез�
 
 msgid "Update"
 msgstr "Обновить"
+
+#: static/js/base-app.js:0
+msgid "The program will be restarted"
+msgstr "Программа будет перезагружена"
+
+#: static/js/base-app.js:0
+msgid "Restart now"
+msgstr "Перезагрузить сейчас"

@@ -318,33 +318,27 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
         updateNotifCount();
         setInterval(updateNotifCount, 15000);
 
-        // ── Обновления системы: уведомление → окно с описанием → «Обновить» ──
+        // ── Обновления: блокирующее окно при открытии → «Обновить» →
+        //    предупреждение о перезагрузке → рестарт. Без обновления окно
+        //    закрыть нельзя; изменения вступают в силу после перезагрузки. ──
         window.APP_VERSION = window.__BOOT.APP_VERSION;
         function checkAppUpdate() {
             if (!window.APP_VERSION) return;
+            if (document.getElementById('updateModal')) return;
             fetch('/api/version?since=' + encodeURIComponent(window.APP_VERSION))
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
                     if (!d || !d.updates || !d.updates.length) return;
-                    if (document.getElementById('updateToast')) return;
-                    var cont = document.querySelector('.toast-container') || document.body;
-                    var box = document.createElement('div');
-                    box.id = 'updateToast';
-                    box.style.cssText = 'cursor:pointer;background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.28);font-size:13px;max-width:330px;border-left:4px solid #27ae60;text-align:left';
-                    box.textContent = '⬆️ ' + __T('Update available') + ' — ' + (d.version || '') + '. ' + __T('Click to view changes');
-                    box.onclick = function () { openUpdateModal(d); };
-                    cont.appendChild(box);
+                    openUpdateModal(d);
                 })
                 .catch(function () {});
         }
         function openUpdateModal(d) {
-            var m = document.getElementById('updateModal');
-            if (!m) {
-                m = document.createElement('div');
-                m.id = 'updateModal';
-                m.style.cssText = 'display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px';
-                document.body.appendChild(m);
-            }
+            if (document.getElementById('updateModal')) return;
+            var m = document.createElement('div');
+            m.id = 'updateModal';
+            m.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:16px';
+            // Окно без закрытия: фон, Esc и «позже» не работают — обновление обязательно
             var html = '<div style="background:#fff;border-radius:16px;max-width:460px;width:100%;padding:22px;text-align:left">'
                 + '<h3 style="margin:0 0 10px">⬆️ ' + __T('New version') + ' ' + (d.version || '') + '</h3>'
                 + '<div style="max-height:52vh;overflow:auto">';
@@ -353,16 +347,22 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                 (u.notes || []).forEach(function (n) { html += '<li style="margin:4px 0">' + n + '</li>'; });
                 html += '</ul></div>';
             });
-            html += '</div><p style="color:#888;font-size:12px;margin:10px 0">' + __T('Updates take effect after restarting the app') + '</p>'
-                + '<div style="display:flex;gap:8px">'
-                + '<button id="updateDoBtn" style="flex:1;background:#27ae60;color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">' + __T('Update') + '</button>'
-                + '<button id="updateLaterBtn" style="flex:1;background:#eee;border:none;padding:13px;border-radius:10px;font-size:15px;cursor:pointer">' + __T('Later') + '</button>'
-                + '</div></div>';
+            html += '</div>'
+                + '<button id="updateDoBtn" style="width:100%;background:#27ae60;color:#fff;border:none;padding:14px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px">' + __T('Update') + '</button>'
+                + '</div>';
             m.innerHTML = html;
-            m.style.display = 'flex';
-            document.getElementById('updateDoBtn').onclick = function () { location.reload(); };
-            document.getElementById('updateLaterBtn').onclick = function () { m.style.display = 'none'; };
-            m.onclick = function (e) { if (e.target === m) m.style.display = 'none'; };
+            document.body.appendChild(m);
+            document.body.style.overflow = 'hidden';
+            document.getElementById('updateDoBtn').onclick = function () { showRestartWarning(m); };
+        }
+        function showRestartWarning(m) {
+            m.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:24px;text-align:center">'
+                + '<div style="font-size:38px;margin-bottom:8px">🔄</div>'
+                + '<h3 style="margin:0 0 8px">' + __T('The program will be restarted') + '</h3>'
+                + '<p style="color:#888;font-size:13px;margin:0 0 18px">' + __T('Updates take effect after restarting the app') + '</p>'
+                + '<button id="updateRestartBtn" style="width:100%;background:#2c3e50;color:#fff;border:none;padding:14px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer">' + __T('Restart now') + '</button>'
+                + '</div>';
+            document.getElementById('updateRestartBtn').onclick = function () { location.reload(); };
         }
         checkAppUpdate();
         setInterval(checkAppUpdate, 600000);

@@ -6687,3 +6687,11 @@ msgstr "Updates worden actief na herstart van de app"
 
 msgid "Update"
 msgstr "Bijwerken"
+
+#: static/js/base-app.js:0
+msgid "The program will be restarted"
+msgstr "Het programma wordt opnieuw opgestart"
+
+#: static/js/base-app.js:0
+msgid "Restart now"
+msgstr "Nu herstarten"
