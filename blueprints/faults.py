@@ -13,6 +13,7 @@ from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie, FaultWorkSession, now_local)
 from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
+from logs import create_notifications
 from security import director_only
 
 bp = Blueprint('faults', __name__, url_prefix='/faults')
@@ -377,14 +378,27 @@ def _lang_for(f):
 
 def _notify_reporter_status(f, kind, detail=None):
     """Заявитель: создана / прочитана / решена / закрыта — на его языке."""
+    r = _reporter_row(f, kind, detail)
+    if r:
+        create_notifications([r])
+
+
+def _reporter_row(f, kind, detail=None):
+    """Строка уведомления заявителю (или None)."""
     if not getattr(f, 'reporter_id', None) or kind not in ('created', 'accepted', 'resolved', 'closed'):
-        return
+        return None
     title, msg = _lifecycle_msg(f, kind, detail=detail, lang=_lang_for(f))
-    create_notification(f.reporter_id, title, msg, 'fault', f'/faults/{f.id}')
+    return {'user_id': f.reporter_id, 'title': title, 'message': msg,
+            'type': 'fault', 'link': f'/faults/{f.id}'}
 
 
 def _notify_i18n(user_id, title_msgid, build_msg, link, ntype='fault'):
-    """Уведомление в локали ПОЛУЧАТЕЛЯ: title и msg строятся в force_locale.
+    """Одиночное уведомление в локали ПОЛУЧАТЕЛЯ."""
+    create_notifications([_notify_i18n_row(user_id, title_msgid, build_msg, link, ntype)])
+
+
+def _notify_i18n_row(user_id, title_msgid, build_msg, link, ntype='fault'):
+    """Строка уведомления в локали ПОЛУЧАТЕЛЯ: title и msg строятся в force_locale.
 
     Раньше сообщения фан-аута собирались на языке отправителя —
     получатель видел чужой язык и в списке, и в тосте.
@@ -398,7 +412,7 @@ def _notify_i18n(user_id, title_msgid, build_msg, link, ntype='fault'):
     with force_locale(lang):
         title = _f(title_msgid)
         msg = build_msg(_f)
-    create_notification(user_id, title, msg, ntype, link)
+    return {'user_id': user_id, 'title': title, 'message': msg, 'type': ntype, 'link': link}
 
 
 def _notify_director_status(f, kind, detail=None):
@@ -406,21 +420,29 @@ def _notify_director_status(f, kind, detail=None):
 
     Назначения, склад, отпуска, личные — директору НЕ шлются.
     """
+    create_notifications(_director_rows(f, kind, detail))
+
+
+def _director_rows(f, kind, detail=None):
+    """Строки уведомлений директорам (список, пачкой)."""
     if kind not in ('created', 'paused', 'resolved', 'closed'):
-        return
+        return []
     try:
         from logs import _user_language
     except Exception:
-        _user_language = lambda uid: 'ru'
+        _user_language = lambda uid: 'nl'
+    rows = []
     for d in User.query.filter(User.role == 'director', User.is_active_user == True).all():
         if getattr(f, 'reporter_id', None) and d.id == f.reporter_id:
             continue
         try:
             lang = _user_language(d.id)
         except Exception:
-            lang = 'ru'
+            lang = 'nl'
         title, msg = _lifecycle_msg(f, kind, detail=detail, lang=lang)
-        create_notification(d.id, title, msg, 'fault', f'/faults/{f.id}')
+        rows.append({'user_id': d.id, 'title': title, 'message': msg,
+                     'type': 'fault', 'link': f'/faults/{f.id}'})
+    return rows
 
 _FAULTS_EAGER = (
     joinedload(FaultReport.machine),
@@ -600,10 +622,12 @@ def fault_new():
                     flash(_('Fault created but video upload failed'), 'warning')
 
             _link = url_for('faults.fault_detail', fault_id=f.id)
+            # Все уведомления события — одной пачкой (один commit на диск)
+            _notif_rows = []
             for tech in f.assigned_technicians:
-                _notify_i18n(tech.id, 'Fault assigned to you',
+                _notif_rows.append(_notify_i18n_row(tech.id, 'Fault assigned to you',
                     lambda _f: f"{_f('Machine')}: {target} - {f.title} ({_f('Priority')}: {f.priority}, {_f('Reporter')}: {who})",
-                    _link)
+                    _link))
             # Уведомляем: механиков + админ (+ Peter/Ruslan по имени).
             # Директорам идёт отдельное «ЗАЯВКА СОЗДАНА» — без лишних сообщений.
             notify_ids = set()
@@ -618,12 +642,15 @@ def fault_new():
                 if 'ruslan' in n or 'abasoff' in n:
                     notify_ids.add(u.id)
             for tid in notify_ids:
-                _notify_i18n(tid, 'New fault report',
+                _notif_rows.append(_notify_i18n_row(tid, 'New fault report',
                     lambda _f: f"{_f('Machine')}: {target} - {f.title} ({_f('Reporter')}: {who})",
-                    _link)
+                    _link))
             # Заявитель: «ЗАЯВКА СОЗДАНА: … — время»; директору — то же
-            _notify_reporter_status(f, 'created')
-            _notify_director_status(f, 'created')
+            _r_row = _reporter_row(f, 'created')
+            if _r_row:
+                _notif_rows.append(_r_row)
+            _notif_rows += _director_rows(f, 'created')
+            create_notifications(_notif_rows)
 
             log_audit('create', 'fault', f.id, f'{f.title} — {target} (приоритет: {f.priority}, заявитель: {who})')
             try:
@@ -944,15 +971,17 @@ def fault_assign(fault_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
-    for tech in f.assigned_technicians:
-        _notify_i18n(tech.id, 'Fault assigned to you',
-            lambda _f: f"{_f('Admin assigned fault to you')}: {f.title} ({_f('Machine')}: {f.target_name})",
-            url_for('faults.fault_detail', fault_id=f.id))
+    _a_rows = [_notify_i18n_row(tech.id, 'Fault assigned to you',
+        lambda _f: f"{_f('Admin assigned fault to you')}: {f.title} ({_f('Machine')}: {f.target_name})",
+        url_for('faults.fault_detail', fault_id=f.id)) for tech in f.assigned_technicians]
     # Заявителю: ПРОЧИТАНА (назначение = заявка принята в работу)
     try:
-        _notify_reporter_status(f, 'accepted')
+        _ar = _reporter_row(f, 'accepted')
+        if _ar:
+            _a_rows.append(_ar)
     except Exception:
         pass
+    create_notifications(_a_rows)
     log_audit('assign', 'fault', f.id, f'{f.title} → {", ".join(names)}')
     flash(_('Fault assigned to') + ' ' + (', '.join(names)), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -974,13 +1003,13 @@ def fault_resolve(fault_id):
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('resolve', 'fault', f.id, f'{f.title} — {f.target_name}')
     # Уведомить админов: заявка ждёт закрытия (директору идёт «РЕШЕНО» из _set_fault_status)
-    for head in User.query.filter(User.role == 'admin', User.is_active_user == True).all():
-        if head.id != current_user.id:
-            create_notification(head.id, 'Fault resolved — awaiting close',
-                f"#{f.id} {f.title} — {_('Resolved by')} {current_user.display_name or current_user.username}. {_('Please verify and close')}.",
-                'info',
-                url_for('faults.fault_detail', fault_id=f.id)
-            )
+    _h_rows = [{'user_id': head.id, 'title': 'Fault resolved — awaiting close',
+                'message': f"#{f.id} {f.title} — {_('Resolved by')} {current_user.display_name or current_user.username}. {_('Please verify and close')}.",
+                'type': 'info',
+                'link': url_for('faults.fault_detail', fault_id=f.id)}
+               for head in User.query.filter(User.role == 'admin', User.is_active_user == True).all()
+               if head.id != current_user.id]
+    create_notifications(_h_rows)
     flash(_('Fault report resolved') + '. ' + _('Awaiting close by head'), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
 

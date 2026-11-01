@@ -9,6 +9,7 @@ from flask_babel import gettext as _
 
 from models import db, Notification, MachinePart, VoorraadItem, User, UserReminder, now_local
 from utils import role_required, safe_commit, create_notification
+from logs import create_notifications
 
 bp = Blueprint('notifications', __name__)
 
@@ -161,10 +162,10 @@ def reminder_new():
         flash(_('Save failed'), 'error')
         return redirect(url_for('notifications.reminders'))
 
-    # Уведомления получателям (заголовок «Напоминание»)
-    for u in r.targets:
-        if u.id != current_user.id:
-            create_notification(u.id, 'Reminder', title, 'info', '/reminders')
+    # Уведомления получателям (заголовок «Напоминание») — одной пачкой
+    create_notifications([{'user_id': u.id, 'title': 'Reminder', 'message': title,
+                           'type': 'info', 'link': '/reminders'}
+                          for u in r.targets if u.id != current_user.id])
     flash(_('Reminder created'), 'success')
     return redirect(url_for('notifications.reminders'))
 

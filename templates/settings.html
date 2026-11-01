@@ -38,7 +38,7 @@
         <div style="margin-bottom:10px;background:#f8f9fa;border-radius:10px;overflow:hidden;border:1px solid #e8ecf1">
             <!-- User header -->
             <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;flex-wrap:wrap"
-                 onclick="var d=document.getElementById('detail-{{ u.id }}');d.style.display=d.style.display==='none'?'block':'none';this.querySelector('.arr').textContent=d.style.display==='none'?'▶':'▼'">
+                 onclick="toggleUserDetail({{ u.id }}, this)">
                 <span class="arr" style="font-size:10px;opacity:0.5">▶</span>
                 <div style="width:32px;height:32px;border-radius:50%;background:{% if u.role=='admin' %}#e74c3c{% elif u.role=='technician' %}#3498db{% elif u.role=='director' %}#f39c12{% else %}#27ae60{% endif %};display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:700">
                     {{ (u.display_name or u.username)[0]|upper }}
@@ -74,22 +74,7 @@
                 <p style="font-size:12px;color:#27ae60;padding:8px 0">⚡ {{ _('Admin has full access to all modules.') }}</p>
                 {% else %}
                 <p style="font-size:11px;color:#888;margin-bottom:8px">{{ _('Toggle section access for this user:') }}</p>
-                <div style="display:flex;flex-wrap:wrap;gap:4px;max-width:100%;overflow:hidden">
-                    {% for section in sections_tree %}
-                    <div style="background:white;border:1px solid #e8ecf1;border-radius:6px;padding:6px 8px">
-                        <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px">{{ section.icon }} {{ section.group }}</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:2px">
-                            {% for key, name, icon in section.entries %}
-                            {% set sec_ok = u.has_section_access(key) %}
-                            <label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;max-width:140px;background:{% if sec_ok %}#e8f5e9{% else %}#f5f5f5{% endif %};border:1px solid {% if sec_ok %}#c8e6c9{% else %}#e8ecf1{% endif %}">
-                                <input type="checkbox" class="user-access-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if sec_ok %}checked{% endif %} style="width:12px;height:12px">
-                                {{ icon }} {{ name }}
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                <div class="matrix-host" data-kind="compact" data-user="{{ u.id }}"></div>
                 <div style="display:flex;gap:6px;margin-top:8px">
                     <button onclick="selectAllUser({{ u.id }}, true)" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#27ae60;color:white">{{ _('Select All') }}</button>
                     <button onclick="selectAllUser({{ u.id }}, false)" class="btn btn-sm" style="font-size:9px;padding:3px 8px;background:#e74c3c;color:white">{{ _('Clear All') }}</button>
@@ -591,6 +576,104 @@
 </div>
 
 <script>
+/* Матрицы доступа собираются на клиенте при первом открытии блока —
+   раньше страница отдавала ~2МБ готового HTML (тысячи чекбоксов). */
+const ACCESS_DATA = {{ access_json|tojson }};
+function _esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c];
+    });
+}
+function buildMatrix(host) {
+    if (!host || host.dataset.built) return;
+    host.dataset.built = '1';
+    const kind = host.dataset.kind;
+    const uid = host.dataset.user;
+    const rid = host.dataset.responsible;
+    let html = '';
+    if (kind === 'compact') {
+        const d = ACCESS_DATA.users[uid];
+        if (!d) return;
+        html = '<div style="display:flex;flex-wrap:wrap;gap:4px;max-width:100%;overflow:hidden">';
+        for (const g of ACCESS_DATA.tree) {
+            html += '<div style="background:white;border:1px solid #e8ecf1;border-radius:6px;padding:6px 8px">' +
+                '<div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px">' + _esc(g.icon) + ' ' + _esc(g.group) + '</div>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:2px">';
+            for (const e of g.entries) {
+                const ok = !!d.access[e[0]];
+                html += '<label style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;max-width:140px;background:' + (ok ? '#e8f5e9' : '#f5f5f5') + ';border:1px solid ' + (ok ? '#c8e6c9' : '#e8ecf1') + '">' +
+                    '<input type="checkbox" class="user-access-' + uid + '" data-user="' + uid + '" data-section="' + _esc(e[0]) + '"' + (ok ? ' checked' : '') + ' style="width:12px;height:12px">' +
+                    ' ' + _esc(e[2]) + ' ' + _esc(e[1]) + '</label>';
+            }
+            html += '</div></div>';
+        }
+        html += '</div>';
+    } else if (kind === 'user') {
+        const d = ACCESS_DATA.users[uid];
+        if (!d) return;
+        html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">🧩 {{ _("Modules") }}</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for (const g of ACCESS_DATA.tree) {
+            html += '<div style="width:100%;margin-bottom:4px"><div style="font-size:11px;color:#666;font-weight:600;margin-bottom:2px">' + _esc(g.icon) + ' ' + _esc(g.group) + '</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+            for (const e of g.entries) {
+                const ok = !!d.access[e[0]];
+                html += '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:' + (ok ? '#e8f5e9' : '#f5f7fa') + ';border:1px solid ' + (ok ? '#a5d6a7' : '#e0e0e0') + '">' +
+                    '<input type="checkbox" class="access-cb user-' + uid + '" data-user="' + uid + '" data-section="' + _esc(e[0]) + '"' + (ok ? ' checked' : '') + ' style="width:14px;height:14px">' +
+                    '<span>' + _esc(e[2]) + ' ' + _esc(e[1]) + '</span></label>';
+            }
+            html += '</div></div>';
+        }
+        html += '</div></div>';
+        html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">🏭 {{ _("Factory sections") }} <small style="font-weight:400;color:#888">({{ _("empty = all sections") }})</small></div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for (const s of ACCESS_DATA.factory_sections) {
+            const ok = d.sections.indexOf(s[0]) >= 0;
+            html += '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:#eef6ff;border:1px solid #b3d4f5">' +
+                '<input type="checkbox" class="sec-cb user-' + uid + '" data-user="' + uid + '" data-section-id="' + s[0] + '"' + (ok ? ' checked' : '') + ' style="width:14px;height:14px">' +
+                '<span>' + _esc(s[1]) + '</span></label>';
+        }
+        html += '</div></div>';
+        html += '<div><div style="font-size:12px;font-weight:700;margin-bottom:6px">🚫 {{ _("Hidden machines (exceptions)") }}</div>' +
+            '<select multiple class="hid-mach user-' + uid + '" data-user="' + uid + '" size="5" style="width:100%;min-height:100px;font-size:11px;padding:6px;border:1px solid #ddd;border-radius:8px">';
+        for (const m of ACCESS_DATA.machines) {
+            const sel = d.hidden.indexOf(m[0]) >= 0;
+            html += '<option value="' + m[0] + '"' + (sel ? ' selected' : '') + '>' + _esc(m[1]) + (m[2] ? ' (' + _esc(m[2]) + ')' : '') + '</option>';
+        }
+        html += '</select><small style="color:#888;font-size:11px">{{ _("Ctrl+click to select several. Selected = hidden from this user.") }}</small></div>';
+    } else if (kind === 'resp') {
+        const d = ACCESS_DATA.responsible[rid];
+        if (!d) return;
+        html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">🏭 {{ _("Factory sections") }}</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for (const s of ACCESS_DATA.factory_sections) {
+            const ok = d.sections.indexOf(s[0]) >= 0;
+            html += '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:#eef6ff;border:1px solid #b3d4f5">' +
+                '<input type="checkbox" class="resp-sec" data-responsible="' + rid + '" data-section-id="' + s[0] + '"' + (ok ? ' checked' : '') + ' style="width:14px;height:14px">' +
+                '<span>' + _esc(s[1]) + '</span></label>';
+        }
+        html += '</div></div>';
+        html += '<div><div style="font-size:12px;font-weight:700;margin-bottom:6px">🧩 {{ _("Modules") }}</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for (const g of ACCESS_DATA.tree) {
+            for (const e of g.entries) {
+                const ok = !!d.access[e[0]];
+                html += '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:' + (ok ? '#e8f5e9' : '#f5f7fa') + ';border:1px solid ' + (ok ? '#a5d6a7' : '#e0e0e0') + '">' +
+                    '<input type="checkbox" class="access-cb resp-' + rid + '" data-responsible="' + rid + '" data-section="' + _esc(e[0]) + '"' + (ok ? ' checked' : '') + ' style="width:14px;height:14px">' +
+                    '<span>' + _esc(e[2]) + ' ' + _esc(e[1]) + '</span></label>';
+            }
+        }
+        html += '</div></div>';
+    }
+    host.innerHTML = html;
+}
+function buildAllMatrices() {
+    document.querySelectorAll('.matrix-host:not([data-built])').forEach(buildMatrix);
+}
+function toggleUserDetail(uid, btn) {
+    const d = document.getElementById('detail-' + uid);
+    if (!d) return;
+    const open = d.style.display === 'none';
+    d.style.display = open ? 'block' : 'none';
+    const arr = btn && btn.querySelector('.arr');
+    if (arr) arr.textContent = open ? '▼' : '▶';
+    if (open) d.querySelectorAll('.matrix-host').forEach(buildMatrix);
+}
 function showTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(el => { el.style.background = '#eee'; el.style.color = '#333'; });
@@ -675,11 +758,13 @@ function saveAllUserAccess() {
 }
 
 function selectAllUser(userId, checked) {
+    document.querySelectorAll('.matrix-host[data-user="' + userId + '"]:not([data-built])').forEach(buildMatrix);
     document.querySelectorAll('.user-access-' + userId).forEach(cb => { cb.checked = checked; });
     document.querySelectorAll('.access-cb.user-' + userId).forEach(cb => { cb.checked = checked; });
 }
 
 function selectAllResp(responsibleId, checked) {
+    document.querySelectorAll('.matrix-host[data-responsible="' + responsibleId + '"]:not([data-built])').forEach(buildMatrix);
     document.querySelectorAll('.access-cb.resp-' + responsibleId).forEach(cb => { cb.checked = checked; });
 }
 
@@ -898,8 +983,10 @@ function toggleAccessBlock(header) {
     body.style.display = open ? 'none' : 'block';
     const arr = header.querySelector('.arr');
     if (arr) arr.textContent = open ? '▶' : '▼';
+    if (!open) body.querySelectorAll('.matrix-host').forEach(buildMatrix);
 }
 function expandAllAccess(open) {
+    if (open) buildAllMatrices();
     document.querySelectorAll('.access-body').forEach(b => { b.style.display = open ? 'block' : 'none'; });
     document.querySelectorAll('.access-user-block .arr').forEach(a => { a.textContent = open ? '▼' : '▶'; });
 }

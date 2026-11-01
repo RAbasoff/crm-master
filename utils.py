@@ -149,6 +149,9 @@ def get_work_hours(user_id, date=None):
     return start, end
 
 
+_at_work_cache = {}  # user_id -> (expires_at, value)
+
+
 def is_user_at_work(user):
     """True, если сейчас рабочее время по графику пользователя.
 
@@ -156,7 +159,26 @@ def is_user_at_work(user):
     (off/sick — нерабочий; full/morning/afternoon — рабочая смена,
     в т.ч. суббота, назначенная начальником ТС / админом),
     утверждённый отпуск. Без активного графика — стандартный Пн-Пт 08:00-17:00.
+
+    Кеш 60 сек: вызывается на КАЖДОМ запросе механика (график и отпуск
+    меняются редко — 2 запроса в секунду на пользователя были лишними).
     """
+    import time as _time
+    uid = getattr(user, 'id', None)
+    now_ts = _time.time()
+    if uid is not None:
+        hit = _at_work_cache.get(uid)
+        if hit and hit[0] > now_ts:
+            return hit[1]
+    val = _is_user_at_work_now(user)
+    if uid is not None:
+        if len(_at_work_cache) > 300:
+            _at_work_cache.clear()
+        _at_work_cache[uid] = (now_ts + 60, val)
+    return val
+
+
+def _is_user_at_work_now(user):
     from models import Vacation
     now = now_local()
     today = now.date()

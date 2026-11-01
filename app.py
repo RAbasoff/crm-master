@@ -1900,6 +1900,7 @@ def automation_check():
     today = now_local().date()
     soon = today + timedelta(days=14)
     results = {'maintenance': 0, 'low_stock': 0, 'contracts': 0, 'cylinders': 0}
+    _auto_rows = []
     try:
         from models import sync_app_time
         sync_app_time()
@@ -1915,7 +1916,8 @@ def automation_check():
             msg = f"{p.machine.name}: {p.name} - {'overdue by ' + str(-days) + ' days' if days < 0 else 'due in ' + str(days) + ' days'}"
             existing = Notification.query.filter_by(user_id=p.responsible_user_id, is_read=False, title=title).first()
             if not existing:
-                create_notification(p.responsible_user_id, title, msg, 'warning', url_for('machines.machine_parts', machine_id=p.machine_id))
+                _auto_rows.append({'user_id': p.responsible_user_id, 'title': title, 'message': msg,
+                                   'type': 'warning', 'link': url_for('machines.machine_parts', machine_id=p.machine_id)})
                 results['maintenance'] += 1
 
     # Check low stock
@@ -1927,7 +1929,8 @@ def automation_check():
             msg = ', '.join([f"{i.naam} ({i.hoeveelheid}/{i.minimum})" for i in low_items[:5]])
             existing = Notification.query.filter_by(user_id=admin.id, is_read=False, title=title).first()
             if not existing:
-                create_notification(admin.id, title, msg, 'warning', url_for('warehouse.warehouse_list'))
+                _auto_rows.append({'user_id': admin.id, 'title': title, 'message': msg,
+                                   'type': 'warning', 'link': url_for('warehouse.warehouse_list')})
                 results['low_stock'] += 1
 
     # Check expiring contracts
@@ -1940,8 +1943,12 @@ def automation_check():
             msg = f"Contract with {c.company_name} expires in {days} days"
             existing = Notification.query.filter_by(user_id=admin.id, is_read=False, title=title).first()
             if not existing:
-                create_notification(admin.id, title, msg, 'warning', url_for('contractors.contractor_detail', contractor_id=c.id))
+                _auto_rows.append({'user_id': admin.id, 'title': title, 'message': msg,
+                                   'type': 'warning', 'link': url_for('contractors.contractor_detail', contractor_id=c.id)})
                 results['contracts'] += 1
+
+    from logs import create_notifications
+    create_notifications(_auto_rows)
 
     log_audit('automation_check', details=json.dumps(results))
     return jsonify({'ok': True, 'results': results})

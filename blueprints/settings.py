@@ -125,12 +125,39 @@ def settings():
     else:
         license_info['days_left'] = None
 
+    # Матрицы доступа собираются на клиенте из JSON (страница была ~2МБ HTML)
+    factory_sections = FactorySection.query.order_by(FactorySection.name).all()
+    all_machines = Machine.query.order_by(Machine.name).all()
+    _entries = [(k, n, i) for sec in SECTIONS_TREE for (k, n, i) in sec.get('entries', [])]
+    access_json = {
+        'tree': [{'icon': s.get('icon'), 'group': s.get('group'),
+                  'entries': [list(e) for e in s.get('entries', [])]} for s in SECTIONS_TREE],
+        'factory_sections': [[s.id, s.name] for s in factory_sections],
+        'machines': [[m.id, m.name, (m.section.name if m.section else '')] for m in all_machines],
+        'users': {},
+        'responsible': {},
+    }
+    for u in users:
+        if u.role == 'admin':
+            continue
+        access_json['users'][u.id] = {
+            'access': {k: bool(u.has_section_access(k)) for (k, n, i) in _entries},
+            'sections': [s.id for s in (getattr(u, 'visible_sections', None) or [])],
+            'hidden': [m.id for m in (getattr(u, 'hidden_machines', None) or [])],
+        }
+    for r in responsible_list:
+        access_json['responsible'][r.id] = {
+            'sections': [s.id for s in (r.resp_sections or [])],
+            'access': {k: (k in responsible_access.get(r.id, [])) for (k, n, i) in _entries},
+        }
+
     return render_template('settings.html', users=users, mechanics=mechanics, sections=sections, groups=groups,
         responsible=responsible, responsible_list=responsible_list,
         responsible_access=responsible_access, machines=machines,
         faults_by_priority=faults_by_priority, faults_by_status=faults_by_status,
         top_machines_faults=top_machines_faults,
-        sections_tree=SECTIONS_TREE, factory_sections=FactorySection.query.order_by(FactorySection.name).all(), all_machines=Machine.query.order_by(Machine.name).all(),
+        sections_tree=SECTIONS_TREE, factory_sections=factory_sections, all_machines=all_machines,
+        access_json=access_json,
         license_info=license_info)
 
 

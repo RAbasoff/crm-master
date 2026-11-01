@@ -84,25 +84,48 @@ def _touch_sub(sid):
             pass
 
 
-def _notify_one(user_id, title, message, ntype, link):
-    """Вставить уведомление (быстро) + Web Push в фоне."""
-    n = Notification(user_id=user_id, title=title, message=message, type=ntype, link=link)
-    db.session.add(n)
-    safe_commit()
+def create_notifications(rows):
+    """Пакетная вставка уведомлений — ОДИН commit на всю пачку.
+
+    rows: [{'user_id', 'title', 'message', 'type', 'link'}, ...]
+    Раньше каждое уведомление коммитилось отдельно: при создании заявки
+    10-12 получателей = 10-12 физических записей на диск.
+    """
+    if not rows:
+        return
     try:
-        # снимок подписок и языка — в контексте запроса; потоки получают готовые данные
+        from models import Notification
+        for r in rows:
+            if not r.get('user_id'):
+                continue
+            db.session.add(Notification(
+                user_id=r['user_id'], title=r['title'], message=r.get('message') or '',
+                type=r.get('type') or 'info', link=r.get('link')))
+        safe_commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return
+    # push — в фоне, сетевая часть без БД
+    try:
         from models import PushSubscription
-        lang = _user_language(user_id)
-        rows = [(s.id, s.endpoint, s.p256dh, s.auth, s.user_id)
-                for s in PushSubscription.query.filter_by(user_id=user_id).all()]
-        for row in rows:
-            _push_pool.submit(_send_push_job, row, title, message, ntype, link, lang)
+        for r in rows:
+            if not r.get('user_id'):
+                continue
+            lang = _user_language(r['user_id'])
+            subs = [(s.id, s.endpoint, s.p256dh, s.auth, s.user_id)
+                    for s in PushSubscription.query.filter_by(user_id=r['user_id']).all()]
+            for sub in subs:
+                _push_pool.submit(_send_push_job, sub, r['title'], r.get('message') or '',
+                                  r.get('type'), r.get('link'), lang)
     except Exception:
         pass
 
 
 def create_notification(user_id, title, message, ntype='info', link=None):
-    """Создать уведомление.
+    """Создать уведомление (одиночное — одна запись, один commit).
 
     title/message хранятся как msgid (англ.) — перевод при показе
     на языке текущего пользователя. Push — на языке получателя.
@@ -110,7 +133,8 @@ def create_notification(user_id, title, message, ntype='info', link=None):
     """
     if not user_id:
         return
-    _notify_one(user_id, title, message, ntype, link)
+    create_notifications([{'user_id': user_id, 'title': title, 'message': message,
+                           'type': ntype, 'link': link}])
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:

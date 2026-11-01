@@ -32,57 +32,9 @@
                 {% endif %}
             </div>
             {% if u.role != 'admin' %}
+            <!-- Матрица (модули/цеха/скрытые станки) собирается на клиенте при открытии -->
             <div class="access-body" style="display:none;padding:12px">
-                <!-- MODULES -->
-                <div style="margin-bottom:12px">
-                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🧩 {{ _('Modules') }}</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        {% for section in sections_tree %}
-                        <div style="width:100%;margin-bottom:4px">
-                            <div style="font-size:11px;color:#666;font-weight:600;margin-bottom:2px">{{ section.icon }} {{ section.group }}</div>
-                            <div style="display:flex;flex-wrap:wrap;gap:6px">
-                                {% for key, name, icon in section.entries %}
-                                <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:{% if u.has_section_access(key) %}#e8f5e9{% else %}#f5f7fa{% endif %};border:1px solid {% if u.has_section_access(key) %}#a5d6a7{% else %}#e0e0e0{% endif %}">
-                                    <input type="checkbox" class="access-cb user-{{ u.id }}" data-user="{{ u.id }}" data-section="{{ key }}" {% if u.has_section_access(key) %}checked{% endif %} style="width:14px;height:14px">
-                                    <span>{{ icon }} {{ name }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- SECTIONS (factory map) -->
-                <div style="margin-bottom:12px">
-                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🏭 {{ _('Factory sections') }}
-                        <small style="font-weight:400;color:#888">({{ _('empty = all sections') }})</small>
-                    </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        {% for s in factory_sections %}
-                        <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:#eef6ff;border:1px solid #b3d4f5">
-                            <input type="checkbox" class="sec-cb user-{{ u.id }}" data-user="{{ u.id }}" data-section-id="{{ s.id }}"
-                                   {% if u.visible_sections and s in u.visible_sections %}checked{% endif %}
-                                   style="width:14px;height:14px">
-                            <span>{{ s.name }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- HIDDEN MACHINES -->
-                <div>
-                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🚫 {{ _('Hidden machines (exceptions)') }}</div>
-                    <select multiple class="hid-mach user-{{ u.id }}" data-user="{{ u.id }}" size="5"
-                            style="width:100%;min-height:100px;font-size:11px;padding:6px;border:1px solid #ddd;border-radius:8px">
-                        {% for m in all_machines %}
-                        <option value="{{ m.id }}" {% if u.hidden_machines and m in u.hidden_machines %}selected{% endif %}>
-                            {{ m.name }}{% if m.section %} ({{ m.section.name }}){% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <small style="color:#888;font-size:11px">{{ _('Ctrl+click to select several. Selected = hidden from this user.') }}</small>
-                </div>
+                <div class="matrix-host" data-kind="user" data-user="{{ u.id }}"></div>
             </div>
             {% endif %}
         </div>
@@ -105,34 +57,7 @@
                 </div>
             </div>
             <div class="access-body" style="display:none;padding:12px">
-                <div style="margin-bottom:12px">
-                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🏭 {{ _('Factory sections') }}</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        {% for s in factory_sections %}
-                        <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:#eef6ff;border:1px solid #b3d4f5">
-                            <input type="checkbox" class="resp-sec" data-responsible="{{ r.id }}" data-section-id="{{ s.id }}"
-                                   {% if s in r.resp_sections %}checked{% endif %}
-                                   style="width:14px;height:14px">
-                            <span>{{ s.name }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div>
-                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🧩 {{ _('Modules') }}</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        {% for section in sections_tree %}
-                        {% for key, name, icon in section.entries %}
-                        <label style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:{% if r.id in responsible_access and key in responsible_access[r.id] %}#e8f5e9{% else %}#f5f7fa{% endif %};border:1px solid {% if r.id in responsible_access and key in responsible_access[r.id] %}#a5d6a7{% else %}#e0e0e0{% endif %}">
-                            <input type="checkbox" class="access-cb resp-{{ r.id }}" data-responsible="{{ r.id }}" data-section="{{ key }}"
-                                   {% if r.id in responsible_access and key in responsible_access[r.id] %}checked{% endif %}
-                                   style="width:14px;height:14px">
-                            <span>{{ icon }} {{ name }}</span>
-                        </label>
-                        {% endfor %}
-                        {% endfor %}
-                    </div>
-                </div>
+                <div class="matrix-host" data-kind="resp" data-responsible="{{ r.id }}"></div>
             </div>
         </div>
         {% endfor %}

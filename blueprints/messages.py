@@ -7,6 +7,7 @@ from flask_babel import gettext as _
 
 from models import db, Message, User, Verantwoordelijke
 from utils import role_required, safe_commit, log_audit, create_notification
+from logs import create_notifications
 
 bp = Blueprint('messages', __name__)
 
@@ -69,6 +70,7 @@ def message_new():
 
         sent = 0
         link = url_for('messages.messages_list')
+        _msg_rows = []
         for rid in uniq:
             m = Message(
                 sender_id=current_user.id,
@@ -78,18 +80,14 @@ def message_new():
                 fault_id=fault_id
             )
             db.session.add(m)
-            try:
-                create_notification(rid, 'New message',
-                    f"{_('From')}: {current_user.name} - {subject}",
-                    'message',
-                    link
-                )
-            except Exception:
-                db.session.rollback()
+            _msg_rows.append({'user_id': rid, 'title': 'New message',
+                'message': f"{_('From')}: {current_user.name} - {subject}",
+                'type': 'message', 'link': link})
             sent += 1
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(request.referrer or '/')
+        create_notifications(_msg_rows)
         msg = _('Message sent to') + f' {sent} ' + _('users')
         if skipped:
             msg += f'. {_("No user account for")}: {", ".join(skipped)}'

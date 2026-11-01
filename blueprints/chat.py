@@ -10,6 +10,7 @@ from flask_babel import gettext as _
 
 from models import db, User, ChatRoom, ChatParticipant, ChatMessage
 from utils import role_required, safe_commit, safe_int, create_notification
+from logs import create_notifications
 
 bp = Blueprint('chat', __name__, url_prefix='/chat')
 
@@ -202,18 +203,18 @@ def api_send():
 
     # Set delivery status for all other participants
     status = {}
+    _chat_rows = []
     for p in ChatParticipant.query.filter_by(room_id=room_id).all():
         if p.user_id != current_user.id:
             status[str(p.user_id)] = 'delivered'
-            # Create notification
-            create_notification(p.user_id, 'New message',
-                f"{current_user.display_name}: {body[:50]}",
-                'chat',
-                url_for('chat.chat_room', room_id=room_id)
-            )
+            _chat_rows.append({'user_id': p.user_id, 'title': 'New message',
+                'message': f"{current_user.display_name}: {body[:50]}",
+                'type': 'chat',
+                'link': url_for('chat.chat_room', room_id=room_id)})
     msg.status_json = json.dumps(status)
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
+    create_notifications(_chat_rows)
 
     return jsonify({
         'ok': True,
