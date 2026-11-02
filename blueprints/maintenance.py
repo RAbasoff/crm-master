@@ -384,15 +384,21 @@ def maintenance_calendar():
             continue
         d0 = mro.next_date.date() if isinstance(mro.next_date, datetime) else mro.next_date
         dates = _occurrences_in_month(d0, (mro.periodicity or ''), month_start, m_last)
-        done_one = mro.status == 'completed'
+        # «Выполнено» — только реально отмеченные даты графика (✅ в календаре).
+        # status записи ('completed' по умолчанию) — состояние самой работы,
+        # а НЕ плана: раньше из-за этого все будущие ТО были зелёными.
+        try:
+            done_set = mro.completed_date_set()
+        except Exception:
+            done_set = set()
+        m_name = (mro.machine.name if mro.machine else mro.number)
         for d in dates:
-            is_due = (d == d0)
-            done = done_one and is_due
+            done = d.isoformat() in done_set
             events.append({
                 'date': d,
                 'type': 'equipment_mro',
                 'part': mro.name[:40],
-                'machine': (mro.machine.name if mro.machine else mro.number),
+                'machine': m_name,
                 'machine_id': mro.machine_id,
                 'equipment_id': None,
                 'part_id': None,
@@ -403,6 +409,28 @@ def maintenance_calendar():
                 'mro_id': mro.id,
                 'record_id': None
             })
+        # выполненные даты остаются зелёными в календаре (даже после сдвига плана)
+        for iso in done_set:
+            try:
+                ld = datetime.strptime(iso, '%Y-%m-%d').date()
+            except Exception:
+                continue
+            if month_start <= ld <= m_last and ld not in dates:
+                events.append({
+                    'date': ld,
+                    'type': 'equipment_mro',
+                    'part': mro.name[:40],
+                    'machine': m_name,
+                    'machine_id': mro.machine_id,
+                    'equipment_id': None,
+                    'part_id': None,
+                    'category': mro.periodicity or 'MRO',
+                    'overdue': False,
+                    'done': True,
+                    'plan_id': None,
+                    'mro_id': mro.id,
+                    'record_id': None
+                })
 
     # Get overdue items (before today) — skip if there's a maintenance record after the due date
     overdue = []
@@ -665,10 +693,29 @@ def maintenance_calendar_complete():
         elif ev_type == 'equipment_mro':
             from models import EquipmentMaintenance
             mro_id = request.form.get('mro_id')
+            event_date = request.form.get('date')
             if mro_id:
                 mro = EquipmentMaintenance.query.get(int(mro_id))
                 if mro:
-                    mro.status = 'completed'
+                    try:
+                        ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else None
+                    except ValueError:
+                        ev_d = None
+                    if ev_d is None:
+                        nd = mro.next_date
+                        ev_d = nd.date() if isinstance(nd, datetime) else nd
+                    if ev_d is None:
+                        ev_d = datetime.utcnow().date()
+                    # 1) отметить именно ЭТУ дату графика выполненной
+                    mro.mark_date_completed(ev_d)
+                    # 2) план продолжается: next_date = следующее вхождение после неё
+                    if (mro.periodicity or '').lower() in ('daily', 'weekly', 'biweekly',
+                                                           'monthly', 'quarterly', 'semiannual', 'yearly'):
+                        nxt = _next_occurrence_after(ev_d, (mro.periodicity or '').lower())
+                        nd = mro.next_date
+                        nd = nd.date() if isinstance(nd, datetime) else nd
+                        if nxt and (nd is None or nxt > nd):
+                            mro.next_date = nxt
                     db.session.commit()
                     flash(_('MRO marked as completed'), 'success')
                 else:
@@ -738,6 +785,17 @@ def _period_label(d0, span):
     d1 = d0 + timedelta(days=span - 1)
     s0, s1 = d0.strftime('%d.%m'), d1.strftime('%d.%m')
     return s0 if s1 == s0 else f'{s0}-{s1}'
+
+
+def _next_occurrence_after(d, rec):
+    """Следующее вхождение расписания после даты d."""
+    step = {'daily': 1, 'weekly': 7, 'biweekly': 14}.get(rec)
+    if step:
+        return d + timedelta(days=step)
+    mstep = {'monthly': 1, 'quarterly': 3, 'semiannual': 6, 'yearly': 12}.get(rec)
+    if mstep:
+        return _add_months(d, mstep)
+    return None
 
 
 def _occurrences_in_month(d0, rec, m_lo, m_hi):

@@ -1826,6 +1826,11 @@ class EquipmentMaintenance(db.Model):
     periodicity = db.Column(db.String(50))
     status = db.Column(db.String(20), default='completed')
     notes = db.Column(db.Text)
+    # JSON-список выполненных дат графика ('YYYY-MM-DD') — отметка «✅» в
+    # календаре ТО. Не путать с status: status — состояние самой записи
+    # обслуживания (по умолчанию 'completed' — работа уже сделана),
+    # а график (next_date) — это ПЛАН следующего обслуживания.
+    completed_dates = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=now_local)
     machine = db.relationship('Machine', backref='equipment_maintenance')
@@ -1833,6 +1838,22 @@ class EquipmentMaintenance(db.Model):
     parts = db.relationship('EquipmentPart', backref='equipment', lazy=True, cascade='all, delete-orphan')
     components = db.relationship('EquipmentComponent', backref='equipment', lazy=True, cascade='all, delete-orphan')
     photos = db.relationship('EquipmentMROPhoto', backref='equipment', lazy=True, cascade='all, delete-orphan')
+
+    def completed_date_set(self):
+        """Множество выполненных дат графика (ISO-строки)."""
+        import json as _json
+        try:
+            return {x for x in _json.loads(self.completed_dates or '[]') if x}
+        except Exception:
+            return set()
+
+    def mark_date_completed(self, d):
+        """Отметить дату графика выполненной (не трогая status записи)."""
+        import json as _json
+        iso = d.isoformat() if hasattr(d, 'isoformat') else str(d)
+        s = self.completed_date_set()
+        s.add(iso)
+        self.completed_dates = _json.dumps(sorted(s))
 
 class EquipmentMROPhoto(db.Model):
     __tablename__ = 'equipment_mro_photo'
