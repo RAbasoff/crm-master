@@ -223,6 +223,33 @@ def _cleanup_legacy_empty():
     return None
 
 
+def _side_pair(cylinders):
+    """Пара [лево, право] для графики дашборда.
+
+    Сторона берётся из поля side (баллон «съезжал» в другую позицию,
+    когда порядок брался из статуса). Без назначенной стороны — свободные
+    слоты заполняются по приоритету: в работе → полный на месте → полный.
+    """
+    left = next((c for c in cylinders if (c.side or '') == 'left'), None)
+    right = next((c for c in cylinders if (c.side or '') == 'right'), None)
+    rest = [c for c in cylinders if c is not left and c is not right]
+
+    def _prio(c):
+        if c.status == 'in_use':
+            return 0
+        if c.status == 'full' and c.installed_at:
+            return 1
+        if c.status == 'full':
+            return 2
+        return 3
+    rest.sort(key=_prio)
+    if left is None and rest:
+        left = rest.pop(0)
+    if right is None and rest:
+        right = rest.pop(0)
+    return [left, right]
+
+
 @bp.route('/')
 @login_required
 def gas_dashboard():
@@ -317,6 +344,8 @@ def gas_dashboard():
                            n2_cylinders=n2_cylinders,
                            co2_cylinders=co2_cylinders,
                            mixed_cylinders=mixed_cylinders,
+                           n2_pair=_side_pair(n2_cylinders),
+                           co2_pair=_side_pair(co2_cylinders),
                            n2_spare=n2_spare,
                            co2_spare=co2_spare,
                            components=components,
