@@ -1,4 +1,26 @@
 {
+  "2.17.0": {
+    "ru": [
+      "Оптимизация: страницы в 1,5–3 раза легче, отклик быстрее; «Настройки» почти мгновенно",
+      "Окно обновления: при запуске показывает список изменений, после подтверждения — перезагрузка",
+      "Mule: график ТО в календаре по периодичности, честная отметка «выполнено» и перенос плана",
+      "Mule: «Список устройств» — модель, серийник, состав, история перемещений, печать и PDF",
+      "Назначение ТО: отдельные списки «Станки / Другое оборудование / Mule», выбор сразу из нескольких",
+      "Календарь: перетаскивание починено; работы не попадают на выходные (только с подтверждением)",
+      "Оповещения: без дублей; голландский для всех, русский — по выбору; iPhone push восстановлен",
+      "Доступ 24/7 для механиков-ответственных (Aristidis)"
+    ],
+    "nl": [
+      "Optimalisatie: pagina's 1,5–3× lichter, snellere reactie; «Instellingen» vrijwel direct",
+      "Update-venster: toont bij start de wijzigingen, na bevestiging — herstart",
+      "Mule: TO-planning in kalender op periodiek schema, eerlijke «voltooid»-markering en planverschuiving",
+      "Mule: «Apparatenlijst» — model, serienummer, samenstelling, verplaatsingsgeschiedenis, print en PDF",
+      "TO toewijzen: aparte lijsten «Machines / Overige apparatuur / Mule», kies uit meerdere tegelijk",
+      "Kalender: slepen gerepareerd; werk komt niet in het weekend (alleen met bevestiging)",
+      "Meldingen: geen duplicaten; Nederlands voor iedereen, Russisch naar keuze; iPhone push hersteld",
+      "24/7 toegang voor monteur-verantwoordelijken (Aristidis)"
+    ]
+  },
   "2.16.1": {
     "ru": [
       "Исправлена критическая ошибка: страницы (календарь ТО и другие) снова открываются без ошибок",
