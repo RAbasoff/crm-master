@@ -976,7 +976,9 @@ function saveDrawLine(){
     showLineProps();
     const name=((document.getElementById('lineName')||{}).value||'').trim()||'Line';
     const desc=((document.getElementById('lineDesc')||{}).value||'').trim();
-    const color=(document.getElementById('lineColor')||{}).value||(document.getElementById('drawColor')||{}).value||'#2980b9';
+    // Цвет — из палитры рисования (drawColor); раньше её перебивал
+    // пустой/чёрный lineColor и выбранный цвет «не применялся»
+    const color=(document.getElementById('drawColor')||{}).value||(document.getElementById('lineColor')||{}).value||'#2980b9';
     const width=parseInt((document.getElementById('lineWidth')||{}).value||'3',10)||getDrawWidth();
     csrfFetch('/api/map/lines',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
@@ -1014,6 +1016,31 @@ function deleteSelectedLine(){
         loadFloorLines();
     });
 }
+
+// ── Цвет применяется сразу при выборе ──
+(function(){
+    let saveTimer = null;
+    function wireColor(id, onPick){
+        const el=document.getElementById(id);
+        if(!el) return;
+        el.addEventListener('input', onPick);
+        el.addEventListener('change', onPick);
+    }
+    // выбранные линии: перекрасить мгновенно + сохранить (с дебаунсом)
+    wireColor('lineColor', function(){
+        if(!SELECTED_LINE) return;
+        const ln=FLOOR_LINES.find(function(x){return x.id===SELECTED_LINE;});
+        if(ln){ ln.color=this.value; redrawLines(); }
+        clearTimeout(saveTimer);
+        saveTimer=setTimeout(function(){ saveSelectedLineMeta(); }, 350);
+    });
+    // палитра рисования: цвет черновика и синхронизация с панелью
+    wireColor('drawColor', function(){
+        const lc=document.getElementById('lineColor');
+        if(lc && !SELECTED_LINE) lc.value=this.value;
+        redrawLines();
+    });
+})();
 function loadFloorLines(){
     return fetch('/api/map/lines').then(function(r){return r.json();}).then(function(d){
         FLOOR_LINES=d||[];
