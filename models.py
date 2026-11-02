@@ -610,6 +610,8 @@ class Verantwoordelijke(db.Model):
     last_login = db.Column(db.DateTime)
     login_count = db.Column(db.Integer, default=0)
     force_change_password = db.Column(db.Boolean, default=False)
+    # Доступ 24/7: не ограничивать рабочими часами (механики-ответственные)
+    work_hours_exempt = db.Column(db.Boolean, default=False)
 
     opdrachten = db.relationship('Opdracht', backref='verantwoordelijke', lazy=True)
     monteur = db.relationship('Monteur', foreign_keys=[monteur_id], backref='linked_persons')
@@ -636,6 +638,9 @@ class ResponsibleAuth(UserMixin):
         self.assigned_machines = []  # responsible persons don't own machines
         self.fault_reports = []
         self.force_change_password = person.force_change_password or False
+        # Доступ 24/7 — без него механика шлюз рабочих часов выкидывает
+        # на /work-hours-block (было у Aris: группа Technician, вход невозможен)
+        self.work_hours_exempt = bool(getattr(person, 'work_hours_exempt', False))
 
         # Derive role from group's access_level (director, technician, user)
         # so @role_required checks work correctly
