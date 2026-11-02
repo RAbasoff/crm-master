@@ -3,9 +3,9 @@
     "ru": [
       "Оптимизация: страницы в 1,5–3 раза легче, отклик быстрее; «Настройки» почти мгновенно",
       "Окно обновления: при запуске показывает список изменений, после подтверждения — перезагрузка",
-      "Mule: график ТО в календаре по периодичности, честная отметка «выполнено» и перенос плана",
+      "Mule: график OH в календаре по периодичности, честная отметка «выполнено» и перенос плана",
       "Mule: «Список устройств» — модель, серийник, состав, история перемещений, печать и PDF",
-      "Назначение ТО: отдельные списки «Станки / Другое оборудование / Mule», выбор сразу из нескольких",
+      "Назначение OH: отдельные списки «Станки / Другое оборудование / Mule», выбор сразу из нескольких",
       "Календарь: перетаскивание починено; работы не попадают на выходные (только с подтверждением)",
       "Оповещения: без дублей; голландский для всех, русский — по выбору; iPhone push восстановлен",
       "Доступ 24/7 для механиков-ответственных (Aristidis)"
@@ -13,9 +13,9 @@
     "nl": [
       "Optimalisatie: pagina's 1,5–3× lichter, snellere reactie; «Instellingen» vrijwel direct",
       "Update-venster: toont bij start de wijzigingen, na bevestiging — herstart",
-      "Mule: TO-planning in kalender op periodiek schema, eerlijke «voltooid»-markering en planverschuiving",
+      "Mule: OH-planning in kalender op periodiek schema, eerlijke «voltooid»-markering en planverschuiving",
       "Mule: «Apparatenlijst» — model, serienummer, samenstelling, verplaatsingsgeschiedenis, print en PDF",
-      "TO toewijzen: aparte lijsten «Machines / Overige apparatuur / Mule», kies uit meerdere tegelijk",
+      "OH toewijzen: aparte lijsten «Machines / Overige apparatuur / Mule», kies uit meerdere tegelijk",
       "Kalender: slepen gerepareerd; werk komt niet in het weekend (alleen met bevestiging)",
       "Meldingen: geen duplicaten; Nederlands voor iedereen, Russisch naar keuze; iPhone push hersteld",
       "24/7 toegang voor monteur-verantwoordelijken (Aristidis)"
@@ -23,7 +23,7 @@
   },
   "2.16.1": {
     "ru": [
-      "Исправлена критическая ошибка: страницы (календарь ТО и другие) снова открываются без ошибок",
+      "Исправлена критическая ошибка: страницы (календарь OH и другие) снова открываются без ошибок",
       "Языки: нидерландский — основной, русский — по выбору в настройках аккаунта; английский и польский удалены",
       "SMS полностью удалён — уведомления только push и email",
       "Тест: начало и окончание работы по заявкам работает стабильно"
@@ -105,7 +105,7 @@
   },
   "2.15.7": {
     "ru": [
-      "Квартальный график ТО на следующий год: по цехам и алфавиту, периоды 2-4 дня, печать A4/A3",
+      "Квартальный график OH на следующий год: по цехам и алфавиту, периоды 2-4 дня, печать A4/A3",
       "Права доступа: роль Director по матрице, кнопки скрыты при отсутствии прав",
       "Оповещения: заявителю — создана/прочитана/решена/закрыта, директору — своё",
       "Ускорение работы: кнопки отвечают мгновенно"

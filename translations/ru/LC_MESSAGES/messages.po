@@ -428,25 +428,25 @@ msgstr "Запчасти"
 
 # Maintenance Calendar
 msgid "Maintenance Calendar"
-msgstr "Календарь ТО"
+msgstr "Календарь OH"
 
 msgid "Maintenance Plans"
-msgstr "Планы ТО"
+msgstr "Планы OH"
 
 msgid "Maintenance plan created"
-msgstr "План ТО создан"
+msgstr "План OH создан"
 
 msgid "Maintenance plan updated"
-msgstr "План ТО обновлён"
+msgstr "План OH обновлён"
 
 msgid "Maintenance plan deleted"
-msgstr "План ТО удалён"
+msgstr "План OH удалён"
 
 msgid "New plan"
 msgstr "Новый план"
 
 msgid "New maintenance plan"
-msgstr "Новый план ТО"
+msgstr "Новый план OH"
 
 msgid "Edit plan"
 msgstr "Редактировать план"
@@ -476,7 +476,7 @@ msgid "Actual End"
 msgstr "Фактическое окончание"
 
 msgid "Next Maintenance"
-msgstr "Следующее ТО"
+msgstr "Следующее OH"
 
 msgid "Executor"
 msgstr "Исполнитель"
@@ -1436,7 +1436,7 @@ msgid "Add Group"
 msgstr "Добавить группу"
 
 msgid "Add Maintenance Record"
-msgstr "Добавить запись о ТО"
+msgstr "Добавить запись о OH"
 
 msgid "Add New"
 msgstr "Добавить новый"
@@ -2147,7 +2147,7 @@ msgid "Delete this item?"
 msgstr "Удалить эту позицию?"
 
 msgid "Delete this machine? All maintenance records will be removed."
-msgstr "Удалить этот станок? Все записи о ТО будут удалены."
+msgstr "Удалить этот станок? Все записи о OH будут удалены."
 
 msgid "Delete this message?"
 msgstr "Удалить это сообщение?"
@@ -2348,13 +2348,13 @@ msgid "Equipment deleted"
 msgstr "Оборудование удалено"
 
 msgid "Equipment maintenance deleted"
-msgstr "ТО оборудования удалено"
+msgstr "OH оборудования удалено"
 
 msgid "Equipment maintenance recorded"
-msgstr "ТО оборудования записано"
+msgstr "OH оборудования записано"
 
 msgid "Equipment maintenance updated"
-msgstr "ТО оборудования обновлено"
+msgstr "OH оборудования обновлено"
 
 msgid "Equipment not found"
 msgstr "Оборудование не найдено"
@@ -2960,31 +2960,31 @@ msgid "Main Fuse (A)"
 msgstr "Главный предохранитель (А)"
 
 msgid "Maint. Calendar"
-msgstr "Календарь ТО"
+msgstr "Календарь OH"
 
 msgid "Maint. Plans"
-msgstr "Планы ТО"
+msgstr "Планы OH"
 
 msgid "Maint. Schedule"
-msgstr "График ТО"
+msgstr "График OH"
 
 msgid "Maintenance & Service"
-msgstr "ТО и обслуживание"
+msgstr "OH и обслуживание"
 
 msgid "Maintenance Notes"
-msgstr "Заметки по ТО"
+msgstr "Заметки по OH"
 
 msgid "Maintenance Plan"
-msgstr "План ТО"
+msgstr "План OH"
 
 msgid "Maintenance Records"
-msgstr "Записи о ТО"
+msgstr "Записи о OH"
 
 msgid "Maintenance marked as completed"
-msgstr "ТО отмечено как завершённое"
+msgstr "OH отмечено как завершённое"
 
 msgid "Maintenance plan created with TWO"
-msgstr "План ТО создан с TWO"
+msgstr "План OH создан с TWO"
 
 msgid "Map Icon"
 msgstr "Иконка на карте"
@@ -3068,7 +3068,7 @@ msgid "Movement type"
 msgstr "Тип движения"
 
 msgid "Mule Maintenance"
-msgstr "ТО Mule"
+msgstr "OH Mule"
 
 msgid "Must change"
 msgstr "Требуется смена"
@@ -3107,7 +3107,7 @@ msgid "New Mule"
 msgstr "Новый Mule"
 
 msgid "New Mule Maintenance"
-msgstr "Новое ТО Mule"
+msgstr "Новое OH Mule"
 
 msgid "New Order"
 msgstr "Новый заказ"
@@ -3167,7 +3167,7 @@ msgid "Next Date"
 msgstr "Следующая дата"
 
 msgid "Next Maintenance Date"
-msgstr "Дата следующего ТО"
+msgstr "Дата следующего OH"
 
 msgid "Next Replacement"
 msgstr "Следующая замена"
@@ -3300,7 +3300,7 @@ msgid "No workers found in Technical Service"
 msgstr "Мастера не найдены в технической службе"
 
 msgid "Non-urgent, scheduled maintenance"
-msgstr "Не срочное, плановое ТО"
+msgstr "Не срочное, плановое OH"
 
 msgid "None / Disconnected"
 msgstr "Нет / Отключено"
@@ -3961,7 +3961,7 @@ msgid "Select items first"
 msgstr "Сначала выберите позиции"
 
 msgid "Select machines for maintenance. Each machine has its own work list."
-msgstr "Выберите станки для ТО. У каждого станка свой список работ."
+msgstr "Выберите станки для OH. У каждого станка свой список работ."
 
 msgid "Select material"
 msgstr "Выберите материал"
@@ -4783,7 +4783,7 @@ msgid "📷 Start Camera"
 msgstr "Включить камеру"
 
 msgid "Maintenance"
-msgstr "ТО"
+msgstr "OH"
 
 msgid "Absent"
 msgstr "Отсутствует"
@@ -4792,7 +4792,7 @@ msgid "Accept"
 msgstr "Принять"
 
 msgid "Add Maintenance"
-msgstr "Добавить ТО"
+msgstr "Добавить OH"
 
 msgid "Add Part"
 msgstr "Добавить деталь"
@@ -4924,7 +4924,7 @@ msgid "Delete user"
 msgstr "Удалить пользователя"
 
 msgid "Describe the maintenance work performed..."
-msgstr "Опишите выполненные работы по ТО..."
+msgstr "Опишите выполненные работы по OH..."
 
 msgid "Describe the work performed..."
 msgstr "Опишите выполненные работы..."
@@ -5111,19 +5111,19 @@ msgid "Maintain now"
 msgstr "Обслужить сейчас"
 
 msgid "Maintenance History"
-msgstr "История ТО"
+msgstr "История OH"
 
 msgid "Maintenance Interval (days)"
-msgstr "Интервал ТО (дней)"
+msgstr "Интервал OH (дней)"
 
 msgid "Maintenance Schedule"
-msgstr "График ТО"
+msgstr "График OH"
 
 msgid "Maintenance Type"
-msgstr "Тип ТО"
+msgstr "Тип OH"
 
 msgid "Maintenance record added"
-msgstr "Запись о ТО добавлена"
+msgstr "Запись о OH добавлена"
 
 msgid "Manual"
 msgstr "Вручную"
@@ -5150,7 +5150,7 @@ msgid "Month"
 msgstr "Месяц"
 
 msgid "Needs Maintenance"
-msgstr "Требуется ТО"
+msgstr "Требуется OH"
 
 msgid "Needs Replacement"
 msgstr "Требуется замена"
@@ -5192,7 +5192,7 @@ msgid "New vacation request"
 msgstr "Новая заявка на отпуск"
 
 msgid "Next maintenance"
-msgstr "Следующее ТО"
+msgstr "Следующее OH"
 
 msgid "Next replacement"
 msgstr "Следующая замена"
@@ -5213,7 +5213,7 @@ msgid "No file selected"
 msgstr "Файл не выбран"
 
 msgid "No maintenance records"
-msgstr "Нет записей о ТО"
+msgstr "Нет записей о OH"
 
 msgid "No notifications"
 msgstr "Нет уведомлений"
@@ -6416,7 +6416,7 @@ msgstr "Прочее оборудование"
 
 #: equip-cal
 msgid "no service date"
-msgstr "без даты ТО"
+msgstr "без даты OH"
 
 #: equip-cal
 msgid "Set date"
@@ -6424,7 +6424,7 @@ msgstr "Задать дату"
 
 #: equip-cal
 msgid "Last service"
-msgstr "Последнее ТО"
+msgstr "Последнее OH"
 
 #: fault-status
 msgid "New"
@@ -6624,7 +6624,7 @@ msgid "Check hydraulics / pneumatics"
 msgstr "Проверка гидравлики / пневматики"
 
 msgid "TO act + photos"
-msgstr "Акт ТО + фото"
+msgstr "Акт OH + фото"
 
 msgid "Replace oils / greases per schedule"
 msgstr "Замена масел / смазок по регламенту"
@@ -6636,7 +6636,7 @@ msgid "Diagnose electric motors"
 msgstr "Диагностика электродвигателей"
 
 msgid "Full TO per manufacturer manual"
-msgstr "Полное ТО по паспорту завода"
+msgstr "Полное OH по паспорту завода"
 
 msgid "Replace worn assemblies"
 msgstr "Замена изношенных узлов"
@@ -6847,7 +6847,7 @@ msgid "PAUSED"
 msgstr "НА ПАУЗЕ"
 
 msgid "Quarterly TO plan"
-msgstr "Квартальный график ТО"
+msgstr "Квартальный график OH"
 
 msgid "Work items"
 msgstr "Виды работ"
