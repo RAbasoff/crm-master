@@ -15,8 +15,12 @@ const PRECACHE = [
   '/static/icon-512.png',
   '/static/apple-touch-icon.png',
   '/static/js/scanner-common.js',
+  '/static/js/html5-qrcode.min.js',
   '/static/js/offline-queue.js',
   '/static/fonts/DejaVuSans.ttf',
+  '/gas/',
+  '/gas/scan',
+  '/gas/scan-list',
 ];
 
 self.addEventListener('message', (event) => {

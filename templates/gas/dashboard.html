@@ -618,21 +618,16 @@ function imSubmit() {
         })
         .catch(function() { showErr(); });
     } else {
+        // Одна заявка (accept:true) — работает и через оффлайн-очередь
         csrfFetch('/gas/api/cylinders/scan-list', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({number: code, gas_type: gasType})
+            body: JSON.stringify({number: code, gas_type: gasType, accept: true})
         })
         .then(function(r) { return r.json(); })
         .then(function(d) {
             if (d.error) { showErr(d.error); return; }
-            return csrfFetch('/gas/api/cylinders/scan-list/add-stock', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ids: [d.cylinder_id]})
-            }).then(function(r) { return r.json(); }).then(function() {
-                showOk({cylinder_number: d.number || code});
-            });
+            showOk({cylinder_number: d.number || code, offline: d.offline});
         })
         .catch(function() { showErr(); });
     }

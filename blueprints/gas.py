@@ -865,10 +865,16 @@ def cylinder_scan_list():
 @role_required('admin', 'director', 'technician')
 @director_only()
 def cylinder_scan_list_add():
-    """Добавить номер баллона в список приёмки (без требования Z)."""
+    """Добавить номер баллона в список приёмки (без требования Z).
+
+    accept=true — принять сразу на склад (для оффлайн-очереди это одна
+    заявка вместо цепочки «скан → приёмка»: иначе после синхронизации
+    второй шаг терял бы id первого).
+    """
     data = request.get_json() or {}
     number = (data.get('number') or '').strip()
     gas_type = data.get('gas_type') or 'nitrogen'
+    accept = bool(data.get('accept'))
     if not number:
         return jsonify({'error': 'No number'}), 400
     if gas_type not in GAS_TYPES:
@@ -876,16 +882,25 @@ def cylinder_scan_list_add():
     c = GasCylinder.query.filter_by(cylinder_number=number).first()
     created = False
     if not c:
-        # scanned only — NOT in stock until «Добавить на склад»
+        # scanned only — NOT in stock until «Добавить на склад» (если accept — сразу)
         c = GasCylinder(gas_type=gas_type, cylinder_number=number,
-                        status='scanned', received_at=None)
+                        status='full' if accept else 'scanned',
+                        received_at=datetime.utcnow() if accept else None)
         db.session.add(c)
         db.session.flush()
         created = True
-        db.session.add(CylinderLog(cylinder_id=c.id, action='created',
+        db.session.add(CylinderLog(cylinder_id=c.id, action='received' if accept else 'created',
                                    performed_by=current_user.id,
                                    new_cylinder_number=number,
-                                   notes='Scan list (not in stock yet)'))
+                                   notes='Scan list (added to stock)' if accept else 'Scan list (not in stock yet)'))
+    elif accept and (not c.received_at or c.status in ('scanned', None, '')):
+        if not c.received_at:
+            c.received_at = datetime.utcnow()
+        if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
+            c.status = 'full'
+        db.session.add(CylinderLog(
+            cylinder_id=c.id, action='received', performed_by=current_user.id,
+            notes='Added to stock on scan'))
     elif c.status == 'scanned' and not c.received_at:
         pass
     if not safe_commit():
