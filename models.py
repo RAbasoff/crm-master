@@ -1824,6 +1824,8 @@ class EquipmentMaintenance(db.Model):
     record_type = db.Column(db.String(20), default='maintenance')
     name = db.Column(db.String(200), nullable=False)
     serial = db.Column(db.String(100))
+    # Модель устройства (напр. C2941 M5821) — для «Списка Mule»
+    model_name = db.Column(db.String(200))
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
     date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text, nullable=False)

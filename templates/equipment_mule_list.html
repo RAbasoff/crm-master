@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Mule list') }} — CRM{% endblock %}
+{% block content %}
+<style>
+    .mule-table th, .mule-table td { padding: 7px 9px; font-size: 12px; }
+    .mule-hist { font-size: 11px; color: #666; background: #fafbfc; }
+    .mule-comp { font-size: 11px; color: #444; }
+    @media print {
+        .sidebar, .sidebar-overlay, .topbar, .notif-panel, .offline-panel,
+        .offline-toast-wrap, .toast-container, .bottom-nav, .no-print,
+        .install-hint, #pwaInstallBanner, #pwaIosHelp,
+        #pushEnableBtn, button, select, input, textarea,
+        [style*="position:fixed"], [style*="position: fixed"] { display: none !important; }
+        .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+        .content, .main, main { padding: 0 !important; margin: 0 !important; }
+        body { background: #fff !important; }
+        .mule-table { font-size: 9.5px !important; width: 100% !important; }
+        .mule-table th, .mule-table td { padding: 3px 4px !important; }
+        .mule-table th { background: #2c3e50 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        tr, td, th { page-break-inside: avoid !important; }
+    }
+</style>
+<div class="page-header">
+    <h1>📋 {{ _('Mule list') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/equipment" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <button class="btn btn-sm" style="background:#2c3e50;color:white" onclick="window.print()">🖨 {{ _('Print') }}</button>
+        <a class="btn btn-sm" style="background:#e74c3c;color:white" id="pdfBtn" href="/equipment/mule-list/pdf?composition=1&history=0">📕 PDF</a>
+    </div>
+</div>
+
+<div class="card no-print" style="padding:10px 14px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+    <label style="font-size:13px;cursor:pointer">
+        <input type="checkbox" id="tglComp" checked onchange="applyView()"> {{ _('Device composition') }}
+    </label>
+    <label style="font-size:13px;cursor:pointer">
+        <input type="checkbox" id="tglHist" onchange="applyView()"> {{ _('Movement history') }}
+    </label>
+    <small style="color:#888">{{ _('Check the options to add to print and PDF') }}</small>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table class="mule-table">
+            <thead>
+                <tr style="background:#2c3e50;color:#fff">
+                    <th style="width:36px">№</th>
+                    <th>{{ _('Name') }}</th>
+                    <th>{{ _('Model') }}</th>
+                    <th>{{ _('Serial Number') }}</th>
+                    <th class="comp-col">{{ _('Device composition') }}</th>
+                    <th style="width:120px">{{ _('Installed on') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in devices %}
+                <tr>
+                    <td style="text-align:center;font-weight:700">{{ d.no }}</td>
+                    <td><strong>{{ d.name }}</strong></td>
+                    <td>{{ d.model or '—' }}</td>
+                    <td style="font-family:monospace">{{ d.serial or '—' }}</td>
+                    <td class="comp-col mule-comp">
+                        {% if d.components %}
+                            {% for c in d.components %}
+                            <div>• {{ c.type }}{% if c.model %} {{ c.model }}{% endif %}{% if c.size %} {{ c.size }}{% endif %} ×{{ c.quantity }}{% if c.notes %} <span style="color:#999">({{ c.notes }})</span>{% endif %}</div>
+                            {% endfor %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ d.machine }}</td>
+                </tr>
+                <tr class="hist-row" style="display:none">
+                    <td colspan="6" class="mule-hist">
+                        🚚 <b>{{ _('Movement history') }}:</b>
+                        {% for dt, mm in d.history %}
+                            {{ dt.strftime('%d.%m.%Y') }} — {{ mm }}{% if not loop.last %};  {% endif %}
+                        {% else %}—{% endfor %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:10px" class="no-print">
+    {{ _('History is built from Mule maintenance records: date — machine.') }}
+</p>
+
+<script>
+function applyView() {
+    var comp = document.getElementById('tglComp').checked;
+    var hist = document.getElementById('tglHist').checked;
+    document.querySelectorAll('.comp-col').forEach(function (el) {
+        el.style.display = comp ? '' : 'none';
+    });
+    document.querySelectorAll('.hist-row').forEach(function (el) {
+        el.style.display = hist ? '' : 'none';
+    });
+    document.getElementById('pdfBtn').href =
+        '/equipment/mule-list/pdf?composition=' + (comp ? '1' : '0') + '&history=' + (hist ? '1' : '0');
+}
+applyView();
+</script>
+{% endblock %}

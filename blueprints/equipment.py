@@ -93,6 +93,182 @@ def equipment_report():
                            generated_at=datetime.now())
 
 
+# ── Список Mule: реестр устройств (печать + PDF + история перемещений) ──
+
+def _mule_devices():
+    """Устройства Mule: записи ТО/ремонта сгруппированы по (название, серийник).
+
+    Каждая запись — событие/установка устройства; история перемещений
+    выводится из машин этих записей.
+    """
+    recs = (EquipmentMaintenance.query
+            .filter(EquipmentMaintenance.record_type.isnot('repair'))
+            .order_by(EquipmentMaintenance.date.asc(), EquipmentMaintenance.id.asc())
+            .all())
+    devices, order = {}, []
+    for r in recs:
+        key = ((r.name or '').strip().lower(), (r.serial or '').strip())
+        if key not in devices:
+            devices[key] = {'name': r.name or r.number, 'serial': r.serial or '',
+                            'model': '', 'components': [], 'machine': '—', 'history': []}
+            order.append(key)
+        d = devices[key]
+        if r.model_name:
+            d['model'] = r.model_name
+        if r.machine_id:
+            try:
+                d['machine'] = r.machine.name if r.machine else d['machine']
+            except Exception:
+                pass
+        comps = []
+        try:
+            comps = list(r.components)
+        except Exception:
+            pass
+        if comps:
+            d['components'] = [
+                {'type': c.component_type or '', 'model': c.model or '',
+                 'size': (c.size or '') + ((' ' + c.length) if c.length else ''),
+                 'qty': c.quantity or 1, 'notes': c.notes or ''}
+                for c in comps
+            ]
+        h = (r.date, d['machine'])
+        if not d['history'] or d['history'][-1] != h:
+            d['history'].append(h)
+    out = []
+    for i, key in enumerate(order, 1):
+        d = devices[key]
+        d['no'] = i
+        out.append(d)
+    return out
+
+
+@bp.route('/equipment/mule-list')
+@login_required
+@role_required('admin', 'director', 'technician')
+def equipment_mule_list():
+    """Список Mule: №, название, модель, серийник, состав, история перемещений."""
+    return render_template('equipment_mule_list.html', devices=_mule_devices())
+
+
+@bp.route('/equipment/mule-list/pdf')
+@login_required
+@role_required('admin', 'director', 'technician')
+def equipment_mule_list_pdf():
+    """PDF-экспорт списка Mule (?composition=1&history=1)."""
+    devices = _mule_devices()
+    with_comp = request.args.get('composition', '1') != '0'
+    with_hist = request.args.get('history', '0') == '1'
+    try:
+        fpdf_mod = ensure_fpdf()
+        FPDF = fpdf_mod.FPDF
+    except Exception as e:
+        log_system('error', 'export', f'Mule list PDF failed: fpdf unavailable: {e}')
+        flash(_('PDF export is temporarily unavailable'), 'error')
+        return redirect(url_for('equipment.equipment_mule_list'))
+    font_path = find_pdf_font()
+    unicode_font = bool(font_path)
+    if unicode_font:
+        try:
+            _probe = FPDF()
+            _probe.add_font('AppFont', '', font_path)
+        except Exception:
+            unicode_font = False
+
+    def pdf_text(s):
+        s = str(s if s is not None else '')
+        return s if unicode_font else s.encode('latin-1', 'replace').decode('latin-1')
+
+    date_str = datetime.now().strftime('%d-%m-%Y %H:%M')
+
+    class ListPDF(FPDF):
+        def header(self):
+            fn = 'AppFont' if unicode_font else 'Helvetica'
+            self.set_font(fn, 'B', 12)
+            self.cell(0, 8, pdf_text(f"Mule list - ProMaster"), new_x='LMARGIN', new_y='NEXT')
+            self.set_font(fn, '', 8)
+            self.cell(0, 5, pdf_text(f'{date_str} - {len(devices)}'),
+                      new_x='LMARGIN', new_y='NEXT')
+            self.ln(2)
+
+        def footer(self):
+            fn = 'AppFont' if unicode_font else 'Helvetica'
+            self.set_y(-12)
+            self.set_font(fn, '', 7)
+            self.set_text_color(128)
+            self.cell(0, 8, pdf_text(f'ProMaster CRM - {_("page")} {self.page_no()}/{{nb}}'), align='C')
+
+    pdf = ListPDF(orientation='L', unit='mm', format='A4')
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=14)
+    if unicode_font:
+        pdf.add_font('AppFont', '', font_path)
+        pdf.add_font('AppFont', 'B', font_path)
+        base = 'AppFont'
+    else:
+        base = 'Helvetica'
+    pdf.add_page()
+
+    # шапка таблицы
+    headers = [('#', 10), (_('Name'), 42), (_('Model'), 34), (_('Serial Number'), 32)]
+    if with_comp:
+        headers.append((_('Components'), 78))
+    headers.append((_('Installed on'), 40))
+    pdf.set_font(base, 'B', 9)
+    pdf.set_fill_color(44, 62, 80)
+    pdf.set_text_color(255)
+    for label, w in headers:
+        pdf.cell(w, 7, pdf_text(label), border=1, fill=True)
+    pdf.ln()
+    pdf.set_text_color(0)
+
+    for d in devices:
+        pdf.set_font(base, '', 8)
+        comp_txt = '; '.join(
+            f"{c['type']}{(' ' + c['model']) if c['model'] else ''}"
+            f"{(' ' + c['size']) if c['size'] else ''} x{c['qty']:g}"
+            for c in d['components']) if d['components'] else '—'
+        row = [(str(d['no']), 10), (d['name'], 42), (d['model'] or '—', 34), (d['serial'] or '—', 32)]
+        if with_comp:
+            row.append((comp_txt, 78))
+        row.append((d['machine'] or '—', 40))
+        # высота строки — по самому длинному тексту
+        line_h = 5
+        for txt, w in row:
+            lines = pdf.multi_cell(w, line_h, pdf_text(txt), border=0, dry_run=True, output='LINES')
+            line_h_needed = max(line_h, line_h * max(1, len(lines)))
+        h = line_h_needed
+        x0, y0 = pdf.get_x(), pdf.get_y()
+        if y0 + h > pdf.h - 14:
+            pdf.add_page()
+            x0, y0 = pdf.get_x(), pdf.get_y()
+        x = x0
+        for txt, w in row:
+            pdf.set_xy(x, y0)
+            pdf.multi_cell(w, h, pdf_text(txt), border=1)
+            x += w
+        pdf.set_xy(x0, y0 + h)
+        if with_hist and d['history']:
+            hist = ' | '.join(f'{dt.strftime("%d.%m.%Y")}: {mm}' for dt, mm in d['history'])
+            pdf.set_font(base, '', 7)
+            pdf.set_text_color(90)
+            total_w = sum(w for _, w in row)
+            hh = 5
+            pdf.multi_cell(total_w, hh, pdf_text(f"{_('History')}: {hist}"), border=1)
+            pdf.set_text_color(0)
+            pdf.set_font(base, '', 8)
+
+    return _pdf_response(pdf, f'mule-list-{datetime.now():%Y%m%d}.pdf')
+
+
+def _pdf_response(pdf, filename):
+    from flask import make_response
+    resp = make_response(pdf.output(dest='S'))
+    resp.headers['Content-Type'] = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return resp
+
+
 @bp.route('/equipment/export/pdf')
 @login_required
 @role_required('admin', 'director', 'technician')
@@ -475,6 +651,7 @@ def equipment_new():
             record_type=rec_type,
             name=request.form['name'],
             serial=request.form.get('serial', ''),
+            model_name=request.form.get('model_name', ''),
             machine_id=safe_int(request.form.get('machine_id')) or None,
             date=date,
             reason=request.form['reason'],
@@ -557,6 +734,7 @@ def equipment_edit(eq_id):
             return redirect(url_for('equipment.equipment_edit', eq_id=eq.id))
         eq.name = request.form['name']
         eq.serial = request.form.get('serial', '')
+        eq.model_name = request.form.get('model_name', '')
         eq.machine_id = safe_int(request.form.get('machine_id')) or None
         eq.reason = request.form['reason']
         eq.next_date = (d := safe_date(request.form.get('next_date'))) and d.date() or None

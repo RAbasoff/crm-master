@@ -1869,7 +1869,7 @@ msgid "Component updated"
 msgstr "Компонент обновлён"
 
 msgid "Components"
-msgstr "Компоненты"
+msgstr "Состав"
 
 msgid "Condition"
 msgstr "Состояние"
@@ -6895,3 +6895,27 @@ msgid "Select from several lists at once — one plan is created per item."
 msgstr ""
 "Можно выбирать сразу из нескольких списков — на каждый пункт создаётся свой "
 "план."
+
+#: templates/equipment_mule_list.html:0
+msgid "Mule list"
+msgstr "Список Mule"
+
+#: templates/equipment_mule_list.html:0
+msgid "Device composition"
+msgstr "Состав устройства"
+
+#: templates/equipment_mule_list.html:0
+msgid "Movement history"
+msgstr "История перемещений"
+
+#: templates/equipment_mule_list.html:0
+msgid "Installed on"
+msgstr "Установлен на"
+
+#: templates/equipment_mule_list.html:0
+msgid "Check the options to add to print and PDF"
+msgstr "Отметьте пункты, чтобы добавить их в печать и PDF"
+
+#: templates/equipment_mule_list.html:0
+msgid "History is built from Mule maintenance records: date — machine."
+msgstr "История строится из записей обслуживания Mule: дата — станок."

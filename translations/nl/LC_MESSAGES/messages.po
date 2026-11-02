@@ -1412,7 +1412,7 @@ msgid "Component updated"
 msgstr "Component bijgewerkt"
 
 msgid "Components"
-msgstr "Componenten"
+msgstr "Onderdelen"
 
 msgid "Condition"
 msgstr "Staat"
@@ -6709,3 +6709,27 @@ msgid "Select from several lists at once — one plan is created per item."
 msgstr ""
 "Selecteer uit meerdere lijsten tegelijk — per punt wordt een eigen plan "
 "gemaakt."
+
+#: templates/equipment_mule_list.html:0
+msgid "Mule list"
+msgstr "Mule-lijst"
+
+#: templates/equipment_mule_list.html:0
+msgid "Device composition"
+msgstr "Apparaatsamenstelling"
+
+#: templates/equipment_mule_list.html:0
+msgid "Movement history"
+msgstr "Verplaatsingsgeschiedenis"
+
+#: templates/equipment_mule_list.html:0
+msgid "Installed on"
+msgstr "Geïnstalleerd op"
+
+#: templates/equipment_mule_list.html:0
+msgid "Check the options to add to print and PDF"
+msgstr "Vink opties aan om toe te voegen aan print en PDF"
+
+#: templates/equipment_mule_list.html:0
+msgid "History is built from Mule maintenance records: date — machine."
+msgstr "Geschiedenis komt uit Mule-onderhoudsrecords: datum — machine."
