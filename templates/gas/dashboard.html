@@ -513,33 +513,13 @@ function imSubmit() {
     resultDiv.style.background = '#e8f4fd';
     resultDiv.innerHTML = '⏳ <b>' + code + '</b> — processing...';
 
-    var url = imAction === 'install' ? '/gas/api/cylinders/scan' : '/gas/api/cylinders/add';
-    var body = imAction === 'install'
-        ? {code: code, gas_type: gasType, side: imSide}
-        : {code: code, gas_type: gasType};
-
-    csrfFetch(url, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(body)
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        if (d.error) {
-            resultDiv.style.background = '#fde8e8';
-            resultDiv.innerHTML = '❌ ' + d.error;
-            document.getElementById('imCode').value = '';
-            document.getElementById('imCode').focus();
-            return;
-        }
-        var gasLabel = gasType === 'nitrogen' ? 'N₂' : 'CO₂';
+    function showOk(d) {
+        var gasLabel = gasType === 'nitrogen' ? 'N₂' : (gasType === 'mixed' ? '{{ _('Mixed gas') }}' : 'CO₂');
         var html = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
         html += '<span style="font-size:16px">✅</span>';
         html += '<b>' + (d.cylinder_number || code) + '</b>';
-        if (d.already_exists) {
-            html += '<span class="badge" style="background:#f39c12;color:white;font-size:10px">{{ _("Already in DB") }}: ' + (d.status || '') + '</span>';
-        } else if (imAction === 'install') {
-            html += '<span class="badge" style="background:#27ae60;color:white;font-size:10px">FULL</span>';
+        if (imAction === 'install') {
+            html += '<span class="badge" style="background:#27ae60;color:white;font-size:10px">IN USE</span>';
             html += '<span class="badge" style="background:#3498db;color:white;font-size:10px">' + gasLabel + '</span>';
             if (imSide) html += '<span style="font-size:11px;color:#555">' + (imSide === 'left' ? '⬅ {{ _('Left') }}' : '➡ {{ _('Right') }}') + '</span>';
             if (d.other_activated) html += '<div style="width:100%;font-size:11px;color:#27ae60">→ {{ _('Other cylinder') }} <b>' + d.other_activated + '</b> {{ _('is now IN USE') }}</div>';
@@ -552,11 +532,48 @@ function imSubmit() {
         resultDiv.innerHTML = html;
         imLastCode = '';
         setTimeout(function() { location.reload(); }, 1500);
-    })
-    .catch(function() {
+    }
+    function showErr(msg) {
         resultDiv.style.background = '#fde8e8';
-        resultDiv.innerHTML = '❌ {{ _('Connection error') }}';
-    });
+        resultDiv.innerHTML = '❌ ' + (msg || '{{ _('Connection error') }}');
+        imLastCode = '';
+        document.getElementById('imCode').value = '';
+        document.getElementById('imCode').focus();
+    }
+
+    // Единый поток: install → assign-work; add → приёмка + сразу на склад
+    if (imAction === 'install') {
+        csrfFetch('/gas/api/cylinders/assign-work', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({number: code, gas_type: gasType, side: imSide || 'left', action: 'install'})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.error) { showErr(d.error); return; }
+            if (d.need_choose) { showErr(d.message || 'Number is not in the scanned list'); return; }
+            showOk(d);
+        })
+        .catch(function() { showErr(); });
+    } else {
+        csrfFetch('/gas/api/cylinders/scan-list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({number: code, gas_type: gasType})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.error) { showErr(d.error); return; }
+            return csrfFetch('/gas/api/cylinders/scan-list/add-stock', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ids: [d.cylinder_id]})
+            }).then(function(r) { return r.json(); }).then(function() {
+                showOk({cylinder_number: d.number || code});
+            });
+        })
+        .catch(function() { showErr(); });
+    }
 }
 
 function quickStatus(cylId, status, btn) {
