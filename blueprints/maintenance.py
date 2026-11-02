@@ -373,21 +373,31 @@ def maintenance_calendar():
                     'record_id': None
                 })
 
-    # Add EquipmentMaintenance (MRO) records with next_date
-    mro_q = EquipmentMaintenance.query.filter(EquipmentMaintenance.next_date.isnot(None))
+    # Add EquipmentMaintenance (Mule TO) — по графику: периодичность даёт
+    # повторные даты в месяце. Ремонты (record_type='repair') — не план.
+    mro_q = EquipmentMaintenance.query.filter(
+        EquipmentMaintenance.next_date.isnot(None),
+        EquipmentMaintenance.record_type.isnot('repair'))
+    m_last = month_end - timedelta(days=1)
     for mro in mro_q.all():
-        if mro.next_date and month_start <= mro.next_date < month_end:
-            done = mro.status == 'completed'
+        if not mro.next_date:
+            continue
+        d0 = mro.next_date.date() if isinstance(mro.next_date, datetime) else mro.next_date
+        dates = _occurrences_in_month(d0, (mro.periodicity or ''), month_start, m_last)
+        done_one = mro.status == 'completed'
+        for d in dates:
+            is_due = (d == d0)
+            done = done_one and is_due
             events.append({
-                'date': mro.next_date,
+                'date': d,
                 'type': 'equipment_mro',
                 'part': mro.name[:40],
-                'machine': mro.number,
+                'machine': (mro.machine.name if mro.machine else mro.number),
                 'machine_id': mro.machine_id,
                 'equipment_id': None,
                 'part_id': None,
                 'category': mro.periodicity or 'MRO',
-                'overdue': mro.next_date < today and not done,
+                'overdue': d < today and not done,
                 'done': done,
                 'plan_id': None,
                 'mro_id': mro.id,
@@ -728,6 +738,42 @@ def _period_label(d0, span):
     d1 = d0 + timedelta(days=span - 1)
     s0, s1 = d0.strftime('%d.%m'), d1.strftime('%d.%m')
     return s0 if s1 == s0 else f'{s0}-{s1}'
+
+
+def _occurrences_in_month(d0, rec, m_lo, m_hi):
+    """Вхождения расписания (шаг от d0) внутри месяца [m_lo, m_hi] (включительно)."""
+    if not d0 or d0 > m_hi:
+        return []
+    rec = (rec or '').lower()
+    step = {'daily': 1, 'weekly': 7, 'biweekly': 14}.get(rec)
+    if step:
+        k = (m_lo - d0).days
+        if k <= 0:
+            first = d0
+        else:
+            first = d0 + timedelta(days=(k // step) * step)
+            if first < m_lo:
+                first += timedelta(days=step)
+        out = []
+        d = first
+        while d <= m_hi and len(out) < 31:
+            out.append(d)
+            d += timedelta(days=step)
+        return out
+    mstep = {'monthly': 1, 'quarterly': 3, 'semiannual': 6, 'yearly': 12}.get(rec)
+    if mstep:
+        months = (m_lo.year - d0.year) * 12 + (m_lo.month - d0.month)
+        kk = (months // mstep) * mstep if months > 0 else 0
+        out = []
+        while kk <= (months // mstep) * mstep + mstep * 2:
+            d = _add_months(d0, kk)
+            if d > m_hi:
+                break
+            if d >= m_lo:
+                out.append(d)
+            kk += mstep
+        return out
+    return [d0] if m_lo <= d0 <= m_hi else []
 
 
 def _yearly_to_chart(year):
@@ -1866,6 +1912,33 @@ def api_maintenance_today():
         pass
 
     return jsonify(items)
+
+
+@bp.route('/api/mule/reminders')
+@login_required
+def api_mule_reminders():
+    """Ближайшее и просроченное ТО Mule (для всплывающих напоминаний)."""
+    today = datetime.utcnow().date()
+    soon = today + timedelta(days=14)
+    q = EquipmentMaintenance.query.filter(
+        EquipmentMaintenance.next_date.isnot(None),
+        EquipmentMaintenance.record_type.isnot('repair'),
+        EquipmentMaintenance.status != 'completed')
+    items = []
+    for mro in q.all():
+        d = mro.next_date.date() if isinstance(mro.next_date, datetime) else mro.next_date
+        if not d or d > soon:
+            continue
+        items.append({
+            'name': mro.name or mro.number,
+            'number': mro.number,
+            'machine': (mro.machine.name if mro.machine else (mro.serial or '')),
+            'date': d.isoformat(),
+            'days_left': (d - today).days,
+            'overdue': bool(d < today),
+        })
+    items.sort(key=lambda x: (not x['overdue'], x['date']))
+    return jsonify(items[:20])
 
 
 @bp.route('/api/maintenance/reminders')

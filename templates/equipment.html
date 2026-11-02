@@ -2,6 +2,32 @@
 {% block title %}{{ _('Mule Maintenance') }} — CRM{% include '_pagination.html' with context %}
 {% endblock %}
 {% block content %}
+<style>
+    /* Компактно + правый столбец «Действия» всегда виден (sticky) */
+    .eq-table th, .eq-table td { padding: 8px 10px; }
+    .eq-table th:last-child, .eq-table td:last-child {
+        position: sticky; right: 0; background: #fff; z-index: 2;
+        box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.18);
+    }
+    .eq-table th:last-child { background: #f8f9fc; z-index: 3; }
+    .eq-table tr:hover td:last-child { background: #f8f9fc; }
+    body.dark-mode .eq-table td:last-child { background: #0d1117; }
+    body.dark-mode .eq-table th:last-child { background: #161b22; }
+    body.dark-mode .eq-table tr:hover td:last-child { background: #161b22; }
+    .eq-actions { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
+    .eq-actions .btn { white-space: nowrap; }
+    @media (max-width: 1150px) {
+        /* причина — самая широкая, прячем чтобы кнопки справа влезали */
+        .eq-main th:nth-child(7), .eq-main td:nth-child(7) { display: none; }
+        .eq-rep th:nth-child(6), .eq-rep td:nth-child(6) { display: none; }
+    }
+    @media (max-width: 900px) {
+        .eq-main th:nth-child(5), .eq-main td:nth-child(5) { display: none; }
+        .eq-main th:nth-child(10), .eq-main td:nth-child(10) { display: none; }
+        .eq-rep th:nth-child(4), .eq-rep td:nth-child(4) { display: none; }
+        .eq-rep th:nth-child(9), .eq-rep td:nth-child(9) { display: none; }
+    }
+</style>
 <div class="page-header">
     <h1>🔧 {{ _('Mule Maintenance') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -89,7 +115,7 @@
             <input type="checkbox" id="selectAll" onchange="toggleAll(this)"> {{ _('Select All') }}
         </label>
     </div>
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table class="eq-table eq-main">
         <tr>
             <th style="width:32px"><input type="checkbox" id="selectAll2" onchange="toggleAll(this)"></th>
             <th>{{ _('Number') }}</th>
@@ -125,7 +151,7 @@
             <td>{% if r.next_date %}{{ r.next_date.strftime('%d-%m-%Y') }}{% else %}—{% endif %}</td>
             <td>{{ r.periodicity or '—' }}</td>
             <td>
-                <div style="display:flex;gap:4px">
+                <div class="eq-actions">
                     <a href="/equipment/{{ r.id }}" class="btn btn-sm" style="font-size:11px;background:#eee" title="{{ _('View') }}">👁</a>
                     {% if current_user.has_role('admin', 'technician') %}
                     <a href="/equipment/{{ r.id }}/edit" class="btn btn-sm btn-primary" style="font-size:11px">{{ _('Edit') }}</a>
@@ -151,7 +177,7 @@
         <a href="/equipment/new?type=repair" class="btn btn-sm" style="background:#8e24aa;color:white">+ {{ _('New Repair') }}</a>
         {% endif %}
     </div>
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table class="eq-table eq-rep">
         <tr>
             <th>{{ _('Number') }}</th>
             <th>{{ _('Date') }}</th>

@@ -6695,3 +6695,7 @@ msgstr "Het programma wordt opnieuw opgestart"
 #: static/js/base-app.js:0
 msgid "Restart now"
 msgstr "Nu herstarten"
+
+#: templates/base.html:0
+msgid "Due in"
+msgstr "Nog"

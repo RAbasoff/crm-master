@@ -6881,3 +6881,7 @@ msgstr "Программа будет перезагружена"
 #: static/js/base-app.js:0
 msgid "Restart now"
 msgstr "Перезагрузить сейчас"
+
+#: templates/base.html:0
+msgid "Due in"
+msgstr "Через"

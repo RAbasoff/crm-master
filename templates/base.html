@@ -516,6 +516,71 @@ window.__BOOT = {
     </script>
     {% endif %}
 
+    <!-- MULE TO — всплывающие напоминания ответственным за Mule (Safa / Hashem) -->
+    {% set _mule_uname = ((current_user.display_name or '') ~ ' ' ~ (current_user.username or '')).lower() %}
+    {% if current_user.is_authenticated and ('safa' in _mule_uname or 'hashem' in _mule_uname or 'hashim' in _mule_uname) %}
+    <script>
+    (function() {
+        const MAX_SHOW = 4;
+        const COOLDOWN_MS = 2 * 60 * 60 * 1000;
+        function todayKey() { return new Date().toISOString().slice(0, 10); }
+        function getCount() {
+            try { return parseInt(localStorage.getItem('mule_to_cnt_' + todayKey()) || '0', 10) || 0; }
+            catch (e) { return 0; }
+        }
+        function bumpCount() {
+            try { localStorage.setItem('mule_to_cnt_' + todayKey(), String(getCount() + 1)); } catch (e) {}
+        }
+        function lastShown() {
+            try { return parseInt(localStorage.getItem('mule_to_last') || '0', 10) || 0; }
+            catch (e) { return 0; }
+        }
+        function markShown() {
+            try { localStorage.setItem('mule_to_last', String(Date.now())); bumpCount(); } catch (e) {}
+        }
+        function canShow() {
+            if (getCount() >= MAX_SHOW) return false;
+            return (Date.now() - lastShown()) >= COOLDOWN_MS;
+        }
+        function showMuleTO() {
+            if (!canShow()) return;
+            if (document.getElementById('muleTOWarning')) return;
+            fetch('/api/mule/reminders').then(r => r.json()).then(items => {
+                if (!items || items.length === 0) return;
+                if (document.getElementById('muleTOWarning')) return;
+                markShown();
+                const overlay = document.createElement('div');
+                overlay.id = 'muleTOWarning';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;padding:12px';
+                let list = '';
+                items.forEach(w => {
+                    const dot = w.overdue ? '🔴' : '🟡';
+                    const when = w.overdue
+                        ? '{{ _("Overdue") }}'
+                        : '{{ _("Due in") }} ' + w.days_left + ' {{ _("days") }}';
+                    list += '<div style="padding:6px 10px;background:rgba(255,255,255,0.92);border-radius:6px;margin-bottom:4px;border:1px solid #000;text-align:left">' +
+                        '<div style="font-size:12px;font-weight:700;color:#000">' + dot + ' ' + w.name + (w.machine ? ' — ' + w.machine : '') + '</div>' +
+                        '<div style="font-size:11px;color:#111">' + w.date + ' · ' + when + '</div>' +
+                        '</div>';
+                });
+                overlay.innerHTML = '<div style="background:#8e24aa;padding:14px 16px;border-radius:12px;text-align:center;width:100%;max-width:380px;max-height:min(86vh,560px);display:flex;flex-direction:column;box-shadow:0 0 30px rgba(142,36,170,0.55);color:#000;box-sizing:border-box">' +
+                    '<div style="font-size:22px;line-height:1">🧰</div>' +
+                    '<div style="font-size:15px;font-weight:800;color:#fff;margin:4px 0 8px">🔧 {{ _("Mule Maintenance") }}</div>' +
+                    '<div style="overflow-y:auto;flex:1 1 auto;min-height:0;max-height:42vh;padding-right:2px">' + list + '</div>' +
+                    '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex:0 0 auto">' +
+                    '<button onclick="document.getElementById(\'muleTOWarning\').remove()" style="padding:8px 14px;font-size:12px;font-weight:700;border:2px solid #000;background:#fff;color:#000;border-radius:8px;cursor:pointer">{{ _("Understood") }}</button>' +
+                    '<button onclick="window.location.href=\'/equipment\'" style="padding:8px 14px;font-size:12px;font-weight:700;border:2px solid #000;background:#8e24aa;color:#fff;border-radius:8px;cursor:pointer">{{ _("Open") }}</button>' +
+                    '</div></div>';
+                document.body.appendChild(overlay);
+                overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+            }).catch(() => {});
+        }
+        setTimeout(showMuleTO, 3000);
+        setInterval(showMuleTO, COOLDOWN_MS);
+    })();
+    </script>
+    {% endif %}
+
     <!-- AUTO-LOGOUT: 30 min idle on PC for non-admin users -->
     {% if current_user.is_authenticated and current_user.role != 'admin' %}
     <script>
