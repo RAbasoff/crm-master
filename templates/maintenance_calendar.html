@@ -1,25 +1,39 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Maintenance Calendar') }} — CRM{% endblock %}
 {% block content %}
+<style id="pageSetup">@page { size: A4 landscape; margin: 8mm; }</style>
 <style>
     @media print {
-        .sidebar, .topbar, .page-header > div, .card:last-child, .no-print { display: none !important; }
-        .page-header h1 { font-size: 18px; margin-bottom: 8px; }
+        /* Только название месяца + сетка календаря — ничего лишнего */
+        .sidebar, .sidebar-overlay, .topbar, .notif-panel, .offline-panel,
+        .offline-toast-wrap, .toast-container, .bottom-nav, .no-print,
+        .install-hint, #pwaInstallBanner, #pwaIosHelp,
+        .page-header, .print-legend, button, select, input, textarea,
+        [style*="position:fixed"], [style*="position: fixed"] { display: none !important; }
+        .print-month { display: block !important; font-size: 24px; font-weight: 800; text-align: center; margin: 0 0 6mm; }
         body { background: white !important; }
-        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+        .card { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+        .content, .main, main { padding: 0 !important; margin: 0 !important; }
+        html, body, .card, .table-wrap, .cal-grid { width: 100% !important; max-width: 100% !important; }
+        .table-wrap { overflow: visible !important; }
         a { color: #333 !important; text-decoration: none !important; }
+        /* Сетка — на весь горизонтальный лист */
+        .cal-grid { table-layout: fixed; height: 165mm; border-collapse: collapse; }
+        .cal-grid th, .cal-grid td { padding: 3px 4px !important; font-size: 9px !important; }
+        .cal-drop { height: auto !important; }
         table { page-break-inside: avoid; }
-        .print-legend { display: flex !important; }
     }
+    .print-month { display: none; }
     .print-legend { display: none; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: #f9f9f9; border-top: 1px solid #eee; font-size: 11px; }
     .print-legend .legend-item { display: flex; align-items: center; gap: 6px; }
     .print-legend .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
 </style>
+<div class="print-month">{{ month_name }}</div>
 <div class="page-header">
     <h1>📅 {{ _('Maintenance Calendar') }}</h1>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <a href="/maintenance-calendar?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">◀</a>
-        <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_start.strftime('%B %Y') }}</span>
+        <span style="font-weight:600;font-size:16px;min-width:140px;text-align:center">{{ month_name }}</span>
         <a href="/maintenance-calendar?month={{ next_month }}" class="btn btn-sm" style="background:#eee">▶</a>
         <a href="/maintenance-calendar" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
         <a href="/maintenance-plans" class="btn btn-sm" style="background:#9b59b6;color:white">📋 {{ _('Plans') }}</a>
@@ -29,10 +43,6 @@
         <a href="/maintenance-plans/new" class="btn btn-sm" style="background:#27ae60;color:white">+ {{ _('New Plan') }}</a>
         {% endif %}
         <div style="margin-left:16px;display:flex;gap:6px;align-items:center">
-            <select id="printOrient" style="padding:4px 8px;font-size:12px;border:1px solid #ccc;border-radius:4px">
-                <option value="portrait">📄 Portrait</option>
-                <option value="landscape">📃 Landscape</option>
-            </select>
             <button onclick="doCalPrint()" class="btn btn-sm" style="background:#3498db;color:white;cursor:pointer">🖨️ {{ _('Print') }}</button>
             <a href="/maintenance-calendar/export?month={{ month_start.strftime('%Y-%m') }}" class="btn btn-sm" style="background:#27ae60;color:white">📄 PDF</a>
         </div>
@@ -41,7 +51,7 @@
 
 <!-- Reminders / Overdue (collapsed by default) -->
 {% if overdue|length > 0 %}
-<div class="card" style="border-left:4px solid #e74c3c;background:#fff5f5">
+<div class="card no-print" style="border-left:4px solid #e74c3c;background:#fff5f5">
     <h2 style="color:#e74c3c;margin:0;cursor:pointer;display:flex;align-items:center;gap:8px" onclick="var t=this.nextElementSibling;t.style.display=t.style.display==='none'?'block':'none';this.querySelector('span').textContent=t.style.display==='none'?'▶':'▼'">
         <span style="font-size:11px">▶</span> ⚠️ {{ _('Overdue') }} ({{ overdue|length }})
     </h2>
@@ -101,7 +111,7 @@
     {% set start_weekday = first_day.weekday() %}  {# 0=Mon #}
     {% set days_in_month = (month_end - month_start).days %}
     
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+    <table class="cal-grid" style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead>
             <tr style="background:#1a1a2e;color:white">
                 <th style="padding:10px;text-align:center;font-size:12px">{{ _('Mon') }}</th>
@@ -243,7 +253,7 @@
 </div>
 
 <!-- Upcoming Events List -->
-<div class="card">
+<div class="card no-print">
     <h2>📋 {{ _('Upcoming Events') }} ({{ events|length }})</h2>
     {% if events %}
     <div class="table-wrap"><table>
@@ -330,7 +340,7 @@
 </div>
 
 {% if equipment_unscheduled %}
-<div class="card">
+<div class="card no-print">
     <h2>🏭 {{ _('Other equipment') }} — {{ _('no service date') }} ({{ equipment_unscheduled|length }})</h2>
     <div class="table-wrap"><table>
         <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Status') }}</th><th>{{ _('Last service') }}</th><th></th></tr>
@@ -348,13 +358,8 @@
 {% endif %}
 
 <script>
-var _printStyle = null;
 function doCalPrint() {
-    var orient = document.getElementById('printOrient').value;
-    if (_printStyle) _printStyle.remove();
-    _printStyle = document.createElement('style');
-    _printStyle.textContent = '@media print { @page { size: ' + orient + '; margin: 10mm; } }';
-    document.head.appendChild(_printStyle);
+    // Печать всегда альбомная, сетка на весь лист — без ручных подгонок
     window.print();
 }
 

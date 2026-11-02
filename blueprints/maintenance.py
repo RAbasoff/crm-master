@@ -499,13 +499,20 @@ def maintenance_calendar():
     except Exception:
         pass
 
+    # Локализованное имя месяца («ноябрь 2026» / «november 2026») — для печати
+    try:
+        from flask_babel import format_date
+        month_name = format_date(month_start, 'LLLL y', rebase=False)
+    except Exception:
+        month_name = month_start.strftime('%B %Y')
+
     return render_template('maintenance_calendar.html',
         month=month, month_start=month_start, month_end=month_end,
         events=sorted(events, key=lambda e: e['date']),
         overdue=overdue, today=today,
         prev_month=prev_month, next_month=next_month,
         timedelta=timedelta,
-        month_name=month_start.strftime('%B %Y'),
+        month_name=month_name,
         weekend_work_days=weekend_work_days,
         equipment_unscheduled=equipment_unscheduled)
 
