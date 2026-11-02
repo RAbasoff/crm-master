@@ -62,7 +62,7 @@
                     <td class="comp-col mule-comp">
                         {% if d.components %}
                             {% for c in d.components %}
-                            <div>• {{ c.type }}{% if c.model %} {{ c.model }}{% endif %}{% if c.size %} {{ c.size }}{% endif %} ×{{ c.quantity }}{% if c.notes %} <span style="color:#999">({{ c.notes }})</span>{% endif %}</div>
+                            <div>• {{ c.type }}{% if c.model %} {{ c.model }}{% endif %}{% if c.size %} {{ c.size }}{% endif %} <b>×{{ c.qty }}</b>{% if c.notes %} <span style="color:#999">({{ c.notes }})</span>{% endif %}</div>
                             {% endfor %}
                         {% else %}—{% endif %}
                     </td>

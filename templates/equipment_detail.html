@@ -28,6 +28,7 @@
             <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Number') }}</td><td style="font-weight:600;font-family:monospace">{{ eq.number }}</td></tr>
             <tr><td style="color:#888;padding:6px 0">{{ _('Date') }}</td><td>{{ eq.date.strftime('%d.%m.%Y') }}</td></tr>
             <tr><td style="color:#888;padding:6px 0">{{ _('Name') }}</td><td style="font-weight:600">{{ eq.name }}</td></tr>
+            <tr><td style="color:#888;padding:6px 0">{{ _('Model') }}</td><td>{{ eq.model_name or '—' }}</td></tr>
             <tr><td style="color:#888;padding:6px 0">{{ _('Serial') }}</td><td style="font-family:monospace">{{ eq.serial or '—' }}</td></tr>
             <tr><td style="color:#888;padding:6px 0">{{ _('Machine') }}</td><td>{{ eq.machine.name if eq.machine else '—' }}</td></tr>
             <tr><td style="color:#888;padding:6px 0">{{ _('Status') }}</td><td><span class="badge badge-{{ 'active' if eq.status=='completed' else 'open' }}">{{ eq.status }}</span></td></tr>

@@ -18,14 +18,14 @@
     .eq-actions .btn { white-space: nowrap; }
     @media (max-width: 1150px) {
         /* причина — самая широкая, прячем чтобы кнопки справа влезали */
-        .eq-main th:nth-child(7), .eq-main td:nth-child(7) { display: none; }
-        .eq-rep th:nth-child(6), .eq-rep td:nth-child(6) { display: none; }
+        .eq-main th:nth-child(8), .eq-main td:nth-child(8) { display: none; }
+        .eq-rep th:nth-child(7), .eq-rep td:nth-child(7) { display: none; }
     }
     @media (max-width: 900px) {
-        .eq-main th:nth-child(5), .eq-main td:nth-child(5) { display: none; }
-        .eq-main th:nth-child(10), .eq-main td:nth-child(10) { display: none; }
-        .eq-rep th:nth-child(4), .eq-rep td:nth-child(4) { display: none; }
-        .eq-rep th:nth-child(9), .eq-rep td:nth-child(9) { display: none; }
+        .eq-main th:nth-child(6), .eq-main td:nth-child(6) { display: none; }
+        .eq-main th:nth-child(11), .eq-main td:nth-child(11) { display: none; }
+        .eq-rep th:nth-child(5), .eq-rep td:nth-child(5) { display: none; }
+        .eq-rep th:nth-child(10), .eq-rep td:nth-child(10) { display: none; }
     }
 </style>
 <div class="page-header">
@@ -122,6 +122,7 @@
             <th>{{ _('Number') }}</th>
             <th>{{ _('Date') }}</th>
             <th>{{ _('Name') }}</th>
+            <th>{{ _('Model') }}</th>
             <th>{{ _('Serial') }}</th>
             <th>{{ _('Machine') }}</th>
             <th>{{ _('Reason') }}</th>
@@ -145,6 +146,7 @@
             <td><a href="/equipment/{{ r.id }}" style="color:#2c3e50;font-weight:700;font-family:monospace;text-decoration:none;border-bottom:1px dotted #2c3e50">{{ r.number }}</a></td>
             <td>{{ r.date.strftime('%d-%m-%Y') }}</td>
             <td><span style="background:#e3f2fd;padding:2px 8px;border-radius:4px;font-weight:600">{{ r.name }}</span>{% if r.photos %} <span title="{{ _('Photos') }}" style="font-size:11px;color:#e67e22">📷{{ r.photos|length }}</span>{% endif %}</td>
+            <td style="font-size:12px">{{ r.model_name or '—' }}</td>
             <td style="font-size:12px;color:#888">{{ r.serial or '—' }}</td>
             <td>{{ r.machine.name if r.machine else '—' }}</td>
             <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.reason }}</td>
@@ -183,6 +185,7 @@
             <th>{{ _('Number') }}</th>
             <th>{{ _('Date') }}</th>
             <th>{{ _('Name') }}</th>
+            <th>{{ _('Model') }}</th>
             <th>{{ _('Serial') }}</th>
             <th>{{ _('Machine') }}</th>
             <th>{{ _('Reason') }}</th>
@@ -196,6 +199,7 @@
             <td><a href="/equipment/{{ r.id }}" style="color:#8e24aa;font-weight:600">{{ r.number }}</a></td>
             <td>{{ r.date.strftime('%d-%m-%Y') if r.date else '—' }}</td>
             <td>{{ r.name }}</td>
+            <td style="font-size:12px">{{ r.model_name or '—' }}</td>
             <td style="font-size:12px">{{ r.serial or '—' }}</td>
             <td>{{ r.machine.name if r.machine else '—' }}</td>
             <td style="font-size:12px">{{ (r.reason or '')[:60] }}{% if r.reason and r.reason|length > 60 %}…{% endif %}</td>

@@ -158,10 +158,11 @@ def equipment_report():
 # ── Список Mule: реестр устройств (печать + PDF + история перемещений) ──
 
 def _mule_devices():
-    """Устройства Mule: записи ТО/ремонта сгруппированы по (название, серийник).
+    """Устройства Mule — реестр оборудования: ОДНА строка на устройство.
 
-    Каждая запись — событие/установка устройства; история перемещений
-    выводится из машин этих записей.
+    Идентичность — серийный номер (без пробелов/знаков, регистр не важен):
+    'SSVF148232 L2M2.0' и 'SSVF148232L2M2.0' — одно устройство. Без серийника
+    — по нормализованному имени. Имя/модель — из самой свежей записи.
     """
     recs = (EquipmentMaintenance.query
             .filter(EquipmentMaintenance.record_type.isnot('repair'))
@@ -169,14 +170,23 @@ def _mule_devices():
             .all())
     devices, order = {}, []
     for r in recs:
-        key = ((r.name or '').strip().lower(), (r.serial or '').strip())
+        serial_norm = _re.sub(r'[^A-Za-z0-9]', '', (r.serial or '')).upper()
+        name_norm = _re.sub(r'\s+', ' ', (r.name or '').strip().lower())
+        key = ('s:' + serial_norm) if serial_norm else ('n:' + name_norm)
+        if not key or key in ('s:', 'n:'):
+            continue
         if key not in devices:
-            devices[key] = {'name': r.name or r.number, 'serial': r.serial or '',
+            devices[key] = {'name': (r.name or r.number).strip(), 'serial': (r.serial or '').strip(),
                             'model': '', 'components': [], 'machine': '—', 'history': []}
             order.append(key)
         d = devices[key]
+        # самая свежая запись задаёт актуальные имя/модель/серийник
+        if r.name and r.name.strip():
+            d['name'] = r.name.strip()
         if r.model_name:
             d['model'] = r.model_name
+        if r.serial and r.serial.strip():
+            d['serial'] = r.serial.strip()
         if r.machine_id:
             try:
                 d['machine'] = r.machine.name if r.machine else d['machine']
@@ -188,10 +198,16 @@ def _mule_devices():
         except Exception:
             pass
         if comps:
+            def _qty(q):
+                try:
+                    f = float(q if q is not None else 1)
+                    return int(f) if f == int(f) else round(f, 2)
+                except Exception:
+                    return 1
             d['components'] = [
                 {'type': c.component_type or '', 'model': c.model or '',
                  'size': (c.size or '') + ((' ' + c.length) if c.length else ''),
-                 'qty': c.quantity or 1, 'notes': c.notes or ''}
+                 'qty': _qty(c.quantity), 'notes': c.notes or ''}
                 for c in comps
             ]
         h = (r.date, d['machine'])
@@ -557,13 +573,13 @@ MRO_EXPORT_FIELDS = {
 }
 
 MRO_EXPORT_FIELD_LABELS = {
-    'id': 'ID', 'number': 'Number', 'name': 'Name', 'serial': 'Serial',
+    'id': 'ID', 'number': 'Number', 'name': 'Name', 'model_name': 'Model', 'serial': 'Serial',
     'machine': 'Machine', 'date': 'Date', 'reason': 'Reason',
     'next_date': 'Next Date', 'periodicity': 'Periodicity', 'status': 'Status',
     'notes': 'Notes', 'parts_count': 'Parts',
 }
 
-MRO_EXPORT_ALL_FIELDS = ['number', 'date', 'name', 'serial', 'machine', 'reason',
+MRO_EXPORT_ALL_FIELDS = ['number', 'date', 'name', 'model_name', 'serial', 'machine', 'reason',
                           'next_date', 'periodicity', 'status']
 
 
