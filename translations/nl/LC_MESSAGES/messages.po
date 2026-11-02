@@ -6699,3 +6699,7 @@ msgstr "Nu herstarten"
 #: templates/base.html:0
 msgid "Due in"
 msgstr "Nog"
+
+#: templates/maintenance_calendar.html:0
+msgid "Work on a weekend? Set only if necessary."
+msgstr "Werk in het weekend? Alleen als het nodig is."

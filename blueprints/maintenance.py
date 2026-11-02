@@ -393,6 +393,10 @@ def maintenance_calendar():
             done_set = set()
         m_name = (mro.machine.name if mro.machine else mro.number)
         for d in dates:
+            # Автодаты графика не попадают на сб/вс (запрет работы в выходные);
+            # вручную на выходной можно поставить только с подтверждением.
+            if d != d0 and d.weekday() >= 5:
+                d = skip_weekend(d)
             done = d.isoformat() in done_set
             events.append({
                 'date': d,
@@ -780,9 +784,14 @@ def _occurrences(start, recurrence, lo, hi, limit=40):
 
 
 def _period_label(d0, span):
-    """Период 2-4 дня: '12.04-14.04' (span = кол-во дней включительно)."""
+    """Период 2-4 дня: '12.04-14.04' (span = кол-во дней включительно).
+
+    Конец не заходит на сб/вс — работы в выходные не планируются.
+    """
     span = max(2, min(4, int(span or 3)))
     d1 = d0 + timedelta(days=span - 1)
+    while d1.weekday() >= 5 and d1 > d0:
+        d1 -= timedelta(days=1)
     s0, s1 = d0.strftime('%d.%m'), d1.strftime('%d.%m')
     return s0 if s1 == s0 else f'{s0}-{s1}'
 
@@ -1160,6 +1169,11 @@ def maintenance_calendar_move():
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
 
+    # Запрет работ в сб/вс: перенос на выходной только с явным подтверждением
+    # (в интерфейсе — confirm, в API — флаг weekend_ok=1).
+    if new_date.weekday() >= 5 and request.form.get('weekend_ok') != '1':
+        return jsonify({'error': 'weekend', 'need_confirm': True}), 409
+
     try:
         if ev_type == 'plan' and plan_id:
             p = MaintenancePlan.query.get(int(plan_id))
@@ -1226,6 +1240,18 @@ def maintenance_calendar_move():
                 eq = Equipment.query.get(int(equipment_id))
                 if eq:
                     eq.next_service_date = new_date
+                    if not safe_commit():
+                        return jsonify({'error': 'Save failed'}), 500
+                    return jsonify({'ok': True, 'new_date': new_date_str})
+
+        elif ev_type == 'equipment_mro':
+            from models import EquipmentMaintenance
+            mro_id = request.form.get('mro_id')
+            if mro_id:
+                mro = EquipmentMaintenance.query.get(int(mro_id))
+                if mro:
+                    # Перенос = новая якорная дата графика (следующие — по ней)
+                    mro.next_date = new_date
                     if not safe_commit():
                         return jsonify({'error': 'Save failed'}), 500
                     return jsonify({'ok': True, 'new_date': new_date_str})

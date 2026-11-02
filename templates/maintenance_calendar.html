@@ -473,30 +473,39 @@ document.addEventListener('DOMContentLoaded', function() {
             var oldDate = draggedEvent.dataset.date;
             if (!newDate || newDate === oldDate) return;
 
-            var fd = new FormData();
-            fd.append('csrf_token', '{{ csrf_token() }}');
-            fd.append('type', draggedEvent.dataset.type || '');
-            fd.append('plan_id', draggedEvent.dataset.planId || '');
-            fd.append('part_id', draggedEvent.dataset.partId || '');
-            fd.append('machine_id', draggedEvent.dataset.machineId || '');
-            fd.append('equipment_id', draggedEvent.dataset.equipmentId || '');
-            fd.append('mro_id', draggedEvent.dataset.mroId || '');
-            fd.append('record_id', draggedEvent.dataset.recordId || '');
-            fd.append('old_date', oldDate || '');
-            fd.append('new_date', newDate);
+            function sendMove(weekendOk) {
+                var fd = new FormData();
+                fd.append('csrf_token', '{{ csrf_token() }}');
+                fd.append('type', draggedEvent.dataset.type || '');
+                fd.append('plan_id', draggedEvent.dataset.planId || '');
+                fd.append('part_id', draggedEvent.dataset.partId || '');
+                fd.append('machine_id', draggedEvent.dataset.machineId || '');
+                fd.append('equipment_id', draggedEvent.dataset.equipmentId || '');
+                fd.append('mro_id', draggedEvent.dataset.mroId || '');
+                fd.append('record_id', draggedEvent.dataset.recordId || '');
+                fd.append('old_date', oldDate || '');
+                fd.append('new_date', newDate);
+                fd.append('weekend_ok', weekendOk ? '1' : '0');
 
-            fetch('/maintenance-calendar/move', {
-                method: 'POST',
-                body: fd
-            }).then(function(r) { return r.json(); }).then(function(data) {
-                if (data.ok) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Unknown'));
-                }
-            }).catch(function(err) {
-                alert('Error: ' + err.message);
-            });
+                fetch('/maintenance-calendar/move', {
+                    method: 'POST',
+                    body: fd
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (data.ok) {
+                        location.reload();
+                    } else if (data.need_confirm) {
+                        // Запрет работ в сб/вс: перенос на выходной — только осознанно
+                        if (confirm('{{ _("Work on a weekend? Set only if necessary.") }}')) {
+                            sendMove(true);
+                        }
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown'));
+                    }
+                }).catch(function(err) {
+                    alert('Error: ' + err.message);
+                });
+            }
+            sendMove(false);
         });
     });
 });

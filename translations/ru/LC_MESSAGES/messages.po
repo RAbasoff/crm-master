@@ -6885,3 +6885,7 @@ msgstr "Перезагрузить сейчас"
 #: templates/base.html:0
 msgid "Due in"
 msgstr "Через"
+
+#: templates/maintenance_calendar.html:0
+msgid "Work on a weekend? Set only if necessary."
+msgstr "Работа в выходной? Ставьте только если это необходимо."

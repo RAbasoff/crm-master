@@ -190,6 +190,21 @@
 </div>
 
 <script>
+// Запрет работ в сб/вс: дата следующего ТО на выходном — только осознанно
+(function () {
+    var f = document.querySelector('form');
+    if (f) f.addEventListener('submit', function (e) {
+        var nd = f.querySelector('input[name="next_date"]');
+        if (nd && nd.value) {
+            var d = new Date(nd.value + 'T00:00:00');
+            var dow = d.getDay();
+            if ((dow === 0 || dow === 6) && !confirm('{{ _("Work on a weekend? Set only if necessary.") }}')) {
+                e.preventDefault();
+            }
+        }
+    });
+})();
+
 var warehouseItems = [
     {% for w in warehouse_items %}
     {id:{{ w.id }}, name:'{{ w.naam|e }}', spn:'{{ (w.supplier_part_number or "")|e }}', qty:{{ w.hoeveelheid }}, unit:'{{ w.eenheid }}', min:{{ w.minimum }} }{% if not loop.last %},{% endif %}
