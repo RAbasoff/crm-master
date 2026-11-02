@@ -103,6 +103,7 @@
             {% if has_access('air') %}
             <a href="/air" class="sb-item {% if request.endpoint and request.endpoint.startswith('air.') and request.endpoint != 'air.air_map' %}active{% endif %}" data-section="air" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">💨</span>{{ _('Compressed Air') }}</a>
             <a href="/air/map" class="sb-item {% if request.endpoint == 'air.air_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Air Map') }}</a>
+            <a href="/air/3d" class="sb-item {% if request.endpoint == 'air.air_map_3d' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🧊</span>3D {{ _('Overview') }}</a>
             {% endif %}
             {% if has_access('water') %}
             <a href="/water" class="sb-item {% if request.endpoint and request.endpoint.startswith('water.') and request.endpoint != 'water.water_map' %}active{% endif %}" data-section="water" style="padding-left:32px"><span class="sb-icon" style="font-size:14px">💧</span>{{ _('Water Supply') }}</a>

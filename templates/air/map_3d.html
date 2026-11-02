@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}3D {{ _('Overview') }} — {{ _('Compressed Air') }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🧊 3D — {{ _('Compressed Air') }} / {{ _('Factory Map') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/air/map" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <button class="btn btn-sm" style="background:#2c3e50;color:#fff" onclick="resetCam()">🎥 {{ _('Reset view') }}</button>
+        <button class="btn btn-sm" id="btnAir" style="background:#e67e22;color:#fff" onclick="toggleAir()">🌀 {{ _('Air lines') }}</button>
+        <button class="btn btn-sm" id="btnLbl" style="background:#3498db;color:#fff" onclick="toggleLabels()">🏷 {{ _('Labels') }}</button>
+        <button class="btn btn-sm" style="background:#7e57c2;color:#fff" onclick="topView()">⬆ {{ _('Top view') }}</button>
+    </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+    <div id="scene3d" style="width:100%;height:70vh;background:#14161c;position:relative">
+        <div id="sceneLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b95a5;font-size:14px">{{ _('Loading') }}…</div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;font-size:11px;color:#666">
+        <span><span style="display:inline-block;width:12px;height:12px;background:#3498db;vertical-align:middle"></span> {{ _('Sections') }}</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#27ae60;vertical-align:middle"></span> {{ _('Machines') }}</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#7e57c2;vertical-align:middle"></span> {{ _('Other equipment') }}</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#e67e22;border-radius:50%;vertical-align:middle"></span> {{ _('Compressed Air') }}</span>
+        <span style="margin-left:auto;color:#999">120 × 45 × 4,5 m</span>
+    </div>
+</div>
+<p style="color:#888;font-size:12px;margin-top:8px">{{ _('Drag to rotate, wheel to zoom, right-drag to pan.') }}</p>
+
+<script src="/static/js/three.min.js"></script>
+<script src="/static/js/OrbitControls.js"></script>
+<script>
+(function () {
+    // Фабрика: 120м (длина/ось X плана) × 45м (ширина/ось Y плана) × 4.5м (потолок)
+    const W = 120, D = 45, H = 4.5;
+    const host = document.getElementById('scene3d');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x14161c);
+    scene.fog = new THREE.Fog(0x14161c, 90, 260);
+
+    const camera = new THREE.PerspectiveCamera(50, host.clientWidth / Math.max(1, host.clientHeight), 0.1, 500);
+    camera.position.set(75, 55, 85);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(host.clientWidth, Math.max(200, host.clientHeight));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    host.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 2, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2 - 0.03;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+    sun.position.set(60, 90, 40);
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x88aaff, 0.25);
+    fill.position.set(-60, 50, -40);
+    scene.add(fill);
+
+    // план % (0..100) → метры, центр сцены (0,0)
+    function px(x) { return (x / 100) * W - W / 2; }
+    function pz(y) { return (y / 100) * D - D / 2; }
+
+    // Пол с текстурой плана фабрики
+    const texLoader = new THREE.TextureLoader();
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a2e36, roughness: 0.95, metalness: 0 });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(W, D), groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+    texLoader.load('/static/floor_plan.jpeg', function (tex) {
+        tex.flipY = true;
+        groundMat.map = tex;
+        groundMat.color.set(0xffffff);
+        groundMat.needsUpdate = true;
+    }, undefined, function () {});
+
+    // Стены-контур (прозрачные) + потолок-сетка
+    const wallMat = new THREE.LineBasicMaterial({ color: 0x5b6b82, transparent: true, opacity: 0.8 });
+    const corners = [[-W/2, -D/2], [W/2, -D/2], [W/2, D/2], [-W/2, D/2], [-W/2, -D/2]];
+    for (let i = 0; i < 4; i++) {
+        const a = corners[i], b = corners[i + 1];
+        const pts = [new THREE.Vector3(a[0], 0, a[1]), new THREE.Vector3(b[0], 0, b[1]),
+                     new THREE.Vector3(b[0], H, b[1]), new THREE.Vector3(a[0], H, a[1]), new THREE.Vector3(a[0], 0, a[1])];
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wallMat));
+    }
+    const ceil = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, D)),
+        new THREE.LineBasicMaterial({ color: 0x3a4356, transparent: true, opacity: 0.35 }));
+    ceil.rotation.x = -Math.PI / 2;
+    ceil.position.y = H;
+    scene.add(ceil);
+
+    const root = new THREE.Group();
+    scene.add(root);
+    const airGroup = new THREE.Group();
+    scene.add(airGroup);
+    const labelGroup = new THREE.Group();
+    scene.add(labelGroup);
+
+    function makeLabel(text, x, y, z, color) {
+        const cv = document.createElement('canvas');
+        const ctx = cv.getContext('2d');
+        const pad = 12;
+        ctx.font = 'bold 30px Arial';
+        const w = Math.min(460, ctx.measureText(text).width + pad * 2);
+        cv.width = w; cv.height = 46;
+        const c2 = cv.getContext('2d');
+        c2.font = 'bold 30px Arial';
+        c2.fillStyle = color || 'rgba(30,36,50,0.85)';
+        c2.fillRect(0, 0, w, 46);
+        c2.fillStyle = '#fff';
+        c2.textBaseline = 'middle';
+        c2.fillText(text, pad, 24);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+        spr.position.set(x, y, z);
+        spr.scale.set(w / 26, 46 / 26, 1);
+        labelGroup.add(spr);
+        return spr;
+    }
+
+    // Данные карты: цеха, станки, оборудование
+    fetch('/api/map/all').then(r => r.json()).then(function (d) {
+        (d.sections || []).forEach(function (s) {
+            const color = new THREE.Color(s.color || '#3498db');
+            // контур цеха (линия секции) + полупрозрачный пол
+            const pts = (s.line_points || []).map(p => new THREE.Vector3(px(p.x), 0.06, pz(p.y)));
+            if (pts.length > 1) {
+                const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+                    new THREE.LineBasicMaterial({ color: color, linewidth: 2 }));
+                root.add(line);
+                // заливка пола цеха — по рамке линии (convex не нужен: контур замкнут)
+                const shape = new THREE.Shape((s.line_points || []).map(p => new THREE.Vector2(px(p.x), pz(p.y))));
+                try {
+                    const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape),
+                        new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.16, depthWrite: false }));
+                    floor.rotation.x = Math.PI / 2;
+                    floor.position.y = 0.05;
+                    root.add(floor);
+                } catch (e) {}
+            }
+            // подпись цеха
+            let lx = s.label_x, ly = s.label_y;
+            if ((lx == null || ly == null) && (s.line_points || []).length) {
+                let sx = 0, sy = 0;
+                s.line_points.forEach(p => { sx += p.x; sy += p.y; });
+                lx = sx / s.line_points.length; ly = sy / s.line_points.length;
+            }
+            makeLabel(s.name, px(lx || s.x || 50), 6.5, pz(ly || s.y || 50), (s.color || '#3498db') + 'e6');
+        });
+
+        (d.machines || []).forEach(function (m) {
+            const g = new THREE.Group();
+            const base = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 3),
+                new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6, metalness: 0.15 }));
+            base.position.y = 1;
+            g.add(base);
+            const top = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 2.4),
+                new THREE.MeshStandardMaterial({ color: 0x1e8449, roughness: 0.5 }));
+            top.position.y = 2.2;
+            g.add(top);
+            g.position.set(px(m.x || 50), 0, pz(m.y || 50));
+            root.add(g);
+            makeLabel(m.name, px(m.x || 50), 3.6, pz(m.y || 50), 'rgba(39,174,96,0.9)');
+        });
+
+        (d.equipment || []).forEach(function (eq) {
+            const g = new THREE.Group();
+            // Ворота/прочее оборудование — панель (позже заменим 3D-моделями)
+            const body = new THREE.Mesh(new THREE.BoxGeometry(5, 3.6, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x7e57c2, roughness: 0.55, metalness: 0.2 }));
+            body.position.y = 1.9;
+            g.add(body);
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.35, 0.6),
+                new THREE.MeshStandardMaterial({ color: 0xb39ddb }));
+            stripe.position.y = 3.3;
+            g.add(stripe);
+            g.position.set(px(eq.x == null ? 50 : eq.x), 0, pz(eq.y == null ? 50 : eq.y));
+            root.add(g);
+            makeLabel(eq.name, px(eq.x == null ? 50 : eq.x), 4.8, pz(eq.y == null ? 50 : eq.y), 'rgba(126,87,194,0.92)');
+        });
+
+        document.getElementById('sceneLoading').style.display = 'none';
+    });
+
+    // Воздуховоды: трубы под потолком по вершинам линий
+    fetch('/air/api/map/data').then(r => r.json()).then(function (d) {
+        (d.lines || []).forEach(function (ln) {
+            const vs = ln.vertices || [];
+            if (vs.length < 2) return;
+            const color = new THREE.Color(ln.color || '#e67e22');
+            const rM = Math.max(0.07, (ln.diameter_mm || 40) / 1000 / 2 * 3.5); // утолщено для видимости
+            for (let i = 0; i < vs.length - 1; i++) {
+                const a = new THREE.Vector3(px(vs[i].x), H - 0.35, pz(vs[i].y));
+                const b = new THREE.Vector3(px(vs[i + 1].x), H - 0.35, pz(vs[i + 1].y));
+                const dir = b.clone().sub(a);
+                const len = dir.length();
+                if (len < 0.01) continue;
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(rM, rM, len, 10),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.35 }));
+                tube.position.copy(a).add(b).multiplyScalar(0.5);
+                tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+                airGroup.add(tube);
+            }
+            // узлы вершин
+            vs.forEach(function (p) {
+                const ball = new THREE.Mesh(new THREE.SphereGeometry(rM * 1.5, 10, 8),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 }));
+                ball.position.set(px(p.x), H - 0.35, pz(p.y));
+                airGroup.add(ball);
+            });
+        });
+        (d.points || []).forEach(function (p) {
+            const col = p.status === 'active' ? 0x27ae60 : (p.status === 'fault' ? 0xe74c3c : 0xf39c12);
+            const conn = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.2, 10),
+                new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.25 }));
+            conn.position.set(px(p.x), H - 1.1, pz(p.y));
+            airGroup.add(conn);
+        });
+    });
+
+    // Управление сценой
+    let airOn = true, labelsOn = true;
+    window.toggleAir = function () {
+        airOn = !airOn;
+        airGroup.visible = airOn;
+        document.getElementById('btnAir').style.opacity = airOn ? '1' : '0.45';
+    };
+    window.toggleLabels = function () {
+        labelsOn = !labelsOn;
+        labelGroup.visible = labelsOn;
+        document.getElementById('btnLbl').style.opacity = labelsOn ? '1' : '0.45';
+    };
+    window.resetCam = function () {
+        camera.position.set(75, 55, 85);
+        controls.target.set(0, 2, 0);
+    };
+    window.topView = function () {
+        camera.position.set(0, 120, 0.1);
+        controls.target.set(0, 0, 0);
+    };
+
+    window.addEventListener('resize', function () {
+        camera.aspect = host.clientWidth / Math.max(1, host.clientHeight);
+        camera.updateProjectionMatrix();
+        renderer.setSize(host.clientWidth, Math.max(200, host.clientHeight));
+    });
+
+    (function loop() {
+        requestAnimationFrame(loop);
+        controls.update();
+        renderer.render(scene, camera);
+    })();
+})();
+</script>
+{% endblock %}

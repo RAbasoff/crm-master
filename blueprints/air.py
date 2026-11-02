@@ -308,6 +308,13 @@ def air_map():
     return render_template('air_map.html', points=points, lines=lines, sections=sections)
 
 
+@bp.route('/3d')
+@login_required
+def air_map_3d():
+    """3D-обзор фабрики: цеха, станки, оборудование, воздуховоды."""
+    return render_template('air/map_3d.html')
+
+
 @bp.route('/api/map/point-position', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')

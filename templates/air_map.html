@@ -26,6 +26,7 @@
     <h1>🗺️ {{ _('Compressed Air Map') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/air" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="/air/3d" class="btn btn-sm" style="background:#283593;color:white">🧊 3D</a>
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/air/lines/new" class="btn btn-sm" style="background:#e67e22;color:white">➕ {{ _('Add line') }}</a>
         {% endif %}

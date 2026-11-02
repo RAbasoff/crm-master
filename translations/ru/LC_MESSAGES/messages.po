@@ -6935,3 +6935,7 @@ msgstr "нет"
 #: templates/map_editor.html:0
 msgid "no restrictions"
 msgstr "без ограничений"
+
+#: templates/air/map_3d.html:0
+msgid "Overview"
+msgstr "Обзор"

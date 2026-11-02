@@ -6749,3 +6749,7 @@ msgstr "geen"
 #: templates/map_editor.html:0
 msgid "no restrictions"
 msgstr "geen beperkingen"
+
+#: templates/air/map_3d.html:0
+msgid "Overview"
+msgstr "Overzicht"
