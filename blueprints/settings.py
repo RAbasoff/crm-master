@@ -427,9 +427,44 @@ def api_map_save_section():
         db.session.flush()
         resp_ids = data.get('responsible_ids', [])
         s.responsible_persons = [Verantwoordelijke.query.get(int(pid)) for pid in resp_ids if pid]
+    # Линия-граница: привязываем к секции (визуал секции — линия, не рамка)
+    line_id = data.get('line_id')
+    if line_id:
+        try:
+            from models import FloorMapLine
+            ln = db.session.get(FloorMapLine, int(line_id))
+            if ln:
+                ln.section_id = s.id
+        except Exception:
+            pass
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     return jsonify({'ok': True, 'id': s.id})
+
+
+@bp.route('/api/map/equipment-position', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def api_map_equipment_position():
+    """Перетаскивание маркера прочего оборудования (ворота и т.п.) на карте."""
+    data = request.get_json() or {}
+    from models import Equipment
+    try:
+        e = db.session.get(Equipment, int(data.get('id') or 0))
+    except (TypeError, ValueError):
+        e = None
+    if not e:
+        return jsonify({'error': 'Equipment not found'}), 404
+    try:
+        e.floor_x = float(data.get('x'))
+        e.floor_y = float(data.get('y'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Bad coordinates'}), 400
+    if 'section_id' in data:
+        e.section_id = int(data['section_id']) if data.get('section_id') else None
+    if not safe_commit():
+        return jsonify({'error': 'Save failed'}), 500
+    return jsonify({'ok': True})
 
 
 @bp.route('/api/map/delete-section', methods=['POST'])
@@ -488,14 +523,71 @@ def api_map_assign_machine():
 @bp.route('/api/map/all')
 @login_required
 def api_map_all():
+    import json as _json
+    from models import FloorMapLine, Equipment, User
+
+    # Линии-границы секций + всё для карточек секций
+    lines_by_sec = {}
+    all_lines = []
+    for ln in FloorMapLine.query.all():
+        try:
+            pts = _json.loads(ln.points_json or '[]')
+        except Exception:
+            pts = []
+        entry = {'id': ln.id, 'points': pts, 'label_x': ln.label_x, 'label_y': ln.label_y,
+                 'color': ln.color, 'width': ln.width, 'name': ln.name,
+                 'section_id': ln.section_id}
+        all_lines.append(entry)
+        if ln.section_id:
+            lines_by_sec.setdefault(ln.section_id, []).append(entry)
+
+    machines_all = Machine.query.all()
+    mechs_by_sec = {}
+    for u in User.query.filter(User.role == 'technician').all():
+        for m in (getattr(u, 'assigned_machines', []) or []):
+            if m.section_id:
+                mechs_by_sec.setdefault(m.section_id, set()).add(u.display_name or u.username)
+
+    access_by_sec = {}
+    for u in User.query.filter(User.is_active_user == True).all():
+        vis = list(getattr(u, 'visible_sections', []) or [])
+        for s in vis:
+            access_by_sec.setdefault(s.id, []).append(u.display_name or u.username)
+
+    equip_by_sec = {}
+    equip_all = []
+    for e in Equipment.query.all():
+        item = {'id': e.id, 'name': e.name, 'type': e.equipment_type or '',
+                'x': e.floor_x, 'y': e.floor_y, 'section_id': e.section_id}
+        equip_all.append(item)
+        if e.section_id:
+            equip_by_sec.setdefault(e.section_id, []).append(item)
+
     sections = []
     for s in FactorySection.query.all():
+        machines = [{'id': m.id, 'name': m.name} for m in machines_all if m.section_id == s.id]
+        resp_users = []
+        if s.responsible_user_id:
+            ru = db.session.get(User, s.responsible_user_id)
+            if ru:
+                resp_users.append(ru.display_name or ru.username)
+        resp_persons = [p.naam for p in s.responsible_persons]
         sections.append({
             'id': s.id, 'name': s.name, 'description': s.description or '',
             'type': s.section_type, 'color': s.color,
             'x': s.floor_x, 'y': s.floor_y, 'w': s.width, 'h': s.height,
             'responsible_ids': [p.id for p in s.responsible_persons],
-            'responsible': ', '.join(p.naam for p in s.responsible_persons) if s.responsible_persons else None
+            'responsible': ', '.join(resp_persons) if resp_persons else None,
+            'line_points': (lines_by_sec.get(s.id) or [{}])[0].get('points', []),
+            'line_id': (lines_by_sec.get(s.id) or [{}])[0].get('id'),
+            'label_x': (lines_by_sec.get(s.id) or [{}])[0].get('label_x'),
+            'label_y': (lines_by_sec.get(s.id) or [{}])[0].get('label_y'),
+            'machines': machines,
+            'mechanics': sorted(mechs_by_sec.get(s.id, [])),
+            'resp_users': resp_users,
+            'resp_person_names': resp_persons,
+            'access_users': sorted(access_by_sec.get(s.id, [])),
+            'equipment': equip_by_sec.get(s.id, []),
         })
     machines = []
     from security import filter_machines_for_user
@@ -506,7 +598,8 @@ def api_map_all():
             'x': m.floor_x, 'y': m.floor_y, 'section_id': m.section_id,
             'marker_size': m.marker_size or 30,
         })
-    return jsonify({'sections': sections, 'machines': machines})
+    return jsonify({'sections': sections, 'machines': machines,
+                    'lines': all_lines, 'equipment': equip_all})
 
 
 # ============================================================

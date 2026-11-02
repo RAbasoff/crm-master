@@ -6737,3 +6737,15 @@ msgstr "Geschiedenis komt uit Mule-onderhoudsrecords: datum — machine."
 #: templates/gas/dashboard.html:0
 msgid "Stop camera"
 msgstr "Camera stoppen"
+
+#: templates/map_editor.html:0
+msgid "Mechanics"
+msgstr "Monteurs"
+
+#: templates/map_editor.html:0
+msgid "none"
+msgstr "geen"
+
+#: templates/map_editor.html:0
+msgid "no restrictions"
+msgstr "geen beperkingen"

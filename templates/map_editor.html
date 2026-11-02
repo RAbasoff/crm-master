@@ -212,6 +212,26 @@
 </div>
 
 <style>
+    /* Карточки секций под картой */
+    .sec-card {
+        border:1px solid #e2e6ea; border-radius:10px; padding:8px 10px; margin-bottom:8px;
+        cursor:pointer; background:#fff; transition:box-shadow .15s,border-color .15s;
+    }
+    .sec-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.12); }
+    .sec-card.sel { border-color:#3498db; box-shadow:0 0 0 2px rgba(52,152,219,.35); }
+    .sec-card .cdot { width:12px; height:12px; border-radius:50%; display:inline-block; flex:0 0 auto; }
+
+    /* Маркер прочего оборудования (ворота и т.п.) */
+    .equip-marker {
+        position:absolute; transform:translate(-50%,-50%); z-index:12;
+        display:flex; flex-direction:column; align-items:center; cursor:grab; user-select:none;
+    }
+    .equip-marker .equip-icon {
+        width:36px; height:36px; border-radius:9px; background:#7e57c2; color:#fff;
+        display:flex; align-items:center; justify-content:center; font-size:18px;
+        box-shadow:0 2px 8px rgba(0,0,0,.35); border:2px solid #fff;
+    }
+
     .sec {
         position: absolute; cursor: move; user-select: none; border-radius: 8px;
         transition: box-shadow 0.15s;
@@ -291,7 +311,7 @@ const T = {
     allSaved: '{{ _("All saved!") }}'
 };
 
-let sections = [], machines = [], sel = null, drag = null;
+let sections = [], machines = [], EQUIPMENT = [], sel = null, drag = null;
 let SELECTED_LINE = null;
 const sLay = document.getElementById('sectionsLayer');
 const mLay = document.getElementById('machinesLayer');
@@ -341,41 +361,44 @@ canvasWrapEl.addEventListener('wheel', function(e) {
     mapZoomBy(factor);
 }, { passive: false });
 
-fetch('/api/map/all').then(r=>r.json()).then(d => { sections=d.sections; machines=d.machines; render(); });
+fetch('/api/map/all').then(r=>r.json()).then(d => { sections=d.sections||[]; machines=d.machines||[]; EQUIPMENT=d.equipment||[]; render(); });
 
 function render() { renderSections(); renderMachines(); renderLists(); updSelectors(); }
 
+function secLabelPos(s) {
+    // Позиция ярлыка: label-точка линии или центроид точек границы
+    let lx = s.label_x, ly = s.label_y;
+    if ((lx == null || ly == null) && s.line_points && s.line_points.length) {
+        let sx = 0, sy = 0;
+        s.line_points.forEach(p => { sx += p.x; sy += p.y; });
+        lx = sx / s.line_points.length; ly = sy / s.line_points.length;
+    }
+    if (lx == null || ly == null) { lx = s.x; ly = s.y; }
+    return {x: lx, y: ly};
+}
+
 function renderSections() {
-    sLay.innerHTML = '';
+    // Секция визуально = её ЛИНИЯ (redrawLines); здесь — только подпись.
+    // Прямоугольники убраны: они «съезжали» при масштабе/прокрутке.
+    const lay = document.getElementById('labelsLayer');
+    if (!lay) return;
+    lay.innerHTML = '';
     sections.forEach(s => {
+        const p = secLabelPos(s);
         const el = document.createElement('div');
-        el.className = 'sec' + (sel===s.id ? ' sel' : '');
+        el.className = 'sec-label' + (sel === s.id ? ' sel' : '');
         el.dataset.id = s.id;
-        el.style.cssText = `left:${s.x}%;top:${s.y}%;width:${s.w}%;height:${s.h}%;z-index:10`;
-        el.innerHTML = `
-            <div class="sec-body" style="border-color:${s.color};background:${s.color}55"></div>
-            <div class="sec-label" style="opacity:0;pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:${s.color}f0;color:#fff;padding:4px 10px;border-radius:8px;white-space:nowrap;z-index:20;font-size:12px;font-weight:700">
-                <span class="sec-name">${esc(s.name)}</span>
-                <div class="sec-type">${esc(s.type || '')}</div>
-            </div>
-            <div class="rh rh-tl" data-d="tl"></div><div class="rh rh-tr" data-d="tr"></div>
-            <div class="rh rh-bl" data-d="bl"></div><div class="rh rh-br" data-d="br"></div>
-            <div class="rh rh-t" data-d="t"></div><div class="rh rh-b" data-d="b"></div>
-            <div class="rh rh-l" data-d="l"></div><div class="rh rh-r" data-d="r"></div>
-            <div class="edge edge-t" data-d="t"></div><div class="edge edge-b" data-d="b"></div>
-            <div class="edge edge-l" data-d="l"></div><div class="edge edge-r" data-d="r"></div>
-        `;
+        el.style.cssText = 'pointer-events:auto;position:absolute;left:' + p.x + '%;top:' + p.y + '%;' +
+            'transform:translate(-50%,-50%);background:' + s.color + 'ee;color:#fff;padding:5px 12px;' +
+            'border-radius:8px;white-space:nowrap;font-size:12px;font-weight:700;cursor:pointer;' +
+            'box-shadow:0 2px 8px rgba(0,0,0,.35);border:2px solid ' + (sel === s.id ? '#fff' : 'transparent');
+        el.textContent = s.name;
         el.title = s.name;
-        el.querySelectorAll('.rh, .edge').forEach(h => {
-            h.addEventListener('mousedown', e => { e.stopPropagation(); startResize(e, s, el, h.dataset.d); });
-        });
-        el.addEventListener('mousedown', e => {
-            if (e.target.closest('.rh') || e.target.closest('.edge')) return;
+        el.addEventListener('click', function (e) {
             e.stopPropagation();
-            startDrag(e, s, el, 'section');
+            selectSection(s.id);
         });
-        el.addEventListener('click', e => { e.stopPropagation(); selectSection(s.id); });
-        sLay.appendChild(el);
+        lay.appendChild(el);
     });
 }
 
@@ -392,19 +415,50 @@ function renderMachines() {
         el.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(e, m, el, 'machine'); });
         mLay.appendChild(el);
     });
+    // Прочее оборудование (ворота и т.п.) — обязательно отмечено в цеху
+    EQUIPMENT.forEach(eq => {
+        const el = document.createElement('div');
+        el.className = 'equip-marker';
+        el.dataset.id = eq.id;
+        el.style.left = (eq.x == null ? 50 : eq.x) + '%';
+        el.style.top = (eq.y == null ? 50 : eq.y) + '%';
+        el.innerHTML = '<div class="equip-icon" title="' + esc(eq.type || '') + '">🚪</div>' +
+            '<div class="mach-lbl">' + esc(eq.name) + '</div>';
+        el.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(e, eq, el, 'equipment'); });
+        mLay.appendChild(el);
+    });
 }
 
 function renderLists() {
+    // Карточки секций: название, ответственные, станки, механики, допуск, оборудование
     const sList = document.getElementById('sectionsList');
     sList.innerHTML = '';
     const sc = {active:'#27ae60',broken:'#e74c3c',maintenance:'#f39c12',offline:'#95a5a6'};
     sections.forEach(s => {
-        const cnt = machines.filter(m=>m.section_id===s.id).length;
-        const el = document.createElement('div');
-        el.className = 'li' + (sel===s.id ? ' act' : '');
-        el.innerHTML = `<span class="cdot" style="background:${s.color}"></span><span style="flex:1">${esc(s.name)}</span><span style="color:#888;font-size:10px">${cnt}⚙️</span>`;
-        el.onclick = () => selectSection(s.id);
-        sList.appendChild(el);
+        const card = document.createElement('div');
+        card.className = 'sec-card' + (sel === s.id ? ' sel' : '');
+        const resp = [].concat(s.resp_users || [], s.resp_person_names || []);
+        const mech = s.mechanics || [];
+        const acc = s.access_users || [];
+        const eqp = s.equipment || [];
+        const mach = s.machines || [];
+        function line(label, items, empty) {
+            const txt = (items && items.length) ? items.map(esc).join(', ') : '<span style="color:#aaa">' + empty + '</span>';
+            return '<div style="margin:3px 0"><span style="color:#888">' + label + ':</span> ' + txt + '</div>';
+        }
+        card.innerHTML =
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+                '<span class="cdot" style="background:' + s.color + '"></span>' +
+                '<b style="flex:1;font-size:13px">' + esc(s.name) + '</b>' +
+                '<span style="color:#888;font-size:10px">' + mach.length + '⚙️</span>' +
+            '</div>' +
+            line('👤 {{ _("Responsible") }}', resp, '—') +
+            line('⚙️ {{ _("Machines") }}', mach.map(m => m.name), '{{ _("none") }}') +
+            line('🧑‍🔧 {{ _("Mechanics") }}', mech, '—') +
+            line('🔐 {{ _("Users with access") }}', acc, '{{ _("no restrictions") }}') +
+            line('🚪 {{ _("Other equipment") }}', eqp.map(e => e.name), '{{ _("none") }}');
+        card.onclick = () => selectSection(s.id);
+        sList.appendChild(card);
     });
     const mList = document.getElementById('machinesList');
     mList.innerHTML = '';
@@ -567,6 +621,12 @@ function stopDrag() {
             body: JSON.stringify({id:drag.data.id, x:drag.data.x, y:drag.data.y})
         });
     }
+    if (drag && drag.type === 'equipment') {
+        csrfFetch('/api/map/equipment-position', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:drag.data.id, x:drag.data.x, y:drag.data.y, section_id: drag.data.section_id})
+        });
+    }
     drag = null;
 }
 
@@ -725,18 +785,17 @@ function convertLineToSection(){
     const name=(document.getElementById('lineName')||{}).value||ln.name||'{{ _("New Section") }}';
     const desc=(document.getElementById('lineDesc')||{}).value||ln.description||'';
     csrfFetch('/api/map/save-section',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:name,description:desc,section_type:'workshop',color:ln.color||'#3498db',x:minX,y:minY,w:w,h:h,responsible_ids:[]})
+        body:JSON.stringify({name:name,description:desc,section_type:'workshop',color:ln.color||'#3498db',x:minX,y:minY,w:w,h:h,responsible_ids:[],line_id:ln.id})
     }).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){ alert(d.error||'Error'); return; }
-        // исходную линию удаляем, чтобы не дублировать
-        csrfFetch('/api/map/lines/'+ln.id+'/delete',{method:'POST'}).then(function(){
-            loadFloorLines();
-            fetch('/api/map/all').then(function(r){return r.json();}).then(function(all){
-                sections=all.sections||[];
-                machines=all.machines||[];
-                render();
-                selectSection(d.id);
-            });
+        // Линию СОХРАНЯЕМ — она и есть граница секции (без прямоугольников)
+        loadFloorLines();
+        fetch('/api/map/all').then(function(r){return r.json();}).then(function(all){
+            sections=all.sections||[];
+            machines=all.machines||[];
+            EQUIPMENT=all.equipment||[];
+            render();
+            selectSection(d.id);
         });
     });
 }

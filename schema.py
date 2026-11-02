@@ -203,6 +203,7 @@ def ensure_schema():
         ("equipment_maintenance.model_name", "ALTER TABLE equipment_maintenance ADD COLUMN model_name VARCHAR(200)"),
         ("maintenance_plan.mule_id", "ALTER TABLE maintenance_plan ADD COLUMN mule_id INTEGER"),
         ("client.work_hours_exempt", "ALTER TABLE client ADD COLUMN work_hours_exempt INTEGER"),
+        ("floor_map_line.section_id", "ALTER TABLE floor_map_line ADD COLUMN section_id INTEGER"),
         ("client.monteur_id", "ALTER TABLE client ADD COLUMN monteur_id INTEGER REFERENCES worker(id)"),
         ("worker.user_id", "ALTER TABLE worker ADD COLUMN user_id INTEGER REFERENCES user(id)"),
         ("worker.group_id", "ALTER TABLE worker ADD COLUMN group_id INTEGER REFERENCES responsible_group(id)"),

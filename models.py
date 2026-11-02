@@ -875,7 +875,11 @@ class InvoiceItem(db.Model):
 # ============================================================
 
 class FloorMapLine(db.Model):
-    """Линии/разметка на карте цеха (рисование)."""
+    """Линии/разметка на карте цеха (рисование).
+
+    section_id — линия является границей секции (визуал секции — только
+    линия, без прямоугольников; карточка секции — отдельно).
+    """
     __tablename__ = 'floor_map_line'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), default='Line')
@@ -885,9 +889,11 @@ class FloorMapLine(db.Model):
     points_json = db.Column(db.Text, default='[]')  # [{"x":..%,"y":..%}, ...]
     label_x = db.Column(db.Float)  # позиция подписи, % (None = у первой точки)
     label_y = db.Column(db.Float)
+    section_id = db.Column(db.Integer, db.ForeignKey('factory_section.id'), nullable=True, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=now_local)
     creator = db.relationship('User', foreign_keys=[created_by])
+    section = db.relationship('FactorySection', backref='map_lines')
 
 
 class MachinePassword(db.Model):

@@ -6923,3 +6923,15 @@ msgstr "История строится из записей обслуживан
 #: templates/gas/dashboard.html:0
 msgid "Stop camera"
 msgstr "Выключить камеру"
+
+#: templates/map_editor.html:0
+msgid "Mechanics"
+msgstr "Механики"
+
+#: templates/map_editor.html:0
+msgid "none"
+msgstr "нет"
+
+#: templates/map_editor.html:0
+msgid "no restrictions"
+msgstr "без ограничений"
