@@ -46,8 +46,12 @@ def _send_push_job(row, title, message, ntype, link, lang='ru'):
                 res = send_web_push(
                     {'endpoint': endpoint, 'keys': {'p256dh': p256dh, 'auth': auth}},
                     _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
-    except Exception:
+    except Exception as e:
         res = 'error'
+        print('PUSH EXC sub=%s: %s' % (sid, e))
+    if res != 'ok':
+        # раньше ошибки молчали — push «просто переставал приходить»
+        print('PUSH %s sub=%s user=%s' % (res, sid, user_id))
     if res == 'dead':
         # мёртвую подписку удаляем отдельной короткой задачей
         _push_pool.submit(_cleanup_dead_sub, sid)

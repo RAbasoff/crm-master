@@ -380,7 +380,7 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=5').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
+                navigator.serviceWorker.register('/static/sw.js?v=6').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
                     .then(reg => {
                         console.log('SW registered:', reg.scope);
                         initWebPush(reg);
@@ -412,6 +412,7 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                         localStorage.setItem('push_enabled', '1');
                         localStorage.setItem('push_synced_at', String(Date.now()));
                         localStorage.setItem('push_user', String(window.APP_USER_ID || ''));
+                        localStorage.setItem('push_endpoint_tail', String(sub.endpoint || '').slice(-24));
                     } catch (e) {}
                     const b = document.getElementById('pushEnableBtn');
                     if (b) {
@@ -446,18 +447,20 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                             // («синхронизировано <1 часа назад») мешал
                             // самовосстановлению: мёртвая подписка не
                             // пересоздавалась до часа, в PWA — вообще никогда.
-                            var savedSig = null, syncedUser = null;
+                            var savedSig = null, syncedUser = null, savedEp = null;
                             try {
                                 savedSig = localStorage.getItem('push_key_sig');
                                 syncedUser = localStorage.getItem('push_user');
+                                savedEp = localStorage.getItem('push_endpoint_tail');
                             } catch (e) {}
+                            var epTail = String(sub.endpoint || '').slice(-24);
                             var userId = String(window.APP_USER_ID || '');
                             return fetch('/api/push/status').then(function (r) { return r.json(); }).then(function (st) {
                                 if (st && st.subscribed) {
-                                    if (savedSig === keySig && syncedUser === userId) {
+                                    if (savedSig === keySig && syncedUser === userId && savedEp === epTail) {
                                         return Promise.resolve(); // жива и привязана — без лишнего POST
                                     }
-                                    return syncPushSub(sub); // сменился пользователь или VAPID-ключ
+                                    return syncPushSub(sub); // сменился пользователь / ключ / сама подписка
                                 }
                                 // подписка мёртва или привязана к другому — новая подписка
                                 return sub.unsubscribe().then(doSub).catch(doSub);

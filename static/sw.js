@@ -147,8 +147,38 @@ self.addEventListener('push', (event) => {
       icon: '/static/icon-192.png',
       badge: '/static/icon-192.png',
       data: { url: data.url || '/' },
-    })
+    }).catch(function () {})
   );
+});
+
+// ── Жизненно важно для iPhone: при обновлении/пересоздании SW браузер
+// может заменить push-подписку. Без этого обработчика подписка
+// «осиротевает»: на сервере старая, на телефоне её больше нет —
+// push молча перестают приходить.
+function swUrlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const r = await fetch('/api/push/vapid-public-key');
+      const d = await r.json();
+      const key = d.publicKey || d.key;
+      if (!key) return;
+      const sub = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: swUrlBase64ToUint8Array(key),
+      });
+      // Синхронизацию с сервером сделает страница при следующем открытии —
+      // она увидит новую подписку и отправит её на /api/push/subscribe.
+      console.log('pushsubscriptionchange: resubscribed', !!sub);
+    } catch (e) {
+      console.log('pushsubscriptionchange failed:', e);
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
