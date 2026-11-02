@@ -353,12 +353,10 @@ function renderSections() {
         el.dataset.id = s.id;
         el.style.cssText = `left:${s.x}%;top:${s.y}%;width:${s.w}%;height:${s.h}%;z-index:10`;
         el.innerHTML = `
-            <div class="sec-body" style="border-color:${s.color};background:${s.color}55">
-                el.innerHTML = `<div class="sec-label" style="opacity:0;pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:${s.color}f0;color:#fff;padding:4px 10px;border-radius:8px;white-space:nowrap;z-index:20;font-size:12px;font-weight:700">
-                    <span class="sec-name">${esc(s.name)}</span>
-                    <div class="sec-type">${esc(s.type)}</div>
-                </div>`;
-                el.title = s.name;
+            <div class="sec-body" style="border-color:${s.color};background:${s.color}55"></div>
+            <div class="sec-label" style="opacity:0;pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:${s.color}f0;color:#fff;padding:4px 10px;border-radius:8px;white-space:nowrap;z-index:20;font-size:12px;font-weight:700">
+                <span class="sec-name">${esc(s.name)}</span>
+                <div class="sec-type">${esc(s.type || '')}</div>
             </div>
             <div class="rh rh-tl" data-d="tl"></div><div class="rh rh-tr" data-d="tr"></div>
             <div class="rh rh-bl" data-d="bl"></div><div class="rh rh-br" data-d="br"></div>
@@ -367,6 +365,7 @@ function renderSections() {
             <div class="edge edge-t" data-d="t"></div><div class="edge edge-b" data-d="b"></div>
             <div class="edge edge-l" data-d="l"></div><div class="edge edge-r" data-d="r"></div>
         `;
+        el.title = s.name;
         el.querySelectorAll('.rh, .edge').forEach(h => {
             h.addEventListener('mousedown', e => { e.stopPropagation(); startResize(e, s, el, h.dataset.d); });
         });
