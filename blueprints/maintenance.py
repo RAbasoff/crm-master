@@ -102,18 +102,17 @@ def maintenance_calendar():
         return log.date.date() if hasattr(log.date, 'date') else log.date
 
     def _is_part_done(p, logs, due, ltype):
-        """Done if a matching completion log exists on/before the due date."""
+        """Done only for THIS due date: work logged on the date, slightly
+        early (≤14 days), or after it. Раньше любая запись внутри цикла
+        помечала будущее ТО выполненным — «выполнено» стояло на работах,
+        до которых ещё далеко."""
         acts = ('replacement', 'replaced') if ltype == 'replacement' else ('maintenance', 'maint', 'replaced')
+        window_start = due - timedelta(days=14)
         for log in logs:
             if log.action not in acts or not log.date:
                 continue
             ld = _log_date(log)
-            if ld == due:
-                return True
-            # completed early in this cycle (interval reschedules next_*)
-            if p.last_replacement and ltype == 'replacement' and p.last_replacement <= ld < due:
-                return True
-            if p.last_maintenance and ltype == 'maintenance' and p.last_maintenance <= ld < due:
+            if ld == due or (window_start <= ld < due) or ld > due:
                 return True
         return False
 
