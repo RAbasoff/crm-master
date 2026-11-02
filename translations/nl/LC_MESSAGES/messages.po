@@ -6733,3 +6733,7 @@ msgstr "Vink opties aan om toe te voegen aan print en PDF"
 #: templates/equipment_mule_list.html:0
 msgid "History is built from Mule maintenance records: date — machine."
 msgstr "Geschiedenis komt uit Mule-onderhoudsrecords: datum — machine."
+
+#: templates/gas/dashboard.html:0
+msgid "Stop camera"
+msgstr "Camera stoppen"

@@ -6919,3 +6919,7 @@ msgstr "Отметьте пункты, чтобы добавить их в пе�
 #: templates/equipment_mule_list.html:0
 msgid "History is built from Mule maintenance records: date — machine."
 msgstr "История строится из записей обслуживания Mule: дата — станок."
+
+#: templates/gas/dashboard.html:0
+msgid "Stop camera"
+msgstr "Выключить камеру"

@@ -113,6 +113,14 @@
         <!-- Step 2: code entry -->
         <div id="imStep2" style="display:none;margin-top:16px">
             <label style="font-weight:600;font-size:12px;display:block;margin-bottom:4px" id="imCodeLabel">{{ _('Scan or enter cylinder number') }}</label>
+            <!-- Камера: включается в режиме «Скан» (кнопка + автозапуск) -->
+            <div id="imCameraWrap" style="display:none;margin-bottom:10px">
+                <div id="imReader" style="width:100%;max-width:420px;border-radius:10px;overflow:hidden;background:#111"></div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+                    <button type="button" id="imCameraBtn" onclick="imToggleCamera()" class="btn btn-sm" style="background:#27ae60;color:#fff;padding:8px 14px">📷 {{ _('Camera') }}</button>
+                    <span id="imCameraHint" style="font-size:11px;color:#888">{{ _('Scan barcode or enter number') }}</span>
+                </div>
+            </div>
             <div style="display:flex;gap:8px">
                 <input type="text" id="imCode" placeholder="{{ _('Cylinder number / barcode...') }}"
                     style="flex:1;padding:12px;border:2px solid #3498db;border-radius:8px;font-size:16px;font-family:monospace;outline:none" autocomplete="off">
@@ -419,6 +427,7 @@
     </div>
 </div>
 
+<script src="/static/js/html5-qrcode.min.js"></script>
 <script src="/static/js/scanner-common.js"></script>
 <script>
 var currentCylId = null;
@@ -457,9 +466,11 @@ function openInstallModal() {
     imSetInput('scan');
 }
 function closeInstallModal() {
+    imStopScanner();
     document.getElementById('installModal').style.display = 'none';
 }
 function imStep1() {
+    imStopScanner();
     document.getElementById('imStep1').style.display = '';
     document.getElementById('imStep1Close').style.display = '';
     document.getElementById('imStep2').style.display = 'none';
@@ -493,7 +504,58 @@ function imSetInput(m) {
     document.getElementById('imStep1Close').style.display = 'none';
     document.getElementById('imStep2').style.display = '';
     document.getElementById('imCodeLabel').textContent = m === 'scan' ? '{{ _("Scan barcode or enter number") }}' : '{{ _("Enter cylinder number") }}';
+    // Камера: в режиме «Скан» включаем сразу (раньше вообще не включалась)
+    var cam = document.getElementById('imCameraWrap');
+    if (cam) cam.style.display = (m === 'scan') ? '' : 'none';
+    if (m === 'scan') {
+        setTimeout(imStartScanner, 250);
+    } else {
+        imStopScanner();
+    }
     setTimeout(function() { document.getElementById('imCode').focus(); }, 100);
+}
+
+// ── Камера модалки (html5-qrcode) ──
+var imScanner = null, imScanBusy = false;
+function imStartScanner() {
+    if (imScanner) return;
+    var hint = document.getElementById('imCameraHint');
+    if (typeof Html5Qrcode === 'undefined') {
+        if (hint) hint.textContent = '{{ _("Camera not available. Use manual entry or USB scanner.") }}';
+        return;
+    }
+    imScanner = new Html5Qrcode('imReader');
+    imScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 120 } },
+        function (text) {
+            if (imScanBusy) return;
+            var v = String(text).trim();
+            if (!v || v === document.getElementById('imCode').value.trim()) return;
+            imScanBusy = true;
+            setTimeout(function () { imScanBusy = false; }, 1500);
+            if (typeof ScannerCommon !== 'undefined') v = ScannerCommon.normalizeCode(v);
+            document.getElementById('imCode').value = v;
+            imSubmit();
+        }, function () {}
+    ).then(function () {
+        var b = document.getElementById('imCameraBtn');
+        if (b) b.textContent = '⏹ {{ _("Stop camera") }}';
+        if (hint) hint.textContent = '{{ _("Scan barcode or enter number") }}';
+    }).catch(function () {
+        if (hint) hint.textContent = '{{ _("Camera not available. Use manual entry or USB scanner.") }}';
+    });
+}
+function imStopScanner() {
+    if (!imScanner) return;
+    try {
+        imScanner.stop().then(function () { try { imScanner.clear(); } catch (e) {} }).catch(function () {});
+    } catch (e) {}
+    imScanner = null;
+    imScanBusy = false;
+    var b = document.getElementById('imCameraBtn');
+    if (b) b.textContent = '📷 {{ _("Camera") }}';
+}
+function imToggleCamera() {
+    if (imScanner) imStopScanner(); else imStartScanner();
 }
 document.getElementById('imCode').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { e.preventDefault(); imSubmit(); }
