@@ -6939,3 +6939,35 @@ msgstr "без ограничений"
 #: templates/air/map_3d.html:0
 msgid "Overview"
 msgstr "Обзор"
+
+#: templates/air/map_3d.html:0
+msgid "Walls"
+msgstr "Стены"
+
+#: templates/air/map_3d.html:0
+msgid "Ceiling"
+msgstr "Потолок"
+
+#: templates/air/map_3d.html:0
+msgid "Passages"
+msgstr "Проходы"
+
+#: templates/air/map_3d.html:0
+msgid "Reset view"
+msgstr "Сбросить вид"
+
+#: templates/air/map_3d.html:0
+msgid "Top view"
+msgstr "Вид сверху"
+
+#: templates/air/map_3d.html:0
+msgid "Loading"
+msgstr "Загрузка"
+
+#: templates/air/map_3d.html:0
+msgid "Factory Map"
+msgstr "Карта цеха"
+
+#: templates/air/map_3d.html:0
+msgid "Drag to rotate, wheel to zoom, right-drag to pan."
+msgstr "Перетащите — вращение, колесо — масштаб, правая кнопка — сдвиг."

@@ -6753,3 +6753,35 @@ msgstr "geen beperkingen"
 #: templates/air/map_3d.html:0
 msgid "Overview"
 msgstr "Overzicht"
+
+#: templates/air/map_3d.html:0
+msgid "Walls"
+msgstr "Muren"
+
+#: templates/air/map_3d.html:0
+msgid "Ceiling"
+msgstr "Plafond"
+
+#: templates/air/map_3d.html:0
+msgid "Passages"
+msgstr "Doorgangen"
+
+#: templates/air/map_3d.html:0
+msgid "Reset view"
+msgstr "Weergave resetten"
+
+#: templates/air/map_3d.html:0
+msgid "Top view"
+msgstr "Bovenaanzicht"
+
+#: templates/air/map_3d.html:0
+msgid "Loading"
+msgstr "Laden"
+
+#: templates/air/map_3d.html:0
+msgid "Factory Map"
+msgstr "Fabriekskaart"
+
+#: templates/air/map_3d.html:0
+msgid "Drag to rotate, wheel to zoom, right-drag to pan."
+msgstr "Slepen — draaien, scrollen — zoomen, rechts slepen — verplaatsen."
