@@ -393,6 +393,9 @@ class MaintenancePlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'), nullable=True)
     equipment_id = db.Column(db.Integer, nullable=True)  # другое оборудование
+    # Mule-устройство (запись Mule-onderhoud = equipment_maintenance.id):
+    # ТО муле и ТО станка, где он стоит, — разные работы, но видны в одном списке
+    mule_id = db.Column(db.Integer, nullable=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     maintenance_type = db.Column(db.String(50), default='preventive')
@@ -425,6 +428,8 @@ class MaintenancePlan(db.Model):
     creator = db.relationship('User', foreign_keys=[created_by])
     equipment = db.relationship('Equipment', foreign_keys=[equipment_id],
                                 primaryjoin='MaintenancePlan.equipment_id == Equipment.id')
+    mule = db.relationship('EquipmentMaintenance', foreign_keys=[mule_id],
+                           primaryjoin='MaintenancePlan.mule_id == EquipmentMaintenance.id')
 
     def window_end_date(self):
         """Конец окна ТО: planned_end или planned_start + window_days - 1."""

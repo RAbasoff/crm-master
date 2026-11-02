@@ -6703,3 +6703,9 @@ msgstr "Nog"
 #: templates/maintenance_calendar.html:0
 msgid "Work on a weekend? Set only if necessary."
 msgstr "Werk in het weekend? Alleen als het nodig is."
+
+#: templates/maintenance_plan_form.html:0
+msgid "Select from several lists at once — one plan is created per item."
+msgstr ""
+"Selecteer uit meerdere lijsten tegelijk — per punt wordt een eigen plan "
+"gemaakt."

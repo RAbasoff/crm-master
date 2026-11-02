@@ -6889,3 +6889,9 @@ msgstr "Через"
 #: templates/maintenance_calendar.html:0
 msgid "Work on a weekend? Set only if necessary."
 msgstr "Работа в выходной? Ставьте только если это необходимо."
+
+#: templates/maintenance_plan_form.html:0
+msgid "Select from several lists at once — one plan is created per item."
+msgstr ""
+"Можно выбирать сразу из нескольких списков — на каждый пункт создаётся свой "
+"план."

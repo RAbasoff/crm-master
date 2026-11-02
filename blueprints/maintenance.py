@@ -24,10 +24,29 @@ bp = Blueprint('maintenance', __name__)
 
 
 def _target_name(obj):
-    """Безопасное имя цели ТО: станок, иначе оборудование, иначе «—»."""
+    """Безопасное имя цели ТО: станок, Mule-устройство, оборудование, «—»."""
     m = getattr(obj, 'machine', None)
     if m is not None and getattr(m, 'name', None):
         return m.name
+    mule_id = getattr(obj, 'mule_id', None)
+    if mule_id:
+        try:
+            from models import EquipmentMaintenance
+            mro = db.session.get(EquipmentMaintenance, mule_id)
+        except Exception:
+            mro = None
+        if mro:
+            nm = mro.name or mro.number
+            if mro.serial:
+                nm = f'{nm} ({mro.serial})'
+            if mro.machine_id:
+                try:
+                    mm = db.session.get(__import__('models').Machine, mro.machine_id)
+                    if mm and mm.name:
+                        nm = f'{nm} · {mm.name}'
+                except Exception:
+                    pass
+            return nm
     eq_id = getattr(obj, 'equipment_id', None)
     if eq_id:
         eq = Equipment.query.get(eq_id)
@@ -1636,12 +1655,14 @@ def skip_weekend(d):
 
 
 def _parse_target_id(tid):
-    """Parse 'm12' / 'e3' → ('machine'|'equipment', id) or (None, None)."""
+    """Parse 'm12' / 'e3' / 'u7' → ('machine'|'equipment'|'mule', id)."""
     tid = (tid or '').strip()
     if tid.startswith('m') and tid[1:].isdigit():
         return 'machine', int(tid[1:])
     if tid.startswith('e') and tid[1:].isdigit():
         return 'equipment', int(tid[1:])
+    if tid.startswith('u') and tid[1:].isdigit():
+        return 'mule', int(tid[1:])
     return None, None
 
 @bp.route('/maintenance-plans/new', methods=['GET', 'POST'])
@@ -1679,14 +1700,17 @@ def maintenance_plan_new():
         for tid in targets:
             kind, target_id = _parse_target_id(tid)
             if kind == 'machine':
-                machine_id, equipment_id = target_id, None
+                machine_id, equipment_id, mule_id = target_id, None, None
             elif kind == 'equipment':
-                machine_id, equipment_id = None, target_id
+                machine_id, equipment_id, mule_id = None, target_id, None
+            elif kind == 'mule':
+                machine_id, equipment_id, mule_id = None, None, target_id
             else:
                 continue
             p = MaintenancePlan(
                 machine_id=machine_id,
                 equipment_id=equipment_id,
+                mule_id=mule_id,
                 title=title,
                 description=request.form.get('description', ''),
                 maintenance_type=request.form.get('maintenance_type', 'preventive'),
@@ -1779,7 +1803,8 @@ def maintenance_plan_new():
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
     from models import Equipment
-    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all())
+    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all(),
+                           mules=EquipmentMaintenance.query.filter(EquipmentMaintenance.record_type.isnot('repair')).order_by(EquipmentMaintenance.name).all())
 
 @bp.route('/maintenance-plans/<int:plan_id>')
 @login_required
@@ -1800,8 +1825,11 @@ def maintenance_plan_edit(plan_id):
             kind, target_id = _parse_target_id(targets[0]) if targets else (None, None)
             if kind is None:
                 raise ValueError('no target')
+            p.mule_id = None
             if kind == 'machine':
                 p.machine_id, p.equipment_id = target_id, None
+            elif kind == 'mule':
+                p.machine_id, p.equipment_id, p.mule_id = None, None, target_id
             else:
                 p.machine_id, p.equipment_id = None, target_id
             p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
@@ -1884,6 +1912,7 @@ def maintenance_plan_edit(plan_id):
                 new_plan = MaintenancePlan(
                     machine_id=p.machine_id,
                     equipment_id=p.equipment_id,
+                    mule_id=p.mule_id,
                     title=p.title,
                     description=p.description,
                     maintenance_type=p.maintenance_type,
@@ -1905,7 +1934,8 @@ def maintenance_plan_edit(plan_id):
         return redirect(url_for('maintenance.maintenance_plan_detail', plan_id=p.id))
     machines = Machine.query.order_by(Machine.name).all()
     workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all())
+    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all(),
+                           mules=EquipmentMaintenance.query.filter(EquipmentMaintenance.record_type.isnot('repair')).order_by(EquipmentMaintenance.name).all())
 
 @bp.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])
 @login_required
