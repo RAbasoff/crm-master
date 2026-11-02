@@ -36,6 +36,68 @@ def mule_machines_json(machines):
         out.append({'id': m.id, 'name': m.name, 'serial': sn})
     return out
 
+
+import re as _re
+_SPLIT_SEP = _re.compile(r'[\s/]+')
+_TOK_DIGITS = _re.compile(r'\d+$')
+_TOK_CODE = _re.compile(r'[A-Za-z]{1,3}\d{2,}$')
+_TOK_WORD = _re.compile(r'[A-Za-z]+$')
+_TOK_COMPOUND = _re.compile(r'[A-Za-z][A-Za-z0-9]*-[A-Za-z0-9/-]+$')
+
+
+def _is_model_token(t):
+    """Токен похож на обозначение модели: C2941, M1721, 1799, 55, Nutripack-V9."""
+    return bool(_TOK_DIGITS.match(t) or _TOK_CODE.match(t) or _TOK_COMPOUND.match(t))
+
+
+def split_mule_name(name):
+    """Разделить «имя + модель» в одном поле: 'V9 II COM 1799' → ('V9 II', 'COM 1799').
+
+    Принцип: модель — хвостовой блок кодов (буквы+цифры, 'COM 1799', 'C2902/1'),
+    имя — то, что впереди ('V9 II', 'V7 ALU', 'V9 Links'). Если всё имя похоже
+    на модель — первый токен остаётся именем ('M2623 C3043' → 'M2623' + 'C3043').
+    Одиночные коды и словосочетания ('Kwartaal onderhoud') не трогаем.
+    """
+    s = (name or '').strip()
+    if not s:
+        return '', ''
+    parts = []
+    prev = 0
+    for m in _SPLIT_SEP.finditer(s):
+        parts.append((s[prev:m.start()], prev))
+        prev = m.end()
+    parts.append((s[prev:], prev))
+    parts = [(t, p) for t, p in parts if t]
+    n = len(parts)
+    if n < 2:
+        return s, ''
+    # идём справа: хвостовой блок токенов-моделей
+    i = n - 1
+    while i >= 0:
+        t = parts[i][0]
+        if _is_model_token(t):
+            i -= 1
+            continue
+        # 'COM' + '1799', 'M' + '620': буквы перед чисто цифровым токеном
+        if _TOK_WORD.match(t) and i + 1 < n and _TOK_DIGITS.fullmatch(parts[i + 1][0]):
+            i -= 1
+            continue
+        break
+    k = i + 1  # первый токен модели
+    if k >= n:
+        return s, ''          # модели не нашли
+    if k == 0:
+        # всё имя — «модельные» токены: первый токен оставляем именем
+        if n >= 2 and any(_re.search(r'[A-Za-z]', parts[j][0]) for j in range(1, n)):
+            k = 1
+        else:
+            return s, ''
+    new_name = s[:parts[k][1]].strip(' /')
+    new_model = s[parts[k][1]:].strip()
+    if not new_name or not new_model:
+        return s, ''
+    return new_name, new_model
+
 def gen_eq_number(record_type='maintenance'):
     from utils import next_number_suffix
     day = datetime.utcnow().strftime('%Y%m%d')
@@ -646,12 +708,20 @@ def equipment_new():
             flash(_('Invalid date format'), 'error')
             return redirect(url_for('equipment.equipment_new'))
         rec_type = request.form.get('record_type') or ('repair' if request.args.get('type') == 'repair' else 'maintenance')
+        # Если в имени смешаны имя и модель ('V9 II COM 1799') — модель
+        # автоматически уходит в своё поле (пока поле модели пустое).
+        _nm = (request.form.get('name') or '').strip()
+        _md = (request.form.get('model_name') or '').strip()
+        if not _md and _nm:
+            _sn, _sm = split_mule_name(_nm)
+            if _sm:
+                _nm, _md = _sn, _sm
         eq = EquipmentMaintenance(
             number=gen_eq_number(rec_type),
             record_type=rec_type,
-            name=request.form['name'],
+            name=_nm,
             serial=request.form.get('serial', ''),
-            model_name=request.form.get('model_name', ''),
+            model_name=_md,
             machine_id=safe_int(request.form.get('machine_id')) or None,
             date=date,
             reason=request.form['reason'],
@@ -732,9 +802,15 @@ def equipment_edit(eq_id):
         except (ValueError, KeyError):
             flash(_('Invalid date format'), 'error')
             return redirect(url_for('equipment.equipment_edit', eq_id=eq.id))
-        eq.name = request.form['name']
+        _nm = (request.form.get('name') or '').strip()
+        _md = (request.form.get('model_name') or '').strip()
+        if not _md and _nm:
+            _sn, _sm = split_mule_name(_nm)
+            if _sm:
+                _nm, _md = _sn, _sm
+        eq.name = _nm
         eq.serial = request.form.get('serial', '')
-        eq.model_name = request.form.get('model_name', '')
+        eq.model_name = _md
         eq.machine_id = safe_int(request.form.get('machine_id')) or None
         eq.reason = request.form['reason']
         eq.next_date = (d := safe_date(request.form.get('next_date'))) and d.date() or None
