@@ -770,7 +770,7 @@ def _notify_logistiek_low_stock(item):
         if p.username:
             user = User.query.filter_by(username=p.username).first()
             if user:
-                create_notification(user.id, 'Low stock', f'⚠️ Склад Oktopus: {msg}', 'warning', '/warehouse/')
+                create_notification(user.id, 'Low stock', f'⚠️ Magazijn Oktopus: {msg}', 'warning', '/warehouse/')
 
 
 # Анти-спам: «ниже минимума» — одно уведомление на позицию за 12 часов

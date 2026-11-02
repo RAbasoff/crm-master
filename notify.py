@@ -146,8 +146,8 @@ def notify_fault_created(fault, mechanics, head_of_ts_users=None):
 def notify_fault_done(fault, reporter_user=None, head_users=None):
     """Выполнено/закрыто: email заявителю + начальнику ТС."""
     st = getattr(fault, 'status', '') or ''
-    title = f"Заявка #{fault.id}: {st}"
-    body = f"<p>Заявка <b>#{fault.id}</b> — {fault.title}</p><p>Статус: <b>{st}</b></p>"
+    title = f"Storing #{fault.id}: {st}"
+    body = f"<p>Storing <b>#{fault.id}</b> — {fault.title}</p><p>Status: <b>{st}</b></p>"
     sent = 0
     for u in list(reporter_user and [reporter_user] or []) + list(head_users or []):
         email = getattr(u, 'email', None)
