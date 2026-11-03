@@ -20,6 +20,7 @@
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <strong style="font-size:12px;color:#2c3e50">{{ _('Edit tools') }}:</strong>
         <button class="btn btn-sm" id="tool-select" onclick="setTool('select')" style="background:#eee">&#128433; {{ _('Select') }}</button>
+        <button class="btn btn-sm" id="tool-move" onclick="setTool('move')" style="background:#ddd">&#10021; {{ _('Move') }}</button>
         <button class="btn btn-sm" id="tool-wall" onclick="setTool('wall')" style="background:#9fb3c8">&#129529; {{ _('Wall') }}</button>
         <button class="btn btn-sm" id="tool-opening" onclick="setTool('opening')" style="background:#b0bec5">&#128682; {{ _('Opening') }}</button>
         <button class="btn btn-sm" id="tool-gate" onclick="setTool('gate')" style="background:#7e57c2;color:#fff">&#128678; {{ _('Gate') }}</button>
@@ -33,6 +34,8 @@
         <label>{{ _('Width') }} <input type="number" id="panW" value="5" step="0.1" min="0.3" style="width:64px"> m</label>
         <label>{{ _('Diameter') }} <input type="number" id="panD" value="110" step="5" min="6" style="width:64px"> mm</label>
         <label>{{ _('Pipe height') }} <input type="number" id="panY" value="4" step="0.1" min="0.2" style="width:64px"> m</label>
+        <label>{{ _('Rotation') }} <input type="number" id="panR" value="0" step="15" style="width:64px"> °</label>
+        <button class="btn btn-sm" onclick="rotSelected()" style="background:#7e57c2;color:#fff">+90°</button>
         <button class="btn btn-sm" onclick="applyParams()" style="background:#2c3e50;color:#fff">{{ _('Apply') }}</button>
         <button class="btn btn-sm" onclick="delSelected()" style="background:#e74c3c;color:#fff">{{ _('Delete') }}</button>
         <button class="btn btn-sm" onclick="clearDesign()" style="background:#95a5a6;color:#fff">{{ _('Clear all') }}</button>
@@ -350,18 +353,19 @@
     const editGroup = new THREE.Group();
     scene.add(editGroup);
     const design = { walls: [], gates: [], pipes: [], valves: [] };
-    const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4 };
-    let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null;
+    const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
+    let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
 
     function setTool(t) {
         curTool = t; wallStart = null; pipeBuf = [];
-        ['select', 'wall', 'opening', 'gate', 'pipe', 'hose', 'valve'].forEach(function (id) {
+        ['select', 'move', 'wall', 'opening', 'gate', 'pipe', 'hose', 'valve'].forEach(function (id) {
             const b = document.getElementById('tool-' + id);
             if (b) b.style.opacity = (id === t) ? '1' : '0.45';
         });
         const h = document.getElementById('toolHint');
         if (h) h.textContent = {
             select: '{{ _("Click an object to edit its size") }}',
+            move: '{{ _("Drag an object to move it") }}',
             wall: '{{ _("Click 1 — wall start, click 2 — wall end") }}',
             opening: '{{ _("Click on a drawn wall to cut a doorway") }}',
             gate: '{{ _("Click on the floor to place a gate") }}',
@@ -511,6 +515,9 @@
         if (d.t != null) document.getElementById('panT').value = d.t;
         if (d.w != null) document.getElementById('panW').value = d.w;
         if (d.d != null) document.getElementById('panD').value = d.d;
+        if (selected.kind === 'gate') {
+            document.getElementById('panR').value = Math.round((d.rot || 0) * 180 / Math.PI) % 360;
+        }
     }
     window.applyParams = function () {
         const num = function (id) { return parseFloat(document.getElementById(id).value); };
@@ -522,6 +529,7 @@
         params.pipeD = num('panD') || params.pipeD;
         params.hoseD = Math.min(params.pipeD, 32);
         params.pipeH = num('panY') || params.pipeH;
+        params.gateRot = (parseFloat(document.getElementById('panR').value) || 0) * Math.PI / 180;
         if (selected) {
             const d = arrOf(selected.kind)[selected.idx];
             if (d) {
@@ -529,8 +537,21 @@
                 if (d.t != null) d.t = num('panT') || d.t;
                 if (d.w != null) d.w = num('panW') || d.w;
                 if (d.d != null) d.d = num('panD') || d.d;
+                if (selected.kind === 'gate') d.rot = params.gateRot;
                 rebuildDesign();
             }
+        }
+    };
+    window.rotSelected = function () {
+        if (selected && selected.kind === 'gate') {
+            const d = design.gates[selected.idx];
+            d.rot = ((d.rot || 0) + Math.PI / 2) % (Math.PI * 2);
+            document.getElementById('panR').value = Math.round(d.rot * 180 / Math.PI) % 360;
+            params.gateRot = d.rot;
+            rebuildDesign();
+        } else {
+            params.gateRot = (params.gateRot + Math.PI / 2) % (Math.PI * 2);
+            document.getElementById('panR').value = Math.round(params.gateRot * 180 / Math.PI) % 360;
         }
     };
     window.delSelected = function () {
@@ -550,8 +571,50 @@
 
     renderer.domElement.addEventListener('pointerdown', function (ev) {
         if (ev.button === 0) downXY = { x: ev.clientX, y: ev.clientY };
+        if (curTool === 'move' && ev.button === 0) {
+            const r = renderer.domElement.getBoundingClientRect();
+            edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+            edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+            edRay.setFromCamera(edNdc, camera);
+            const hits = edRay.intersectObjects(editGroup.children, true);
+            if (hits.length) {
+                const u = hits[0].object.userData;
+                const grp = editGroup.children.find(function (g) {
+                    return g.userData && g.userData.kind === u.kind && g.userData.idx === u.idx;
+                });
+                const p = groundPoint(ev);
+                if (grp && p) {
+                    drag = { grp: grp, kind: u.kind, idx: u.idx, start: p };
+                    controls.enabled = false;
+                }
+            }
+        }
+    });
+    renderer.domElement.addEventListener('pointermove', function (ev) {
+        if (!drag) return;
+        const p = groundPoint(ev);
+        if (!p) return;
+        drag.grp.position.set(p.x - drag.start.x, 0, p.z - drag.start.z);
     });
     renderer.domElement.addEventListener('pointerup', function (ev) {
+        if (drag && ev.button === 0) {
+            const dx = drag.grp.position.x, dz = drag.grp.position.z;
+            const d = arrOf(drag.kind)[drag.idx];
+            if (d) {
+                if (drag.kind === 'wall') {
+                    d.x1 += dx; d.z1 += dz; d.x2 += dx; d.z2 += dz;
+                    (d.openings || []).forEach(function (o) { o.x += dx; o.z += dz; });
+                } else if (drag.kind === 'pipe') {
+                    d.pts.forEach(function (pt) { pt.x += dx; pt.z += dz; });
+                } else {
+                    d.x += dx; d.z += dz;
+                }
+                rebuildDesign();
+            }
+            controls.enabled = true;
+            drag = null;
+        }
+        if (curTool === 'move') { downXY = null; return; }
         if (ev.button !== 0 || !downXY) return;
         const moved = Math.hypot(ev.clientX - downXY.x, ev.clientY - downXY.y);
         downXY = null;
@@ -599,7 +662,7 @@
                 rebuildDesign();
             }
         } else if (curTool === 'gate') {
-            design.gates.push({ x: p.x, z: p.z, w: params.gateW, h: params.wallH, rot: 0 });
+            design.gates.push({ x: p.x, z: p.z, w: params.gateW, h: params.wallH, rot: params.gateRot });
             rebuildDesign();
         } else if (curTool === 'pipe' || curTool === 'hose') {
             pipeBuf.push({ x: p.x, z: p.z });

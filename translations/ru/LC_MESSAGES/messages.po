@@ -7059,3 +7059,15 @@ msgstr "Клик возле трубы — поставить кран"
 #: templates/air/map_3d.html:0
 msgid "Click the wall end"
 msgstr "Кликните конец стены"
+
+#: templates/air/map_3d.html:0
+msgid "Rotation"
+msgstr "Поворот"
+
+#: templates/air/map_3d.html:0
+msgid "Move"
+msgstr "Перемещение"
+
+#: templates/air/map_3d.html:0
+msgid "Drag an object to move it"
+msgstr "Перетащите объект мышью"

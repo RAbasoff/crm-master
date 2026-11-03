@@ -6873,3 +6873,15 @@ msgstr "Klik bij een leiding — kraan plaatsen"
 #: templates/air/map_3d.html:0
 msgid "Click the wall end"
 msgstr "Klik het muureinde"
+
+#: templates/air/map_3d.html:0
+msgid "Rotation"
+msgstr "Rotatie"
+
+#: templates/air/map_3d.html:0
+msgid "Move"
+msgstr "Verplaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Drag an object to move it"
+msgstr "Sleep een object om te verplaatsen"
