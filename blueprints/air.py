@@ -363,3 +363,33 @@ def api_map_data():
         'vertices': [{'x': v.map_x, 'y': v.map_y} for v in ln.vertices],
     } for ln in AirLine.query.all()]
     return jsonify(points=points, lines=lines)
+
+# ── 3D-редактор: сохранение чертежа на сервере ──
+@bp.route('/api/3d-design', methods=['GET', 'POST'])
+@login_required
+def api_3d_design():
+    """Серверное хранилище чертежа 3D (стены/ворота/трубы/краны)."""
+    import os
+    from flask import current_app
+    path = os.path.join(current_app.instance_path, 'map_3d_design.json')
+    if request.method == 'POST':
+        if not current_user.has_role('admin', 'director', 'technician'):
+            return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        data = request.get_json(force=True, silent=True) or {}
+        clean = {
+            'walls': data.get('walls') or [],
+            'gates': data.get('gates') or [],
+            'pipes': data.get('pipes') or [],
+            'valves': data.get('valves') or [],
+        }
+        os.makedirs(current_app.instance_path, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(clean, f, ensure_ascii=False)
+        return jsonify({'ok': True})
+    if os.path.exists(path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                return jsonify(json.load(f))
+        except Exception:
+            pass
+    return jsonify({})

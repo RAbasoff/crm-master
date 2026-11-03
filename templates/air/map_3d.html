@@ -383,6 +383,25 @@
     const design = { walls: [], gates: [], pipes: [], valves: [] };
     const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
+    const canEdit3d = {{ 'true' if current_user.has_role('admin', 'director', 'technician') else 'false' }};
+    let serverLoaded = false, saveTimer = null;
+    function api3dFetch(url, opts) {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        try { opts.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content; } catch (e) {}
+        return fetch(url, opts);
+    }
+    function saveDesignToServer() {
+        if (!canEdit3d || !serverLoaded) return;
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+            api3dFetch('/air/api/3d-design', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves })
+            }).catch(function () {});
+        }, 600);
+    }
 
     function setTool(t) {
         curTool = t; wallStart = null; pipeBuf = [];
@@ -529,6 +548,7 @@
         design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i); });
         design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
         try { localStorage.setItem('map3d_design', JSON.stringify(design)); } catch (e) {}
+        saveDesignToServer();
     }
 
     try {
@@ -548,6 +568,23 @@
         design.hasPlan = true;
     }
     rebuildDesign();
+
+    // ── Серверное сохранение: сервер главнее локального кэша ──
+    api3dFetch('/air/api/3d-design').then(function (r) { return r.json(); }).then(function (srv) {
+        serverLoaded = true;
+        const hasSrv = srv && ((srv.walls && srv.walls.length) || (srv.gates && srv.gates.length) ||
+                               (srv.pipes && srv.pipes.length) || (srv.valves && srv.valves.length));
+        if (hasSrv) {
+            design.walls = srv.walls || [];
+            design.gates = srv.gates || [];
+            design.pipes = srv.pipes || [];
+            design.valves = srv.valves || [];
+            design.hasPlan = true;
+            rebuildDesign();
+        } else if (design.walls.length || design.gates.length || design.pipes.length || design.valves.length) {
+            saveDesignToServer();
+        }
+    }).catch(function () { serverLoaded = true; });
 
     function arrOf(kind) {
         return design[{ wall: 'walls', gate: 'gates', pipe: 'pipes', valve: 'valves' }[kind]];
