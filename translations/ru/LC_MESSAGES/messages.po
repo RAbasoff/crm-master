@@ -6971,3 +6971,23 @@ msgstr "Карта цеха"
 #: templates/air/map_3d.html:0
 msgid "Drag to rotate, wheel to zoom, right-drag to pan."
 msgstr "Перетащите — вращение, колесо — масштаб, правая кнопка — сдвиг."
+
+#: templates/_pagination.html:0
+msgid "mm"
+msgstr "мм"
+
+#: templates/_pagination.html:0
+msgid "kW"
+msgstr "кВт"
+
+#: templates/_pagination.html:0
+msgid "m3h"
+msgstr "м³/ч"
+
+#: templates/_pagination.html:0
+msgid "lmin"
+msgstr "л/мин"
+
+#: templates/_pagination.html:0
+msgid "First"
+msgstr "В начало"

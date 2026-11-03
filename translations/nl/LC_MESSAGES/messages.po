@@ -6785,3 +6785,23 @@ msgstr "Fabriekskaart"
 #: templates/air/map_3d.html:0
 msgid "Drag to rotate, wheel to zoom, right-drag to pan."
 msgstr "Slepen — draaien, scrollen — zoomen, rechts slepen — verplaatsen."
+
+#: templates/_pagination.html:0
+msgid "mm"
+msgstr "mm"
+
+#: templates/_pagination.html:0
+msgid "kW"
+msgstr "kW"
+
+#: templates/_pagination.html:0
+msgid "m3h"
+msgstr "m³/u"
+
+#: templates/_pagination.html:0
+msgid "lmin"
+msgstr "l/min"
+
+#: templates/_pagination.html:0
+msgid "First"
+msgstr "Naar begin"

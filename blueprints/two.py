@@ -82,10 +82,10 @@ def two_list():
     def _two_sort_key(o):
         st = (o.status or '').lower()
         is_open = st not in ('completed', 'cancelled', 'done', 'closed', 'finished')
-        dt = o.planned_date or (o.created_at.date() if o.created_at else None)
-        ymd = dt.toordinal() if dt else 0
         num = o.number or ''
-        return (0 if is_open else 1, -ymd if is_open else ymd, num)
+        tail = num.rsplit('-', 1)[-1]
+        seq = int(tail) if tail.isdigit() else 0
+        return (0 if is_open else 1, -seq)
 
     orders = sorted(orders, key=_two_sort_key)
 

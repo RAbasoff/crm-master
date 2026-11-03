@@ -149,7 +149,7 @@
                 <td style="font-size:12px">{{ l.from_point.name if l.from_point else '—' }}</td>
                 <td style="font-size:12px">{{ l.to_point.name if l.to_point else '—' }}</td>
                 <td>{{ l.length_m or '—' }} м</td>
-                <td>{{ l.diameter_mm or '—' }} мм</td>
+                <td>{{ l.diameter_mm or '—' }} {{ _('mm') }}</td>
                 <td>{{ _(l.MATERIALS.get(l.material, l.material)) }}</td>
                 <td>
                     {% if l.status == 'ok' %}✅{% elif l.status == 'repair' %}🔧{% else %}⛔{% endif %}

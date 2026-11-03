@@ -47,7 +47,7 @@
                            value="{{ line.length_m if line and line.length_m is not none else '' }}" placeholder="12.5">
                 </div>
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Diameter') }}, мм</label>
+                    <label>{{ _('Diameter') }}, {{ _('mm') }}</label>
                     <input type="number" name="diameter_mm" step="0.1" min="0"
                            value="{{ line.diameter_mm if line and line.diameter_mm is not none else '' }}" placeholder="25">
                 </div>

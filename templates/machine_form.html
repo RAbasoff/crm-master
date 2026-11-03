@@ -62,19 +62,19 @@
             <legend style="font-size:12px;font-weight:700;color:#555;padding:0 6px">{{ _('Machine specifications') }}</legend>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Length') }}, мм</label>
+                    <label>{{ _('Length') }}, {{ _('mm') }}</label>
                     <input type="number" name="dim_length_mm" step="0.1" min="0" value="{{ machine.dim_length_mm if machine and machine.dim_length_mm is not none else '' }}">
                 </div>
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Width') }}, мм</label>
+                    <label>{{ _('Width') }}, {{ _('mm') }}</label>
                     <input type="number" name="dim_width_mm" step="0.1" min="0" value="{{ machine.dim_width_mm if machine and machine.dim_width_mm is not none else '' }}">
                 </div>
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Height') }}, мм</label>
+                    <label>{{ _('Height') }}, {{ _('mm') }}</label>
                     <input type="number" name="dim_height_mm" step="0.1" min="0" value="{{ machine.dim_height_mm if machine and machine.dim_height_mm is not none else '' }}">
                 </div>
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Power') }}, кВт</label>
+                    <label>{{ _('Power') }}, {{ _('kW') }}</label>
                     <input type="number" name="power_kw" step="0.1" min="0" value="{{ machine.power_kw if machine and machine.power_kw is not none else '' }}">
                 </div>
             </div>
@@ -90,11 +90,11 @@
                     </select>
                 </div>
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Compressed air') }}, м³/ч</label>
+                    <label>{{ _('Compressed air') }}, {{ _('m3h') }}</label>
                     <input type="number" name="air_usage_m3h" step="0.1" min="0" value="{{ machine.air_usage_m3h if machine and machine.air_usage_m3h is not none else '' }}">
                 </div>
                 <div class="form-group" style="margin:0">
-                    <label>{{ _('Water') }}, л/мин</label>
+                    <label>{{ _('Water') }}, {{ _('lmin') }}</label>
                     <input type="number" name="water_usage_lmin" step="0.1" min="0" value="{{ machine.water_usage_lmin if machine and machine.water_usage_lmin is not none else '' }}">
                 </div>
             </div>
@@ -116,15 +116,15 @@
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
                     <div class="form-group" style="margin:0">
-                        <label>{{ _('Natural gas') }}, м³/ч</label>
+                        <label>{{ _('Natural gas') }}, {{ _('m3h') }}</label>
                         <input type="number" name="gas_usage_m3h" step="0.1" min="0" value="{{ machine.gas_usage_m3h if machine and machine.gas_usage_m3h is not none else '' }}">
                     </div>
                     <div class="form-group" style="margin:0">
-                        <label>{{ _('Nitrogen') }}, м³/ч</label>
+                        <label>{{ _('Nitrogen') }}, {{ _('m3h') }}</label>
                         <input type="number" name="nitrogen_usage_m3h" step="0.1" min="0" value="{{ machine.nitrogen_usage_m3h if machine and machine.nitrogen_usage_m3h is not none else '' }}">
                     </div>
                     <div class="form-group" style="margin:0">
-                        <label>{{ _('Carbon dioxide') }}, м³/ч</label>
+                        <label>{{ _('Carbon dioxide') }}, {{ _('m3h') }}</label>
                         <input type="number" name="co2_usage_m3h" step="0.1" min="0" value="{{ machine.co2_usage_m3h if machine and machine.co2_usage_m3h is not none else '' }}">
                     </div>
                 </div>

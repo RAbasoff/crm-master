@@ -61,13 +61,13 @@
                 <div style="font-size:12px;color:#444;line-height:1.7">
                     <div>📐 {{ _('Dimensions') }}:
                         {% if machine.dim_length_mm or machine.dim_width_mm or machine.dim_height_mm %}
-                            {{ machine.dim_length_mm or '—' }} × {{ machine.dim_width_mm or '—' }} × {{ machine.dim_height_mm or '—' }} мм
+                            {{ machine.dim_length_mm or '—' }} × {{ machine.dim_width_mm or '—' }} × {{ machine.dim_height_mm or '—' }} {{ _('mm') }}
                         {% else %}—{% endif %}
                     </div>
                     <div>⚡ {{ _('Voltage') }}: {{ machine.power_voltage or '—' }}{% if machine.power_voltage and machine.power_voltage != 'other' %} V{% endif %}
-                        &nbsp;·&nbsp; {{ _('Power') }}: {{ machine.power_kw if machine.power_kw is not none else '—' }} кВт</div>
-                    <div>💨 {{ _('Compressed air') }}: {{ machine.air_usage_m3h if machine.air_usage_m3h is not none else '—' }} м³/ч</div>
-                    <div>💧 {{ _('Water') }}: {{ machine.water_usage_lmin if machine.water_usage_lmin is not none else '—' }} л/мин</div>
+                        &nbsp;·&nbsp; {{ _('Power') }}: {{ machine.power_kw if machine.power_kw is not none else '—' }} {{ _('kW') }}</div>
+                    <div>💨 {{ _('Compressed air') }}: {{ machine.air_usage_m3h if machine.air_usage_m3h is not none else '—' }} {{ _('m3h') }}</div>
+                    <div>💧 {{ _('Water') }}: {{ machine.water_usage_lmin if machine.water_usage_lmin is not none else '—' }} {{ _('lmin') }}</div>
                     <div style="margin-top:4px">
                         <strong>{{ _('Gases used') }}:</strong>
                         {% set gases = [] %}
@@ -77,13 +77,13 @@
                         {% if gases %}{{ gases | join(' · ') }}{% else %}—{% endif %}
                     </div>
                     {% if machine.gas_natural or machine.gas_usage_m3h is not none %}
-                    <div style="padding-left:12px;color:#666">🔥 {{ _('Natural gas') }}: {{ machine.gas_usage_m3h if machine.gas_usage_m3h is not none else '—' }} м³/ч</div>
+                    <div style="padding-left:12px;color:#666">🔥 {{ _('Natural gas') }}: {{ machine.gas_usage_m3h if machine.gas_usage_m3h is not none else '—' }} {{ _('m3h') }}</div>
                     {% endif %}
                     {% if machine.gas_nitrogen or machine.nitrogen_usage_m3h is not none %}
-                    <div style="padding-left:12px;color:#666">🧪 {{ _('Nitrogen') }}: {{ machine.nitrogen_usage_m3h if machine.nitrogen_usage_m3h is not none else '—' }} м³/ч</div>
+                    <div style="padding-left:12px;color:#666">🧪 {{ _('Nitrogen') }}: {{ machine.nitrogen_usage_m3h if machine.nitrogen_usage_m3h is not none else '—' }} {{ _('m3h') }}</div>
                     {% endif %}
                     {% if machine.gas_co2 or machine.co2_usage_m3h is not none %}
-                    <div style="padding-left:12px;color:#666">💨 {{ _('Carbon dioxide') }}: {{ machine.co2_usage_m3h if machine.co2_usage_m3h is not none else '—' }} м³/ч</div>
+                    <div style="padding-left:12px;color:#666">💨 {{ _('Carbon dioxide') }}: {{ machine.co2_usage_m3h if machine.co2_usage_m3h is not none else '—' }} {{ _('m3h') }}</div>
                     {% endif %}
                 </div>
             </div>
