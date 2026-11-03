@@ -47,6 +47,12 @@
 <div class="card" style="padding:0;overflow:hidden">
     <div id="scene3d" style="width:100%;height:70vh;background:#14161c;position:relative">
         <div id="sceneLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b95a5;font-size:14px">{{ _('Loading') }}…</div>
+    <div style="position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:5">
+        <button class="btn btn-sm" onclick="zoomBy(0.78)" title="{{ _('Zoom in') }}" style="background:#2c3e50;color:#fff;font-size:15px;line-height:1;padding:8px 11px">+</button>
+        <button class="btn btn-sm" onclick="zoomBy(1.28)" title="{{ _('Zoom out') }}" style="background:#2c3e50;color:#fff;font-size:15px;line-height:1;padding:8px 11px">−</button>
+        <button class="btn btn-sm" id="btnPanMode" onclick="togglePanMode()" title="{{ _('Pan mode') }}" style="background:#2c3e50;color:#fff;font-size:14px;line-height:1;padding:8px 11px">&#9995;</button>
+        <button class="btn btn-sm" onclick="resetCam()" title="{{ _('Reset view') }}" style="background:#2c3e50;color:#fff;font-size:13px;line-height:1;padding:8px 11px">&#127916;</button>
+    </div>
     </div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;font-size:11px;color:#666">
         <span><span style="display:inline-block;width:12px;height:12px;background:#9fb3c8;vertical-align:middle"></span> {{ _('Walls') }} / {{ _('Passages') }}</span>
@@ -312,6 +318,27 @@
             airGroup.add(conn);
         });
     });
+
+    // ── Навигация: зум кнопками + режим перемещения ──
+    window.zoomBy = function (f) {
+        const dir = camera.position.clone().sub(controls.target);
+        const d = dir.length() * f;
+        const clamped = Math.min(400, Math.max(2, d));
+        camera.position.copy(controls.target).add(dir.setLength(clamped));
+    };
+    let panMode = false;
+    window.togglePanMode = function () {
+        panMode = !panMode;
+        if (panMode) {
+            controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+            controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
+        } else {
+            controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+            controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+        }
+        const b = document.getElementById('btnPanMode');
+        if (b) b.style.opacity = panMode ? '1' : '0.55';
+    };
 
     // ── Переключатели ──
     let airOn = true, labelsOn = true, wallsOn = true, ceilOn = true, machinesOn = true;

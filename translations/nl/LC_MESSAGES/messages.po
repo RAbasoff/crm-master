@@ -6885,3 +6885,15 @@ msgstr "Verplaatsen"
 #: templates/air/map_3d.html:0
 msgid "Drag an object to move it"
 msgstr "Sleep een object om te verplaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Zoom in"
+msgstr "Inzoomen"
+
+#: templates/air/map_3d.html:0
+msgid "Zoom out"
+msgstr "Uitzoomen"
+
+#: templates/air/map_3d.html:0
+msgid "Pan mode"
+msgstr "Verplaatsmodus"
