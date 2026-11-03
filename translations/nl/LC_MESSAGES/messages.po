@@ -6913,3 +6913,19 @@ msgstr "Klik op een muur — deur plaatsen"
 #: templates/air/map_3d.html:0
 msgid "Click on a wall to install a window"
 msgstr "Klik op een muur — raam plaatsen"
+
+#: templates/air_map.html:0
+msgid "Finish line"
+msgstr "Lijn voltooien"
+
+#: templates/air_map.html:0
+msgid "Finish"
+msgstr "Voltooien"
+
+#: templates/air_map.html:0
+msgid "Draft from map restored"
+msgstr "Concept van kaart hersteld"
+
+#: templates/air_map.html:0
+msgid "points"
+msgstr "punten"

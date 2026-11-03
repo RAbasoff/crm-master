@@ -7099,3 +7099,19 @@ msgstr "Клик по стене — установить дверь"
 #: templates/air/map_3d.html:0
 msgid "Click on a wall to install a window"
 msgstr "Клик по стене — установить окно"
+
+#: templates/air_map.html:0
+msgid "Finish line"
+msgstr "Завершить линию"
+
+#: templates/air_map.html:0
+msgid "Finish"
+msgstr "Готово"
+
+#: templates/air_map.html:0
+msgid "Draft from map restored"
+msgstr "Черновик с карты восстановлен"
+
+#: templates/air_map.html:0
+msgid "points"
+msgstr "точек"

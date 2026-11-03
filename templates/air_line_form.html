@@ -107,6 +107,24 @@
 
 <script>
 (function () {
+    (function () {
+        try {
+            var d = JSON.parse(sessionStorage.getItem('air_line_draft') || 'null');
+            if (d && d.vertices && d.vertices.length >= 2) {
+                var nameEl = document.querySelector('input[name="name"]');
+                if (nameEl && !nameEl.value) nameEl.value = d.name || '';
+                var colorEl = document.querySelector('input[name="color"]');
+                if (colorEl && d.color) colorEl.value = d.color;
+                var vEl = document.getElementById('verticesJson');
+                if (vEl) vEl.value = JSON.stringify(d.vertices);
+                sessionStorage.removeItem('air_line_draft');
+                var hint = document.createElement('div');
+                hint.style.cssText = 'background:#e8f8e8;border:1px solid #27ae60;padding:6px 10px;border-radius:6px;margin:8px 0;font-size:12px';
+                hint.textContent = '{{ _("Draft from map restored") }}: ' + d.vertices.length + ' {{ _("points") | lower }}';
+                (document.querySelector('form') || document.body).prepend(hint);
+            }
+        } catch (e) {}
+    })();
     var verts = {{ vertices_json | safe }};
     document.getElementById('verticesJson').value = JSON.stringify(verts);
 })();

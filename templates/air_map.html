@@ -37,6 +37,7 @@
     {% if current_user.has_role('admin', 'director', 'technician') %}
     <button type="button" class="tool-btn active" id="btnSelect" onclick="setMode('select')">🖱️ {{ _('Select') }}</button>
     <button type="button" class="tool-btn" id="btnDraw" onclick="setMode('draw')">✏️ {{ _('Draw line') }}</button>
+    <button type="button" class="tool-btn" id="btnFinishLine" onclick="finishDraft()" style="background:#27ae60;color:#fff">✅ {{ _('Finish line') }}</button>
     <span class="tool-sep"></span>
     <button type="button" class="tool-btn" onclick="undoVertex()" title="{{ _('Undo last point') }}">↩️ {{ _('Undo') }}</button>
     <button type="button" class="tool-btn danger" onclick="clearDraft()">✖ {{ _('Clear') }}</button>

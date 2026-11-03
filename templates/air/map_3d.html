@@ -28,6 +28,7 @@
         <button class="btn btn-sm" id="tool-gate" onclick="setTool('gate')" style="background:#7e57c2;color:#fff">&#128678; {{ _('Gate') }}</button>
         <button class="btn btn-sm" id="tool-pipe" onclick="setTool('pipe')" style="background:#3498db;color:#fff">&#128295; {{ _('Pipe') }}</button>
         <button class="btn btn-sm" id="tool-hose" onclick="setTool('hose')" style="background:#27ae60;color:#fff">&#128168; {{ _('Hose') }}</button>
+        <button class="btn btn-sm" id="btnFinishPipe" onclick="finishPipe()" style="background:#27ae60;color:#fff;display:none">&#9989; {{ _('Finish') }}</button>
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px">
@@ -444,6 +445,7 @@
 
     function setTool(t) {
         curTool = t; wallStart = null; pipeBuf = [];
+        if (typeof updatePipePreview === 'function') updatePipePreview();
         ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'valve'].forEach(function (id) {
             const b = document.getElementById('tool-' + id);
             if (b) b.style.opacity = (id === t) ? '1' : '0.45';
@@ -939,6 +941,7 @@
             rebuildDesign();
         } else if (curTool === 'pipe' || curTool === 'hose') {
             pipeBuf.push({ x: p.x, z: p.z });
+            updatePipePreview();
         } else if (curTool === 'valve') {
             saveHist();
             design.valves.push({
@@ -949,7 +952,32 @@
             rebuildDesign();
         }
     });
-    renderer.domElement.addEventListener('dblclick', function () {
+    const previewGroup = new THREE.Group();
+    scene.add(previewGroup);
+    function updatePipePreview() {
+        while (previewGroup.children.length) previewGroup.remove(previewGroup.children[0]);
+        const b = document.getElementById('btnFinishPipe');
+        if (b) b.style.display = pipeBuf.length ? '' : 'none';
+        pipeBuf.forEach(function (p) {
+            const s = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8),
+                new THREE.MeshBasicMaterial({ color: 0xffb74d }));
+            s.position.set(p.x, params.pipeH, p.z);
+            previewGroup.add(s);
+        });
+        for (let i = 0; i < pipeBuf.length - 1; i++) {
+            const a = new THREE.Vector3(pipeBuf[i].x, params.pipeH, pipeBuf[i].z);
+            const b2 = new THREE.Vector3(pipeBuf[i + 1].x, params.pipeH, pipeBuf[i + 1].z);
+            const dir = b2.clone().sub(a);
+            const L = dir.length();
+            if (L < 0.01) continue;
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, L, 6),
+                new THREE.MeshBasicMaterial({ color: 0xffb74d }));
+            tube.position.copy(a).add(b2).multiplyScalar(0.5);
+            tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+            previewGroup.add(tube);
+        }
+    }
+    window.finishPipe = function () {
         if ((curTool === 'pipe' || curTool === 'hose') && pipeBuf.length >= 2) {
             const pts = pipeBuf.slice();
             const tool = curTool;
@@ -961,6 +989,7 @@
                 rebuildDesign();
             };
             pipeBuf = [];
+            updatePipePreview();
             api3dFetch('/air/api/lines', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -977,6 +1006,9 @@
                 else { addLocal(null); }
             }).catch(function () { addLocal(null); });
         }
+    };
+    renderer.domElement.addEventListener('dblclick', function () {
+        window.finishPipe();
     });
     setTool('select');
 
