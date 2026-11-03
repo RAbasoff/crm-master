@@ -6056,7 +6056,7 @@ msgid "PEX"
 msgstr "PEX"
 
 msgid "Undo"
-msgstr "Отменить"
+msgstr "Отмена"
 
 msgid "Thin"
 msgstr "Тонкая"

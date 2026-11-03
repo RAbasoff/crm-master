@@ -36,6 +36,7 @@
         <label>{{ _('Pipe height') }} <input type="number" id="panY" value="4" step="0.1" min="0.2" style="width:64px"> m</label>
         <label>{{ _('Rotation') }} <input type="number" id="panR" value="0" step="15" style="width:64px"> °</label>
         <button class="btn btn-sm" onclick="rotSelected()" style="background:#7e57c2;color:#fff">+90°</button>
+        <button class="btn btn-sm" onclick="undoAction()" style="background:#8e44ad;color:#fff">&#8617; {{ _('Undo') }}</button>
         <button class="btn btn-sm" onclick="applyParams()" style="background:#2c3e50;color:#fff">{{ _('Apply') }}</button>
         <button class="btn btn-sm" onclick="delSelected()" style="background:#e74c3c;color:#fff">{{ _('Delete') }}</button>
         <button class="btn btn-sm" onclick="clearDesign()" style="background:#95a5a6;color:#fff">{{ _('Clear all') }}</button>
@@ -471,6 +472,19 @@
         return g;
     }
 
+    const history = [];
+    function saveHist() {
+        history.push(JSON.stringify({ w: design.walls, g: design.gates, p: design.pipes, v: design.valves }));
+        if (history.length > 60) history.shift();
+    }
+    window.undoAction = function () {
+        if (!history.length) return;
+        const s = JSON.parse(history.pop());
+        design.walls = s.w; design.gates = s.g; design.pipes = s.p; design.valves = s.v;
+        selected = null;
+        rebuildDesign();
+        syncPanel();
+    };
     function rebuildDesign() {
         while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
         function tag(m, kind, idx) {
@@ -533,6 +547,7 @@
         if (selected) {
             const d = arrOf(selected.kind)[selected.idx];
             if (d) {
+                saveHist();
                 if (d.h != null) d.h = num('panH') || d.h;
                 if (d.t != null) d.t = num('panT') || d.t;
                 if (d.w != null) d.w = num('panW') || d.w;
@@ -545,6 +560,7 @@
     window.rotSelected = function () {
         if (selected && selected.kind === 'gate') {
             const d = design.gates[selected.idx];
+            saveHist();
             d.rot = ((d.rot || 0) + Math.PI / 2) % (Math.PI * 2);
             document.getElementById('panR').value = Math.round(d.rot * 180 / Math.PI) % 360;
             params.gateRot = d.rot;
@@ -556,12 +572,14 @@
     };
     window.delSelected = function () {
         if (!selected) return;
+        saveHist();
         arrOf(selected.kind).splice(selected.idx, 1);
         selected = null;
         rebuildDesign();
         syncPanel();
     };
     window.clearDesign = function () {
+        saveHist();
         design.walls = design.walls.filter(function (w) { return w.plan; });
         design.gates = []; design.pipes = []; design.valves = [];
         selected = null;
@@ -601,6 +619,7 @@
             const dx = drag.grp.position.x, dz = drag.grp.position.z;
             const d = arrOf(drag.kind)[drag.idx];
             if (d) {
+                saveHist();
                 if (drag.kind === 'wall') {
                     d.x1 += dx; d.z1 += dz; d.x2 += dx; d.z2 += dz;
                     (d.openings || []).forEach(function (o) { o.x += dx; o.z += dz; });
@@ -639,6 +658,7 @@
                 const h = document.getElementById('toolHint');
                 if (h) h.textContent = '{{ _("Click the wall end") }}';
             } else {
+                saveHist();
                 design.walls.push({
                     x1: wallStart.x, z1: wallStart.z, x2: p.x, z2: p.z,
                     h: params.wallH, t: params.wallT, openings: []
@@ -657,16 +677,19 @@
                 if (dist < bestD) { bestD = dist; best = { w: w, x: qx, z: qz }; }
             });
             if (best) {
+                saveHist();
                 best.w.openings = best.w.openings || [];
                 best.w.openings.push({ x: best.x, z: best.z, w: params.doorW });
                 rebuildDesign();
             }
         } else if (curTool === 'gate') {
+            saveHist();
             design.gates.push({ x: p.x, z: p.z, w: params.gateW, h: params.wallH, rot: params.gateRot });
             rebuildDesign();
         } else if (curTool === 'pipe' || curTool === 'hose') {
             pipeBuf.push({ x: p.x, z: p.z });
         } else if (curTool === 'valve') {
+            saveHist();
             design.valves.push({
                 x: p.x, z: p.z,
                 d: Math.max(0.12, (params.pipeD / 1000) * 1.5),
@@ -677,6 +700,7 @@
     });
     renderer.domElement.addEventListener('dblclick', function () {
         if ((curTool === 'pipe' || curTool === 'hose') && pipeBuf.length >= 2) {
+            saveHist();
             design.pipes.push({
                 pts: pipeBuf.slice(),
                 d: curTool === 'hose' ? params.hoseD : params.pipeD,
