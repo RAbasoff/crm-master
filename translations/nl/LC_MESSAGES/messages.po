@@ -6805,3 +6805,71 @@ msgstr "l/min"
 #: templates/_pagination.html:0
 msgid "First"
 msgstr "Naar begin"
+
+#: templates/air/map_3d.html:0
+msgid "Edit tools"
+msgstr "Gereedschap"
+
+#: templates/air/map_3d.html:0
+msgid "Opening"
+msgstr "Opening"
+
+#: templates/air/map_3d.html:0
+msgid "Gate"
+msgstr "Poort"
+
+#: templates/air/map_3d.html:0
+msgid "Pipe"
+msgstr "Leiding"
+
+#: templates/air/map_3d.html:0
+msgid "Hose"
+msgstr "Slang"
+
+#: templates/air/map_3d.html:0
+msgid "Thickness"
+msgstr "Dikte"
+
+#: templates/air/map_3d.html:0
+msgid "Pipe height"
+msgstr "Leidinghoogte"
+
+#: templates/air/map_3d.html:0
+msgid "Clear all"
+msgstr "Alles wissen"
+
+#: templates/air/map_3d.html:0
+msgid "Nothing selected"
+msgstr "Niets geselecteerd"
+
+#: templates/air/map_3d.html:0
+msgid "Click an object to edit its size"
+msgstr "Klik op een object — maat aanpassen"
+
+#: templates/air/map_3d.html:0
+msgid "Click 1 — wall start, click 2 — wall end"
+msgstr "Klik 1 — muur begin, klik 2 — muur eind"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a drawn wall to cut a doorway"
+msgstr "Klik op een getekende muur — deuropening"
+
+#: templates/air/map_3d.html:0
+msgid "Click on the floor to place a gate"
+msgstr "Klik op de vloer — poort plaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Click pipe points, double-click to finish"
+msgstr "Klik — leidingpunten, dubbelklik — klaar"
+
+#: templates/air/map_3d.html:0
+msgid "Click hose points, double-click to finish"
+msgstr "Klik — slangpunten, dubbelklik — klaar"
+
+#: templates/air/map_3d.html:0
+msgid "Click near a pipe to place a valve"
+msgstr "Klik bij een leiding — kraan plaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Click the wall end"
+msgstr "Klik het muureinde"

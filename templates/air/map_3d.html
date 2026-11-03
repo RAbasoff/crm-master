@@ -15,6 +15,31 @@
     </div>
 </div>
 
+
+<div class="card no-print" style="margin:8px 0;padding:10px 12px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <strong style="font-size:12px;color:#2c3e50">{{ _('Edit tools') }}:</strong>
+        <button class="btn btn-sm" id="tool-select" onclick="setTool('select')" style="background:#eee">&#128433; {{ _('Select') }}</button>
+        <button class="btn btn-sm" id="tool-wall" onclick="setTool('wall')" style="background:#9fb3c8">&#129529; {{ _('Wall') }}</button>
+        <button class="btn btn-sm" id="tool-opening" onclick="setTool('opening')" style="background:#b0bec5">&#128682; {{ _('Opening') }}</button>
+        <button class="btn btn-sm" id="tool-gate" onclick="setTool('gate')" style="background:#7e57c2;color:#fff">&#128678; {{ _('Gate') }}</button>
+        <button class="btn btn-sm" id="tool-pipe" onclick="setTool('pipe')" style="background:#3498db;color:#fff">&#128295; {{ _('Pipe') }}</button>
+        <button class="btn btn-sm" id="tool-hose" onclick="setTool('hose')" style="background:#27ae60;color:#fff">&#128168; {{ _('Hose') }}</button>
+        <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px">
+        <label>{{ _('Height') }} <input type="number" id="panH" value="4.5" step="0.1" min="0.2" style="width:64px"> m</label>
+        <label>{{ _('Thickness') }} <input type="number" id="panT" value="0.28" step="0.02" min="0.05" style="width:64px"> m</label>
+        <label>{{ _('Width') }} <input type="number" id="panW" value="5" step="0.1" min="0.3" style="width:64px"> m</label>
+        <label>{{ _('Diameter') }} <input type="number" id="panD" value="110" step="5" min="6" style="width:64px"> mm</label>
+        <label>{{ _('Pipe height') }} <input type="number" id="panY" value="4" step="0.1" min="0.2" style="width:64px"> m</label>
+        <button class="btn btn-sm" onclick="applyParams()" style="background:#2c3e50;color:#fff">{{ _('Apply') }}</button>
+        <button class="btn btn-sm" onclick="delSelected()" style="background:#e74c3c;color:#fff">{{ _('Delete') }}</button>
+        <button class="btn btn-sm" onclick="clearDesign()" style="background:#95a5a6;color:#fff">{{ _('Clear all') }}</button>
+        <span id="panInfo" style="color:#666">{{ _('Nothing selected') }}</span>
+    </div>
+    <div id="toolHint" style="margin-top:6px;font-size:11px;color:#888"></div>
+</div>
 <div class="card" style="padding:0;overflow:hidden">
     <div id="scene3d" style="width:100%;height:70vh;background:#14161c;position:relative">
         <div id="sceneLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b95a5;font-size:14px">{{ _('Loading') }}…</div>
@@ -341,6 +366,279 @@
         camera.updateProjectionMatrix();
         renderer.setSize(host.clientWidth, Math.max(200, host.clientHeight));
     });
+
+
+    // ═══ 3D editor tools: walls / openings / gates / pipes / hoses / valves ═══
+    const editGroup = new THREE.Group();
+    scene.add(editGroup);
+    const design = { walls: [], gates: [], pipes: [], valves: [] };
+    const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4 };
+    let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null;
+
+    function setTool(t) {
+        curTool = t; wallStart = null; pipeBuf = [];
+        ['select', 'wall', 'opening', 'gate', 'pipe', 'hose', 'valve'].forEach(function (id) {
+            const b = document.getElementById('tool-' + id);
+            if (b) b.style.opacity = (id === t) ? '1' : '0.45';
+        });
+        const h = document.getElementById('toolHint');
+        if (h) h.textContent = {
+            select: '{{ _("Click an object to edit its size") }}',
+            wall: '{{ _("Click 1 — wall start, click 2 — wall end") }}',
+            opening: '{{ _("Click on a drawn wall to cut a doorway") }}',
+            gate: '{{ _("Click on the floor to place a gate") }}',
+            pipe: '{{ _("Click pipe points, double-click to finish") }}',
+            hose: '{{ _("Click hose points, double-click to finish") }}',
+            valve: '{{ _("Click near a pipe to place a valve") }}'
+        }[t] || '';
+    }
+    window.setTool = setTool;
+
+    const edRay = new THREE.Raycaster();
+    const edNdc = new THREE.Vector2();
+    function groundPoint(ev) {
+        const r = renderer.domElement.getBoundingClientRect();
+        edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+        edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+        edRay.setFromCamera(edNdc, camera);
+        const hit = edRay.intersectObject(ground, false);
+        return hit.length ? hit[0].point : null;
+    }
+
+    function wallMesh(w) {
+        const dx = w.x2 - w.x1, dz = w.z2 - w.z1;
+        const len = Math.hypot(dx, dz) || 0.01;
+        const g = new THREE.Group();
+        const gaps = (w.openings || []).map(function (o) {
+            const t = ((o.x - w.x1) * dx + (o.z - w.z1) * dz) / len;
+            return { s: Math.max(0, t - o.w / 2), e: Math.min(len, t + o.w / 2) };
+        }).sort(function (a, b) { return a.s - b.s; });
+        let cur = 0;
+        const pieces = [];
+        gaps.forEach(function (g2) { if (g2.s > cur) pieces.push([cur, g2.s]); cur = Math.max(cur, g2.e); });
+        if (cur < len) pieces.push([cur, len]);
+        const ux = dx / len, uz = dz / len, rot = -Math.atan2(dz, dx);
+        pieces.forEach(function (p) {
+            const pl = p[1] - p[0];
+            if (pl < 0.1) return;
+            const mid = (p[0] + p[1]) / 2;
+            const m = new THREE.Mesh(new THREE.BoxGeometry(pl, w.h, w.t),
+                new THREE.MeshStandardMaterial({ color: 0x9fb3c8, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+            m.position.set(w.x1 + ux * mid, w.h / 2, w.z1 + uz * mid);
+            m.rotation.y = rot;
+            g.add(m);
+        });
+        return g;
+    }
+
+    function gateMesh(gt) {
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(gt.w, gt.h, 0.5),
+            new THREE.MeshStandardMaterial({ color: 0x7e57c2, roughness: 0.55, metalness: 0.2 }));
+        body.position.y = gt.h / 2;
+        g.add(body);
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(gt.w * 1.02, 0.35, 0.6),
+            new THREE.MeshStandardMaterial({ color: 0xb39ddb }));
+        stripe.position.y = gt.h - 0.3;
+        g.add(stripe);
+        g.position.set(gt.x, 0, gt.z);
+        g.rotation.y = gt.rot || 0;
+        return g;
+    }
+
+    function pipeMesh(pp) {
+        const g = new THREE.Group();
+        const rM = Math.max(0.03, pp.d / 1000 / 2);
+        const mat = new THREE.MeshStandardMaterial({
+            color: pp.type === 'hose' ? 0x27ae60 : 0x3498db, roughness: 0.5, metalness: 0.3
+        });
+        for (let i = 0; i < pp.pts.length - 1; i++) {
+            const a = new THREE.Vector3(pp.pts[i].x, pp.h, pp.pts[i].z);
+            const b = new THREE.Vector3(pp.pts[i + 1].x, pp.h, pp.pts[i + 1].z);
+            const dir = b.clone().sub(a), L = dir.length();
+            if (L < 0.01) continue;
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(rM, rM, L, 10), mat);
+            tube.position.copy(a).add(b).multiplyScalar(0.5);
+            tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+            g.add(tube);
+        }
+        pp.pts.forEach(function (p) {
+            const s = new THREE.Mesh(new THREE.SphereGeometry(rM * 1.4, 8, 6), mat);
+            s.position.set(p.x, pp.h, p.z);
+            g.add(s);
+        });
+        return g;
+    }
+
+    function valveMesh(v) {
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(v.d, v.d, v.d * 2.2, 12),
+            new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.45, roughness: 0.35 }));
+        body.rotation.z = Math.PI / 2;
+        body.position.y = v.h;
+        g.add(body);
+        const hand = new THREE.Mesh(new THREE.BoxGeometry(v.d * 3, v.d * 0.35, v.d * 0.35),
+            new THREE.MeshStandardMaterial({ color: 0xc0392b }));
+        hand.position.y = v.h + v.d * 1.7;
+        g.add(hand);
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(v.d * 0.3, v.d * 0.3, v.d * 1.8, 8),
+            new THREE.MeshStandardMaterial({ color: 0xc0392b }));
+        stem.position.y = v.h + v.d * 0.9;
+        g.add(stem);
+        g.position.set(v.x, 0, v.z);
+        return g;
+    }
+
+    function rebuildDesign() {
+        while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
+        function tag(m, kind, idx) {
+            m.traverse(function (ch) { ch.userData = { kind: kind, idx: idx }; });
+            editGroup.add(m);
+        }
+        design.walls.forEach(function (w, i) { tag(wallMesh(w), 'wall', i); });
+        design.gates.forEach(function (g2, i) { tag(gateMesh(g2), 'gate', i); });
+        design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i); });
+        design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
+        try { localStorage.setItem('map3d_design', JSON.stringify(design)); } catch (e) {}
+    }
+
+    try {
+        const saved = JSON.parse(localStorage.getItem('map3d_design') || 'null');
+        if (saved) {
+            design.walls = saved.walls || [];
+            design.gates = saved.gates || [];
+            design.pipes = saved.pipes || [];
+            design.valves = saved.valves || [];
+        }
+    } catch (e) {}
+    rebuildDesign();
+
+    function arrOf(kind) {
+        return design[{ wall: 'walls', gate: 'gates', pipe: 'pipes', valve: 'valves' }[kind]];
+    }
+    function syncPanel() {
+        const info = document.getElementById('panInfo');
+        if (!selected) { info.textContent = '{{ _("Nothing selected") }}'; return; }
+        const d = arrOf(selected.kind)[selected.idx];
+        info.textContent = selected.kind + ' #' + (selected.idx + 1);
+        if (!d) return;
+        if (d.h != null) document.getElementById('panH').value = d.h;
+        if (d.t != null) document.getElementById('panT').value = d.t;
+        if (d.w != null) document.getElementById('panW').value = d.w;
+        if (d.d != null) document.getElementById('panD').value = d.d;
+    }
+    window.applyParams = function () {
+        const num = function (id) { return parseFloat(document.getElementById(id).value); };
+        params.wallH = num('panH') || params.wallH;
+        params.wallT = num('panT') || params.wallT;
+        params.gateW = num('panW') || params.gateW;
+        params.gateH = params.wallH;
+        params.doorW = Math.min(params.gateW, 1.5);
+        params.pipeD = num('panD') || params.pipeD;
+        params.hoseD = Math.min(params.pipeD, 32);
+        params.pipeH = num('panY') || params.pipeH;
+        if (selected) {
+            const d = arrOf(selected.kind)[selected.idx];
+            if (d) {
+                if (d.h != null) d.h = num('panH') || d.h;
+                if (d.t != null) d.t = num('panT') || d.t;
+                if (d.w != null) d.w = num('panW') || d.w;
+                if (d.d != null) d.d = num('panD') || d.d;
+                rebuildDesign();
+            }
+        }
+    };
+    window.delSelected = function () {
+        if (!selected) return;
+        arrOf(selected.kind).splice(selected.idx, 1);
+        selected = null;
+        rebuildDesign();
+        syncPanel();
+    };
+    window.clearDesign = function () {
+        design.walls = []; design.gates = []; design.pipes = []; design.valves = [];
+        selected = null;
+        rebuildDesign();
+        syncPanel();
+    };
+
+    renderer.domElement.addEventListener('pointerdown', function (ev) {
+        if (ev.button === 0) downXY = { x: ev.clientX, y: ev.clientY };
+    });
+    renderer.domElement.addEventListener('pointerup', function (ev) {
+        if (ev.button !== 0 || !downXY) return;
+        const moved = Math.hypot(ev.clientX - downXY.x, ev.clientY - downXY.y);
+        downXY = null;
+        if (moved > 6) return; // orbit drag
+        if (curTool === 'select') {
+            const r = renderer.domElement.getBoundingClientRect();
+            edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+            edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+            edRay.setFromCamera(edNdc, camera);
+            const hits = edRay.intersectObjects(editGroup.children, true);
+            if (!hits.length) { selected = null; syncPanel(); return; }
+            const u = hits[0].object.userData;
+            selected = u.kind ? { kind: u.kind, idx: u.idx } : null;
+            syncPanel();
+            return;
+        }
+        const p = groundPoint(ev);
+        if (!p) return;
+        if (curTool === 'wall') {
+            if (!wallStart) {
+                wallStart = { x: p.x, z: p.z };
+                const h = document.getElementById('toolHint');
+                if (h) h.textContent = '{{ _("Click the wall end") }}';
+            } else {
+                design.walls.push({
+                    x1: wallStart.x, z1: wallStart.z, x2: p.x, z2: p.z,
+                    h: params.wallH, t: params.wallT, openings: []
+                });
+                wallStart = null;
+                rebuildDesign();
+            }
+        } else if (curTool === 'opening') {
+            let best = null, bestD = 2.5;
+            design.walls.forEach(function (w) {
+                const dx = w.x2 - w.x1, dz = w.z2 - w.z1;
+                const L = Math.hypot(dx, dz) || 1;
+                const t = Math.max(0, Math.min(L, ((p.x - w.x1) * dx + (p.z - w.z1) * dz) / L));
+                const qx = w.x1 + dx / L * t, qz = w.z1 + dz / L * t;
+                const dist = Math.hypot(p.x - qx, p.z - qz);
+                if (dist < bestD) { bestD = dist; best = { w: w, x: qx, z: qz }; }
+            });
+            if (best) {
+                best.w.openings = best.w.openings || [];
+                best.w.openings.push({ x: best.x, z: best.z, w: params.doorW });
+                rebuildDesign();
+            }
+        } else if (curTool === 'gate') {
+            design.gates.push({ x: p.x, z: p.z, w: params.gateW, h: params.wallH, rot: 0 });
+            rebuildDesign();
+        } else if (curTool === 'pipe' || curTool === 'hose') {
+            pipeBuf.push({ x: p.x, z: p.z });
+        } else if (curTool === 'valve') {
+            design.valves.push({
+                x: p.x, z: p.z,
+                d: Math.max(0.12, (params.pipeD / 1000) * 1.5),
+                h: params.pipeH
+            });
+            rebuildDesign();
+        }
+    });
+    renderer.domElement.addEventListener('dblclick', function () {
+        if ((curTool === 'pipe' || curTool === 'hose') && pipeBuf.length >= 2) {
+            design.pipes.push({
+                pts: pipeBuf.slice(),
+                d: curTool === 'hose' ? params.hoseD : params.pipeD,
+                h: params.pipeH,
+                type: curTool
+            });
+            pipeBuf = [];
+            rebuildDesign();
+        }
+    });
+    setTool('select');
 
     (function loop() {
         requestAnimationFrame(loop);

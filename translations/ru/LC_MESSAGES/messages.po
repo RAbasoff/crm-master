@@ -6991,3 +6991,71 @@ msgstr "л/мин"
 #: templates/_pagination.html:0
 msgid "First"
 msgstr "В начало"
+
+#: templates/air/map_3d.html:0
+msgid "Edit tools"
+msgstr "Инструменты"
+
+#: templates/air/map_3d.html:0
+msgid "Opening"
+msgstr "Проём"
+
+#: templates/air/map_3d.html:0
+msgid "Gate"
+msgstr "Ворота"
+
+#: templates/air/map_3d.html:0
+msgid "Pipe"
+msgstr "Труба"
+
+#: templates/air/map_3d.html:0
+msgid "Hose"
+msgstr "Шланг"
+
+#: templates/air/map_3d.html:0
+msgid "Thickness"
+msgstr "Толщина"
+
+#: templates/air/map_3d.html:0
+msgid "Pipe height"
+msgstr "Высота трубы"
+
+#: templates/air/map_3d.html:0
+msgid "Clear all"
+msgstr "Очистить всё"
+
+#: templates/air/map_3d.html:0
+msgid "Nothing selected"
+msgstr "Ничего не выбрано"
+
+#: templates/air/map_3d.html:0
+msgid "Click an object to edit its size"
+msgstr "Клик по объекту — изменить размер"
+
+#: templates/air/map_3d.html:0
+msgid "Click 1 — wall start, click 2 — wall end"
+msgstr "Клик 1 — начало стены, клик 2 — конец"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a drawn wall to cut a doorway"
+msgstr "Клик по нарисованной стене — дверной проём"
+
+#: templates/air/map_3d.html:0
+msgid "Click on the floor to place a gate"
+msgstr "Клик по полу — поставить ворота"
+
+#: templates/air/map_3d.html:0
+msgid "Click pipe points, double-click to finish"
+msgstr "Клик — точки трубы, двойной клик — завершить"
+
+#: templates/air/map_3d.html:0
+msgid "Click hose points, double-click to finish"
+msgstr "Клик — точки шланга, двойной клик — завершить"
+
+#: templates/air/map_3d.html:0
+msgid "Click near a pipe to place a valve"
+msgstr "Клик возле трубы — поставить кран"
+
+#: templates/air/map_3d.html:0
+msgid "Click the wall end"
+msgstr "Кликните конец стены"
