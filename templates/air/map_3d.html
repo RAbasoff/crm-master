@@ -48,7 +48,6 @@
         <span><span style="display:inline-block;width:12px;height:12px;background:#9fb3c8;vertical-align:middle"></span> {{ _('Walls') }} / {{ _('Passages') }}</span>
         <span><span style="display:inline-block;width:12px;height:12px;background:#3498db;vertical-align:middle"></span> {{ _('Sections') }}</span>
         <span><span style="display:inline-block;width:12px;height:12px;background:#27ae60;vertical-align:middle"></span> {{ _('Machines') }}</span>
-        <span><span style="display:inline-block;width:12px;height:12px;background:#7e57c2;vertical-align:middle"></span> {{ _('Other equipment') }}</span>
         <span><span style="display:inline-block;width:12px;height:12px;background:#e67e22;border-radius:50%;vertical-align:middle"></span> {{ _('Compressed Air') }}</span>
         <span style="margin-left:auto;color:#999">120 × 45 × 4,5 m</span>
     </div>
@@ -198,10 +197,7 @@
     }
 
     fetch('/api/map/all').then(r => r.json()).then(function (d) {
-        // 1) точки проходов: ворота/оборудование (проёмы в стенах)
-        (d.equipment || []).forEach(function (eq) {
-            openings.push({ x: px(eq.x == null ? 50 : eq.x), z: pz(eq.y == null ? 50 : eq.y), w: 3.8 });
-        });
+        // 1) проёмы ворот рисуются инструментом (см. панель Инструменты)
 
         // 2) контуры цехов → стены + входы (проход по середине длинного ребра)
         (d.sections || []).forEach(function (s) {
@@ -256,10 +252,7 @@
             makeLabel(s.name, px(lx || s.x || 50), 6.8, pz(ly || s.y || 50), (s.color || '#3498db') + 'e6');
         });
 
-        // 4б) стены по контурам плана цеха (все помещения)
-        PLAN_WALLS.forEach(function (w) {
-            addWall(px(w.x1), pz(w.y1), px(w.x2), pz(w.y2));
-        });
+        // 4б) стены плана загружаются в редактор ниже (design.walls) и редактируются
 
         // 5) станки
         (d.machines || []).forEach(function (m) {
@@ -277,21 +270,6 @@
             makeLabel(m.name, px(m.x || 50), 3.6, pz(m.y || 50), 'rgba(39,174,96,0.9)');
         });
 
-        // 6) прочее оборудование (ворота) — панель в проёме
-        (d.equipment || []).forEach(function (eq) {
-            const g = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(5, 3.6, 0.5),
-                new THREE.MeshStandardMaterial({ color: 0x7e57c2, roughness: 0.55, metalness: 0.2 }));
-            body.position.y = 1.9;
-            g.add(body);
-            const stripe = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.35, 0.6),
-                new THREE.MeshStandardMaterial({ color: 0xb39ddb }));
-            stripe.position.y = 3.3;
-            g.add(stripe);
-            g.position.set(px(eq.x == null ? 50 : eq.x), 0, pz(eq.y == null ? 50 : eq.y));
-            root.add(g);
-            makeLabel(eq.name, px(eq.x == null ? 50 : eq.x), 4.8, pz(eq.y == null ? 50 : eq.y), 'rgba(126,87,194,0.92)');
-        });
 
         document.getElementById('sceneLoading').style.display = 'none';
     });
@@ -511,6 +489,13 @@
             design.valves = saved.valves || [];
         }
     } catch (e) {}
+    if (!design.hasPlan) {
+        PLAN_WALLS.forEach(function (w) {
+            design.walls.push({ x1: px(w.x1), z1: pz(w.y1), x2: px(w.x2), z2: pz(w.y2),
+                                h: 4.5, t: 0.28, openings: [], plan: true });
+        });
+        design.hasPlan = true;
+    }
     rebuildDesign();
 
     function arrOf(kind) {
@@ -556,7 +541,8 @@
         syncPanel();
     };
     window.clearDesign = function () {
-        design.walls = []; design.gates = []; design.pipes = []; design.valves = [];
+        design.walls = design.walls.filter(function (w) { return w.plan; });
+        design.gates = []; design.pipes = []; design.valves = [];
         selected = null;
         rebuildDesign();
         syncPanel();
