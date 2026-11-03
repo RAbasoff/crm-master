@@ -6897,3 +6897,19 @@ msgstr "Uitzoomen"
 #: templates/air/map_3d.html:0
 msgid "Pan mode"
 msgstr "Verplaatsmodus"
+
+#: templates/air/map_3d.html:0
+msgid "Door"
+msgstr "Deur"
+
+#: templates/air/map_3d.html:0
+msgid "Window"
+msgstr "Raam"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a wall to install a door"
+msgstr "Klik op een muur — deur plaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a wall to install a window"
+msgstr "Klik op een muur — raam plaatsen"

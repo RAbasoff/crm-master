@@ -7083,3 +7083,19 @@ msgstr "Отдалить"
 #: templates/air/map_3d.html:0
 msgid "Pan mode"
 msgstr "Режим перемещения"
+
+#: templates/air/map_3d.html:0
+msgid "Door"
+msgstr "Дверь"
+
+#: templates/air/map_3d.html:0
+msgid "Window"
+msgstr "Окно"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a wall to install a door"
+msgstr "Клик по стене — установить дверь"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a wall to install a window"
+msgstr "Клик по стене — установить окно"
