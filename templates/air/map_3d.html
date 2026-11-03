@@ -29,12 +29,12 @@
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px">
-        <label>{{ _('Height') }} <input type="number" id="panH" value="4.5" step="0.1" min="0.2" style="width:64px"> m</label>
-        <label>{{ _('Thickness') }} <input type="number" id="panT" value="0.28" step="0.02" min="0.05" style="width:64px"> m</label>
-        <label>{{ _('Width') }} <input type="number" id="panW" value="5" step="0.1" min="0.3" style="width:64px"> m</label>
-        <label>{{ _('Diameter') }} <input type="number" id="panD" value="110" step="5" min="6" style="width:64px"> mm</label>
-        <label>{{ _('Pipe height') }} <input type="number" id="panY" value="4" step="0.1" min="0.2" style="width:64px"> m</label>
-        <label>{{ _('Rotation') }} <input type="number" id="panR" value="0" step="15" style="width:64px"> °</label>
+        <label>{{ _('Height') }} <input type="number" id="panH" oninput="liveApply()" value="4.5" step="0.1" min="0.2" style="width:64px"> m</label>
+        <label>{{ _('Thickness') }} <input type="number" id="panT" oninput="liveApply()" value="0.28" step="0.02" min="0.05" style="width:64px"> m</label>
+        <label>{{ _('Width') }} <input type="number" id="panW" oninput="liveApply()" value="5" step="0.1" min="0.3" style="width:64px"> m</label>
+        <label>{{ _('Diameter') }} <input type="number" id="panD" oninput="liveApply()" value="110" step="5" min="6" style="width:64px"> mm</label>
+        <label>{{ _('Pipe height') }} <input type="number" id="panY" oninput="liveApply()" value="4" step="0.1" min="0.2" style="width:64px"> m</label>
+        <label>{{ _('Rotation') }} <input type="number" id="panR" oninput="liveApply()" value="0" step="15" style="width:64px"> °</label>
         <button class="btn btn-sm" onclick="rotSelected()" style="background:#7e57c2;color:#fff">+90°</button>
         <button class="btn btn-sm" onclick="undoAction()" style="background:#8e44ad;color:#fff">&#8617; {{ _('Undo') }}</button>
         <button class="btn btn-sm" onclick="applyParams()" style="background:#2c3e50;color:#fff">{{ _('Apply') }}</button>
@@ -331,10 +331,10 @@
         panMode = !panMode;
         if (panMode) {
             controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
-            controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
+            if (THREE.TOUCH) controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
         } else {
             controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-            controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+            if (THREE.TOUCH) controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
         }
         const b = document.getElementById('btnPanMode');
         if (b) b.style.opacity = panMode ? '1' : '0.55';
@@ -515,7 +515,13 @@
     function rebuildDesign() {
         while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
         function tag(m, kind, idx) {
-            m.traverse(function (ch) { ch.userData = { kind: kind, idx: idx }; });
+            const isSel = selected && selected.kind === kind && selected.idx === idx;
+            m.traverse(function (ch) {
+                ch.userData = { kind: kind, idx: idx };
+                if (ch.material && ch.material.emissive) {
+                    ch.material.emissive.setHex(isSel ? 0x2a4a7f : 0x000000);
+                }
+            });
             editGroup.add(m);
         }
         design.walls.forEach(function (w, i) { tag(wallMesh(w), 'wall', i); });
@@ -560,6 +566,34 @@
             document.getElementById('panR').value = Math.round((d.rot || 0) * 180 / Math.PI) % 360;
         }
     }
+    function rotPt(cx, cz, x, z, a) {
+        const co = Math.cos(a), si = Math.sin(a);
+        return { x: cx + (x - cx) * co - (z - cz) * si, z: cz + (x - cx) * si + (z - cz) * co };
+    }
+    function rotateObj(d, kind, newRot) {
+        const oldRot = d.rot || 0, delta = newRot - oldRot;
+        if (Math.abs(delta) < 1e-9) { d.rot = newRot; return; }
+        if (kind === 'wall') {
+            const cx = (d.x1 + d.x2) / 2, cz = (d.z1 + d.z2) / 2;
+            let p = rotPt(cx, cz, d.x1, d.z1, delta); d.x1 = p.x; d.z1 = p.z;
+            p = rotPt(cx, cz, d.x2, d.z2, delta); d.x2 = p.x; d.z2 = p.z;
+            (d.openings || []).forEach(function (o) {
+                const q = rotPt(cx, cz, o.x, o.z, delta); o.x = q.x; o.z = q.z;
+            });
+        } else if (kind === 'pipe') {
+            const n2 = d.pts.length || 1;
+            let cx = 0, cz = 0;
+            d.pts.forEach(function (p) { cx += p.x; cz += p.z; });
+            cx /= n2; cz /= n2;
+            d.pts.forEach(function (p) {
+                const q = rotPt(cx, cz, p.x, p.z, delta); p.x = q.x; p.z = q.z;
+            });
+        }
+        d.rot = newRot;
+    }
+    window.liveApply = function () {
+        window.applyParams();
+    };
     window.applyParams = function () {
         const num = function (id) { return parseFloat(document.getElementById(id).value); };
         params.wallH = num('panH') || params.wallH;
@@ -579,22 +613,26 @@
                 if (d.t != null) d.t = num('panT') || d.t;
                 if (d.w != null) d.w = num('panW') || d.w;
                 if (d.d != null) d.d = num('panD') || d.d;
-                if (selected.kind === 'gate') d.rot = params.gateRot;
+                if (selected.kind === 'gate') {
+                    d.rot = params.gateRot;
+                } else {
+                    rotateObj(d, selected.kind, params.gateRot);
+                }
                 rebuildDesign();
             }
         }
     };
     window.rotSelected = function () {
-        if (selected && selected.kind === 'gate') {
-            const d = design.gates[selected.idx];
-            saveHist();
-            d.rot = ((d.rot || 0) + Math.PI / 2) % (Math.PI * 2);
-            document.getElementById('panR').value = Math.round(d.rot * 180 / Math.PI) % 360;
-            params.gateRot = d.rot;
-            rebuildDesign();
-        } else {
-            params.gateRot = (params.gateRot + Math.PI / 2) % (Math.PI * 2);
-            document.getElementById('panR').value = Math.round(params.gateRot * 180 / Math.PI) % 360;
+        const newRot = ((parseFloat(document.getElementById('panR').value) || 0) + 90) * Math.PI / 180;
+        document.getElementById('panR').value = Math.round(newRot * 180 / Math.PI) % 360;
+        params.gateRot = newRot;
+        if (selected) {
+            const d = arrOf(selected.kind)[selected.idx];
+            if (d) {
+                saveHist();
+                rotateObj(d, selected.kind, newRot);
+                rebuildDesign();
+            }
         }
     };
     window.delSelected = function () {
