@@ -288,8 +288,13 @@
     });
 
     // ── Воздуховоды ──
+    function loadAirLines() {
     fetch('/air/api/map/data').then(r => r.json()).then(function (d) {
+        while (airGroup.children.length) airGroup.remove(airGroup.children[0]);
+        const localPipeIds = {};
+        design.pipes.forEach(function (pp) { if (pp.db_id) localPipeIds[pp.db_id] = true; });
         (d.lines || []).forEach(function (ln) {
+            if (localPipeIds[ln.id]) return;
             const vs = ln.vertices || [];
             if (vs.length < 2) return;
             const color = new THREE.Color(ln.color || '#e67e22');
@@ -321,6 +326,8 @@
             airGroup.add(conn);
         });
     });
+    }
+    loadAirLines();
 
     // ── Навигация: зум кнопками + режим перемещения ──
     window.zoomBy = function (f) {
@@ -399,6 +406,29 @@
         try { opts.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content; } catch (e) {}
         return fetch(url, opts);
     }
+    function toPct(pts) {
+        return pts.map(function (p) {
+            return { x: +(((p.x + W / 2) / W) * 100).toFixed(2), y: +(((p.z + D / 2) / D) * 100).toFixed(2) };
+        });
+    }
+    function pathLen(pts) {
+        let L = 0;
+        for (let i = 0; i < pts.length - 1; i++) L += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].z - pts[i].z);
+        return Math.round(L * 10) / 10;
+    }
+    function syncPipeDb(p) {
+        if (!p.db_id) return;
+        api3dFetch('/air/api/lines/' + p.db_id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vertices: toPct(p.pts),
+                diameter_mm: p.d,
+                length_m: pathLen(p.pts),
+                color: p.type === 'hose' ? '#27ae60' : '#3498db'
+            })
+        }).catch(function () {});
+    }
     function saveDesignToServer() {
         if (!canEdit3d || !serverLoaded) return;
         clearTimeout(saveTimer);
@@ -408,6 +438,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves })
             }).catch(function () {});
+            design.pipes.forEach(syncPipeDb);
         }, 600);
     }
 
@@ -656,6 +687,7 @@
         } else if (design.walls.length || design.gates.length || design.pipes.length || design.valves.length) {
             saveDesignToServer();
         }
+        loadAirLines();
     }).catch(function () { serverLoaded = true; });
 
     function arrOf(kind) {
@@ -770,6 +802,12 @@
     window.delSelected = function () {
         if (!selected) return;
         saveHist();
+        if (selected.kind === 'pipe') {
+            const pp = design.pipes[selected.idx];
+            if (pp && pp.db_id) {
+                api3dFetch('/air/api/lines/' + pp.db_id, { method: 'DELETE' }).catch(function () {});
+            }
+        }
         if (selected.kind === 'opening') {
             const w = design.walls[selected.idx];
             if (w && w.openings) w.openings.splice(selected.oidx, 1);
@@ -913,15 +951,31 @@
     });
     renderer.domElement.addEventListener('dblclick', function () {
         if ((curTool === 'pipe' || curTool === 'hose') && pipeBuf.length >= 2) {
-            saveHist();
-            design.pipes.push({
-                pts: pipeBuf.slice(),
-                d: curTool === 'hose' ? params.hoseD : params.pipeD,
-                h: params.pipeH,
-                type: curTool
-            });
+            const pts = pipeBuf.slice();
+            const tool = curTool;
+            const isHose = tool === 'hose';
+            const dMM = isHose ? params.hoseD : params.pipeD;
+            const addLocal = function (dbId) {
+                saveHist();
+                design.pipes.push({ pts: pts, d: dMM, h: params.pipeH, type: tool, db_id: dbId || null });
+                rebuildDesign();
+            };
             pipeBuf = [];
-            rebuildDesign();
+            api3dFetch('/air/api/lines', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    color: isHose ? '#27ae60' : '#3498db',
+                    diameter_mm: dMM,
+                    material: isHose ? 'plastic' : 'steel',
+                    length_m: pathLen(pts),
+                    notes: '3D',
+                    vertices: toPct(pts)
+                })
+            }).then(function (r) { return r.json(); }).then(function (j) {
+                if (j && j.ok) { addLocal(j.id); loadAirLines(); }
+                else { addLocal(null); }
+            }).catch(function () { addLocal(null); });
         }
     });
     setTool('select');

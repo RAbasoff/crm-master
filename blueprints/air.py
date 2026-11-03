@@ -364,6 +364,70 @@ def api_map_data():
     } for ln in AirLine.query.all()]
     return jsonify(points=points, lines=lines)
 
+# ── API для 3D-редактора: трубы из 3D становятся линиями воздуховодов ──
+
+@bp.route('/api/lines', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def api_lines_create():
+    """Создать линию воздуховода из 3D-инструмента «Труба/Шланг»."""
+    from datetime import datetime
+    data = request.get_json(force=True, silent=True) or {}
+    verts = data.get('vertices') or []
+    if len(verts) < 2:
+        return jsonify(ok=False, error='need 2+ vertices'), 400
+    name = (data.get('name') or '').strip() or ('3D ' + datetime.now().strftime('%d-%m %H:%M'))
+    ln = AirLine(
+        name=name,
+        length_m=_opt_float(data.get('length_m')),
+        diameter_mm=_opt_float(data.get('diameter_mm')),
+        material=data.get('material') if data.get('material') in AirLine.MATERIALS else 'steel',
+        status='ok',
+        color=(data.get('color') or '').strip() or None,
+        notes=(data.get('notes') or '').strip(),
+    )
+    db.session.add(ln)
+    db.session.flush()
+    for i, v in enumerate(verts):
+        db.session.add(AirLineVertex(line_id=ln.id, seq=i,
+                                     map_x=float(v['x']), map_y=float(v['y'])))
+    if not safe_commit():
+        return jsonify(ok=False, error='save failed'), 500
+    log_audit('create', 'air_line', ln.id, '3D ' + ln.name)
+    return jsonify(ok=True, id=ln.id, name=ln.name)
+
+
+@bp.route('/api/lines/<int:line_id>', methods=['PATCH', 'DELETE'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def api_line_modify(line_id):
+    """Обновить (геометрию/диаметр) или удалить линию воздуховода из 3D."""
+    ln = AirLine.query.get_or_404(line_id)
+    if request.method == 'DELETE':
+        AirLineVertex.query.filter_by(line_id=ln.id).delete()
+        db.session.delete(ln)
+        if not safe_commit():
+            return jsonify(ok=False), 500
+        log_audit('delete', 'air_line', ln.id, ln.name)
+        return jsonify(ok=True)
+    data = request.get_json(force=True, silent=True) or {}
+    verts = data.get('vertices')
+    if verts and len(verts) >= 2:
+        AirLineVertex.query.filter_by(line_id=ln.id).delete()
+        for i, v in enumerate(verts):
+            db.session.add(AirLineVertex(line_id=ln.id, seq=i,
+                                         map_x=float(v['x']), map_y=float(v['y'])))
+    if data.get('diameter_mm') is not None:
+        ln.diameter_mm = _opt_float(data.get('diameter_mm'))
+    if data.get('length_m') is not None:
+        ln.length_m = _opt_float(data.get('length_m'))
+    if data.get('color'):
+        ln.color = str(data.get('color'))
+    if not safe_commit():
+        return jsonify(ok=False), 500
+    return jsonify(ok=True)
+
+
 # ── 3D-редактор: сохранение чертежа на сервере ──
 @bp.route('/api/3d-design', methods=['GET', 'POST'])
 @login_required
