@@ -378,30 +378,37 @@ with app.app_context():
     # ── Здоровье push: библиотека pywebpush ОБЯЗАНА быть установлена,
     # иначе уведомления молча не доходят до телефонов (2026-11-04).
     try:
+        import logging as _pl
+        _plog = _pl.getLogger('push.health')
         import pywebpush  # noqa: F401
-        print("PUSH LIB: ok")
+        _plog.warning("PUSH LIB: ok (%s)", __import__('sys').executable)
     except Exception:
-        print("PUSH LIB: MISSING — push-уведомления не работают! Пробую доустановить...")
+        _plog = __import__('logging').getLogger('push.health')
+        _plog.error("PUSH LIB: MISSING — push-уведомления не работают! Пробую доустановить (--user)...")
         try:
             import subprocess as _sp, sys as _s
-            _sp.run([_s.executable, '-m', 'pip', 'install', 'pywebpush'],
+            _sp.run([_s.executable, '-m', 'pip', 'install', '--user', 'pywebpush'],
                     capture_output=True, text=True, timeout=180)
             import importlib as _il
             _il.invalidate_caches()
             import pywebpush  # noqa: F401
-            print("PUSH LIB: auto-install ok")
+            _plog.warning("PUSH LIB: auto-install ok")
         except Exception as _pe:
-            print("PUSH LIB: AUTO-INSTALL FAILED — установите вручную: pip install pywebpush |", _pe)
+            _plog.error("PUSH LIB: AUTO-INSTALL FAILED — установите: %s -m pip install --user pywebpush | %s",
+                        __import__('sys').executable, _pe)
     # ── Контроль конфигурации уведомлений («бетон»: сбои видны сразу) ──
     try:
         from models import User, PushSubscription
+        import logging as _nl
+        _nlog = _nl.getLogger('notify.health')
         _inactive = User.query.filter(
             User.is_active_user == False,
             User.role.in_(('admin', 'director', 'technician'))).all()
         for _u in _inactive:
-            print(f"NOTIFY CFG WARNING: staff {_u.username} (role={_u.role}) is INACTIVE — уведомления ему НЕ создадутся")
+            _nlog.warning("NOTIFY CFG WARNING: staff %s (role=%s) is INACTIVE — уведомления ему НЕ создадутся",
+                          _u.username, _u.role)
         _sub_n = PushSubscription.query.count()
-        print(f"NOTIFY CFG: push subscriptions = {_sub_n}")
+        _nlog.warning("NOTIFY CFG: push subscriptions = %s", _sub_n)
     except Exception as _ne:
         print("NOTIFY CFG: check skipped", _ne)
     try:
