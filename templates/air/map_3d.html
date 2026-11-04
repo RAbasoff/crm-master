@@ -227,19 +227,77 @@
         const accent = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.5 });
         const glassM = new THREE.MeshStandardMaterial({ color: 0x81d4fa, transparent: true, opacity: 0.35, roughness: 0.2 });
         if (d.style === 'filler') {
-            const hopper = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.55, 1.0, 18), steel);
-            hopper.position.y = 2.75; g.add(hopper);
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.1, 1.6), steel);
-            body.position.y = 1.75; g.add(body);
-            const base = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.7, 1.7), dark);
-            base.position.y = 0.85; g.add(base);
-            const panel = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.6, 0.12), dark);
-            panel.position.set(0.55, 2.15, 0.87); g.add(panel);
-            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.36, 0.04), glassM);
-            screen.position.set(0.55, 2.15, 0.95); g.add(screen);
-            const outlet = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.2, 10), dark);
-            outlet.rotation.z = Math.PI / 2;
-            outlet.position.set(1.45, 1.6, 0); g.add(outlet);
+            // VEMAG HP30E (Vulbus): конус-воронка, наклонная крыша, панель с экраном
+            // в зелёной рамке, выпуск с фланцем слева, манометр, вентиль, лоток с перфорацией
+            const green = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.45, metalness: 0.2 });
+            const white = new THREE.MeshStandardMaterial({ color: 0xeceff1, roughness: 0.6 });
+            const legsP = [[-0.95, -0.7], [0.95, -0.7], [-0.95, 0.7], [0.95, 0.7]];
+            legsP.forEach(function (p) {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.38, 10), dark);
+                leg.position.set(p[0], 0.19, p[1]); g.add(leg);
+            });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.55, 1.7), steel);
+            body.position.y = 1.15; g.add(body);
+            const slope = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.18, 1.3), steel);
+            slope.position.set(0, 2.0, 0.12);
+            slope.rotation.x = -0.32; g.add(slope);
+            const hopper = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.32, 1.25, 26), steel);
+            hopper.position.set(0, 2.9, -0.15); g.add(hopper);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.055, 8, 26), steel);
+            rim.position.set(0, 3.52, -0.15); rim.rotation.x = Math.PI / 2; g.add(rim);
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.5, 16), dark);
+            neck.position.set(0, 2.1, -0.15); g.add(neck);
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.8, 0.09), green);
+            panel.position.set(-0.42, 1.45, 0.9); g.add(panel);
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.52, 0.03), dark);
+            screen.position.set(-0.6, 1.45, 0.96); g.add(screen);
+            const glow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.44, 0.015),
+                new THREE.MeshStandardMaterial({ color: 0x143d1c, emissive: 0x1f6b33, emissiveIntensity: 0.4 }));
+            glow.position.set(-0.6, 1.45, 0.975); g.add(glow);
+            for (let rx = 0; rx < 3; rx++) for (let ry = 0; ry < 3; ry++) {
+                const key = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.085, 0.03), dark);
+                key.position.set(-0.12 + rx * 0.125, 1.66 - ry * 0.125, 0.96);
+                g.add(key);
+            }
+            const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 10), dark);
+            stick.rotation.x = Math.PI / 2;
+            stick.position.set(-0.12, 1.22, 0.96); g.add(stick);
+            const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.09, 16), dark);
+            gauge.rotation.x = Math.PI / 2;
+            gauge.position.set(0.32, 1.78, 0.92); g.add(gauge);
+            const face = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 16), white);
+            face.rotation.x = Math.PI / 2;
+            face.position.set(0.32, 1.78, 0.975); g.add(face);
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 1.35, 14), steel);
+            tube.rotation.z = Math.PI / 2;
+            tube.position.set(-1.75, 1.62, 0.15); g.add(tube);
+            const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 16), dark);
+            collar.rotation.z = Math.PI / 2;
+            collar.position.set(-1.25, 1.62, 0.15); g.add(collar);
+            const flare = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.2, 0.32, 18), steel);
+            flare.rotation.z = Math.PI / 2;
+            flare.position.set(-2.5, 1.62, 0.15); g.add(flare);
+            const lip = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 20), steel);
+            lip.position.set(-2.68, 1.62, 0.15); lip.rotation.y = Math.PI / 2; g.add(lip);
+            const lever = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 0.1), white);
+            lever.position.set(-2.45, 1.18, 0.15); g.add(lever);
+            const valve = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.22, 12), green);
+            valve.position.set(0.85, 2.1, 0.45); g.add(valve);
+            const valveKnob = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.09, 0.09), green);
+            valveKnob.position.set(0.85, 2.26, 0.45); g.add(valveKnob);
+            const handle = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.18), white);
+            handle.position.set(-0.75, 0.95, 0.92); g.add(handle);
+            const tray = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.07, 0.8), steel);
+            tray.position.set(0.95, 0.62, 0.72); g.add(tray);
+            const trayLip = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.16, 0.06), steel);
+            trayLip.position.set(0.95, 0.72, 1.1); g.add(trayLip);
+            for (let hx = 0; hx < 5; hx++) for (let hz = 0; hz < 3; hz++) {
+                const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.02, 8), dark);
+                hole.position.set(0.52 + hx * 0.21, 0.665, 0.48 + hz * 0.22);
+                g.add(hole);
+            }
+            const badge = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.24, 0.03), white);
+            badge.position.set(0.62, 1.35, 0.87); g.add(badge);
         } else if (d.style === 'wrapper') {
             const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.5, 1.7), steel);
             body.position.y = 1.55; g.add(body);
@@ -713,7 +771,7 @@
         design.machines.forEach(function (m, i) {
             if (m.off) return;
             tag(machineModel(m), 'machine', i, machinesGroup);
-            makeLabel(m.name || '', m.x || 0, 3.2 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)',
+            makeLabel(m.name || '', m.x || 0, 4.1 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)',
                       machinesGroup.children[machinesGroup.children.length - 1]);
         });
         design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
