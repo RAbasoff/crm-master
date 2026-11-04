@@ -4,7 +4,7 @@
  *  - HTML pages: network-first, fallback to cache, fallback to offline.html
  *  - API / POST: always network (never cache mutations)
  */
-const CACHE = 'promaster-v6';
+const CACHE = 'promaster-v7';
 const OFFLINE_URL = '/static/offline.html';
 
 const PRECACHE = [
@@ -142,8 +142,9 @@ self.addEventListener('push', (event) => {
   // Тег = тип + URL: все «fault» раньше схлопывались в одно уведомление
   // на экране блокировки (tag=ntype), теперь каждая заявка — своя.
   const tag = (data.tag || 'promaster') + ':' + (data.url || '');
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'ProMaster', {
+  event.waitUntil((async () => {
+    const title = data.title || 'ProMaster';
+    const opts = {
       body: data.body || '',
       tag: tag,
       requireInteraction: true,
@@ -151,8 +152,18 @@ self.addEventListener('push', (event) => {
       icon: '/static/icon-192.png',
       badge: '/static/icon-192.png',
       data: { url: data.url || '/' },
-    }).catch(function () {})
-  );
+    };
+    try {
+      await self.registration.showNotification(title, opts);
+    } catch (e) {
+      // iOS: часть опций может отвергаться — показываем минимальную версию
+      try {
+        await self.registration.showNotification(title, {
+          body: data.body || '', tag: tag, data: opts.data
+        });
+      } catch (e2) {}
+    }
+  })());
 });
 
 // ── Жизненно важно для iPhone: при обновлении/пересоздании SW браузер

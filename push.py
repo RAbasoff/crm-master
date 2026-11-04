@@ -62,6 +62,9 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
             # Apple требует валидный контакт в sub; https-URL надёжнее mailto с .local
             vapid_claims={'sub': 'https://rabasoff.pythonanywhere.com'},
             ttl=60 * 60 * 6,
+            # iOS: без Urgency:high Apple ставит push в низкий приоритет —
+            # уведомление приходит с задержкой или вообще молчит (на ПК всё ок)
+            headers={'Urgency': 'high'},
         )
         return 'ok' if (resp and resp.status_code < 300) else 'error'
     except WebPushException as e:
