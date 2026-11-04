@@ -28,6 +28,7 @@
         <button class="btn btn-sm" id="tool-gate" onclick="setTool('gate')" style="background:#7e57c2;color:#fff">&#128678; {{ _('Gate') }}</button>
         <button class="btn btn-sm" id="tool-pipe" onclick="setTool('pipe')" style="background:#3498db;color:#fff">&#128295; {{ _('Pipe') }}</button>
         <button class="btn btn-sm" id="tool-hose" onclick="setTool('hose')" style="background:#27ae60;color:#fff">&#128168; {{ _('Hose') }}</button>
+        <button class="btn btn-sm" id="tool-drop" onclick="setTool('drop')" style="background:#455a64;color:#fff">&#11015; {{ _('Drop') }}</button>
         <button class="btn btn-sm" id="btnFinishPipe" onclick="finishPipe()" style="background:#27ae60;color:#fff;display:none">&#9989; {{ _('Finish') }}</button>
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
@@ -475,9 +476,10 @@
     let hoverLabel = null, hoverTick = 0;
     renderer.domElement.addEventListener('pointermove', function (ev) {
         if ((curTool === 'pipe' || curTool === 'hose') && !drag) {
-            const pg = groundPoint(ev);
+            const hit3 = pipePick(ev);
+            const pg = hit3 ? { x: hit3.x, z: hit3.z } : groundPoint(ev);
             if (pg) {
-                pipeHoverPt = snapPipePoint({ x: pg.x, z: pg.z });
+                pipeHoverPt = hit3 ? { x: hit3.x, z: hit3.z } : snapPipePoint({ x: pg.x, z: pg.z });
                 updatePipePreview();
             }
         } else if (pipeHoverPt) {
@@ -623,7 +625,7 @@
     function setTool(t) {
         curTool = t; wallStart = null; pipeBuf = []; pipeHoverPt = null;
         if (typeof updatePipePreview === 'function') updatePipePreview();
-        ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'valve'].forEach(function (id) {
+        ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'drop', 'valve'].forEach(function (id) {
             const b = document.getElementById('tool-' + id);
             if (b) b.style.opacity = (id === t) ? '1' : '0.45';
         });
@@ -638,7 +640,8 @@
             gate: '{{ _("Click on the floor to place a gate") }}',
             pipe: '{{ _("Click to set points (right angles, snaps to pipes), double-click to finish") }}',
             hose: '{{ _("Click to set points (right angles, snaps to pipes), double-click to finish") }}',
-            valve: '{{ _("Click near a pipe to place a valve") }}'
+            valve: '{{ _("Click near a pipe to place a valve") }}',
+            drop: '{{ _("Click on a pipe to drop it down to the height field level") }}'
         }[t] || '';
     }
     window.setTool = setTool;
@@ -713,9 +716,10 @@
         const mat = new THREE.MeshStandardMaterial({
             color: pp.color || (pp.type === 'hose' ? 0x27ae60 : 0x3498db), roughness: 0.5, metalness: 0.3
         });
+        const ph = function (pt) { return (pt && pt.h != null) ? pt.h : pp.h; };
         for (let i = 0; i < pp.pts.length - 1; i++) {
-            const a = new THREE.Vector3(pp.pts[i].x, pp.h, pp.pts[i].z);
-            const b = new THREE.Vector3(pp.pts[i + 1].x, pp.h, pp.pts[i + 1].z);
+            const a = new THREE.Vector3(pp.pts[i].x, ph(pp.pts[i]), pp.pts[i].z);
+            const b = new THREE.Vector3(pp.pts[i + 1].x, ph(pp.pts[i + 1]), pp.pts[i + 1].z);
             const dir = b.clone().sub(a), L = dir.length();
             if (L < 0.01) continue;
             const tube = new THREE.Mesh(new THREE.CylinderGeometry(rM, rM, L, 10), mat);
@@ -725,7 +729,7 @@
         }
         pp.pts.forEach(function (p) {
             const s = new THREE.Mesh(new THREE.SphereGeometry(rM * 1.4, 8, 6), mat);
-            s.position.set(p.x, pp.h, p.z);
+            s.position.set(p.x, ph(p), p.z);
             g.add(s);
         });
         return g;
@@ -1135,8 +1139,21 @@
             saveHist();
             design.gates.push({ x: p.x, z: p.z, w: params.gateW, h: params.wallH, rot: params.gateRot });
             rebuildDesign();
+        } else if (curTool === 'drop') {
+            const hit3 = pipePick(ev);
+            if (hit3) {
+                saveHist();
+                design.pipes.push({
+                    pts: [{ x: hit3.x, z: hit3.z, h: hit3.h },
+                          { x: hit3.x, z: hit3.z, h: params.pipeH }],
+                    d: params.pipeD, h: params.pipeH, type: 'pipe'
+                });
+                rebuildDesign();
+            }
+            return;
         } else if (curTool === 'pipe' || curTool === 'hose') {
-            const p2 = snapPipePoint(p);
+            const hit3 = pipePick(ev);
+            const p2 = hit3 ? { x: hit3.x, z: hit3.z } : snapPipePoint(p);
             if (pipeBuf.length) {
                 const last = pipeBuf[pipeBuf.length - 1];
                 const ddx = Math.abs(p2.x - last.x), ddz = Math.abs(p2.z - last.z);
@@ -1159,9 +1176,32 @@
         }
     });
     let pipeHoverPt = null;
+    // Клик по САМОЙ трубе (3D-попадание) — надёжно при любом наклоне камеры
+    function pipePick(ev) {
+        const r = renderer.domElement.getBoundingClientRect();
+        edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+        edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+        edRay.setFromCamera(edNdc, camera);
+        const hits = edRay.intersectObjects([pipesLayer], true);
+        if (!hits.length) return null;
+        const h = hits[0];
+        let owner = h.object;
+        while (owner && !(owner.userData && owner.userData.kind === 'pipe')) owner = owner.parent;
+        if (!owner) return null;
+        const pp = design.pipes[owner.userData.idx];
+        if (!pp) return null;
+        // ближайшая вершина трубы к точке попадания
+        let bv = null, bd = 1e9;
+        (pp.pts || []).forEach(function (v) {
+            const d = Math.hypot(v.x - h.point.x, v.z - h.point.z);
+            if (d < bd) { bd = d; bv = v; }
+        });
+        return { x: bv ? bv.x : h.point.x, z: bv ? bv.z : h.point.z,
+                 h: (bv && bv.h != null) ? bv.h : pp.h };
+    }
     function snapPipePoint(p) {
         // Привязка: вершины труб -> линии труб (стыки/разветвления) -> сетка 0.5 м
-        let best = null, bestD = 1.3;
+        let best = null, bestD = 2.5;
         design.pipes.forEach(function (pp) {
             (pp.pts || []).forEach(function (v) {
                 const d = Math.hypot(v.x - p.x, v.z - p.z);

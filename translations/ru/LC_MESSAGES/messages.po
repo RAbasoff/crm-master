@@ -7169,3 +7169,11 @@ msgstr ""
 #: templates/air/map_3d.html:0
 msgid "Compressor"
 msgstr "Компрессор"
+
+#: templates/air/map_3d.html:0
+msgid "Drop"
+msgstr "Опуск"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a pipe to drop it down to the height field level"
+msgstr "Клик по трубе — опустить её вниз до высоты из поля «Высота трубы»"
