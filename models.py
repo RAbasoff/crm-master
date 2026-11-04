@@ -548,6 +548,19 @@ class ToolWear(db.Model):
     notes = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    documents = db.relationship('ToolWearDocument', backref='tool', lazy=True,
+                                cascade='all, delete-orphan')
+
+
+class ToolWearDocument(db.Model):
+    """Документ по инструменту: акт заточки, накладная и т.п."""
+    __tablename__ = 'tool_wear_document'
+    id = db.Column(db.Integer, primary_key=True)
+    tool_id = db.Column(db.Integer, db.ForeignKey('tool_wear.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(500))
+    uploaded_at = db.Column(db.DateTime, default=now_local)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 # ============================================================
 # CONTRACTOR MODELS
@@ -1036,6 +1049,9 @@ fault_technicians = db.Table('fault_technicians',
 class FaultReport(db.Model):
     __tablename__ = 'fault_report'
     id = db.Column(db.Integer, primary_key=True)
+    # Порядковый номер заявки в рамках года (обнуляется 1 января)
+    serial_no = db.Column(db.Integer, index=True)
+    serial_year = db.Column(db.Integer, index=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     priority = db.Column(db.String(20), default='normal', index=True)
@@ -1086,6 +1102,42 @@ class FaultReport(db.Model):
         if self.reporter:
             return self.reporter.name
         return '—'
+
+
+# ── Порядковые номера заявок: сквозные в рамках года, обнуление 1 января ──
+try:
+    from sqlalchemy import event as _sa_event, func as _sa_func
+
+    def _next_fault_serial(conn, year):
+        mx = conn.execute(
+            db.select(_sa_func.max(FaultReport.serial_no)).where(FaultReport.serial_year == year)
+        ).scalar()
+        return int(mx or 0) + 1
+
+    @_sa_event.listens_for(FaultReport, 'before_insert')
+    def _fault_serial_assign(mapper, connection, target):
+        if target.serial_no:
+            return
+        y = (target.created_at or now_local()).year
+        target.serial_year = y
+        target.serial_no = _next_fault_serial(connection, y)
+
+    def ensure_fault_serials():
+        """Разовый backfill: присвоить номера старым заявкам по порядку в году."""
+        rows = FaultReport.query.filter(FaultReport.serial_no.is_(None)).order_by(FaultReport.id).all()
+        if not rows:
+            return 0
+        counters = {}
+        for f in rows:
+            y = (f.created_at or now_local()).year
+            counters[y] = counters.get(y, 0) + 1
+            f.serial_year = y
+            f.serial_no = counters[y]
+        db.session.commit()
+        return len(rows)
+except Exception:
+    def ensure_fault_serials():
+        return 0
 
 class FaultStatusHistory(db.Model):
     __tablename__ = 'fault_status_history'

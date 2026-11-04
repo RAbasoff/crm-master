@@ -463,6 +463,41 @@ def check_tool_wear_notifications():
             create_notification(uid, 'Knife replacement needed', msg, 'tool_wear', '/tool-wear')
             existing_notifs.add(uid)
 
+    # ── Спец-оповещение «Замена ножей» при 90% выработки ──
+    # Только для закреплённых за машиной (Bartek / Safa / Hashim и т.п.).
+    # Все остальные уведомления — без изменений.
+    knife_users = {u.id: u for u in User.query.filter(
+        User.is_active_user == True,
+        User.username.in_(('bartek', 'safa', 'hashim', 'hashem'))).all()}
+    if knife_users:
+        knife_seen = set()
+        for nk in Notification.query.filter(
+                Notification.type == 'knife_90',
+                (Notification.created_at >= cutoff) | (Notification.is_read == False)).all():
+            knife_seen.add(nk.user_id)
+        for t in tools:
+            cycle = t.cycle_days or 14
+            if t.last_replaced:
+                days_k = (today - t.last_replaced).days
+                wear_k = min(100.0, round((days_k / cycle) * 100, 1))
+            else:
+                wear_k = 100.0
+            if wear_k < 90:
+                continue
+            machine = Machine.query.filter(
+                Machine.name.ilike((t.machine_name or '').strip())).first()
+            for uid, u in knife_users.items():
+                if uid in knife_seen:
+                    continue
+                resp = bool(machine) and (
+                    machine.responsible_user_id == uid or
+                    (u.person_id and machine.responsible_person_id == u.person_id))
+                if not resp:
+                    continue
+                msg_k = f"{t.machine_name}: {t.tool_name} — {wear_k}% {_('wear')}"
+                create_notification(uid, _('Knife replacement 90%'), msg_k, 'knife_90', '/tool-wear')
+                knife_seen.add(uid)
+
 
 BELGIAN_HOLIDAYS_FIXED = {
     (1, 1): "Nieuwjaar / Jour de l'An",

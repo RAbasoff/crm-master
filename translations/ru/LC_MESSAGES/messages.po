@@ -7115,3 +7115,19 @@ msgstr "Черновик с карты восстановлен"
 #: templates/air_map.html:0
 msgid "points"
 msgstr "точек"
+
+#: templates/tool_wear.html:0
+msgid "Document added"
+msgstr "Документ добавлен"
+
+#: templates/tool_wear.html:0
+msgid "Delete document?"
+msgstr "Удалить документ?"
+
+#: templates/tool_wear.html:0
+msgid "Knife replacement 90%"
+msgstr "Замена ножей 90%"
+
+#: templates/tool_wear.html:0
+msgid "Invalid file"
+msgstr "Недопустимый файл"

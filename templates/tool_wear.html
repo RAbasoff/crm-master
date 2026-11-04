@@ -18,6 +18,7 @@
                 <th>{{ _('Wear') }}</th>
                 <th>{{ _('Status') }}</th>
                 <th>{{ _('Last Replaced') }}</th>
+                <th>{{ _('Documents') }}</th>
                 <th>{{ _('Actions') }}</th>
             </tr>
             {% for t in tools %}
@@ -43,6 +44,26 @@
                     {% endif %}
                 </td>
                 <td>{{ t.last_replaced.strftime('%d.%m.%Y') if t.last_replaced else '—' }}</td>
+                <td style="min-width:190px">
+                    {% for d in t.documents %}
+                    <div style="display:flex;align-items:center;gap:5px;font-size:11px;margin:2px 0">
+                        <a href="/static/uploads/{{ d.filename }}" target="_blank">📎 {{ d.description or d.filename[:16] }}</a>
+                        <span style="color:#999">{{ d.uploaded_at.strftime('%d-%m-%Y') if d.uploaded_at else '' }}</span>
+                        {% if current_user.has_role('admin', 'director', 'technician') %}
+                        <form method="POST" action="/tool-wear/doc/{{ d.id }}/delete" style="display:inline" onsubmit="return confirm('{{ _('Delete document?') }}')">
+                            <button type="submit" class="btn btn-sm btn-ghost">🗑</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
+                    <form method="POST" action="/tool-wear/{{ t.id }}/doc" enctype="multipart/form-data" style="display:flex;gap:4px;align-items:center;margin-top:4px">
+                        <input type="file" name="file" required style="font-size:10px;max-width:125px">
+                        <input type="text" name="description" placeholder="{{ _('Description') }}" style="font-size:10px;width:85px">
+                        <button type="submit" class="btn btn-sm" style="background:#3498db;color:#fff;padding:2px 8px">+</button>
+                    </form>
+                    {% endif %}
+                </td>
                 <td style="white-space:nowrap">
                     {% if current_user.has_role('admin', 'director') %}
                     <button class="btn btn-sm btn-ghost" onclick="openEdit({{ t.id }},'{{ t.machine_name }}','{{ t.tool_name }}',{{ t.cycle_days or 14 }},'{{ t.last_replaced.strftime('%Y-%m-%d') if t.last_replaced }}','{{ t.notes or '' }}')">✏️</button>

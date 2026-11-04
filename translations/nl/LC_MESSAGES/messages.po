@@ -6929,3 +6929,19 @@ msgstr "Concept van kaart hersteld"
 #: templates/air_map.html:0
 msgid "points"
 msgstr "punten"
+
+#: templates/tool_wear.html:0
+msgid "Document added"
+msgstr "Document toegevoegd"
+
+#: templates/tool_wear.html:0
+msgid "Delete document?"
+msgstr "Document verwijderen?"
+
+#: templates/tool_wear.html:0
+msgid "Knife replacement 90%"
+msgstr "Mesvervanging 90%"
+
+#: templates/tool_wear.html:0
+msgid "Invalid file"
+msgstr "Ongeldig bestand"

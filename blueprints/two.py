@@ -20,21 +20,21 @@ bp = Blueprint('two', __name__)
 
 
 def gen_two_number():
-    from utils import next_number_suffix
     day = now_local().strftime('%Y%m%d')
-    # Сквозной порядковый номер по всей системе: растёт непрерывно,
-    # НЕ сбрасывается с началом каждого дня (структура TWO-дата-номер сохранена).
-    num = max(
-        next_number_suffix(TechnicalWorkOrder, 'number', 'TWO'),
-        TechnicalWorkOrder.query.count() + 1,
-    )
+    year = day[:4]
+    # Порядковый номер обнуляется 1 января: NNNN — счётчик в пределах ГОДА.
+    mx = 0
+    for (num_s,) in TechnicalWorkOrder.query.with_entities(TechnicalWorkOrder.number).filter(
+            TechnicalWorkOrder.number.like('TWO-' + year + '%')).all():
+        tail = (num_s or '').rsplit('-', 1)[-1]
+        if tail.isdigit():
+            mx = max(mx, int(tail))
+    num = max(mx + 1, 1)
     candidate = f'TWO-{day}-{num:04d}'
-    # защита от редкого совпадения с историческими номерами
     while TechnicalWorkOrder.query.filter_by(number=candidate).first():
         num += 1
         candidate = f'TWO-{day}-{num:04d}'
     return candidate
-
 
 def _load_machine_to_checklist(machine_id, period=None):
     """Чек-лист ТО для машины из machine_to_checklist (по виду обслуживания)."""
@@ -79,15 +79,12 @@ def two_list():
 
     # Открытые TWO — всегда СВЕРХУ (независимо от даты).
     # completed/cancelled — по дате и порядковому номеру.
-    def _two_sort_key(o):
+    # Сортировка по полному номеру (год сбрасывает NNNN — сортируем по всей строке)
+    orders = sorted(orders, key=lambda o: o.number or '', reverse=True)
+    def _two_open_key(o):
         st = (o.status or '').lower()
-        is_open = st not in ('completed', 'cancelled', 'done', 'closed', 'finished')
-        num = o.number or ''
-        tail = num.rsplit('-', 1)[-1]
-        seq = int(tail) if tail.isdigit() else 0
-        return (0 if is_open else 1, -seq)
-
-    orders = sorted(orders, key=_two_sort_key)
+        return 1 if st in ('completed', 'cancelled', 'done', 'closed', 'finished') else 0
+    orders = sorted(orders, key=_two_open_key)
 
     # Группировка: сначала блок «Открытые», затем по году → месяцу.
     from collections import OrderedDict

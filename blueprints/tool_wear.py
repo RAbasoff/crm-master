@@ -7,9 +7,9 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, ToolWear, Notification
+from models import db, ToolWear, ToolWearDocument, Notification
 from utils import (role_required, safe_commit, safe_int, check_tool_wear_notifications,
-                   user_has_section_access, log_system)
+                   user_has_section_access, log_system, save_uploaded_file, log_audit)
 
 bp = Blueprint('tool_wear', __name__)
 
@@ -145,3 +145,41 @@ def api_tool_wear_warnings():
                 'last_replaced': t.last_replaced.strftime('%d.%m.%Y') if t.last_replaced else '—'
             })
     return jsonify({'warnings': warnings})
+
+
+@bp.route('/tool-wear/<int:tool_id>/doc', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def tool_doc_add(tool_id):
+    """Добавить документ (акт заточки и т.п.) к инструменту."""
+    tool = ToolWear.query.get_or_404(tool_id)
+    fn = save_uploaded_file(request.files.get('file'), prefix='tool_')
+    if not fn:
+        flash(_('Invalid file'), 'error')
+        return redirect(url_for('tool_wear.tool_wear_page'))
+    d = ToolWearDocument(
+        tool_id=tool.id, filename=fn,
+        description=(request.form.get('description') or '').strip(),
+        uploaded_by=current_user.id)
+    db.session.add(d)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        log_audit('create', 'tool_wear_doc', d.id, f'{tool.machine_name} {d.description or fn}')
+        flash(_('Document added'), 'success')
+    return redirect(url_for('tool_wear.tool_wear_page'))
+
+
+@bp.route('/tool-wear/doc/<int:doc_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def tool_doc_delete(doc_id):
+    """Удалить документ инструмента."""
+    d = ToolWearDocument.query.get_or_404(doc_id)
+    db.session.delete(d)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        log_audit('delete', 'tool_wear_doc', d.id, d.filename)
+        flash(_('Deleted'), 'success')
+    return redirect(url_for('tool_wear.tool_wear_page'))

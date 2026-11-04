@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Fault') }} #{{ fault.id }} — CRM{% endblock %}
+{% block title %}{{ _('Fault') }} №{{ fault.serial_no or fault.id }} — CRM{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>⚠️ {{ _('Fault') }} #{{ fault.id }}</h1>
+    <h1>⚠️ {{ _('Fault') }} №{{ fault.serial_no or fault.id }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         {% if fault.status == 'open' and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <form method="POST" action="/faults/{{ fault.id }}/accept" style="display:inline">

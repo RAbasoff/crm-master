@@ -59,7 +59,7 @@
             </td>
             <td>{{ o.workers|workers_for_user(current_user) }}</td>
             <td>{{ o.planned_date.strftime('%d-%m-%Y') if o.planned_date else '—' }}</td>
-            <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">#{{ o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>
+            <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">№{{ o.fault.serial_no or o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>
             <td>
                 <div style="display:flex;gap:4px">
                     <a href="/two/{{ o.id }}/print" class="btn btn-sm" style="background:#eee;padding:4px 8px" target="_blank">🖨️</a>
@@ -136,7 +136,7 @@
             </td>
             <td>{% for w in o.workers %}{{ w.naam }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
             <td>{{ o.planned_date.strftime('%d-%m-%Y') if o.planned_date else '—' }}</td>
-            <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">#{{ o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>
+            <td>{% if o.fault %}<a href="/faults/{{ o.fault_id }}">№{{ o.fault.serial_no or o.fault_id }} {{ o.fault.title[:30] }}</a>{% else %}—{% endif %}</td>
             <td>
                 <div style="display:flex;gap:4px">
                     <a href="/two/{{ o.id }}/print" class="btn btn-sm" style="background:#eee;padding:4px 8px" target="_blank">🖨️</a>

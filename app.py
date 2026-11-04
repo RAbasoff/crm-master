@@ -364,6 +364,13 @@ with app.app_context():
         from schema import ensure_floor_users, ensure_plan_windows, ensure_head_of_ts, ensure_perf
         ensure_perf()
         ensure_floor_users()
+        try:
+            from models import ensure_fault_serials as _efsn
+            _cnt = _efsn()
+            if _cnt:
+                print("FAULT SERIALS: backfilled", _cnt)
+        except Exception as _e:
+            print("FAULT SERIALS: skip", _e)
         ensure_plan_windows()
         ensure_head_of_ts()
     except Exception as _fu_err:
