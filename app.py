@@ -392,6 +392,18 @@ with app.app_context():
             print("PUSH LIB: auto-install ok")
         except Exception as _pe:
             print("PUSH LIB: AUTO-INSTALL FAILED — установите вручную: pip install pywebpush |", _pe)
+    # ── Контроль конфигурации уведомлений («бетон»: сбои видны сразу) ──
+    try:
+        from models import User, PushSubscription
+        _inactive = User.query.filter(
+            User.is_active_user == False,
+            User.role.in_(('admin', 'director', 'technician'))).all()
+        for _u in _inactive:
+            print(f"NOTIFY CFG WARNING: staff {_u.username} (role={_u.role}) is INACTIVE — уведомления ему НЕ создадутся")
+        _sub_n = PushSubscription.query.count()
+        print(f"NOTIFY CFG: push subscriptions = {_sub_n}")
+    except Exception as _ne:
+        print("NOTIFY CFG: check skipped", _ne)
     try:
         from models import sync_app_time
         sync_app_time()
