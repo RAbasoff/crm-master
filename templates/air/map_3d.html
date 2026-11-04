@@ -429,13 +429,7 @@
                 });
             }
         });
-        // Компрессор — синий шкаф, источник труб. Ставится один раз, двигается мышью.
-        if (!design.machines.some(function (q) { return q.id === -1; })) {
-            design.machines.push({
-                id: -1, name: '{{ _("Compressor") }}',
-                x: 30, z: -15, rot: Math.PI / 2, s: 1, off: false, style: 'compressor'
-            });
-        }
+        ensureCompressor();
         rebuildDesign();
 
         document.getElementById('sceneLoading').style.display = 'none';
@@ -487,6 +481,7 @@
             updatePipePreview();
         }
         if (drag) return;
+        if (!SHOW_HOVER_LABELS) return;
         const now = Date.now();
         if (now - hoverTick < 90) return;
         hoverTick = now;
@@ -578,6 +573,18 @@
     const design = { walls: [], gates: [], pipes: [], valves: [], machines: [] };
     const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
+    // Временно отключено (пользователю мешают): всплывающие подписи и подписи станков.
+    // Чтобы вернуть — поставить true и перезагрузить страницу.
+    const SHOW_HOVER_LABELS = false;
+    // Компрессор не должен пропадать: создаём всегда, если его нет
+    function ensureCompressor() {
+        if (!design.machines.some(function (q) { return q.id === -1; })) {
+            design.machines.push({
+                id: -1, name: '{{ _("Compressor") }}',
+                x: 22.28, z: 4.04, rot: -Math.PI / 2, s: 1, off: false, style: 'compressor'
+            });
+        }
+    }
     const canEdit3d = {{ 'true' if current_user.has_role('admin', 'director', 'technician') else 'false' }};
     let serverLoaded = false, saveTimer = null;
     function api3dFetch(url, opts) {
@@ -819,8 +826,10 @@
         design.machines.forEach(function (m, i) {
             if (m.off) return;
             tag(machineModel(m), 'machine', i, machinesGroup);
-            makeLabel(m.name || '', m.x || 0, 4.1 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)',
-                      machinesGroup.children[machinesGroup.children.length - 1]);
+            if (SHOW_HOVER_LABELS) {
+                makeLabel(m.name || '', m.x || 0, 4.1 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)',
+                          machinesGroup.children[machinesGroup.children.length - 1]);
+            }
         });
         design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
         design.walls.forEach(function (w, wi) {
@@ -874,6 +883,7 @@
             design.pipes = srv.pipes || [];
             design.valves = srv.valves || [];
             design.machines = srv.machines || design.machines;
+            ensureCompressor();
             design.hasPlan = true;
             rebuildDesign();
         } else if (design.walls.length || design.gates.length || design.pipes.length || design.valves.length) {
