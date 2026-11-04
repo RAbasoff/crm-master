@@ -1163,17 +1163,27 @@
             return;
         } else if (curTool === 'pipe' || curTool === 'hose') {
             const hit3 = pipePick(ev);
-            const p2 = hit3 ? { x: hit3.x, z: hit3.z } : snapPipePoint(p);
+            let p2;
+            if (hit3) {
+                // зацепились за трубу — принимаем её высоту, чтобы стык был вплотную
+                p2 = { x: hit3.x, z: hit3.z };
+                params.pipeH = hit3.h;
+                const yEl = document.getElementById('panY');
+                if (yEl) yEl.value = Math.round(hit3.h * 100) / 100;
+            } else {
+                p2 = snapPipePoint(p);
+            }
+            const hNow = params.pipeH;
             if (pipeBuf.length) {
                 const last = pipeBuf[pipeBuf.length - 1];
                 const ddx = Math.abs(p2.x - last.x), ddz = Math.abs(p2.z - last.z);
                 if (ddx > 0.05 && ddz > 0.05) {
                     // Г-колено: сначала по большему направлению — прямой угол
-                    if (ddx >= ddz) pipeBuf.push({ x: p2.x, z: last.z });
-                    else pipeBuf.push({ x: last.x, z: p2.z });
+                    if (ddx >= ddz) pipeBuf.push({ x: p2.x, z: last.z, h: hNow });
+                    else pipeBuf.push({ x: last.x, z: p2.z, h: hNow });
                 }
             }
-            pipeBuf.push(p2);
+            pipeBuf.push({ x: p2.x, z: p2.z, h: hNow });
             updatePipePreview();
         } else if (curTool === 'valve') {
             saveHist();
