@@ -6304,7 +6304,7 @@ msgstr "Что мешает работе? Опишите конкретно..."
 
 #: pause test-push
 msgid "Send test notification"
-msgstr "Отправить тестовое оповещение"
+msgstr "Отправить тестовое уведомление"
 
 #: pause test-push
 msgid "Test push"
@@ -6320,7 +6320,7 @@ msgstr "Все механики"
 
 #: pause test-push
 msgid "Test notification sent"
-msgstr "Тестовое оповещение отправлено"
+msgstr "Тестовое уведомление отправлено"
 
 #: pause test-push
 msgid "Select a mechanic"
@@ -7155,3 +7155,7 @@ msgstr "Загружен"
 #: templates/tool_wear.html:0
 msgid "No documents yet"
 msgstr "Документов пока нет"
+
+#: templates/settings.html:0
+msgid "Test notification"
+msgstr "Тестовое уведомление"

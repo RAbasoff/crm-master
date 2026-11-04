@@ -727,3 +727,21 @@ def api_user_object_access(user_id):
         return jsonify({'ok': False, 'error': 'save failed'}), 500
     log_audit('update', 'user_access', u.id, f'object-access sections={sec_ids} hidden={hid_ids}')
     return jsonify({'ok': True})
+
+
+@bp.route('/test-push', methods=['POST'])
+@login_required
+def test_push():
+    """Отправить тестовое уведомление себе (проверка push на телефоне)."""
+    if not current_user.has_role('admin', 'director'):
+        flash(_('Access denied. Insufficient rights.'), 'error')
+        return redirect('/settings')
+    try:
+        from logs import create_notification
+        create_notification(current_user.id, 'Test notification',
+                            'Push notifications are working / Pushmeldingen werken',
+                            'info', '/settings')
+        flash(_('Test notification sent'), 'success')
+    except Exception as e:
+        flash(_('Save failed') + ': %s' % e, 'error')
+    return redirect('/settings')

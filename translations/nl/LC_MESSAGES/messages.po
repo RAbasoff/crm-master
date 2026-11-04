@@ -6969,3 +6969,15 @@ msgstr "Geüpload"
 #: templates/tool_wear.html:0
 msgid "No documents yet"
 msgstr "Nog geen documenten"
+
+#: templates/settings.html:0
+msgid "Send test notification"
+msgstr "Testmelding versturen"
+
+#: templates/settings.html:0
+msgid "Test notification sent"
+msgstr "Testmelding verstuurd"
+
+#: templates/settings.html:0
+msgid "Test notification"
+msgstr "Testmelding"

@@ -375,6 +375,23 @@ with app.app_context():
         ensure_head_of_ts()
     except Exception as _fu_err:
         print(f'ensure_floor_users skip: {_fu_err}')
+    # ── Здоровье push: библиотека pywebpush ОБЯЗАНА быть установлена,
+    # иначе уведомления молча не доходят до телефонов (2026-11-04).
+    try:
+        import pywebpush  # noqa: F401
+        print("PUSH LIB: ok")
+    except Exception:
+        print("PUSH LIB: MISSING — push-уведомления не работают! Пробую доустановить...")
+        try:
+            import subprocess as _sp, sys as _s
+            _sp.run([_s.executable, '-m', 'pip', 'install', 'pywebpush'],
+                    capture_output=True, text=True, timeout=180)
+            import importlib as _il
+            _il.invalidate_caches()
+            import pywebpush  # noqa: F401
+            print("PUSH LIB: auto-install ok")
+        except Exception as _pe:
+            print("PUSH LIB: AUTO-INSTALL FAILED — установите вручную: pip install pywebpush |", _pe)
     try:
         from models import sync_app_time
         sync_app_time()
