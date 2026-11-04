@@ -548,17 +548,15 @@ class ToolWear(db.Model):
     notes = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    documents = db.relationship('ToolWearDocument', backref='tool', lazy=True,
-                                cascade='all, delete-orphan')
 
 
-class ToolWearDocument(db.Model):
-    """Документ по инструменту: акт заточки, накладная и т.п."""
-    __tablename__ = 'tool_wear_document'
+class ToolWearActDocument(db.Model):
+    """Акт заточки ножей от подрядчика — один документ на все ножи (A4)."""
+    __tablename__ = 'tool_wear_act_document'
     id = db.Column(db.Integer, primary_key=True)
-    tool_id = db.Column(db.Integer, db.ForeignKey('tool_wear.id'), nullable=False, index=True)
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(500))
+    received_date = db.Column(db.Date)   # дата получения заточенных ножей
     uploaded_at = db.Column(db.DateTime, default=now_local)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 

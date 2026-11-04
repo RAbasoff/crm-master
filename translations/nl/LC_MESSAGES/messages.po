@@ -6945,3 +6945,27 @@ msgstr "Mesvervanging 90%"
 #: templates/tool_wear.html:0
 msgid "Invalid file"
 msgstr "Ongeldig bestand"
+
+#: templates/tool_wear.html:0
+msgid "Sharpening documents"
+msgstr "Slijtdocumenten"
+
+#: templates/tool_wear.html:0
+msgid ""
+"One act covers all knives. Upload after receiving sharpened knives from the "
+"contractor."
+msgstr ""
+"Eén act voor alle messen. Upload na ontvangst van geslepen messen van de "
+"aannemer."
+
+#: templates/tool_wear.html:0
+msgid "Date received"
+msgstr "Ontvangstdatum"
+
+#: templates/tool_wear.html:0
+msgid "Uploaded"
+msgstr "Geüpload"
+
+#: templates/tool_wear.html:0
+msgid "No documents yet"
+msgstr "Nog geen documenten"

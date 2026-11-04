@@ -7131,3 +7131,27 @@ msgstr "Замена ножей 90%"
 #: templates/tool_wear.html:0
 msgid "Invalid file"
 msgstr "Недопустимый файл"
+
+#: templates/tool_wear.html:0
+msgid "Sharpening documents"
+msgstr "Документы заточки"
+
+#: templates/tool_wear.html:0
+msgid ""
+"One act covers all knives. Upload after receiving sharpened knives from the "
+"contractor."
+msgstr ""
+"Один акт на все ножи. Загружайте после получения заточенных ножей от "
+"подрядчика."
+
+#: templates/tool_wear.html:0
+msgid "Date received"
+msgstr "Дата получения"
+
+#: templates/tool_wear.html:0
+msgid "Uploaded"
+msgstr "Загружен"
+
+#: templates/tool_wear.html:0
+msgid "No documents yet"
+msgstr "Документов пока нет"
