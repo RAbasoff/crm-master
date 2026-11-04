@@ -311,6 +311,33 @@
             reel.position.set(0, 2.85, -0.2); g.add(reel);
             const hood = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 1.6), glassM);
             hood.position.set(0.4, 2.2, 0.2); g.add(hood);
+        } else if (d.style === 'compressor') {
+            // Компрессор: синий металлический шкаф — источник всех труб на фабрике
+            const blue = new THREE.MeshStandardMaterial({ color: 0x2b5f9e, metalness: 0.55, roughness: 0.45 });
+            const blueDark = new THREE.MeshStandardMaterial({ color: 0x1d4170, metalness: 0.5, roughness: 0.5 });
+            [[-0.95, -0.5], [0.95, -0.5], [-0.95, 0.5], [0.95, 0.5]].forEach(function (p2) {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.15), blueDark);
+                leg.position.set(p2[0], 0.15, p2[1]); g.add(leg);
+            });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.3, 1.3), blue);
+            body.position.y = 1.35; g.add(body);
+            const top = new THREE.Mesh(new THREE.BoxGeometry(2.26, 0.16, 1.36), blueDark);
+            top.position.y = 2.55; g.add(top);
+            for (let i = 0; i < 5; i++) {
+                const slat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.06), blueDark);
+                slat.position.set(0, 1.0 + i * 0.28, 0.68); g.add(slat);
+            }
+            const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 18), blueDark);
+            fan.position.set(0, 2.66, 0); g.add(fan);
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.16, 10), steel);
+            hub.position.set(0, 2.72, 0); g.add(hub);
+            const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.9, 12), steel);
+            stub.rotation.z = Math.PI / 2;
+            stub.position.set(1.5, 1.9, 0); g.add(stub);
+            const cpanel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.08), dark);
+            cpanel.position.set(-0.7, 1.9, 0.68); g.add(cpanel);
+            const cscreen = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.24, 0.03), glassM);
+            cscreen.position.set(-0.7, 1.9, 0.73); g.add(cscreen);
         } else {
             const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 1.8), steel);
             body.position.y = 1.45; g.add(body);
@@ -401,6 +428,13 @@
                 });
             }
         });
+        // Компрессор — синий шкаф, источник труб. Ставится один раз, двигается мышью.
+        if (!design.machines.some(function (q) { return q.id === -1; })) {
+            design.machines.push({
+                id: -1, name: '{{ _("Compressor") }}',
+                x: 30, z: -15, rot: Math.PI / 2, s: 1, off: false, style: 'compressor'
+            });
+        }
         rebuildDesign();
 
         document.getElementById('sceneLoading').style.display = 'none';

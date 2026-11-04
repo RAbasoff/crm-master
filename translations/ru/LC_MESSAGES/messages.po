@@ -7165,3 +7165,7 @@ msgid ""
 "Click to set points (right angles, snaps to pipes), double-click to finish"
 msgstr ""
 "Клик — точки (прямые углы, привязка к трубам), двойной клик — завершить"
+
+#: templates/air/map_3d.html:0
+msgid "Compressor"
+msgstr "Компрессор"

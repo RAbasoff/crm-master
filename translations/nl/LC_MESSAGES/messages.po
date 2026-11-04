@@ -6988,3 +6988,7 @@ msgid ""
 msgstr ""
 "Klik om punten te zetten (rechte hoeken, koppelt aan leidingen), dubbelklik "
 "om te voltooien"
+
+#: templates/air/map_3d.html:0
+msgid "Compressor"
+msgstr "Compressor"
