@@ -20,7 +20,9 @@ def safe_commit(retries=3, delay=0.5):
                 _time.sleep(delay * (attempt + 1))
             else:
                 db.session.rollback()
-                print(f"SAFE_COMMIT FAILED: {type(e).__name__}: {e}")
+                try:
+                    import logging as _lg; _lg.getLogger(__name__).warning('SAFE_COMMIT FAILED: %s', e)
+                except Exception: pass
                 return False
     return False
 

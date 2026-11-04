@@ -3,6 +3,8 @@ from flask import request, session
 from flask_login import current_user
 from models import db, Notification, AuditLog, UserActivityLog, SystemLog
 from schema import safe_commit
+import logging
+_log = logging.getLogger(__name__)
 
 # Push отправляем в фоне: синхронная отправка (HTTPS к FCM/Apple на каждую
 # подписку) блокировала ответ на 5–30 секунд — «кнопки откликаются медленно».
@@ -41,6 +43,7 @@ def _send_push_job(row, title, message, ntype, link, lang='ru'):
     запрос (было 20–90 сек на сохранение заявки).
     """
     sid, endpoint, p256dh, auth, user_id = row
+    res = 'error'
     try:
         from app import app as _app
         from push import send_web_push
@@ -52,15 +55,21 @@ def _send_push_job(row, title, message, ntype, link, lang='ru'):
                     _t(title), _t(message) if message else '', url=link, tag=ntype or 'info')
     except Exception as e:
         res = 'error'
-        print('PUSH EXC sub=%s: %s' % (sid, e))
-    if res != 'ok':
-        # раньше ошибки молчали — push «просто переставал приходить»
-        print('PUSH %s sub=%s user=%s' % (res, sid, user_id))
+        try:
+            _log.warning('PUSH EXC sub=%s: %s', sid, e)
+        except Exception:
+            pass
+    # Сначала служебные действия, потом логирование: print/logger в фоновых
+    # потоках на сервере может бросать OSError — и всё после него не выполнится.
     if res == 'dead':
-        # мёртвую подписку удаляем отдельной короткой задачей
         _push_pool.submit(_cleanup_dead_sub, sid)
     elif res == 'ok':
         _push_pool.submit(_touch_sub, sid)
+    if res != 'ok':
+        try:
+            _log.warning('PUSH %s sub=%s user=%s', res, sid, user_id)
+        except Exception:
+            pass
 
 
 def _cleanup_dead_sub(sid):

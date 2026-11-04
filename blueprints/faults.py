@@ -16,6 +16,7 @@ from utils import role_required, log_audit, create_notification, add_work_report
 from logs import create_notifications
 from security import director_only
 
+import logging as _lg_faults
 bp = Blueprint('faults', __name__, url_prefix='/faults')
 
 
@@ -678,10 +679,10 @@ def fault_new():
                                 notify_fault_created(_f, _t, _h)
                             _db.session.remove()
                     except Exception as _e:
-                        print('notify bg', _e)
+                        _lg_faults.warning('notify bg: %s', _e)
                 threading.Thread(target=_send_notify, daemon=True).start()
             except Exception as _ne:
-                print('notify_fault_created', _ne)
+                _lg_faults.warning('notify_fault_created: %s', _ne)
             add_work_report(f"{_('New fault')}: {f.title} — {target} ({_('Priority')}: {f.priority}, {_('Reporter')}: {who})")
 
             if f.priority == 'critical':
