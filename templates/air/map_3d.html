@@ -440,6 +440,16 @@
     // ── Подписи при наведении ──
     let hoverLabel = null, hoverTick = 0;
     renderer.domElement.addEventListener('pointermove', function (ev) {
+        if ((curTool === 'pipe' || curTool === 'hose') && !drag) {
+            const pg = groundPoint(ev);
+            if (pg) {
+                pipeHoverPt = snapPipePoint({ x: pg.x, z: pg.z });
+                updatePipePreview();
+            }
+        } else if (pipeHoverPt) {
+            pipeHoverPt = null;
+            updatePipePreview();
+        }
         if (drag) return;
         const now = Date.now();
         if (now - hoverTick < 90) return;
@@ -577,7 +587,7 @@
     }
 
     function setTool(t) {
-        curTool = t; wallStart = null; pipeBuf = [];
+        curTool = t; wallStart = null; pipeBuf = []; pipeHoverPt = null;
         if (typeof updatePipePreview === 'function') updatePipePreview();
         ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'valve'].forEach(function (id) {
             const b = document.getElementById('tool-' + id);
@@ -592,8 +602,8 @@
             door: '{{ _("Click on a wall to install a door") }}',
             window: '{{ _("Click on a wall to install a window") }}',
             gate: '{{ _("Click on the floor to place a gate") }}',
-            pipe: '{{ _("Click pipe points, double-click to finish") }}',
-            hose: '{{ _("Click hose points, double-click to finish") }}',
+            pipe: '{{ _("Click to set points (right angles, snaps to pipes), double-click to finish") }}',
+            hose: '{{ _("Click to set points (right angles, snaps to pipes), double-click to finish") }}',
             valve: '{{ _("Click near a pipe to place a valve") }}'
         }[t] || '';
     }
@@ -1092,7 +1102,17 @@
             design.gates.push({ x: p.x, z: p.z, w: params.gateW, h: params.wallH, rot: params.gateRot });
             rebuildDesign();
         } else if (curTool === 'pipe' || curTool === 'hose') {
-            pipeBuf.push({ x: p.x, z: p.z });
+            const p2 = snapPipePoint(p);
+            if (pipeBuf.length) {
+                const last = pipeBuf[pipeBuf.length - 1];
+                const ddx = Math.abs(p2.x - last.x), ddz = Math.abs(p2.z - last.z);
+                if (ddx > 0.05 && ddz > 0.05) {
+                    // Г-колено: сначала по большему направлению — прямой угол
+                    if (ddx >= ddz) pipeBuf.push({ x: p2.x, z: last.z });
+                    else pipeBuf.push({ x: last.x, z: p2.z });
+                }
+            }
+            pipeBuf.push(p2);
             updatePipePreview();
         } else if (curTool === 'valve') {
             saveHist();
@@ -1104,8 +1124,44 @@
             rebuildDesign();
         }
     });
+    let pipeHoverPt = null;
+    function snapPipePoint(p) {
+        // Привязка: вершины труб -> линии труб (стыки/разветвления) -> сетка 0.5 м
+        let best = null, bestD = 1.3;
+        design.pipes.forEach(function (pp) {
+            (pp.pts || []).forEach(function (v) {
+                const d = Math.hypot(v.x - p.x, v.z - p.z);
+                if (d < bestD) { bestD = d; best = { x: v.x, z: v.z }; }
+            });
+            for (let i = 0; i < (pp.pts || []).length - 1; i++) {
+                const a = pp.pts[i], b = pp.pts[i + 1];
+                const dx = b.x - a.x, dz = b.z - a.z;
+                const L2 = dx * dx + dz * dz;
+                if (L2 < 1e-6) continue;
+                let t = ((p.x - a.x) * dx + (p.z - a.z) * dz) / L2;
+                t = Math.max(0, Math.min(1, t));
+                const qx = a.x + dx * t, qz = a.z + dz * t;
+                const d = Math.hypot(qx - p.x, qz - p.z);
+                if (d < bestD) { bestD = d; best = { x: qx, z: qz }; }
+            }
+        });
+        if (best) return best;
+        return { x: Math.round(p.x * 2) / 2, z: Math.round(p.z * 2) / 2 };
+    }
     const previewGroup = new THREE.Group();
     scene.add(previewGroup);
+    function previewTube(a, b, r, col, op) {
+        const va = new THREE.Vector3(a.x, params.pipeH, a.z);
+        const vb = new THREE.Vector3(b.x, params.pipeH, b.z);
+        const dir = vb.clone().sub(va);
+        const L = dir.length();
+        if (L < 0.01) return;
+        const tube = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 6),
+            new THREE.MeshBasicMaterial({ color: col, transparent: !!op, opacity: op || 1 }));
+        tube.position.copy(va).add(vb).multiplyScalar(0.5);
+        tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+        previewGroup.add(tube);
+    }
     function updatePipePreview() {
         while (previewGroup.children.length) previewGroup.remove(previewGroup.children[0]);
         const b = document.getElementById('btnFinishPipe');
@@ -1117,16 +1173,25 @@
             previewGroup.add(s);
         });
         for (let i = 0; i < pipeBuf.length - 1; i++) {
-            const a = new THREE.Vector3(pipeBuf[i].x, params.pipeH, pipeBuf[i].z);
-            const b2 = new THREE.Vector3(pipeBuf[i + 1].x, params.pipeH, pipeBuf[i + 1].z);
-            const dir = b2.clone().sub(a);
-            const L = dir.length();
-            if (L < 0.01) continue;
-            const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, L, 6),
-                new THREE.MeshBasicMaterial({ color: 0xffb74d }));
-            tube.position.copy(a).add(b2).multiplyScalar(0.5);
-            tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
-            previewGroup.add(tube);
+            previewTube(pipeBuf[i], pipeBuf[i + 1], 0.05, 0xffb74d);
+        }
+        // предпросмотр до курсора — строго под прямым углом (Г-колено)
+        if (pipeHoverPt && pipeBuf.length) {
+            const last = pipeBuf[pipeBuf.length - 1];
+            const path = [last];
+            const dx = Math.abs(pipeHoverPt.x - last.x), dz = Math.abs(pipeHoverPt.z - last.z);
+            if (dx > 0.05 && dz > 0.05) {
+                if (dx >= dz) path.push({ x: pipeHoverPt.x, z: last.z });
+                else path.push({ x: last.x, z: pipeHoverPt.z });
+            }
+            path.push(pipeHoverPt);
+            for (let i = 0; i < path.length - 1; i++) {
+                previewTube(path[i], path[i + 1], 0.035, 0xffd27f, 0.85);
+            }
+            const s = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6),
+                new THREE.MeshBasicMaterial({ color: 0xffd27f, transparent: true, opacity: 0.9 }));
+            s.position.set(pipeHoverPt.x, params.pipeH, pipeHoverPt.z);
+            previewGroup.add(s);
         }
     }
     window.finishPipe = function () {

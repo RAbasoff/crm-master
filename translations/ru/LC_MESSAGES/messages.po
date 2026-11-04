@@ -7159,3 +7159,9 @@ msgstr "Документов пока нет"
 #: templates/settings.html:0
 msgid "Test notification"
 msgstr "Тестовое уведомление"
+
+#: templates/air/map_3d.html:0
+msgid ""
+"Click to set points (right angles, snaps to pipes), double-click to finish"
+msgstr ""
+"Клик — точки (прямые углы, привязка к трубам), двойной клик — завершить"

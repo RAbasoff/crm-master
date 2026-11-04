@@ -6981,3 +6981,10 @@ msgstr "Testmelding verstuurd"
 #: templates/settings.html:0
 msgid "Test notification"
 msgstr "Testmelding"
+
+#: templates/air/map_3d.html:0
+msgid ""
+"Click to set points (right angles, snaps to pipes), double-click to finish"
+msgstr ""
+"Klik om punten te zetten (rechte hoeken, koppelt aan leidingen), dubbelklik "
+"om te voltooien"
