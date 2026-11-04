@@ -191,7 +191,7 @@
     }
 
     // ── Подписи ──
-    function makeLabel(text, x, y, z, color) {
+    function makeLabel(text, x, y, z, color, owner) {
         const cv = document.createElement('canvas');
         const ctx = cv.getContext('2d');
         ctx.font = 'bold 30px Arial';
@@ -204,10 +204,71 @@
         c2.fillStyle = '#fff';
         c2.textBaseline = 'middle';
         c2.fillText(text, 12, 24);
-        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true, opacity: 0.8
+        }));
         spr.position.set(x, y, z);
         spr.scale.set(w / 26, 46 / 26, 1);
-        labelGroup.add(spr);
+        if (owner) {
+            owner.userData.labelRef = spr;
+            spr.visible = false;
+            hoverLabelGroup.add(spr);
+        } else {
+            labelGroup.add(spr);
+        }
+        return spr;
+    }
+
+    // ── Модели станков (стилизованные) ──
+    function machineModel(d) {
+        const g = new THREE.Group();
+        const steel = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.55, roughness: 0.4 });
+        const dark = new THREE.MeshStandardMaterial({ color: 0x455a64, metalness: 0.4, roughness: 0.5 });
+        const accent = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.5 });
+        const glassM = new THREE.MeshStandardMaterial({ color: 0x81d4fa, transparent: true, opacity: 0.35, roughness: 0.2 });
+        if (d.style === 'filler') {
+            const hopper = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.55, 1.0, 18), steel);
+            hopper.position.y = 2.75; g.add(hopper);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.1, 1.6), steel);
+            body.position.y = 1.75; g.add(body);
+            const base = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.7, 1.7), dark);
+            base.position.y = 0.85; g.add(base);
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.6, 0.12), dark);
+            panel.position.set(0.55, 2.15, 0.87); g.add(panel);
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.36, 0.04), glassM);
+            screen.position.set(0.55, 2.15, 0.95); g.add(screen);
+            const outlet = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.2, 10), dark);
+            outlet.rotation.z = Math.PI / 2;
+            outlet.position.set(1.45, 1.6, 0); g.add(outlet);
+        } else if (d.style === 'wrapper') {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.5, 1.7), steel);
+            body.position.y = 1.55; g.add(body);
+            const belt = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.16, 0.9), dark);
+            belt.position.set(0, 1.35, 1.15); g.add(belt);
+            const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.3, 0.16), dark);
+            leg1.position.set(1.4, 0.65, 1.15); g.add(leg1);
+            const leg2 = leg1.clone(); leg2.position.x = -1.4; g.add(leg2);
+            const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.4, 20), accent);
+            reel.rotation.x = Math.PI / 2;
+            reel.position.set(0, 2.85, -0.2); g.add(reel);
+            const hood = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 1.6), glassM);
+            hood.position.set(0.4, 2.2, 0.2); g.add(hood);
+        } else {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 1.8), steel);
+            body.position.y = 1.45; g.add(body);
+            const top = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.25, 1.9), dark);
+            top.position.y = 2.62; g.add(top);
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 0.1), dark);
+            panel.position.set(0, 1.8, 0.95); g.add(panel);
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.5, 0.04), glassM);
+            screen.position.set(0, 1.8, 1.02); g.add(screen);
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.62, 0.18, 1.82), accent);
+            stripe.position.y = 0.55; g.add(stripe);
+        }
+        g.scale.setScalar(d.s || 1);
+        g.position.set(d.x || 0, 0, d.z || 0);
+        g.rotation.y = d.rot || 0;
+        return g;
     }
 
     fetch('/api/map/all').then(r => r.json()).then(function (d) {
@@ -268,22 +329,21 @@
 
         // 4б) стены плана загружаются в редактор ниже (design.walls) и редактируются
 
-        // 5) станки
+        // 5) станки — импорт в редактор (двигаются, поворачиваются, масштабируются)
         (d.machines || []).forEach(function (m) {
-            const g = new THREE.Group();
-            const base = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 3),
-                new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6, metalness: 0.15 }));
-            base.position.y = 1;
-            g.add(base);
-            const top = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 2.4),
-                new THREE.MeshStandardMaterial({ color: 0x1e8449, roughness: 0.5 }));
-            top.position.y = 2.2;
-            g.add(top);
-            g.position.set(px(m.x || 50), 0, pz(m.y || 50));
-            machinesGroup.add(g);
-            makeLabel(m.name, px(m.x || 50), 3.6, pz(m.y || 50), 'rgba(39,174,96,0.9)');
+            const exists = design.machines.some(function (q) { return q.id === m.id; });
+            if (!exists) {
+                design.machines.push({
+                    id: m.id, name: m.name || '',
+                    x: px(m.x == null ? 50 : m.x), z: pz(m.y == null ? 50 : m.y),
+                    rot: 0, s: 1, off: false,
+                    style: /vulbus|vemag/i.test(m.name || '') ? 'filler'
+                        : /caveco|ypsilon|magic|pack|inpak/i.test(m.name || '') ? 'wrapper'
+                        : 'cabinet'
+                });
+            }
         });
-
+        rebuildDesign();
 
         document.getElementById('sceneLoading').style.display = 'none';
     });
@@ -298,27 +358,16 @@
             if (localPipeIds[ln.id]) return;
             const vs = ln.vertices || [];
             if (vs.length < 2) return;
-            const color = new THREE.Color(ln.color || '#e67e22');
-            const rM = Math.max(0.07, (ln.diameter_mm || 40) / 1000 / 2 * 3.5);
-            for (let i = 0; i < vs.length - 1; i++) {
-                const a = new THREE.Vector3(px(vs[i].x), H - 0.35, pz(vs[i].y));
-                const b = new THREE.Vector3(px(vs[i + 1].x), H - 0.35, pz(vs[i + 1].y));
-                const dir = b.clone().sub(a);
-                const len = dir.length();
-                if (len < 0.01) continue;
-                const tube = new THREE.Mesh(new THREE.CylinderGeometry(rM, rM, len, 10),
-                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.35 }));
-                tube.position.copy(a).add(b).multiplyScalar(0.5);
-                tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-                airGroup.add(tube);
-            }
-            vs.forEach(function (p) {
-                const ball = new THREE.Mesh(new THREE.SphereGeometry(rM * 1.5, 10, 8),
-                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 }));
-                ball.position.set(px(p.x), H - 0.35, pz(p.y));
-                airGroup.add(ball);
+            design.pipes.push({
+                pts: vs.map(function (v) { return { x: px(v.x), z: pz(v.y) }; }),
+                d: ln.diameter || 60,
+                h: H - 0.35,
+                type: 'pipe',
+                color: ln.color || '#e67e22',
+                db_id: ln.id
             });
         });
+        rebuildDesign();
         (d.points || []).forEach(function (p) {
             const col = p.status === 'active' ? 0x27ae60 : (p.status === 'fault' ? 0xe74c3c : 0xf39c12);
             const conn = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.2, 10),
@@ -329,6 +378,29 @@
     });
     }
     loadAirLines();
+
+    // ── Подписи при наведении ──
+    let hoverLabel = null, hoverTick = 0;
+    renderer.domElement.addEventListener('pointermove', function (ev) {
+        if (drag) return;
+        const now = Date.now();
+        if (now - hoverTick < 90) return;
+        hoverTick = now;
+        const r = renderer.domElement.getBoundingClientRect();
+        edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+        edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+        edRay.setFromCamera(edNdc, camera);
+        const hits = edRay.intersectObjects([machinesGroup, editGroup, wallsLayer, pipesLayer], true);
+        let ref = null;
+        for (let i = 0; i < hits.length && !ref; i++) {
+            let o = hits[i].object;
+            while (o && !o.userData.labelRef) o = o.parent;
+            if (o && o.userData.labelRef) ref = o.userData.labelRef;
+        }
+        if (hoverLabel && hoverLabel !== ref) hoverLabel.visible = false;
+        hoverLabel = ref;
+        if (hoverLabel) hoverLabel.visible = true;
+    });
 
     // ── Навигация: зум кнопками + режим перемещения ──
     window.zoomBy = function (f) {
@@ -352,13 +424,14 @@
     };
 
     // ── Переключатели ──
-    let airOn = true, labelsOn = true, wallsOn = true, ceilOn = true, machinesOn = true;
+    let airOn = true, labelsOn = false, wallsOn = true, ceilOn = true, machinesOn = true;
     function flip(btnId, on) {
         const b = document.getElementById(btnId);
         if (b) b.style.opacity = on ? '1' : '0.4';
     }
+    flip('btnLbl', false);
     window.toggleAir = function () {
-        airOn = !airOn; airGroup.visible = airOn; flip('btnAir', airOn);
+        airOn = !airOn; airGroup.visible = airOn; pipesLayer.visible = airOn; flip('btnAir', airOn);
     };
     window.toggleLabels = function () {
         labelsOn = !labelsOn; labelGroup.visible = labelsOn; flip('btnLbl', labelsOn);
@@ -395,8 +468,10 @@
     // ═══ 3D editor tools: walls / openings / gates / pipes / hoses / valves ═══
     const editGroup = new THREE.Group();
     const wallsLayer = new THREE.Group(); // стены/двери/окна — можно скрыть целиком
-    scene.add(editGroup); scene.add(wallsLayer);
-    const design = { walls: [], gates: [], pipes: [], valves: [] };
+    const pipesLayer = new THREE.Group(); // трубы — скрываются кнопкой «Линии воздуха»
+    const hoverLabelGroup = new THREE.Group(); // подписи-подсказки при наведении
+    scene.add(editGroup); scene.add(wallsLayer); scene.add(pipesLayer); scene.add(hoverLabelGroup);
+    const design = { walls: [], gates: [], pipes: [], valves: [], machines: [] };
     const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
     const canEdit3d = {{ 'true' if current_user.has_role('admin', 'director', 'technician') else 'false' }};
@@ -426,7 +501,7 @@
                 vertices: toPct(p.pts),
                 diameter_mm: p.d,
                 length_m: pathLen(p.pts),
-                color: p.type === 'hose' ? '#27ae60' : '#3498db'
+                color: p.color || (p.type === 'hose' ? '#27ae60' : '#3498db')
             })
         }).catch(function () {});
     }
@@ -437,7 +512,7 @@
             api3dFetch('/air/api/3d-design', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves })
+                body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves, machines: design.machines })
             }).catch(function () {});
             design.pipes.forEach(syncPipeDb);
         }, 600);
@@ -534,7 +609,7 @@
         const g = new THREE.Group();
         const rM = Math.max(0.03, pp.d / 1000 / 2);
         const mat = new THREE.MeshStandardMaterial({
-            color: pp.type === 'hose' ? 0x27ae60 : 0x3498db, roughness: 0.5, metalness: 0.3
+            color: pp.color || (pp.type === 'hose' ? 0x27ae60 : 0x3498db), roughness: 0.5, metalness: 0.3
         });
         for (let i = 0; i < pp.pts.length - 1; i++) {
             const a = new THREE.Vector3(pp.pts[i].x, pp.h, pp.pts[i].z);
@@ -621,6 +696,7 @@
     function rebuildDesign() {
         while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
         while (wallsLayer.children.length) wallsLayer.remove(wallsLayer.children[0]);
+        while (pipesLayer.children.length) pipesLayer.remove(pipesLayer.children[0]);
         function tag(m, kind, idx, parent) {
             const isSel = selected && selected.kind === kind && selected.idx === idx;
             m.traverse(function (ch) {
@@ -633,7 +709,13 @@
         }
         design.walls.forEach(function (w, i) { tag(wallMesh(w), 'wall', i, wallsLayer); });
         design.gates.forEach(function (g2, i) { tag(gateMesh(g2), 'gate', i); });
-        design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i); });
+        design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i, pipesLayer); });
+        design.machines.forEach(function (m, i) {
+            if (m.off) return;
+            tag(machineModel(m), 'machine', i, machinesGroup);
+            makeLabel(m.name || '', m.x || 0, 3.2 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)',
+                      machinesGroup.children[machinesGroup.children.length - 1]);
+        });
         design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
         design.walls.forEach(function (w, wi) {
             const ang = -Math.atan2(w.z2 - w.z1, w.x2 - w.x1);
@@ -678,12 +760,14 @@
     api3dFetch('/air/api/3d-design').then(function (r) { return r.json(); }).then(function (srv) {
         serverLoaded = true;
         const hasSrv = srv && ((srv.walls && srv.walls.length) || (srv.gates && srv.gates.length) ||
-                               (srv.pipes && srv.pipes.length) || (srv.valves && srv.valves.length));
+                               (srv.pipes && srv.pipes.length) || (srv.valves && srv.valves.length) ||
+                               (srv.machines && srv.machines.length));
         if (hasSrv) {
             design.walls = srv.walls || [];
             design.gates = srv.gates || [];
             design.pipes = srv.pipes || [];
             design.valves = srv.valves || [];
+            design.machines = srv.machines || design.machines;
             design.hasPlan = true;
             rebuildDesign();
         } else if (design.walls.length || design.gates.length || design.pipes.length || design.valves.length) {
@@ -693,7 +777,7 @@
     }).catch(function () { serverLoaded = true; });
 
     function arrOf(kind) {
-        return design[{ wall: 'walls', gate: 'gates', pipe: 'pipes', valve: 'valves' }[kind]];
+        return design[{ wall: 'walls', gate: 'gates', pipe: 'pipes', valve: 'valves', machine: 'machines' }[kind]];
     }
     function selObj() {
         if (!selected) return null;
@@ -714,6 +798,10 @@
         if (d.w != null) document.getElementById('panW').value = d.w;
         if (d.d != null) document.getElementById('panD').value = d.d;
         if (selected.kind === 'gate') {
+            document.getElementById('panR').value = Math.round((d.rot || 0) * 180 / Math.PI) % 360;
+        }
+        if (selected.kind === 'machine') {
+            document.getElementById('panW').value = Math.round((d.s || 1) * 100);
             document.getElementById('panR').value = Math.round((d.rot || 0) * 180 / Math.PI) % 360;
         }
         if (selected.kind === 'opening') {
@@ -770,7 +858,10 @@
                 if (d.t != null) d.t = num('panT') || d.t;
                 if (d.w != null) d.w = num('panW') || d.w;
                 if (d.d != null) d.d = num('panD') || d.d;
-                if (selected.kind === 'opening') {
+                if (selected.kind === 'machine') {
+                    d.s = Math.max(0.2, (num('panW') || 100) / 100);
+                    d.rot = params.gateRot;
+                } else if (selected.kind === 'opening') {
                     d.w = num('panW') || d.w;
                     d.top = num('panH') || d.top;
                     d.sill = Math.max(0, num('panY') || 0);
@@ -810,7 +901,10 @@
                 api3dFetch('/air/api/lines/' + pp.db_id, { method: 'DELETE' }).catch(function () {});
             }
         }
-        if (selected.kind === 'opening') {
+        if (selected.kind === 'machine') {
+            const mm = design.machines[selected.idx];
+            if (mm) mm.off = true;
+        } else if (selected.kind === 'opening') {
             const w = design.walls[selected.idx];
             if (w && w.openings) w.openings.splice(selected.oidx, 1);
         } else {
@@ -836,11 +930,11 @@
             edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
             edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
             edRay.setFromCamera(edNdc, camera);
-            const hits = edRay.intersectObjects([editGroup, wallsLayer], true);
+            const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer], true);
             if (hits.length) {
                 const u = hits[0].object.userData;
                 let grp = null;
-                [editGroup, wallsLayer].forEach(function (root) {
+                [editGroup, wallsLayer, pipesLayer].forEach(function (root) {
                     root.traverse(function (g) {
                         if (!grp && g.userData && g.userData.kind === u.kind && g.userData.idx === u.idx &&
                             g.userData.oidx === u.oidx) { grp = g; }
@@ -891,7 +985,7 @@
             edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
             edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
             edRay.setFromCamera(edNdc, camera);
-            const hits = edRay.intersectObjects([editGroup, wallsLayer], true);
+            const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer], true);
             if (!hits.length) { selected = null; syncPanel(); return; }
             const u = hits[0].object.userData;
             selected = u.kind ? { kind: u.kind, idx: u.idx, oidx: u.oidx } : null;

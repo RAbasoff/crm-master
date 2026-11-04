@@ -445,6 +445,7 @@ def api_3d_design():
             'gates': data.get('gates') or [],
             'pipes': data.get('pipes') or [],
             'valves': data.get('valves') or [],
+            'machines': data.get('machines') or [],
         }
         os.makedirs(current_app.instance_path, exist_ok=True)
         with open(path, 'w', encoding='utf-8') as f:
