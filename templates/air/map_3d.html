@@ -878,10 +878,12 @@
                                (srv.pipes && srv.pipes.length) || (srv.valves && srv.valves.length) ||
                                (srv.machines && srv.machines.length));
         if (hasSrv) {
-            design.walls = srv.walls || [];
-            design.gates = srv.gates || [];
-            design.pipes = srv.pipes || [];
-            design.valves = srv.valves || [];
+            // Самовосстановление: пустое поле сервера не затирает локальные объекты
+            // (раньше гонка сохранения могла стереть ворота/краны — теперь слияние)
+            design.walls = (srv.walls && srv.walls.length) ? srv.walls : design.walls;
+            design.gates = (srv.gates && srv.gates.length) ? srv.gates : design.gates;
+            design.pipes = (srv.pipes && srv.pipes.length) ? srv.pipes : design.pipes;
+            design.valves = (srv.valves && srv.valves.length) ? srv.valves : design.valves;
             design.machines = srv.machines || design.machines;
             ensureCompressor();
             design.hasPlan = true;

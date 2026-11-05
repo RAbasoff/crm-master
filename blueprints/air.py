@@ -448,6 +448,13 @@ def api_3d_design():
             'machines': data.get('machines') or [],
         }
         os.makedirs(current_app.instance_path, exist_ok=True)
+        # резервная копия перед перезаписью — чтобы утерянные объекты можно было вернуть
+        if os.path.exists(path):
+            try:
+                import shutil
+                shutil.copyfile(path, path + '.bak')
+            except Exception:
+                pass
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(clean, f, ensure_ascii=False)
         return jsonify({'ok': True})
