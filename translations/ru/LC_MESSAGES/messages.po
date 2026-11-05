@@ -177,7 +177,7 @@ msgid "Connection"
 msgstr "Подключение"
 
 msgid "Pressure regulator"
-msgstr "Регулятор давления"
+msgstr "Регулятор"
 
 msgid "Valve"
 msgstr "Вентиль"
@@ -7237,3 +7237,15 @@ msgstr "Нет данных за период"
 #: templates/monteurs.html:0
 msgid "Hourly rate"
 msgstr "Ставка €/час"
+
+#: templates/air/map_3d.html:0
+msgid "Ball valve"
+msgstr "Кран шаровый"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a pressure regulator with gauge"
+msgstr "Клик — установить регулятор давления с манометром"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a ball valve"
+msgstr "Клик — установить кран шаровый"

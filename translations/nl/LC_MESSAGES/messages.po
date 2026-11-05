@@ -174,7 +174,7 @@ msgid "Connection"
 msgstr "Aansluiting"
 
 msgid "Pressure regulator"
-msgstr "Drukregelaar"
+msgstr "Regelaar"
 
 msgid "Valve"
 msgstr "Klep"
@@ -7060,3 +7060,15 @@ msgstr "Geen gegevens voor deze periode"
 #: templates/monteurs.html:0
 msgid "Hourly rate"
 msgstr "Tarief €/uur"
+
+#: templates/air/map_3d.html:0
+msgid "Ball valve"
+msgstr "Kogelkraan"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a pressure regulator with gauge"
+msgstr "Klik om drukregelaar met manometer te plaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a ball valve"
+msgstr "Klik om kogelkraan te plaatsen"
