@@ -737,11 +737,18 @@ def test_push():
         flash(_('Access denied. Insufficient rights.'), 'error')
         return redirect('/settings')
     try:
-        from logs import create_notification
-        create_notification(current_user.id, 'Test notification',
-                            'Push notifications are working / Pushmeldingen werken',
-                            'info', '/settings')
-        flash(_('Test notification sent'), 'success')
+        from logs import create_notifications
+        from models import Notification
+        before = Notification.query.filter_by(user_id=current_user.id).count()
+        create_notifications([{'user_id': current_user.id,
+                               'title': 'Test notification / Тестовое уведомление',
+                               'message': 'Push notifications are working / Pushmeldingen werken',
+                               'type': 'info', 'link': '/settings'}])
+        after = Notification.query.filter_by(user_id=current_user.id).count()
+        if after > before:
+            flash(_('Test notification sent') + ' (✓ ' + _('Notifications') + ')', 'success')
+        else:
+            flash(_('Save failed') + ': notification not created', 'error')
     except Exception as e:
         flash(_('Save failed') + ': %s' % e, 'error')
     return redirect('/settings')
