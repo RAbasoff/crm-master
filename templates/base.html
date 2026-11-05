@@ -199,6 +199,7 @@
             <div class="sb-group-items">
             {% if has_access('reports') or current_user.has_role('admin', 'director') %}
             <a href="/reports" class="sb-item {% if request.endpoint in ['reports.reports', 'reports.report_period', 'reports.report_worker'] %}active{% endif %}"><span class="sb-icon">📊</span>{{ _('Reports') }}</a>
+            <a href="/damage" class="sb-item {% if request.endpoint and request.endpoint.startswith('damage.') %}active{% endif %}"><span class="sb-icon">💶</span>{{ _('Economic damage') }}</a>
             <a href="/work-report" class="sb-item {% if 'work_report' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Report') }}</a>
             <a href="/archive" class="sb-item {% if 'archive' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📦</span>{{ _('Archive') }}</a>
             {% endif %}

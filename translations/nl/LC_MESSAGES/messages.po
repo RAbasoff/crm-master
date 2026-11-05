@@ -7000,3 +7000,59 @@ msgstr "Omlaag"
 #: templates/air/map_3d.html:0
 msgid "Click on a pipe to drop it down to the height field level"
 msgstr "Klik op een leiding om hem naar het hoogteveld te laten zakken"
+
+#: templates/damage_report.html:0
+msgid "Economic damage"
+msgstr "Economische schade"
+
+#: templates/damage_report.html:0
+msgid "Downtime cost"
+msgstr "Kosten stilstand"
+
+#: templates/damage_report.html:0
+msgid "Labor cost"
+msgstr "Arbeidskosten"
+
+#: templates/damage_report.html:0
+msgid "Parts and materials"
+msgstr "Onderdelen en materialen"
+
+#: templates/damage_report.html:0
+msgid "Loss per hour"
+msgstr "Verlies €/uur"
+
+#: templates/damage_report.html:0
+msgid "Mechanic rate"
+msgstr "Monteurtarief €/uur"
+
+#: templates/damage_report.html:0
+msgid "Total damage"
+msgstr "Totale schade"
+
+#: templates/damage_report.html:0
+msgid "Downtime"
+msgstr "Stilstand"
+
+#: templates/damage_report.html:0
+msgid "per hour"
+msgstr "per uur"
+
+#: templates/damage_report.html:0
+msgid "Top machines by damage"
+msgstr "Top machines op schade"
+
+#: templates/damage_report.html:0
+msgid "Labor hours"
+msgstr "Arbeidsuren"
+
+#: templates/damage_report.html:0
+msgid "Damage calculation"
+msgstr "Berekening economische schade"
+
+#: templates/damage_report.html:0
+msgid "Settings saved"
+msgstr "Instellingen opgeslagen"
+
+#: templates/damage_report.html:0
+msgid "No data for this period"
+msgstr "Geen gegevens voor deze periode"

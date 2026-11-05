@@ -135,6 +135,8 @@ from blueprints.machines import bp as machines_bp
 app.register_blueprint(machines_bp)
 from blueprints.tool_wear import bp as tool_wear_bp
 app.register_blueprint(tool_wear_bp)
+from blueprints.damage import bp as damage_bp
+app.register_blueprint(damage_bp)
 from blueprints.archive import bp as archive_bp
 app.register_blueprint(archive_bp)
 from blueprints.two import bp as two_bp

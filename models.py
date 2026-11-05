@@ -255,6 +255,8 @@ class FactorySection(db.Model):
 
 class Machine(db.Model):
     __tablename__ = 'machine'
+    # Стоимость простоя €/час (для расчёта экономического ущерба)
+    loss_per_hour = db.Column(db.Numeric(10, 2))
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
@@ -548,6 +550,13 @@ class ToolWear(db.Model):
     notes = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=now_local, onupdate=now_local)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
+class AppSetting(db.Model):
+    """Ключ-значение: тарифы и прочие настройки (ставка механика и т.п.)."""
+    __tablename__ = 'app_setting'
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.String(200))
 
 
 class ToolWearActDocument(db.Model):
@@ -1050,6 +1059,8 @@ class FaultReport(db.Model):
     # Порядковый номер заявки в рамках года (обнуляется 1 января)
     serial_no = db.Column(db.Integer, index=True)
     serial_year = db.Column(db.Integer, index=True)
+    # Стоимость запчастей/материалов по случаю (€) — для расчёта ущерба
+    parts_cost = db.Column(db.Numeric(10, 2), default=0)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     priority = db.Column(db.String(20), default='normal', index=True)

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Economic damage') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>💶 {{ _('Damage calculation') }}</h1>
+    <a href="/damage/export?from={{ d_from }}&to={{ d_to }}{% if machine_id %}&machine_id={{ machine_id }}{% endif %}" class="btn btn-sm" style="background:#27ae60;color:#fff">📥 {{ _('Export CSV') }}</a>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <form method="GET" action="/damage" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><label style="font-size:11px;color:#777">{{ _('Date') }} ({{ _('from') }})</label><br>
+            <input type="date" name="from" value="{{ d_from }}"></div>
+        <div><label style="font-size:11px;color:#777">{{ _('Date') }} ({{ _('to') }})</label><br>
+            <input type="date" name="to" value="{{ d_to }}"></div>
+        <div><label style="font-size:11px;color:#777">{{ _('Machine') }}</label><br>
+            <select name="machine_id">
+                <option value="">{{ _('All') }}</option>
+                {% for m in machines %}
+                <option value="{{ m.id }}" {% if machine_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                {% endfor %}
+            </select></div>
+        <button type="submit" class="btn btn-primary">{{ _('Show') }}</button>
+    </form>
+</div>
+
+<div class="stats" style="grid-template-columns:repeat(5,1fr)">
+    <div class="stat-card"><div class="number">{{ '%.2f'|format(totals.total) }}</div><div class="label">{{ _('Total damage') }} €</div></div>
+    <div class="stat-card warn"><div class="number">{{ '%.2f'|format(totals.downtime_cost) }}</div><div class="label">{{ _('Downtime cost') }} €</div></div>
+    <div class="stat-card"><div class="number">{{ '%.2f'|format(totals.labor_cost) }}</div><div class="label">{{ _('Labor cost') }} €</div></div>
+    <div class="stat-card"><div class="number">{{ '%.2f'|format(totals.parts_cost) }}</div><div class="label">{{ _('Parts and materials') }} €</div></div>
+    <div class="stat-card"><div class="number">{{ '%.1f'|format(totals.downtime_h) }}</div><div class="label">{{ _('Downtime') }} (h)</div></div>
+</div>
+
+{% if current_user.has_role('admin', 'director') %}
+<div class="card" style="margin-bottom:12px">
+    <h3 style="margin:0 0 10px">⚙️ {{ _('Settings') }}</h3>
+    <form method="POST" action="/damage/settings" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="from" value="{{ d_from }}">
+        <input type="hidden" name="to" value="{{ d_to }}">
+        {% if machine_id %}<input type="hidden" name="machine_id" value="{{ machine_id }}">{% endif %}
+        <div><label style="font-size:11px;color:#777">{{ _('Mechanic rate') }}</label><br>
+            <input type="number" step="0.5" min="0" name="labor_rate" value="{{ labor_rate }}" style="width:90px"></div>
+        <div style="flex:1;min-width:320px">
+            <label style="font-size:11px;color:#777">{{ _('Loss per hour') }} (€/{{ _('per hour') }}) — {{ _('Machine') }}</label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-top:6px">
+                {% for m in machines %}
+                <label style="font-size:12px;display:flex;gap:6px;align-items:center">
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.name }}</span>
+                    <input type="number" step="1" min="0" name="rate_{{ m.id }}" value="{{ m.loss_per_hour if m.loss_per_hour is not none else '' }}" placeholder="0" style="width:80px">
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+    </form>
+</div>
+{% endif %}
+
+{% if top %}
+<div class="card" style="margin-bottom:12px">
+    <h3 style="margin:0 0 8px">🏆 {{ _('Top machines by damage') }}</h3>
+    <div style="display:flex;flex-direction:column;gap:6px">
+        {% for name, val in top %}
+        <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:180px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ name }}</span>
+            <div style="flex:1;height:12px;background:#eee;border-radius:6px;overflow:hidden">
+                <div style="width:{{ (val / (top[0][1] or 1) * 100)|round }}%;height:100%;background:#e74c3c;border-radius:6px"></div>
+            </div>
+            <b style="font-size:12px;min-width:80px;text-align:right">{{ '%.2f'|format(val) }} €</b>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>#</th>
+                <th>{{ _('Date') }}</th>
+                <th>{{ _('Machine') }}</th>
+                <th>{{ _('Fault') }}</th>
+                <th>{{ _('Downtime') }} (h)</th>
+                <th>{{ _('Downtime cost') }}</th>
+                <th>{{ _('Labor hours') }}</th>
+                <th>{{ _('Labor cost') }}</th>
+                <th>{{ _('Parts and materials') }}</th>
+                <th>{{ _('Total damage') }}</th>
+            </tr>
+            {% for r in rows %}
+            <tr>
+                <td><a href="/faults/{{ r.id }}">№{{ r.id }}</a></td>
+                <td>{{ r.created.strftime('%d-%m-%Y') if r.created else '—' }}</td>
+                <td>{{ r.machine }}</td>
+                <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.title }}</td>
+                <td>{{ r.downtime_h }}</td>
+                <td>{{ '%.2f'|format(r.downtime_cost) }}</td>
+                <td>{{ r.labor_h }}</td>
+                <td>{{ '%.2f'|format(r.labor_cost) }}</td>
+                <td>
+                    {% if current_user.has_role('admin', 'director') %}
+                    <form method="POST" action="/damage/parts/{{ r.id }}" style="display:flex;gap:4px;align-items:center">
+                        <input type="hidden" name="from" value="{{ d_from }}">
+                        <input type="hidden" name="to" value="{{ d_to }}">
+                        {% if machine_id %}<input type="hidden" name="machine_id" value="{{ machine_id }}">{% endif %}
+                        <input type="number" step="0.01" min="0" name="parts_cost" value="{{ r.parts_cost }}" style="width:80px">
+                        <button type="submit" class="btn btn-sm" style="padding:2px 7px">💾</button>
+                    </form>
+                    {% else %}{{ '%.2f'|format(r.parts_cost) }}{% endif %}
+                </td>
+                <td><b>{{ '%.2f'|format(r.total) }}</b></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="10" style="text-align:center;color:#999;padding:20px">{{ _('No data for this period') }}</td></tr>
+            {% endfor %}
+            {% if rows %}
+            <tr style="background:#f6f8fa;font-weight:700">
+                <td colspan="4">{{ _('Total') }}</td>
+                <td>{{ '%.1f'|format(totals.downtime_h) }}</td>
+                <td>{{ '%.2f'|format(totals.downtime_cost) }}</td>
+                <td>{{ '%.1f'|format(totals.labor_h) }}</td>
+                <td>{{ '%.2f'|format(totals.labor_cost) }}</td>
+                <td>{{ '%.2f'|format(totals.parts_cost) }}</td>
+                <td>{{ '%.2f'|format(totals.total) }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

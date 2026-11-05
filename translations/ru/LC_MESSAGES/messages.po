@@ -7177,3 +7177,59 @@ msgstr "Опуск"
 #: templates/air/map_3d.html:0
 msgid "Click on a pipe to drop it down to the height field level"
 msgstr "Клик по трубе — опустить её вниз до высоты из поля «Высота трубы»"
+
+#: templates/damage_report.html:0
+msgid "Economic damage"
+msgstr "Экономический ущерб"
+
+#: templates/damage_report.html:0
+msgid "Downtime cost"
+msgstr "Убыток от простоя"
+
+#: templates/damage_report.html:0
+msgid "Labor cost"
+msgstr "Стоимость работ"
+
+#: templates/damage_report.html:0
+msgid "Parts and materials"
+msgstr "Запчасти и материалы"
+
+#: templates/damage_report.html:0
+msgid "Loss per hour"
+msgstr "Потери €/час"
+
+#: templates/damage_report.html:0
+msgid "Mechanic rate"
+msgstr "Ставка механика €/час"
+
+#: templates/damage_report.html:0
+msgid "Total damage"
+msgstr "Общий ущерб"
+
+#: templates/damage_report.html:0
+msgid "Downtime"
+msgstr "Простой"
+
+#: templates/damage_report.html:0
+msgid "per hour"
+msgstr "в час"
+
+#: templates/damage_report.html:0
+msgid "Top machines by damage"
+msgstr "Топ станков по ущербу"
+
+#: templates/damage_report.html:0
+msgid "Labor hours"
+msgstr "Часы работ"
+
+#: templates/damage_report.html:0
+msgid "Damage calculation"
+msgstr "Расчёт экономического ущерба"
+
+#: templates/damage_report.html:0
+msgid "Settings saved"
+msgstr "Настройки сохранены"
+
+#: templates/damage_report.html:0
+msgid "No data for this period"
+msgstr "Нет данных за период"
