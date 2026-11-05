@@ -157,6 +157,9 @@
             {% if has_access('time_tracking') %}
             <a href="/time-tracking" class="sb-item {% if 'time_tracking' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">⏱</span>{{ _('Time Tracking') }}</a>
             {% endif %}
+            {% if current_user.has_role('admin', 'director') %}
+            <a href="/monteurs" class="sb-item {% if request.endpoint and request.endpoint.startswith('monteurs') %}active{% endif %}"><span class="sb-icon">🔧</span>{{ _('Monteurs') }}</a>
+            {% endif %}
             </div>
             
             {% if has_access('orders') or has_access('clients') or has_access('workers') or has_access('invoices') or has_access('contractors') %}
