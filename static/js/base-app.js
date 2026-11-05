@@ -474,68 +474,56 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
             // Доступно другим страницам: подписать/переподписать push
             window.__pushSubscribe = subscribeNow;
 
-            // Кнопка «Включить уведомления» — жест для браузера (iOS требует нажатие)
+            // Кнопка «Включить уведомления» — только по НАЖАТИЮ (iOS требует жест,
+            // а прежний автозапрос давал молчаливый отказ и прятал кнопку навсегда).
             window.__showPushEnable = function() {
                 if (document.getElementById('pushEnableBtn')) return;
-                if (typeof Notification === 'undefined' || Notification.permission === 'denied') return;
+                if (typeof Notification === 'undefined') return;
                 const b = document.createElement('button');
                 b.id = 'pushEnableBtn';
                 b.textContent = '🔔 ' + __T('Enable notifications');
                 b.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9000;padding:12px 22px;font-size:14px;font-weight:700;background:#5b9cf6;color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)';
                 function run() {
                     subscribeNow().then(function() {
-                        b.style.background = '#27ae60';
-                        b.textContent = '✓ ' + __T('Notifications enabled');
+                        b.remove();
                         showToast('✓ ' + __T('Notifications enabled'));
                     }, function() {
                         showToast(__T('No subscription — open the app from the home screen icon'), 'error');
                     });
                 }
                 b.onclick = function() {
-                    // разрешение уже есть — подписываемся СРАЗУ (в контексте нажатия)
+                    if (Notification.permission === 'denied') {
+                        showToast(__T('Allow notifications in the browser settings'), 'error');
+                        return;
+                    }
                     if (Notification.permission === 'granted') { run(); return; }
                     Notification.requestPermission().then(function(perm) {
-                        if (perm === 'granted') {
-                            run();
-                        } else if (perm === 'denied') {
-                            b.style.background = '#c0392b';
-                            b.textContent = '✕ ' + __T('Notifications blocked');
-                            showToast(__T('Allow notifications in the browser settings'), 'error');
-                        }
+                        if (perm === 'granted') run();
+                        else showToast(__T('Allow notifications in the browser settings'), 'error');
                     });
                 };
                 document.body.appendChild(b);
             };
 
-            function pushEverEnabled() {
-                try { return localStorage.getItem('push_enabled') === '1'; } catch (e) { return false; }
+            // Кнопка видна всегда, пока подписки НЕТ — даже если раньше нажимали.
+            // Раньше флаг localStorage прятал её навсегда и уведомления «не работали».
+            function refreshPushBtn(hasSub) {
+                const b = document.getElementById('pushEnableBtn');
+                if (hasSub) { if (b) b.remove(); return; }
+                window.__showPushEnable();
             }
-
-            if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
-                if (Notification.permission === 'granted') {
-                    // уже разрешено — подписываемся молча, кнопка не нужна
-                    subscribeNow().then(function(){
-                        try { localStorage.setItem('push_enabled', '1'); } catch (e) {}
-                    }).catch(function(){
-                        // iOS может требовать нажатие — покажем кнопку, только если ещё ни разу не включали
-                        if (!pushEverEnabled()) window.__showPushEnable();
-                    });
-                } else {
-                    // первое включение: одно нажатие — и подписка сохраняется для всей программы
-                    if (!pushEverEnabled()) {
-                        setTimeout(window.__showPushEnable, 1500);
-                    }
-                    // В PWA — сразу просим разрешение
-                    if (window.navigator.standalone === true ||
-                        window.matchMedia('(display-mode: standalone)').matches) {
-                        try {
-                            if (localStorage.getItem('push_asked') !== '1') {
-                                localStorage.setItem('push_asked', '1');
-                                setTimeout(function(){ Notification.requestPermission().then(function(p){ if (p==='granted') subscribeNow().catch(function(){}); }); }, 2500);
-                            }
-                        } catch (e) {}
-                    }
-                }
+            if (typeof Notification !== 'undefined' && 'PushManager' in window) {
+                navigator.serviceWorker.ready
+                    .then(function (reg) { return reg.pushManager.getSubscription(); })
+                    .then(function (sub) {
+                        if (sub) {
+                            syncPushSub(sub).catch(function () {});
+                            refreshPushBtn(true);
+                        } else {
+                            refreshPushBtn(false);
+                        }
+                    })
+                    .catch(function () { refreshPushBtn(false); });
             }
         }
     

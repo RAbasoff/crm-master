@@ -4,7 +4,7 @@
  *  - HTML pages: network-first, fallback to cache, fallback to offline.html
  *  - API / POST: always network (never cache mutations)
  */
-const CACHE = 'promaster-v7';
+const CACHE = 'promaster-v8';
 const OFFLINE_URL = '/static/offline.html';
 
 const PRECACHE = [
