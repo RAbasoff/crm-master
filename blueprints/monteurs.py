@@ -25,6 +25,15 @@ def monteurs_list():
 @login_required
 @role_required('admin')
 def monteur_permissions(user_id):
+    # Ставка механика €/час (карточка механика -> расчёт ущерба)
+    try:
+        from models import User as _U
+        from utils import safe_float as _sf
+        _u = _U.query.get(user_id)
+        if _u is not None and request.form.get('hourly_rate') not in (None, ''):
+            _u.hourly_rate = _sf(request.form.get('hourly_rate')) or 0
+    except Exception:
+        pass
     u = User.query.get_or_404(user_id)
     if u.role != 'technician':
         flash(_('Only technicians can be edited here'), 'error')

@@ -1,4 +1,16 @@
 {
+  "2.18.0": {
+    "ru": [
+      "Модуль «Экономический ущерб»: расчёт потерь от простоев, работ и запчастей (Аналитика)",
+      "Тарифы: потери €/час у каждого станка, ставка механика в карточке и €/час по умолчанию",
+      "Топ станков по ущербу, разбивка по статьям, экспорт CSV (Excel) за период"
+    ],
+    "nl": [
+      "Module \"Economische schade\": berekening van verliezen door stilstand, arbeid en onderdelen",
+      "Tarieven: verlies €/uur per machine, monteurtarief in de kaart en standaard €/uur",
+      "Top machines op schade, uitsplitsing per categorie, CSV-export (Excel)"
+    ]
+  },
   "2.17.0": {
     "ru": [
       "Оптимизация: страницы в 1,5–3 раза легче, отклик быстрее; «Настройки» почти мгновенно",

@@ -94,6 +94,8 @@ user_machine_deny = db.Table('user_machine_deny',
 
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
+    # Ставка механика €/час (для расчёта экономического ущерба)
+    hourly_rate = db.Column(db.Numeric(10, 2))
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)

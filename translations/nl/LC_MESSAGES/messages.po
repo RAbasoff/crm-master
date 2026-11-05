@@ -7056,3 +7056,7 @@ msgstr "Instellingen opgeslagen"
 #: templates/damage_report.html:0
 msgid "No data for this period"
 msgstr "Geen gegevens voor deze periode"
+
+#: templates/monteurs.html:0
+msgid "Hourly rate"
+msgstr "Tarief €/uur"

@@ -69,6 +69,8 @@
                     {{ _('Passwords are not stored in plain text') }}
                 </div>
                 <input type="password" name="password" placeholder="{{ _('Keep current') }}" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+                <label style="font-size:11px;color:#888;font-weight:600;display:block;margin:10px 0 4px">{{ _('Hourly rate') }} €</label>
+                <input type="number" step="0.5" min="0" name="hourly_rate" value="{{ m.hourly_rate if m.hourly_rate is not none else '' }}" placeholder="0" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
             </div>
 
             <!-- SAVE -->

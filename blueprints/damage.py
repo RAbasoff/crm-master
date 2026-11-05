@@ -9,7 +9,7 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required
 from flask_babel import gettext as _
 
-from models import (db, AppSetting, FaultReport, Machine,
+from models import (db, AppSetting, FaultReport, Machine, User,
                     TechnicalWorkOrder, FaultWorkSession, now_local)
 from utils import role_required, safe_commit, safe_float
 
@@ -49,6 +49,7 @@ def damage_report():
     labor_rate = safe_float(get_setting('labor_rate_per_hour', '25')) or 25.0
 
     mmap = {m.id: m for m in Machine.query.all()}
+    umap = {u.id: u for u in User.query.all()}
     q = FaultReport.query.filter(
         FaultReport.created_at >= datetime.combine(dt_from, datetime.min.time()),
         FaultReport.created_at < datetime.combine(dt_to + timedelta(days=1), datetime.min.time()))
@@ -70,7 +71,13 @@ def damage_report():
         sess_min = sum((s.duration_minutes or 0) for s in (f.work_sessions or []))
         two_h = sum((t.time_spent_hours or 0) for t in (f.work_orders or []))
         labor_h = sess_min / 60.0 + two_h
-        labor_cost = labor_h * labor_rate
+        # почасовая работа — по ставке конкретного механика (если указана)
+        labor_cost = 0.0
+        for s in (f.work_sessions or []):
+            uu = umap.get(s.user_id)
+            _r = safe_float(getattr(uu, 'hourly_rate', None)) or labor_rate
+            labor_cost += (s.duration_minutes or 0) / 60.0 * _r
+        labor_cost += two_h * labor_rate
         parts = safe_float(f.parts_cost) or 0.0
         total = downtime_cost + labor_cost + parts
         rows.append({
