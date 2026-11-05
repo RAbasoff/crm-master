@@ -388,13 +388,16 @@ with app.app_context():
         _plog = __import__('logging').getLogger('push.health')
         _plog.error("PUSH LIB: MISSING — push-уведомления не работают! Пробую доустановить (--user)...")
         try:
-            import subprocess as _sp, sys as _s
-            _sp.run([_s.executable, '-m', 'pip', 'install', '--user', 'pywebpush'],
-                    capture_output=True, text=True, timeout=180)
-            import importlib as _il
-            _il.invalidate_caches()
-            import pywebpush  # noqa: F401
-            _plog.warning("PUSH LIB: auto-install ok")
+            # В фоне: установка НЕ должна блокировать старт — иначе воркеры висят (504)
+            import subprocess as _sp, sys as _s, threading as _th
+            def _bg_install():
+                try:
+                    _sp.run([_s.executable, '-m', 'pip', 'install', '--user', 'pywebpush'],
+                            capture_output=True, text=True, timeout=300)
+                    _plog.warning("PUSH LIB: background install finished, reload to activate")
+                except Exception as _e2:
+                    _plog.error("PUSH LIB: background install failed: %s", _e2)
+            _th.Thread(target=_bg_install, daemon=True).start()
         except Exception as _pe:
             _plog.error("PUSH LIB: AUTO-INSTALL FAILED — установите: %s -m pip install --user pywebpush | %s",
                         __import__('sys').executable, _pe)
