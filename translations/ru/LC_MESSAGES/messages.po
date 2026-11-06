@@ -7249,3 +7249,11 @@ msgstr "Клик — установить регулятор давления с
 #: templates/air/map_3d.html:0
 msgid "Click to install a ball valve"
 msgstr "Клик — установить кран шаровый"
+
+#: templates/warehouse.html:0
+msgid "QR codes"
+msgstr "QR-коды"
+
+#: templates/warehouse.html:0
+msgid "addresses"
+msgstr "адресов"

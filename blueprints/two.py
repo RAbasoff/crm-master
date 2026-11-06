@@ -264,7 +264,7 @@ def two_new():
         log_audit('create', 'two', two.id, two.number)
         flash(_('TWO created') + f': {two.number}', 'success')
         return redirect(url_for('two.two_detail', two_id=two.id))
-    faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).order_by(FaultReport.created_at.desc()).all()
+    faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'paused'])).order_by(FaultReport.created_at.desc()).all()
     # Only workers from technical service (Technician group or linked user with technician role)
     workers = Monteur.query.filter_by(actief=True).filter(
         (Monteur.group_id != None) & (Monteur.group_id.in_(
@@ -761,7 +761,7 @@ def two_edit(two_id):
     if not ok:
         flash(_('⚠️ This record is being edited by %(user)s (since %(time)s). You cannot edit it now.', user=lock_info.get('user_name', '?'), time=lock_info.get('locked_at', '?')), 'error')
         return redirect(url_for('two.two_detail', two_id=two_id))
-    faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress'])).order_by(FaultReport.created_at.desc()).all()
+    faults = FaultReport.query.filter(FaultReport.status.in_(['open', 'accepted', 'in_progress', 'paused'])).order_by(FaultReport.created_at.desc()).all()
     # Only workers from technical service (Technician group or linked user with technician role)
     workers = Monteur.query.filter_by(actief=True).filter(
         (Monteur.group_id != None) & (Monteur.group_id.in_(

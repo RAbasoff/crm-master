@@ -7072,3 +7072,11 @@ msgstr "Klik om drukregelaar met manometer te plaatsen"
 #: templates/air/map_3d.html:0
 msgid "Click to install a ball valve"
 msgstr "Klik om kogelkraan te plaatsen"
+
+#: templates/warehouse.html:0
+msgid "QR codes"
+msgstr "QR-codes"
+
+#: templates/warehouse.html:0
+msgid "addresses"
+msgstr "adressen"

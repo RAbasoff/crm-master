@@ -110,6 +110,35 @@ def warehouse_groups_auto():
 @bp.route('/')
 @login_required
 @role_required('admin', 'director', 'technician')
+def _addr_sort_key(a):
+    """Натуральная сортировка адресов: MT-4-2-10 после MT-4-2-6."""
+    import re as _re
+    return [int(x) if x.isdigit() else x.lower() for x in _re.split(r'(\d+)', a)]
+
+
+@bp.route('/qr-codes')
+@login_required
+def warehouse_qr():
+    """Печать QR-кодов адресов ячеек склада."""
+    import qrcode, base64, io as _io
+    items = VoorraadItem.query.all()
+    addrs = sorted({(i.locatie or '').strip() for i in items if (i.locatie or '').strip()},
+                   key=_addr_sort_key)
+    per_addr = {}
+    for i in items:
+        a = (i.locatie or '').strip()
+        if a:
+            per_addr[a] = per_addr.get(a, 0) + 1
+    labels = []
+    for a in addrs:
+        img = qrcode.make(a, box_size=5, border=1)
+        buf = _io.BytesIO()
+        img.save(buf, format='PNG')
+        labels.append({'addr': a, 'img': base64.b64encode(buf.getvalue()).decode(),
+                       'items': per_addr.get(a, 0)})
+    return render_template('warehouse_qr.html', labels=labels)
+
+
 def warehouse_list():
     page = request.args.get('page', 1, type=int)
     cat = request.args.get('categorie', '')
