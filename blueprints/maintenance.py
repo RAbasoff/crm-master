@@ -525,8 +525,12 @@ def _log_equipment_oh(plan, ev_d, user):
     d = ev_d.date() if hasattr(ev_d, 'date') else ev_d
     step = {'weekly': 7, 'biweekly': 14, 'monthly': 30, 'quarterly': 91,
             'semiannual': 182, 'yearly': 365}.get(getattr(plan, 'recurrence', None) or '', 90)
+    # Номер уникален: повторная отметка того же ТО в тот же день не должна падать
+    num = f'OH-{plan.id}-{d:%Y%m%d}'
+    if EquipmentMaintenance.query.filter_by(number=num).first():
+        return
     db.session.add(EquipmentMaintenance(
-        number=f'OH-{plan.id}-{d:%Y%m%d}',
+        number=num,
         name=(plan.title or 'OH')[:200],
         machine_id=plan.machine_id,
         date=d,
