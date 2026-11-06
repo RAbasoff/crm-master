@@ -1,4 +1,20 @@
 {
+  "2.18.1": {
+    "ru": [
+      "Уведомления на телефоны: надёжная доставка push, кнопка «Включить уведомления» теперь не пропадает",
+      "3D: краны и ворота больше не теряются; новые объекты — регулятор давления с манометром, кран шаровый, опуск трубы вниз",
+      "Склад: QR-коды ячеек для печати, чистка адресов и названий разделов",
+      "TWO: в списке заявок видны и «на паузе»; номера заявок и TWO обнуляются каждый год",
+      "Модуль «Экономический ущерб»: расчёт потерь от простоев и поломок"
+    ],
+    "nl": [
+      "Telefoonmeldingen: betrouwbare push, knop \"Meldingen inschakelen\" verdwijnt niet meer",
+      "3D: kranen en poorten raken niet meer kwijt; nieuw — drukregelaar met manometer, kogelkraan, leiding omlaag",
+      "Magazijn: QR-codes van locaties om te printen, opgeschoonde adressen en rubrieken",
+      "TWO: ook \"gepauzeerde\" meldingen zichtbaar; melding- en TWO-nummers resetten jaarlijks",
+      "Module \"Economische schade\": verlies door stilstand en storingen"
+    ]
+  },
   "2.18.0": {
     "ru": [
       "Модуль «Экономический ущерб»: расчёт потерь от простоев, работ и запчастей (Аналитика)",
