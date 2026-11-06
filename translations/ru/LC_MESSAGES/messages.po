@@ -7257,3 +7257,15 @@ msgstr "QR-коды"
 #: templates/warehouse.html:0
 msgid "addresses"
 msgstr "адресов"
+
+#: templates/air/map_3d.html:0
+msgid "Height equals the pipe - change the height field"
+msgstr "Высота совпадает с трубой — измените поле «Высота трубы»"
+
+#: templates/air/map_3d.html:0
+msgid "Drop created"
+msgstr "Опуск создан"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a pipe"
+msgstr "Кликните по трубе"

@@ -1208,14 +1208,27 @@
             rebuildDesign();
         } else if (curTool === 'drop') {
             const hit3 = pipePick(ev);
+            const hintEl = document.getElementById('toolHint');
             if (hit3) {
+                const target = params.pipeH;
+                if (Math.abs(hit3.h - target) < 0.05) {
+                    if (hintEl) hintEl.textContent = '{{ _("Height equals the pipe - change the height field") }}';
+                    return;
+                }
                 saveHist();
                 design.pipes.push({
                     pts: [{ x: hit3.x, z: hit3.z, h: hit3.h },
-                          { x: hit3.x, z: hit3.z, h: params.pipeH }],
-                    d: params.pipeD, h: params.pipeH, type: 'pipe'
+                          { x: hit3.x, z: hit3.z, h: target }],
+                    d: params.pipeD, h: target, type: 'pipe'
                 });
                 rebuildDesign();
+                if (hintEl) {
+                    hintEl.textContent = '{{ _("Drop created") }}: ' +
+                        (Math.round(Math.min(hit3.h, target) * 100) / 100) + ' \u2192 ' +
+                        (Math.round(Math.max(hit3.h, target) * 100) / 100) + ' m';
+                }
+            } else if (hintEl) {
+                hintEl.textContent = '{{ _("Click on a pipe") }}';
             }
             return;
         } else if (curTool === 'pipe' || curTool === 'hose') {

@@ -7080,3 +7080,15 @@ msgstr "QR-codes"
 #: templates/warehouse.html:0
 msgid "addresses"
 msgstr "adressen"
+
+#: templates/air/map_3d.html:0
+msgid "Height equals the pipe - change the height field"
+msgstr "Hoogte is gelijk aan de leiding — wijzig het hoogteveld"
+
+#: templates/air/map_3d.html:0
+msgid "Drop created"
+msgstr "Omlaag gemaakt"
+
+#: templates/air/map_3d.html:0
+msgid "Click on a pipe"
+msgstr "Klik op een leiding"
