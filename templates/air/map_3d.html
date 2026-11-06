@@ -879,10 +879,11 @@
         design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i, pipesLayer); });
         design.machines.forEach(function (m, i) {
             if (m.off) return;
-            tag(machineModel(m), 'machine', i, machinesGroup);
+            const mg = machineModel(m);
+            // Компрессор (id -1) — в editGroup: остаётся видимым при скрытии станков
+            tag(mg, 'machine', i, (m.id === -1) ? editGroup : machinesGroup);
             if (SHOW_HOVER_LABELS) {
-                makeLabel(m.name || '', m.x || 0, 4.1 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)',
-                          machinesGroup.children[machinesGroup.children.length - 1]);
+                makeLabel(m.name || '', m.x || 0, 4.1 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)', mg);
             }
         });
         design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
@@ -1102,11 +1103,11 @@
             edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
             edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
             edRay.setFromCamera(edNdc, camera);
-            const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer], true);
+            const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer, machinesGroup], true);
             if (hits.length) {
                 const u = hits[0].object.userData;
                 let grp = null;
-                [editGroup, wallsLayer, pipesLayer].forEach(function (root) {
+                [editGroup, wallsLayer, pipesLayer, machinesGroup].forEach(function (root) {
                     root.traverse(function (g) {
                         if (!grp && g.userData && g.userData.kind === u.kind && g.userData.idx === u.idx &&
                             g.userData.oidx === u.oidx) { grp = g; }
@@ -1157,7 +1158,7 @@
             edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
             edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
             edRay.setFromCamera(edNdc, camera);
-            const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer], true);
+            const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer, machinesGroup], true);
             if (!hits.length) { selected = null; syncPanel(); return; }
             const u = hits[0].object.userData;
             selected = u.kind ? { kind: u.kind, idx: u.idx, oidx: u.oidx } : null;
