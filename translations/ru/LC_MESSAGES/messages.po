@@ -7289,3 +7289,11 @@ msgstr "Клик — установить разветвитель на 2 час
 #: templates/air/map_3d.html:0
 msgid "Click to install a 3-way splitter"
 msgstr "Клик — установить разветвитель на 3 части"
+
+#: templates/air/map_3d.html:0
+msgid "Quick coupling"
+msgstr "Быстросоединение"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a quick coupling"
+msgstr "Клик — установить быстросоединение (snelkoppeling)"

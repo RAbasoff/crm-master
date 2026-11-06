@@ -7112,3 +7112,11 @@ msgstr "Klik om 2-weg verdeler te plaatsen"
 #: templates/air/map_3d.html:0
 msgid "Click to install a 3-way splitter"
 msgstr "Klik om 3-weg verdeler te plaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Quick coupling"
+msgstr "Snelkoppeling"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a quick coupling"
+msgstr "Klik om snelkoppeling te plaatsen"

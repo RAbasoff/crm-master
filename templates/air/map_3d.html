@@ -33,6 +33,7 @@
         <button class="btn btn-sm" id="tool-ball" onclick="setTool('ball')" style="background:#c62828;color:#fff">&#9898; {{ _('Ball valve') }}</button>
         <button class="btn btn-sm" id="tool-tee" onclick="setTool('tee')" style="background:#5d4037;color:#fff">&#10554; {{ _('2-way splitter') }}</button>
         <button class="btn btn-sm" id="tool-wye" onclick="setTool('wye')" style="background:#4e342e;color:#fff">&#10010; {{ _('3-way splitter') }}</button>
+        <button class="btn btn-sm" id="tool-quick" onclick="setTool('quick')" style="background:#00695c;color:#fff">&#9889; {{ _('Quick coupling') }}</button>
         <button class="btn btn-sm" id="btnFinishPipe" onclick="finishPipe()" style="background:#27ae60;color:#fff;display:none">&#9989; {{ _('Finish') }}</button>
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
@@ -636,7 +637,7 @@
     function setTool(t) {
         curTool = t; wallStart = null; pipeBuf = []; pipeHoverPt = null;
         if (typeof updatePipePreview === 'function') updatePipePreview();
-        ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'drop', 'valve', 'regulator', 'ball', 'tee', 'wye'].forEach(function (id) {
+        ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'drop', 'valve', 'regulator', 'ball', 'tee', 'wye', 'quick'].forEach(function (id) {
             const b = document.getElementById('tool-' + id);
             if (b) b.style.opacity = (id === t) ? '1' : '0.45';
         });
@@ -656,6 +657,7 @@
             ball: '{{ _("Click to install a ball valve") }}',
             tee: '{{ _("Click to install a 2-way splitter") }}',
             wye: '{{ _("Click to install a 3-way splitter") }}',
+            quick: '{{ _("Click to install a quick coupling") }}',
             drop: '{{ _("Click on a pipe to drop it down to the height field level") }}'
         }[t] || '';
     }
@@ -816,6 +818,22 @@
             });
             const cap = new THREE.Mesh(new THREE.CylinderGeometry(d * 1.25, d * 1.25, d * 0.16, 12), dark);
             cap.position.y = v.h + d * 1.15; g.add(cap);
+        } else if (v.kind === 'quick') {
+            // Быстроразъёмная муфта (snelkoppeling): корпус + кольцо-муфта + патрубки
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(d * 0.95, d * 0.95, d * 1.9, 12), steel);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = v.h; g.add(body);
+            const collar = new THREE.Mesh(new THREE.CylinderGeometry(d * 1.25, d * 1.25, d * 0.75, 14), dark);
+            collar.rotation.z = Math.PI / 2;
+            collar.position.set(d * 0.45, v.h, 0); g.add(collar);
+            [-1, 1].forEach(function (s2) {
+                const fit = new THREE.Mesh(new THREE.CylinderGeometry(d * 0.62, d * 0.62, d * 0.7, 10), steel);
+                fit.rotation.z = Math.PI / 2;
+                fit.position.set(s2 * d * 1.35, v.h, 0); g.add(fit);
+            });
+            const tab = new THREE.Mesh(new THREE.BoxGeometry(d * 0.5, d * 0.18, d * 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x00897b, roughness: 0.5 }));
+            tab.position.set(d * 0.45, v.h + d * 1.15, 0); g.add(tab);
         } else {
             // Кран с маховиком (как раньше)
             const body = new THREE.Mesh(new THREE.CylinderGeometry(d, d, d * 2.2, 12),
@@ -1277,7 +1295,7 @@
             }
             pipeBuf.push({ x: p2.x, z: p2.z, h: hNow });
             updatePipePreview();
-        } else if (curTool === 'valve' || curTool === 'regulator' || curTool === 'ball' || curTool === 'tee' || curTool === 'wye') {
+        } else if (curTool === 'valve' || curTool === 'regulator' || curTool === 'ball' || curTool === 'tee' || curTool === 'wye' || curTool === 'quick') {
             saveHist();
             design.valves.push({
                 x: p.x, z: p.z,
