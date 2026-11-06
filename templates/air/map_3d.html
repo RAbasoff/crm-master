@@ -815,6 +815,51 @@
         return g;
     }
 
+    function doorModel(o) {
+        const g = new THREE.Group();
+        const wD = o.w || 1, hD = o.top || 2.1;
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(wD + 0.12, hD + 0.06, 0.14),
+            new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.7 }));
+        frame.position.y = (hD + 0.06) / 2;
+        g.add(frame);
+        const leaf = new THREE.Mesh(new THREE.BoxGeometry(wD * 0.92, hD - 0.04, 0.06),
+            new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.55 }));
+        leaf.position.set(0, hD / 2, 0.06);
+        g.add(leaf);
+        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8),
+            new THREE.MeshStandardMaterial({ color: 0xffd54f, metalness: 0.7, roughness: 0.3 }));
+        knob.position.set(wD * 0.34, 1.05, 0.12);
+        g.add(knob);
+        return g;
+    }
+    function windowModel(o) {
+        const g = new THREE.Group();
+        const wW = o.w || 1.2, sill = o.sill || 1.0, top = o.top == null ? 2.2 : o.top;
+        const hW = Math.max(0.3, top - sill);
+        const yc = sill + hW / 2;
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(wW + 0.1, hW + 0.08, 0.12),
+            new THREE.MeshStandardMaterial({ color: 0x78909c, roughness: 0.6 }));
+        frame.position.y = yc;
+        g.add(frame);
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(wW, hW, 0.04),
+            new THREE.MeshStandardMaterial({ color: 0x81d4fa, transparent: true, opacity: 0.35, roughness: 0.15, metalness: 0.1 }));
+        glass.position.set(0, yc, 0.05);
+        g.add(glass);
+        return g;
+    }
+    const history = [];
+    function saveHist() {
+        history.push(JSON.stringify({ w: design.walls, g: design.gates, p: design.pipes, v: design.valves }));
+        if (history.length > 60) history.shift();
+    }
+    window.undoAction = function () {
+        if (!history.length) return;
+        const s = JSON.parse(history.pop());
+        design.walls = s.w; design.gates = s.g; design.pipes = s.p; design.valves = s.v;
+        selected = null;
+        rebuildDesign();
+        syncPanel();
+    };
     function rebuildDesign() {
         while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
         while (wallsLayer.children.length) wallsLayer.remove(wallsLayer.children[0]);
