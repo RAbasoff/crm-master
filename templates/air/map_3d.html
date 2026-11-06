@@ -31,6 +31,8 @@
         <button class="btn btn-sm" id="tool-drop" onclick="setTool('drop')" style="background:#455a64;color:#fff">&#11015; {{ _('Drop') }}</button>
         <button class="btn btn-sm" id="tool-regulator" onclick="setTool('regulator')" style="background:#00897b;color:#fff">&#127918; {{ _('Pressure regulator') }}</button>
         <button class="btn btn-sm" id="tool-ball" onclick="setTool('ball')" style="background:#c62828;color:#fff">&#9898; {{ _('Ball valve') }}</button>
+        <button class="btn btn-sm" id="tool-tee" onclick="setTool('tee')" style="background:#5d4037;color:#fff">&#10554; {{ _('2-way splitter') }}</button>
+        <button class="btn btn-sm" id="tool-wye" onclick="setTool('wye')" style="background:#4e342e;color:#fff">&#10010; {{ _('3-way splitter') }}</button>
         <button class="btn btn-sm" id="btnFinishPipe" onclick="finishPipe()" style="background:#27ae60;color:#fff;display:none">&#9989; {{ _('Finish') }}</button>
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
@@ -634,7 +636,7 @@
     function setTool(t) {
         curTool = t; wallStart = null; pipeBuf = []; pipeHoverPt = null;
         if (typeof updatePipePreview === 'function') updatePipePreview();
-        ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'drop', 'valve', 'regulator', 'ball'].forEach(function (id) {
+        ['select', 'move', 'wall', 'opening', 'door', 'window', 'gate', 'pipe', 'hose', 'drop', 'valve', 'regulator', 'ball', 'tee', 'wye'].forEach(function (id) {
             const b = document.getElementById('tool-' + id);
             if (b) b.style.opacity = (id === t) ? '1' : '0.45';
         });
@@ -652,6 +654,8 @@
             valve: '{{ _("Click near a pipe to place a valve") }}',
             regulator: '{{ _("Click to install a pressure regulator with gauge") }}',
             ball: '{{ _("Click to install a ball valve") }}',
+            tee: '{{ _("Click to install a 2-way splitter") }}',
+            wye: '{{ _("Click to install a 3-way splitter") }}',
             drop: '{{ _("Click on a pipe to drop it down to the height field level") }}'
         }[t] || '';
     }
@@ -794,6 +798,24 @@
             lever.position.y = v.h + d * 1.55;
             lever.rotation.y = Math.PI / 4;
             g.add(lever);
+        } else if (v.kind === 'tee' || v.kind === 'wye') {
+            // Разветвитель: корпус по X + отвод(ы) по Z; tee = 3 отверстия, wye = 4
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(d * 1.15, d * 1.15, d * 2.5, 14), steel);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = v.h; g.add(body);
+            const stub = new THREE.Mesh(new THREE.CylinderGeometry(d * 1.05, d * 1.05, d * 2.0, 12), steel);
+            stub.position.set(0, v.h, d * 1.15); g.add(stub);
+            if (v.kind === 'wye') {
+                const stub2 = stub.clone();
+                stub2.position.set(0, v.h, -d * 1.15); g.add(stub2);
+            }
+            [-1, 1].forEach(function (s2) {
+                const fit = new THREE.Mesh(new THREE.CylinderGeometry(d * 0.72, d * 0.72, d * 0.5, 10), steel);
+                fit.rotation.z = Math.PI / 2;
+                fit.position.set(s2 * d * 1.5, v.h, 0); g.add(fit);
+            });
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(d * 1.25, d * 1.25, d * 0.16, 12), dark);
+            cap.position.y = v.h + d * 1.15; g.add(cap);
         } else {
             // Кран с маховиком (как раньше)
             const body = new THREE.Mesh(new THREE.CylinderGeometry(d, d, d * 2.2, 12),
@@ -1255,7 +1277,7 @@
             }
             pipeBuf.push({ x: p2.x, z: p2.z, h: hNow });
             updatePipePreview();
-        } else if (curTool === 'valve' || curTool === 'regulator' || curTool === 'ball') {
+        } else if (curTool === 'valve' || curTool === 'regulator' || curTool === 'ball' || curTool === 'tee' || curTool === 'wye') {
             saveHist();
             design.valves.push({
                 x: p.x, z: p.z,

@@ -7269,3 +7269,23 @@ msgstr "Опуск создан"
 #: templates/air/map_3d.html:0
 msgid "Click on a pipe"
 msgstr "Кликните по трубе"
+
+#: templates/air/map_3d.html:0
+msgid "Install shortcut"
+msgstr "Установить ярлык"
+
+#: templates/air/map_3d.html:0
+msgid "2-way splitter"
+msgstr "Разветвитель ×2"
+
+#: templates/air/map_3d.html:0
+msgid "3-way splitter"
+msgstr "Разветвитель ×3"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a 2-way splitter"
+msgstr "Клик — установить разветвитель на 2 части"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a 3-way splitter"
+msgstr "Клик — установить разветвитель на 3 части"

@@ -7092,3 +7092,23 @@ msgstr "Omlaag gemaakt"
 #: templates/air/map_3d.html:0
 msgid "Click on a pipe"
 msgstr "Klik op een leiding"
+
+#: templates/air/map_3d.html:0
+msgid "Install shortcut"
+msgstr "Snelkoppeling installeren"
+
+#: templates/air/map_3d.html:0
+msgid "2-way splitter"
+msgstr "Verdeler 2-weg"
+
+#: templates/air/map_3d.html:0
+msgid "3-way splitter"
+msgstr "Verdeler 3-weg"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a 2-way splitter"
+msgstr "Klik om 2-weg verdeler te plaatsen"
+
+#: templates/air/map_3d.html:0
+msgid "Click to install a 3-way splitter"
+msgstr "Klik om 3-weg verdeler te plaatsen"

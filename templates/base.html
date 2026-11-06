@@ -288,6 +288,7 @@
             <button class="tb-btn" id="offlineBtn" onclick="toggleOfflinePanel()" style="display:none" title="{{ _("Offline") }}">
                 📴<span id="offlineCount" style="display:none;position:absolute;top:2px;right:2px;background:#f39c12;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;padding:0 4px;border:2px solid white">0</span>
             </button>
+            <button class="tb-btn" id="installBtn" onclick="installPWA()" title="{{ _('Install shortcut') }}" style="display:flex">📲</button>
             <button class="dark-toggle" onclick="toggleDarkMode()" title="{{ _('Toggle dark mode') }}">🌙</button>
             <a href="/chat/" class="tb-btn" style="position:relative;text-decoration:none" title="{{ _('Chat') }}">
                 ✉️{% if chat_unread > 0 %}<span style="position:absolute;top:2px;right:2px;background:#25d366;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;padding:0 4px;border:2px solid white">{{ chat_unread }}</span>{% endif %}
