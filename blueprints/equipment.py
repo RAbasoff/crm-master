@@ -165,7 +165,8 @@ def _mule_devices():
     — по нормализованному имени. Имя/модель — из самой свежей записи.
     """
     recs = (EquipmentMaintenance.query
-            .filter(EquipmentMaintenance.record_type.isnot('repair'))
+            .filter(EquipmentMaintenance.record_type.isnot('repair'),
+                    db.not_(EquipmentMaintenance.number.like('OH-%')))
             .order_by(EquipmentMaintenance.date.asc(), EquipmentMaintenance.id.asc())
             .all())
     devices, order = {}, []
