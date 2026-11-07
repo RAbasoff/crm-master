@@ -355,7 +355,8 @@ def maintenance_calendar():
                     break
 
     # Add Equipment maintenance events
-    from models import Equipment, EquipmentMaintenance
+    # (Equipment/EquipmentMaintenance импортированы на уровне модуля;
+    #  локальный import здесь затенял имя и ломал ранние запросы функции)
     equip_q = Equipment.query.filter(Equipment.next_service_date.isnot(None))
     if not current_user.has_role('admin', 'director', 'technician'):
         equip_q = equip_q.filter(Equipment.responsible_user_id == current_user.id)
