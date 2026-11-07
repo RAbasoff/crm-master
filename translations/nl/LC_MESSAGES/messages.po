@@ -7136,3 +7136,7 @@ msgstr ""
 #: templates/gas/returns.html:0
 msgid "returned %(n)d empty to supplier"
 msgstr "%(n)d lege retour naar leverancier"
+
+#: templates/air/map_3d.html:0
+msgid "Machines by workshop"
+msgstr "Machines per afdeling"

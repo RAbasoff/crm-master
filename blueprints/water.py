@@ -46,6 +46,14 @@ def check_water_access():
 
 # ───────────────────────── Dashboard ─────────────────────────
 
+@bp.route('/3d')
+@login_required
+def water_map_3d():
+    """3D-карта фабрики — копия карты сжатого воздуха для раздела воды."""
+    return render_template('air/map_3d.html',
+                           module_title=_('Water Supply'),
+                           back_url='/water')
+
 @bp.route('/')
 @login_required
 def water_dashboard():

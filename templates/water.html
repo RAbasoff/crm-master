@@ -5,6 +5,7 @@
     <h1>💨 {{ _('Water Supply') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/water/map" class="btn btn-sm" style="background:#8e44ad;color:white">🗺️ {{ _('Map') }}</a>
+        <a href="/water/3d" class="btn btn-sm" style="background:#16a085;color:white">🧊 3D</a>
         {% if current_user.has_role('admin', 'director', 'technician') %}
         <a href="/water/points/new" class="btn btn-sm btn-primary">➕ {{ _('Add point') }}</a>
         <a href="/water/lines/new" class="btn btn-sm" style="background:#e67e22;color:white">➕ {{ _('Add line') }}</a>

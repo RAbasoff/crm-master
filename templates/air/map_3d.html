@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}3D {{ _('Overview') }} — {{ _('Compressed Air') }}{% endblock %}
+{% block title %}3D {{ _('Overview') }} — {{ module_title or _('Compressed Air') }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>🧊 3D — {{ _('Compressed Air') }} / {{ _('Factory Map') }}</h1>
+    <h1>🧊 3D — {{ module_title or _('Compressed Air') }} / {{ _('Factory Map') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
-        <a href="/air/map" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="{{ back_url or '/air/map' }}" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
         <button class="btn btn-sm" style="background:#2c3e50;color:#fff" onclick="resetCam()">🎥 {{ _('Reset view') }}</button>
         <button class="btn btn-sm" id="btnWalls" style="background:#9fb3c8;color:#222" onclick="toggleWalls()">🧱 {{ _('Walls') }}</button>
         <button class="btn btn-sm" id="btnMach" style="background:#27ae60;color:#fff" onclick="toggleMachines()">⚙ {{ _('Machines') }}</button>
@@ -53,6 +53,11 @@
         <span id="panInfo" style="color:#666">{{ _('Nothing selected') }}</span>
     </div>
     <div id="toolHint" style="margin-top:6px;font-size:11px;color:#888"></div>
+</div>
+
+<div class="card no-print" style="margin:8px 0;padding:10px 12px">
+    <strong style="font-size:12px;color:#2c3e50">⚙ {{ _('Machines by workshop') }}</strong>
+    <div id="machList" style="display:flex;flex-direction:column;gap:7px;margin-top:8px"></div>
 </div>
 <div class="card" style="padding:0;overflow:hidden">
     <div id="scene3d" style="width:100%;height:70vh;background:#14161c;position:relative">
@@ -124,6 +129,8 @@
 
     const root = new THREE.Group();       // цеха / оборудование
     const machinesGroup = new THREE.Group(); // станки (можно скрыть)
+    const machSectionMap = {};  // id станка → название цеха (для списка над картой)
+    let machGroups = [];        // группы станков по индексу в design.machines
     const airGroup = new THREE.Group();   // воздуховоды
     const wallsGroup = new THREE.Group(); // стены + проходы
     const ceilGroup = new THREE.Group();  // потолок
@@ -364,6 +371,11 @@
     }
 
     fetch('/api/map/all').then(r => r.json()).then(function (d) {
+        // станок → цех: список над картой, сгруппированный по цехам
+        (d.sections || []).forEach(function (s) {
+            (s.machines || []).forEach(function (m) { machSectionMap[m.id] = s.name; });
+        });
+        rebuildMachineList();
         // 1) проёмы ворот рисуются инструментом (см. панель Инструменты)
 
         // 2) контуры цехов → стены + входы (проход по середине длинного ребра)
@@ -581,7 +593,7 @@
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
     // Временно отключено (пользователю мешают): всплывающие подписи и подписи станков.
     // Чтобы вернуть — поставить true и перезагрузить страницу.
-    const SHOW_HOVER_LABELS = false;
+    const SHOW_HOVER_LABELS = true;
     // Компрессор не должен пропадать: создаём всегда, если его нет
     function ensureCompressor() {
         if (!design.machines.some(function (q) { return q.id === -1; })) {
@@ -901,6 +913,71 @@
         rebuildDesign();
         syncPanel();
     };
+
+    // ── Список станков по цехам (над картой) + мягкая оранжевая подсветка ──
+    function setMachineGlow(idx, on) {
+        const grp = machGroups[idx];
+        if (!grp) return;
+        grp.traverse(function (ch) {
+            if (ch.material && ch.material.emissive) {
+                if (on) {
+                    ch.material.emissive.setHex(0xff8c42);
+                    ch.material.emissiveIntensity = 0.5;
+                } else {
+                    ch.material.emissiveIntensity = 1;
+                    const isSel = selected && selected.kind === 'machine' && selected.idx === idx;
+                    ch.material.emissive.setHex(isSel ? 0x2a4a7f : 0x000000);
+                }
+            }
+        });
+    }
+
+    function rebuildMachineList() {
+        const host = document.getElementById('machList');
+        if (!host) return;
+        host.innerHTML = '';
+        const groups = {};
+        const order = [];
+        design.machines.forEach(function (m, i) {
+            const sec = machSectionMap[m.id] || '—';
+            if (!groups[sec]) { groups[sec] = []; order.push(sec); }
+            groups[sec].push({ i: i, name: m.name || ('#' + i), off: !!m.off });
+        });
+        order.sort(function (a, b) {
+            if (a === '—') return 1;
+            if (b === '—') return -1;
+            return a.localeCompare(b);
+        });
+        order.forEach(function (sec) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center';
+            const lbl = document.createElement('span');
+            lbl.style.cssText = 'font-size:11px;font-weight:600;color:#2c3e50;min-width:130px';
+            lbl.textContent = sec + ':';
+            row.appendChild(lbl);
+            groups[sec].sort(function (a, b) { return a.name.localeCompare(b.name); });
+            groups[sec].forEach(function (it) {
+                const chip = document.createElement('span');
+                chip.textContent = it.name;
+                chip.style.cssText = 'font-size:11px;padding:3px 9px;border-radius:11px;cursor:pointer;' +
+                    'background:#eef2f7;border:1px solid #cdd6e2;color:' + (it.off ? '#9aa7b5' : '#2c3e50') +
+                    (it.off ? ';text-decoration:line-through' : '');
+                chip.addEventListener('mouseenter', function () {
+                    chip.style.background = 'rgba(255,140,66,0.25)';
+                    chip.style.borderColor = '#ff8c42';
+                    setMachineGlow(it.i, true);
+                });
+                chip.addEventListener('mouseleave', function () {
+                    chip.style.background = '#eef2f7';
+                    chip.style.borderColor = '#cdd6e2';
+                    setMachineGlow(it.i, false);
+                });
+                row.appendChild(chip);
+            });
+            host.appendChild(row);
+        });
+    }
+
     function rebuildDesign() {
         while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
         while (wallsLayer.children.length) wallsLayer.remove(wallsLayer.children[0]);
@@ -909,6 +986,7 @@
         // каждой пересборке — перетаскивалась старая копия, станок «не двигался»
         while (machinesGroup.children.length) machinesGroup.remove(machinesGroup.children[0]);
         while (hoverLabelGroup.children.length) hoverLabelGroup.remove(hoverLabelGroup.children[0]);
+        machGroups = [];
         function tag(m, kind, idx, parent) {
             const isSel = selected && selected.kind === kind && selected.idx === idx;
             m.traverse(function (ch) {
@@ -923,8 +1001,9 @@
         design.gates.forEach(function (g2, i) { tag(gateMesh(g2), 'gate', i); });
         design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i, pipesLayer); });
         design.machines.forEach(function (m, i) {
-            if (m.off) return;
+            if (m.off) { machGroups[i] = null; return; }
             const mg = machineModel(m);
+            machGroups[i] = mg;
             // Компрессор (id -1) — в editGroup: остаётся видимым при скрытии станков
             tag(mg, 'machine', i, (m.id === -1) ? editGroup : machinesGroup);
             if (SHOW_HOVER_LABELS) {
@@ -949,6 +1028,7 @@
                 wallsLayer.add(m);
             });
         });
+        rebuildMachineList();
         try { localStorage.setItem('map3d_design', JSON.stringify(design)); } catch (e) {}
         saveDesignToServer();
     }

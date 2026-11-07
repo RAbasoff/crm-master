@@ -7313,3 +7313,7 @@ msgstr ""
 #: templates/gas/returns.html:0
 msgid "returned %(n)d empty to supplier"
 msgstr "возвращено пустых поставщику: %(n)d"
+
+#: templates/air/map_3d.html:0
+msgid "Machines by workshop"
+msgstr "Станки по цехам"
