@@ -339,7 +339,7 @@ def gas_dashboard():
     stats['ordered_total_month'] = stats['ordered_n2_month'] + stats['ordered_co2_month']
 
     # Итого в наличии + неисправности + в работе (с указанием стороны)
-    stats['total_on_hand'] = stats['n2_total'] + stats['co2_total']
+    stats['total_on_hand'] = stats['n2_total'] + stats['co2_total'] + balance['mixed']['total']
     stats['n2_defect'] = balance['nitrogen'].get('defect', 0) + balance['nitrogen'].get('maintenance', 0)
     stats['co2_defect'] = balance['co2'].get('defect', 0) + balance['co2'].get('maintenance', 0)
     stats['total_defect'] = stats['n2_defect'] + stats['co2_defect']
