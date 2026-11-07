@@ -107,9 +107,6 @@ def warehouse_groups_auto():
 
 # ── ITEMS ───────────────────────────────────────────────────
 
-@bp.route('/')
-@login_required
-@role_required('admin', 'director', 'technician')
 def _addr_sort_key(a):
     """Натуральная сортировка адресов: MT-4-2-10 после MT-4-2-6."""
     import re as _re
@@ -139,6 +136,9 @@ def warehouse_qr():
     return render_template('warehouse_qr.html', labels=labels)
 
 
+@bp.route('/')
+@login_required
+@role_required('admin', 'director', 'technician')
 def warehouse_list():
     page = request.args.get('page', 1, type=int)
     cat = request.args.get('categorie', '')

@@ -77,10 +77,15 @@ def _inventory_balance():
             CylinderOrder.gas_type == gt,
             CylinderOrder.ordered_at >= month_start
         ).scalar() or 0
+        # Приход = доставлено ЗА месяц (по delivered_at, а не ordered_at:
+        # заказ, оформленный в одном месяце и привезённый в другом, должен
+        # попасть в месяц доставки; для старых записей без delivered_at —
+        # fallback на дату заказа)
+        _delivered_when = db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at)
         delivered_month = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
             CylinderOrder.gas_type == gt,
             CylinderOrder.status == 'delivered',
-            CylinderOrder.ordered_at >= month_start
+            _delivered_when >= month_start
         ).scalar() or 0
         bal[gt] = {
             'label': GAS_LABELS[gt],
@@ -182,12 +187,18 @@ def _orders_by_month(orders_all, now):
     """Group cylinder orders by month with ordered/used counts for the UI."""
     from collections import OrderedDict
     months = OrderedDict()
-    # used (became empty) per month from logs
+    # used (became empty) per month from logs — уникальные баллоны:
+    # в старых данных на каждое опустошение падало два лога
     used_by_month = {}
+    seen_used = set()
     for log in CylinderLog.query.filter(CylinderLog.action.like('%_to_empty%')).all():
-        key = (log.date or log.date).strftime('%Y-%m') if log.date else None
+        key = log.date.strftime('%Y-%m') if log.date else None
         if not key:
             continue
+        mark = (key, log.cylinder_id)
+        if mark in seen_used:
+            continue
+        seen_used.add(mark)
         used_by_month[key] = used_by_month.get(key, 0) + 1
     for o in orders_all:
         if not o.ordered_at:
@@ -285,7 +296,9 @@ def gas_dashboard():
         # NOTE: never mix N₂ and CO₂ into one "total_*" — arithmetic is per gas type
     }
 
-    # Monthly consumption: count cylinders that became empty this month
+    # Monthly consumption: count cylinders that became empty this month.
+    # Уникальные баллоны (в старых данных на каждое опустошение падало два
+    # лога — по записям расход был бы вдвое больше факта).
     now = datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     consumed_logs = CylinderLog.query.filter(
@@ -293,24 +306,31 @@ def gas_dashboard():
         CylinderLog.date >= month_start
     ).all()
     consumed_ids = set(l.cylinder_id for l in consumed_logs)
-    n2_consumed = len([cid for cid in consumed_ids if any(c.id == cid and c.gas_type == 'nitrogen' for c in cylinders)])
-    co2_consumed = len([cid for cid in consumed_ids if any(c.id == cid and c.gas_type == 'co2' for c in cylinders)])
+    gas_by_id = {c.id: c.gas_type for c in cylinders}
+    n2_consumed = len([cid for cid in consumed_ids if gas_by_id.get(cid) == 'nitrogen'])
+    co2_consumed = len([cid for cid in consumed_ids if gas_by_id.get(cid) == 'co2'])
+    mixed_consumed = len([cid for cid in consumed_ids if gas_by_id.get(cid) == 'mixed'])
 
     stats['n2_consumed_month'] = n2_consumed
     stats['co2_consumed_month'] = co2_consumed
-    stats['total_consumed_month'] = n2_consumed + co2_consumed
+    stats['mixed_consumed_month'] = mixed_consumed
+    stats['total_consumed_month'] = n2_consumed + co2_consumed + mixed_consumed
 
-    # Received this month = ФАКТИЧЕСКИ доставлено (delivered orders),
-    # а не «сколько строк created» (сканы/лист приёмки искусственно занижают/завышают).
+    # Received this month = ФАКТИЧЕСКИ доставлено за месяц (по delivered_at:
+    # заказ, оформленный в одном месяце и привезённый в другом, попадает
+    # в месяц доставки; для старых записей без delivered_at — дата заказа).
+    _delivered_when = db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at)
     delivered_orders = CylinderOrder.query.filter(
         CylinderOrder.status == 'delivered',
-        CylinderOrder.ordered_at >= month_start
+        _delivered_when >= month_start
     ).all()
     n2_received = sum(int(o.quantity or 0) for o in delivered_orders if o.gas_type == 'nitrogen')
     co2_received = sum(int(o.quantity or 0) for o in delivered_orders if o.gas_type == 'co2')
+    mixed_received = sum(int(o.quantity or 0) for o in delivered_orders if o.gas_type == 'mixed')
     stats['n2_received_month'] = n2_received
     stats['co2_received_month'] = co2_received
-    stats['total_received_month'] = n2_received + co2_received
+    stats['mixed_received_month'] = mixed_received
+    stats['total_received_month'] = n2_received + co2_received + mixed_received
 
     # Заказано с начала месяца (все заказы)
     orders_month = CylinderOrder.query.filter(CylinderOrder.ordered_at >= month_start).all()
@@ -488,27 +508,24 @@ def cylinder_status(cyl_id):
         if new_status == 'in_use' and not c.installed_at:
             c.installed_at = datetime.utcnow()
 
-    # Only ONE gas can be in use at a time (N2 or CO2 or MIX).
+    # Only ONE in_use per gas type (N2 / CO2 / MIX — рабочая пара своя на тип).
     # When activating a new one, others go back to full (installed, waiting) — not empty.
     if new_status == 'in_use':
         others = GasCylinder.query.filter(
             GasCylinder.status == 'in_use',
+            GasCylinder.gas_type == c.gas_type,
             GasCylinder.id != c.id
         ).all()
         for other in others:
             other.status = 'full'
             if not other.installed_at:
                 other.installed_at = datetime.utcnow()
-            try:
-                from models import CylinderLog
-                db.session.add(CylinderLog(
-                    cylinder_id=other.id,
-                    action='in_use_to_full',
-                    user_id=current_user.id if isinstance(current_user.id, int) else None,
-                    note=f'Standby: switched to {c.cylinder_number} ({c.gas_type})',
-                ))
-            except Exception:
-                pass
+            db.session.add(CylinderLog(
+                cylinder_id=other.id,
+                action='in_use_to_full',
+                performed_by=current_user.id if isinstance(current_user.id, int) else None,
+                notes=f'Standby: switched to {c.cylinder_number} ({c.gas_type})',
+            ))
 
     # When an in_use cylinder empties → promote one full spare into service
     if old_status == 'in_use' and new_status == 'empty':
@@ -527,16 +544,19 @@ def cylinder_status(cyl_id):
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('gas.gas_dashboard'))
 
-    db.session.add(CylinderLog(
-        cylinder_id=c.id,
-        action='status_%s_to_%s' % (old_status, new_status),
-        performed_by=current_user.id,
-        notes='Status: %s -> %s' % (old_status, new_status)
-    ))
-    if not safe_commit():
-        if request.is_json:
-            return jsonify({'error': 'Save failed'}), 500
-        flash(_('Status updated but log entry failed'), 'warning')
+    # Пустой уже залогирован в _mark_empty_leaves_site — второй лог удваивал
+    # все счётчики расхода («used» считался по записям *_to_empty).
+    if new_status != 'empty':
+        db.session.add(CylinderLog(
+            cylinder_id=c.id,
+            action='status_%s_to_%s' % (old_status, new_status),
+            performed_by=current_user.id,
+            notes='Status: %s -> %s' % (old_status, new_status)
+        ))
+        if not safe_commit():
+            if request.is_json:
+                return jsonify({'error': 'Save failed'}), 500
+            flash(_('Status updated but log entry failed'), 'warning')
 
     log_audit('status_change', 'gas_cylinder', c.id,
               '%s #%s: %s -> %s' % (c.gas_type, c.cylinder_number, old_status, new_status))
@@ -754,15 +774,34 @@ def order_status(order_id):
                 notes=f'Received via order #{o.id} x{qty}'
             ))
             created += 1
+        # Обмен: при поставке новых пустые возвращаются поставщику.
+        # Списываем до qty пустых (ждали возврата) — без этого «остаток»
+        # накапливал пустые, а возврат надо было делать вручную.
+        returned = 0
+        empties = GasCylinder.query.filter_by(
+            gas_type=o.gas_type, status='empty'
+        ).order_by(GasCylinder.id.asc()).limit(qty).all()
+        for c in empties:
+            c.status = 'returned'
+            c.side = None
+            db.session.add(CylinderLog(
+                cylinder_id=c.id, action='return_empty',
+                performed_by=current_user.id,
+                notes=f'Returned to supplier on delivery of order #{o.id}'
+            ))
+            returned += 1
         if not safe_commit():
             flash(_('Save failed. Please try again.'), 'error')
             return redirect(url_for('gas.orders_list'))
         if created:
-            flash(_('Order delivered: %(n)d full %(gas)s cylinders added to stock',
-                    n=created, gas=GAS_LABELS.get(o.gas_type, o.gas_type)), 'success')
+            msg = _('Order delivered: %(n)d full %(gas)s cylinders added to stock',
+                    n=created, gas=GAS_LABELS.get(o.gas_type, o.gas_type))
+            if returned:
+                msg += ' · ' + _('returned %(n)d empty to supplier', n=returned)
+            flash(msg, 'success')
         else:
             flash(_('Order marked delivered (cylinders already in stock)'), 'info')
-        log_audit('deliver', 'cylinder_order', o.id, f'{o.gas_type} x{qty}, created={created}')
+        log_audit('deliver', 'cylinder_order', o.id, f'{o.gas_type} x{qty}, created={created}, returned={returned}')
     else:
         flash(_('Order status updated'), 'success')
     return redirect(url_for('gas.orders_list'))
@@ -1325,16 +1364,22 @@ def _gas_archive_view_impl():
             'delivered': o.delivered_at.strftime('%d-%m-%Y') if o.delivered_at else '',
         })
 
-    # Расход (стало пустым) и возвраты по месяцам
+    # Расход (стало пустым) и возвраты по месяцам.
+    # Расход — только опустевшие (уникальные баллоны, в старых данных
+    # на каждое событие падало два лога). Возврат поставщику — НЕ расход.
+    seen_used = set()
     for log in CylinderLog.query.all():
         if not log.date:
             continue
         k = log.date.strftime('%Y-%m')
         row = _ensure(k)
         act = (log.action or '')
-        if '_to_empty' in act or act == 'return_full':
-            row['used_total'] = row.get('used_total', 0) + 1
-        if act == 'return_full':
+        if '_to_empty' in act:
+            mark = (k, log.cylinder_id)
+            if mark not in seen_used:
+                seen_used.add(mark)
+                row['used_total'] = row.get('used_total', 0) + 1
+        if act in ('return_full', 'return_empty'):
             row['returned_total'] = row.get('returned_total', 0) + 1
         if act in ('created', 'received'):
             row.setdefault('received_ops', 0)
@@ -1374,7 +1419,12 @@ def _gas_archive_view_impl():
 @login_required
 @role_required('admin', 'director', 'technician')
 def gas_returns():
-    """Возврат полных баллонов поставщику (дата, тип, количество, причина)."""
+    """Возврат баллонов поставщику (дата, тип, количество, причина).
+
+    По факту обмена: при поставке новых пустые уезжают поставщику.
+    Поэтому первыми списываются ПУСТЫЕ (ждут возврата), полные — только
+    если пустых не хватило.
+    """
     if request.method == 'POST':
         try:
             ret_date = datetime.strptime(request.form.get('return_date') or '', '%Y-%m-%d').date()
@@ -1388,26 +1438,25 @@ def gas_returns():
         if qty <= 0:
             flash(_('Quantity must be positive'), 'error')
             return redirect(url_for('gas.gas_returns'))
-        fulls = GasCylinder.query.filter_by(gas_type=gas_type, status='full').order_by(
-            GasCylinder.id.asc()).limit(qty).all()
+        # 1) пустые — их и возвращают поставщику при обмене
         n = 0
-        for c in fulls:
+        empties = GasCylinder.query.filter_by(gas_type=gas_type, status='empty').order_by(
+            GasCylinder.id.asc()).limit(qty).all()
+        for c in empties:
             c.status = 'returned'
             c.side = None
             db.session.add(CylinderLog(
-                cylinder_id=c.id, action='return_full', performed_by=current_user.id,
-                notes=f'Returned full cylinder {ret_date}: {reason}'
+                cylinder_id=c.id, action='return_empty', performed_by=current_user.id,
+                notes=f'Returned empty {ret_date}: {reason}'
             ))
             n += 1
-        # не нашлось полных — отмечаем фактический возврат (пусть empty/любые)
+        # 2) не хватило пустых — отмечаем фактический возврат остальных
         if n < qty:
             rest = GasCylinder.query.filter(
                 GasCylinder.gas_type == gas_type,
-                GasCylinder.status.in_(('empty', 'full', 'scanned'))
+                GasCylinder.status.in_(('full', 'scanned'))
             ).order_by(GasCylinder.id.asc()).limit(qty - n).all()
             for c in rest:
-                if c.status == 'returned':
-                    continue
                 old = c.status
                 c.status = 'returned'
                 db.session.add(CylinderLog(
@@ -1419,9 +1468,9 @@ def gas_returns():
             flash(_('Save failed'), 'error')
         else:
             flash(_('Cylinders returned') + f': {n} ({GAS_LABELS.get(gas_type, gas_type)}), {ret_date}', 'success')
-        log_audit('return_full', 'gas_cylinder', 0, f'{gas_type} x{qty} {ret_date} {reason}')
+        log_audit('return', 'gas_cylinder', 0, f'{gas_type} x{qty} {ret_date} {reason}')
         return redirect(url_for('gas.gas_returns'))
-    returns = (CylinderLog.query.filter_by(action='return_full')
+    returns = (CylinderLog.query.filter(CylinderLog.action.in_(('return_full', 'return_empty')))
                .order_by(CylinderLog.date.desc()).limit(50).all())
     return render_template('gas/returns.html', returns=returns, gas_labels=GAS_LABELS, gas_types=GAS_TYPES)
 
@@ -1454,10 +1503,10 @@ def gas_report_pdf():
         key = cur.strftime('%Y-%m')
         row = {
             'month': key,
-            'ordered_n2': 0, 'ordered_co2': 0,
-            'used_n2': 0, 'used_co2': 0,
+            'ordered_n2': 0, 'ordered_co2': 0, 'ordered_mixed': 0,
+            'used_n2': 0, 'used_co2': 0, 'used_mixed': 0,
             'defect_n2': 0, 'defect_co2': 0,
-            'received_n2': 0, 'received_co2': 0,
+            'received_n2': 0, 'received_co2': 0, 'received_mixed': 0,
         }
         for o in CylinderOrder.query.filter(
             CylinderOrder.ordered_at >= m_start, CylinderOrder.ordered_at < m_end
@@ -1465,27 +1514,39 @@ def gas_report_pdf():
             q = int(o.quantity or 0)
             if o.gas_type == 'nitrogen':
                 row['ordered_n2'] += q
+            elif o.gas_type == 'mixed':
+                row['ordered_mixed'] += q
             else:
                 row['ordered_co2'] += q
+        # Расход — уникальные баллоны, опустевшие за месяц
+        used_seen = set()
         for log in CylinderLog.query.filter(
             CylinderLog.action.like('%_to_empty%'),
             CylinderLog.date >= m_start, CylinderLog.date < m_end
         ).all():
-            c = db.session.get(GasCylinder, log.cylinder_id) if log.cylinder_id else None
+            if not log.cylinder_id or log.cylinder_id in used_seen:
+                continue
+            used_seen.add(log.cylinder_id)
+            c = db.session.get(GasCylinder, log.cylinder_id)
             if not c:
                 continue
             if c.gas_type == 'nitrogen':
                 row['used_n2'] += 1
+            elif c.gas_type == 'mixed':
+                row['used_mixed'] += 1
             else:
                 row['used_co2'] += 1
-        # «Получено» = доставленные заказы за месяц
+        # «Получено» = доставленные заказы за месяц (по дате доставки)
         for o in CylinderOrder.query.filter(
             CylinderOrder.status == 'delivered',
-            CylinderOrder.ordered_at >= m_start, CylinderOrder.ordered_at < m_end
+            db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at) >= m_start,
+            db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at) < m_end
         ).all():
             q = int(o.quantity or 0)
             if o.gas_type == 'nitrogen':
                 row['received_n2'] += q
+            elif o.gas_type == 'mixed':
+                row['received_mixed'] += q
             else:
                 row['received_co2'] += q
         # неисправные: defect/maintenance на конец месяца
@@ -1551,9 +1612,10 @@ def gas_report_pdf():
     headers = [
         _('Month'), 'N2 ' + _('Ordered'), 'N2 ' + _('Used'),
         'CO2 ' + _('Ordered'), 'CO2 ' + _('Used'),
+        'Mix ' + _('Ordered'), 'Mix ' + _('Used'),
         _('Defects'), _('Received')
     ]
-    col_w = [30, 32, 32, 32, 32, 32, 32]
+    col_w = [28, 28, 28, 28, 28, 28, 28, 28, 28]
     pdf.set_font(base_font, 'B', 8)
     pdf.set_fill_color(44, 62, 80)
     pdf.set_text_color(255)
@@ -1563,20 +1625,25 @@ def gas_report_pdf():
     pdf.set_text_color(51)
     pdf.set_font(base_font, '', 8)
 
-    tot = dict(ordered_n2=0, ordered_co2=0, used_n2=0, used_co2=0)
+    tot = dict(ordered_n2=0, ordered_co2=0, ordered_mixed=0,
+               used_n2=0, used_co2=0, used_mixed=0)
     for m in months:
         pdf.cell(col_w[0], 6, pdf_text(m['month']), border=1)
         pdf.cell(col_w[1], 6, pdf_text(m['ordered_n2']), border=1)
         pdf.cell(col_w[2], 6, pdf_text(m['used_n2']), border=1)
         pdf.cell(col_w[3], 6, pdf_text(m['ordered_co2']), border=1)
         pdf.cell(col_w[4], 6, pdf_text(m['used_co2']), border=1)
-        pdf.cell(col_w[5], 6, pdf_text(m['defect_n2'] + m['defect_co2']), border=1)
-        pdf.cell(col_w[6], 6, pdf_text(m['received_n2'] + m['received_co2']), border=1)
+        pdf.cell(col_w[5], 6, pdf_text(m['ordered_mixed']), border=1)
+        pdf.cell(col_w[6], 6, pdf_text(m['used_mixed']), border=1)
+        pdf.cell(col_w[7], 6, pdf_text(m['defect_n2'] + m['defect_co2']), border=1)
+        pdf.cell(col_w[8], 6, pdf_text(m['received_n2'] + m['received_co2'] + m['received_mixed']), border=1)
         pdf.ln()
         tot['ordered_n2'] += m['ordered_n2']
         tot['ordered_co2'] += m['ordered_co2']
+        tot['ordered_mixed'] += m['ordered_mixed']
         tot['used_n2'] += m['used_n2']
         tot['used_co2'] += m['used_co2']
+        tot['used_mixed'] += m['used_mixed']
 
     pdf.set_font(base_font, 'B', 8)
     pdf.cell(col_w[0], 7, pdf_text(_('Total')), border=1)
@@ -1584,8 +1651,10 @@ def gas_report_pdf():
     pdf.cell(col_w[2], 7, pdf_text(tot['used_n2']), border=1)
     pdf.cell(col_w[3], 7, pdf_text(tot['ordered_co2']), border=1)
     pdf.cell(col_w[4], 7, pdf_text(tot['used_co2']), border=1)
-    pdf.cell(col_w[5], 7, pdf_text(''), border=1)
-    pdf.cell(col_w[6], 7, pdf_text(''), border=1)
+    pdf.cell(col_w[5], 7, pdf_text(tot['ordered_mixed']), border=1)
+    pdf.cell(col_w[6], 7, pdf_text(tot['used_mixed']), border=1)
+    pdf.cell(col_w[7], 7, pdf_text(''), border=1)
+    pdf.cell(col_w[8], 7, pdf_text(''), border=1)
 
     import io
     buf = io.BytesIO()

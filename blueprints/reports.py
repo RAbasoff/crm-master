@@ -138,23 +138,24 @@ def reports_advanced():
 
     elif report_type == 'gas':
         from models import GasCylinder, CylinderLog, CylinderOrder
-        # Received: cylinders created in period
-        received_logs = CylinderLog.query.filter(
-            CylinderLog.action == 'created',
-            CylinderLog.date >= d_from, CylinderLog.date < d_to
+        # Приход = доставлено за период (по delivered_at — как в дашборде)
+        _delivered_when = db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at)
+        delivered = CylinderOrder.query.filter(
+            CylinderOrder.status == 'delivered',
+            _delivered_when >= d_from, _delivered_when < d_to
         ).all()
-        received_ids = list(set(l.cylinder_id for l in received_logs if l.cylinder_id))
-        n2_received = sum(1 for cid in received_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'nitrogen')
-        co2_received = sum(1 for cid in received_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'co2')
+        n2_received = sum(int(o.quantity or 0) for o in delivered if o.gas_type == 'nitrogen')
+        co2_received = sum(int(o.quantity or 0) for o in delivered if o.gas_type == 'co2')
 
-        # Consumed: cylinders that became empty in period
+        # Расход: уникальные баллоны, опустевшие за период
         consumed_logs = CylinderLog.query.filter(
             CylinderLog.action.like('%_to_empty%'),
             CylinderLog.date >= d_from, CylinderLog.date < d_to
         ).all()
-        consumed_ids = list(set(l.cylinder_id for l in consumed_logs if l.cylinder_id))
-        n2_consumed = sum(1 for cid in consumed_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'nitrogen')
-        co2_consumed = sum(1 for cid in consumed_ids if GasCylinder.query.get(cid) and GasCylinder.query.get(cid).gas_type == 'co2')
+        consumed_ids = set(l.cylinder_id for l in consumed_logs if l.cylinder_id)
+        gas_by_id = dict(db.session.query(GasCylinder.id, GasCylinder.gas_type).all())
+        n2_consumed = sum(1 for cid in consumed_ids if gas_by_id.get(cid) == 'nitrogen')
+        co2_consumed = sum(1 for cid in consumed_ids if gas_by_id.get(cid) == 'co2')
 
         # Monthly breakdown (last 6 months)
         chart_data = []
@@ -162,13 +163,16 @@ def reports_advanced():
             m_start = (datetime.utcnow().replace(day=1) - timedelta(days=i*30)).replace(day=1)
             m_end = (m_start + timedelta(days=32)).replace(day=1)
             m_key = m_start.strftime('%Y-%m')
-            r_logs = CylinderLog.query.filter(CylinderLog.action == 'created', CylinderLog.date >= m_start, CylinderLog.date < m_end).all()
+            r_qty = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
+                CylinderOrder.status == 'delivered',
+                db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at) >= m_start,
+                db.func.coalesce(CylinderOrder.delivered_at, CylinderOrder.ordered_at) < m_end
+            ).scalar() or 0
             c_logs = CylinderLog.query.filter(CylinderLog.action.like('%_to_empty%'), CylinderLog.date >= m_start, CylinderLog.date < m_end).all()
-            r_ids = set(l.cylinder_id for l in r_logs if l.cylinder_id)
             c_ids = set(l.cylinder_id for l in c_logs if l.cylinder_id)
             chart_data.append({
                 'month': m_key,
-                'received': len(r_ids),
+                'received': int(r_qty),
                 'consumed': len(c_ids)
             })
 

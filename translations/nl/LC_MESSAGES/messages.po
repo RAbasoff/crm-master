@@ -7120,3 +7120,19 @@ msgstr "Snelkoppeling"
 #: templates/air/map_3d.html:0
 msgid "Click to install a quick coupling"
 msgstr "Klik om snelkoppeling te plaatsen"
+
+#: templates/gas/returns.html:0
+msgid "Return cylinders to supplier"
+msgstr "Retour cilinders naar leverancier"
+
+#: templates/gas/returns.html:0
+msgid ""
+"Empty cylinders are returned first (exchange on delivery). Full ones only if"
+" not enough empties."
+msgstr ""
+"Eerst worden lege cilinders geretourneerd (ruil bij levering). Volle alleen "
+"als er niet genoeg lege zijn."
+
+#: templates/gas/returns.html:0
+msgid "returned %(n)d empty to supplier"
+msgstr "%(n)d lege retour naar leverancier"

@@ -7297,3 +7297,19 @@ msgstr "Быстросоединение"
 #: templates/air/map_3d.html:0
 msgid "Click to install a quick coupling"
 msgstr "Клик — установить быстросоединение (snelkoppeling)"
+
+#: templates/gas/returns.html:0
+msgid "Return cylinders to supplier"
+msgstr "Возврат баллонов поставщику"
+
+#: templates/gas/returns.html:0
+msgid ""
+"Empty cylinders are returned first (exchange on delivery). Full ones only if"
+" not enough empties."
+msgstr ""
+"Сначала возвращаются пустые баллоны (обмен при поставке). Полные — только "
+"если пустых не хватило."
+
+#: templates/gas/returns.html:0
+msgid "returned %(n)d empty to supplier"
+msgstr "возвращено пустых поставщику: %(n)d"
