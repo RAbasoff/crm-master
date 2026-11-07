@@ -226,6 +226,7 @@
     }
 
     // ── Модели станков (стилизованные) ──
+    const MACH_SCALE = 0.5; // глобальный масштаб моделей станков
     function machineModel(d) {
         const g = new THREE.Group();
         const steel = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.55, roughness: 0.4 });
@@ -356,7 +357,7 @@
             const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.62, 0.18, 1.82), accent);
             stripe.position.y = 0.55; g.add(stripe);
         }
-        g.scale.setScalar(d.s || 1);
+        g.scale.setScalar((d.s || 1) * MACH_SCALE);
         g.position.set(d.x || 0, 0, d.z || 0);
         g.rotation.y = d.rot || 0;
         return g;
@@ -904,6 +905,10 @@
         while (editGroup.children.length) editGroup.remove(editGroup.children[0]);
         while (wallsLayer.children.length) wallsLayer.remove(wallsLayer.children[0]);
         while (pipesLayer.children.length) pipesLayer.remove(pipesLayer.children[0]);
+        // станки и их hover-подписи: без очистки копии накапливались при
+        // каждой пересборке — перетаскивалась старая копия, станок «не двигался»
+        while (machinesGroup.children.length) machinesGroup.remove(machinesGroup.children[0]);
+        while (hoverLabelGroup.children.length) hoverLabelGroup.remove(hoverLabelGroup.children[0]);
         function tag(m, kind, idx, parent) {
             const isSel = selected && selected.kind === kind && selected.idx === idx;
             m.traverse(function (ch) {
@@ -923,7 +928,7 @@
             // Компрессор (id -1) — в editGroup: остаётся видимым при скрытии станков
             tag(mg, 'machine', i, (m.id === -1) ? editGroup : machinesGroup);
             if (SHOW_HOVER_LABELS) {
-                makeLabel(m.name || '', m.x || 0, 4.1 * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)', mg);
+                makeLabel(m.name || '', m.x || 0, 4.1 * MACH_SCALE * (m.s || 1), m.z || 0, 'rgba(39,174,96,0.92)', mg);
             }
         });
         design.valves.forEach(function (v, i) { tag(valveMesh(v), 'valve', i); });
@@ -1155,7 +1160,10 @@
                 });
                 const p = groundPoint(ev);
                 if (grp && p) {
-                    drag = { grp: grp, kind: u.kind, idx: u.idx, start: p };
+                    // orig — позиция группы ДО перетаскивания: у станков группа
+                    // стоит в (x,z), простое «position = delta» телепортировало их в центр
+                    drag = { grp: grp, kind: u.kind, idx: u.idx, start: p,
+                             orig: { x: grp.position.x, y: grp.position.y, z: grp.position.z } };
                     controls.enabled = false;
                 }
             }
@@ -1165,11 +1173,14 @@
         if (!drag) return;
         const p = groundPoint(ev);
         if (!p) return;
-        drag.grp.position.set(p.x - drag.start.x, 0, p.z - drag.start.z);
+        drag.grp.position.set(
+            drag.orig.x + (p.x - drag.start.x),
+            drag.orig.y,
+            drag.orig.z + (p.z - drag.start.z));
     });
     renderer.domElement.addEventListener('pointerup', function (ev) {
         if (drag && ev.button === 0) {
-            const dx = drag.grp.position.x, dz = drag.grp.position.z;
+            const dx = drag.grp.position.x - drag.orig.x, dz = drag.grp.position.z - drag.orig.z;
             const d = (drag.kind === 'opening')
                 ? ((design.walls[drag.idx] || {}).openings || [])[drag.oidx]
                 : arrOf(drag.kind)[drag.idx];
