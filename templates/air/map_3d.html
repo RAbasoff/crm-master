@@ -132,6 +132,9 @@
     const machinesGroup = new THREE.Group(); // станки (можно скрыть)
     const machSectionMap = {};  // id станка → название цеха (для списка над картой)
     let machGroups = [];        // группы станков по индексу в design.machines
+    // режим карты и данные чертежа — объявляются ДО первого использования
+    const MAP_MODE = '{{ map_mode or "air" }}'; // air | water | common — свой набор станков на карте
+    const design = { walls: [], gates: [], pipes: [], valves: [], machines: [], hidden: {} };
     const airGroup = new THREE.Group();   // воздуховоды
     const wallsGroup = new THREE.Group(); // стены + проходы
     const ceilGroup = new THREE.Group();  // потолок
@@ -589,8 +592,6 @@
     const pipesLayer = new THREE.Group(); // трубы — скрываются кнопкой «Линии воздуха»
     const hoverLabelGroup = new THREE.Group(); // подписи-подсказки при наведении
     scene.add(editGroup); scene.add(wallsLayer); scene.add(pipesLayer); scene.add(hoverLabelGroup);
-    const MAP_MODE = '{{ map_mode or "air" }}'; // air | water | common — свой набор станков на карте
-    const design = { walls: [], gates: [], pipes: [], valves: [], machines: [], hidden: {} };
     const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
     // Временно отключено (пользователю мешают): всплывающие подписи и подписи станков.
