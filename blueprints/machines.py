@@ -250,6 +250,16 @@ def machines_list():
     return render_template('machines.html', machines=pagination.items, pagination=pagination)
 
 
+@bp.route('/3d')
+@login_required
+def machines_map_3d():
+    """Общая 3D-карта фабрики: только станки (без воздуховодов и воды)."""
+    return render_template('air/map_3d.html',
+                           module_title=_('General map'),
+                           back_url='/machines',
+                           map_mode='common')
+
+
 @bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @role_required('admin', 'director')

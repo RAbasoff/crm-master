@@ -52,7 +52,8 @@ def water_map_3d():
     """3D-карта фабрики — копия карты сжатого воздуха для раздела воды."""
     return render_template('air/map_3d.html',
                            module_title=_('Water Supply'),
-                           back_url='/water')
+                           back_url='/water',
+                           map_mode='water')
 
 @bp.route('/')
 @login_required

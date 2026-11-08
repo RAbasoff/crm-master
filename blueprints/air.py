@@ -312,7 +312,7 @@ def air_map():
 @login_required
 def air_map_3d():
     """3D-обзор фабрики: цеха, станки, оборудование, воздуховоды."""
-    return render_template('air/map_3d.html')
+    return render_template('air/map_3d.html', map_mode='air')
 
 
 @bp.route('/api/map/point-position', methods=['POST'])
@@ -446,6 +446,8 @@ def api_3d_design():
             'pipes': data.get('pipes') or [],
             'valves': data.get('valves') or [],
             'machines': data.get('machines') or [],
+            # скрытые станки по режимам карты (air/water/common)
+            'hidden': data.get('hidden') or {},
         }
         os.makedirs(current_app.instance_path, exist_ok=True)
         # резервная копия перед перезаписью — чтобы утерянные объекты можно было вернуть

@@ -7140,3 +7140,11 @@ msgstr "%(n)d lege retour naar leverancier"
 #: templates/air/map_3d.html:0
 msgid "Machines by workshop"
 msgstr "Machines per afdeling"
+
+#: templates/air/map_3d.html:0
+msgid "General map"
+msgstr "Algemene kaart"
+
+#: templates/air/map_3d.html:0
+msgid "Hidden on this map — click to show"
+msgstr "Verborgen op deze kaart — klik om te tonen"

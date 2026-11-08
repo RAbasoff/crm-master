@@ -9,7 +9,9 @@
         <button class="btn btn-sm" id="btnWalls" style="background:#9fb3c8;color:#222" onclick="toggleWalls()">🧱 {{ _('Walls') }}</button>
         <button class="btn btn-sm" id="btnMach" style="background:#27ae60;color:#fff" onclick="toggleMachines()">⚙ {{ _('Machines') }}</button>
         <button class="btn btn-sm" id="btnCeil" style="background:#8fa6bf;color:#222" onclick="toggleCeil()">⬛ {{ _('Ceiling') }}</button>
+        {% if (map_mode or 'air') == 'air' %}
         <button class="btn btn-sm" id="btnAir" style="background:#e67e22;color:#fff" onclick="toggleAir()">🌀 {{ _('Air lines') }}</button>
+        {% endif %}
         <button class="btn btn-sm" id="btnLbl" style="background:#3498db;color:#fff" onclick="toggleLabels()">🏷 {{ _('Labels') }}</button>
         <button class="btn btn-sm" style="background:#7e57c2;color:#fff" onclick="topView()">⬆ {{ _('Top view') }}</button>
     </div>
@@ -54,14 +56,13 @@
     </div>
     <div id="toolHint" style="margin-top:6px;font-size:11px;color:#888"></div>
 </div>
-
-<div class="card no-print" style="margin:8px 0;padding:10px 12px">
-    <strong style="font-size:12px;color:#2c3e50">⚙ {{ _('Machines by workshop') }}</strong>
-    <div id="machList" style="display:flex;flex-direction:column;gap:7px;margin-top:8px"></div>
-</div>
 <div class="card" style="padding:0;overflow:hidden">
     <div id="scene3d" style="width:100%;height:70vh;background:#14161c;position:relative">
         <div id="sceneLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b95a5;font-size:14px">{{ _('Loading') }}…</div>
+        <div class="no-print" id="machListCard" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:6;width:max-content;max-width:min(92%,880px);max-height:36%;overflow:auto;background:rgba(22,25,32,0.82);border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:8px 12px">
+            <strong style="font-size:12px;color:#e8eef5">⚙ {{ _('Machines by workshop') }}</strong>
+            <div id="machList" style="display:flex;flex-direction:column;gap:7px;margin-top:8px"></div>
+        </div>
     <div style="position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:5">
         <button class="btn btn-sm" onclick="zoomBy(0.78)" title="{{ _('Zoom in') }}" style="background:#2c3e50;color:#fff;font-size:15px;line-height:1;padding:8px 11px">+</button>
         <button class="btn btn-sm" onclick="zoomBy(1.28)" title="{{ _('Zoom out') }}" style="background:#2c3e50;color:#fff;font-size:15px;line-height:1;padding:8px 11px">−</button>
@@ -482,7 +483,7 @@
         });
     });
     }
-    loadAirLines();
+    if (MAP_MODE === 'air') loadAirLines();
 
     // ── Подписи при наведении ──
     let hoverLabel = null, hoverTick = 0;
@@ -588,7 +589,8 @@
     const pipesLayer = new THREE.Group(); // трубы — скрываются кнопкой «Линии воздуха»
     const hoverLabelGroup = new THREE.Group(); // подписи-подсказки при наведении
     scene.add(editGroup); scene.add(wallsLayer); scene.add(pipesLayer); scene.add(hoverLabelGroup);
-    const design = { walls: [], gates: [], pipes: [], valves: [], machines: [] };
+    const MAP_MODE = '{{ map_mode or "air" }}'; // air | water | common — свой набор станков на карте
+    const design = { walls: [], gates: [], pipes: [], valves: [], machines: [], hidden: {} };
     const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
     // Временно отключено (пользователю мешают): всплывающие подписи и подписи станков.
@@ -641,7 +643,7 @@
             api3dFetch('/air/api/3d-design', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves, machines: design.machines })
+                body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves, machines: design.machines, hidden: design.hidden || {} })
             }).catch(function () {});
             design.pipes.forEach(syncPipeDb);
         }, 600);
@@ -915,6 +917,18 @@
     };
 
     // ── Список станков по цехам (над картой) + мягкая оранжевая подсветка ──
+    function isMachineHidden(id) {
+        const arr = design.hidden && design.hidden[MAP_MODE];
+        return !!arr && arr.indexOf(id) !== -1;
+    }
+    function toggleMachineHidden(id) {
+        if (!design.hidden) design.hidden = {};
+        const arr = design.hidden[MAP_MODE] = design.hidden[MAP_MODE] || [];
+        const k = arr.indexOf(id);
+        if (k === -1) arr.push(id); else arr.splice(k, 1);
+        rebuildDesign();
+    }
+
     function setMachineGlow(idx, on) {
         const grp = machGroups[idx];
         if (!grp) return;
@@ -941,7 +955,8 @@
         design.machines.forEach(function (m, i) {
             const sec = machSectionMap[m.id] || '—';
             if (!groups[sec]) { groups[sec] = []; order.push(sec); }
-            groups[sec].push({ i: i, name: m.name || ('#' + i), off: !!m.off });
+            groups[sec].push({ i: i, id: m.id, name: m.name || ('#' + i),
+                               off: !!m.off, hid: isMachineHidden(m.id) });
         });
         order.sort(function (a, b) {
             if (a === '—') return 1;
@@ -952,26 +967,35 @@
             const row = document.createElement('div');
             row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center';
             const lbl = document.createElement('span');
-            lbl.style.cssText = 'font-size:11px;font-weight:600;color:#2c3e50;min-width:130px';
+            lbl.style.cssText = 'font-size:11px;font-weight:600;color:#c7d2de;min-width:130px';
             lbl.textContent = sec + ':';
             row.appendChild(lbl);
             groups[sec].sort(function (a, b) { return a.name.localeCompare(b.name); });
             groups[sec].forEach(function (it) {
+                const hidden = it.off || it.hid;
                 const chip = document.createElement('span');
                 chip.textContent = it.name;
                 chip.style.cssText = 'font-size:11px;padding:3px 9px;border-radius:11px;cursor:pointer;' +
-                    'background:#eef2f7;border:1px solid #cdd6e2;color:' + (it.off ? '#9aa7b5' : '#2c3e50') +
-                    (it.off ? ';text-decoration:line-through' : '');
-                chip.addEventListener('mouseenter', function () {
-                    chip.style.background = 'rgba(255,140,66,0.25)';
-                    chip.style.borderColor = '#ff8c42';
-                    setMachineGlow(it.i, true);
-                });
-                chip.addEventListener('mouseleave', function () {
-                    chip.style.background = '#eef2f7';
-                    chip.style.borderColor = '#cdd6e2';
-                    setMachineGlow(it.i, false);
-                });
+                    'background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.22);color:' +
+                    (hidden ? '#7d8896' : '#e8eef5') + (hidden ? ';text-decoration:line-through' : '');
+                if (it.hid) {
+                    // скрыт на ЭТОЙ карте — клик возвращает обратно
+                    chip.title = '{{ _("Hidden on this map — click to show") }}';
+                    chip.addEventListener('click', function () {
+                        toggleMachineHidden(it.id);
+                    });
+                } else if (!it.off) {
+                    chip.addEventListener('mouseenter', function () {
+                        chip.style.background = 'rgba(255,140,66,0.30)';
+                        chip.style.borderColor = '#ff8c42';
+                        setMachineGlow(it.i, true);
+                    });
+                    chip.addEventListener('mouseleave', function () {
+                        chip.style.background = 'rgba(255,255,255,0.10)';
+                        chip.style.borderColor = 'rgba(255,255,255,0.22)';
+                        setMachineGlow(it.i, false);
+                    });
+                }
                 row.appendChild(chip);
             });
             host.appendChild(row);
@@ -1001,7 +1025,7 @@
         design.gates.forEach(function (g2, i) { tag(gateMesh(g2), 'gate', i); });
         design.pipes.forEach(function (p, i) { tag(pipeMesh(p), 'pipe', i, pipesLayer); });
         design.machines.forEach(function (m, i) {
-            if (m.off) { machGroups[i] = null; return; }
+            if (m.off || isMachineHidden(m.id)) { machGroups[i] = null; return; }
             const mg = machineModel(m);
             machGroups[i] = mg;
             // Компрессор (id -1) — в editGroup: остаётся видимым при скрытии станков
@@ -1040,6 +1064,7 @@
             design.gates = saved.gates || [];
             design.pipes = saved.pipes || [];
             design.valves = saved.valves || [];
+            if (saved.hidden) design.hidden = saved.hidden;
         }
     } catch (e) {}
     if (!design.hasPlan) {
@@ -1065,13 +1090,14 @@
             design.pipes = (srv.pipes && srv.pipes.length) ? srv.pipes : design.pipes;
             design.valves = (srv.valves && srv.valves.length) ? srv.valves : design.valves;
             design.machines = srv.machines || design.machines;
+            if (srv.hidden) design.hidden = srv.hidden;
             ensureCompressor();
             design.hasPlan = true;
             rebuildDesign();
         } else if (design.walls.length || design.gates.length || design.pipes.length || design.valves.length) {
             saveDesignToServer();
         }
-        loadAirLines();
+        if (MAP_MODE === 'air') loadAirLines();
     }).catch(function () { serverLoaded = true; });
 
     function arrOf(kind) {
@@ -1201,7 +1227,13 @@
         }
         if (selected.kind === 'machine') {
             const mm = design.machines[selected.idx];
-            if (mm) mm.off = true;
+            // Удаление с карты = скрыть в текущем режиме (air/water/common —
+            // свои наборы станков: на карте воздуха остаются только «воздушные»)
+            if (mm) {
+                if (!design.hidden) design.hidden = {};
+                const arr = design.hidden[MAP_MODE] = design.hidden[MAP_MODE] || [];
+                if (arr.indexOf(mm.id) === -1) arr.push(mm.id);
+            }
         } else if (selected.kind === 'opening') {
             const w = design.walls[selected.idx];
             if (w && w.openings) w.openings.splice(selected.oidx, 1);
@@ -1515,7 +1547,7 @@
                     vertices: toPct(pts)
                 })
             }).then(function (r) { return r.json(); }).then(function (j) {
-                if (j && j.ok) { addLocal(j.id); loadAirLines(); }
+                if (j && j.ok) { addLocal(j.id); if (MAP_MODE === 'air') loadAirLines(); }
                 else { addLocal(null); }
             }).catch(function () { addLocal(null); });
         }

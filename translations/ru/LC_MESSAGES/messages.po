@@ -7317,3 +7317,11 @@ msgstr "возвращено пустых поставщику: %(n)d"
 #: templates/air/map_3d.html:0
 msgid "Machines by workshop"
 msgstr "Станки по цехам"
+
+#: templates/air/map_3d.html:0
+msgid "General map"
+msgstr "Общая карта"
+
+#: templates/air/map_3d.html:0
+msgid "Hidden on this map — click to show"
+msgstr "Скрыт на этой карте — нажмите, чтобы показать"
