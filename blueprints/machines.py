@@ -3,7 +3,7 @@ Machines blueprint — machine CRUD, parts, consumables, documents, floor plan, 
 """
 from datetime import datetime, timedelta
 from flask import (Blueprint, request, redirect, url_for, flash, render_template,
-                   jsonify, send_file, current_app)
+                   jsonify, send_file, current_app, make_response)
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
@@ -254,10 +254,13 @@ def machines_list():
 @login_required
 def machines_map_3d():
     """Общая 3D-карта фабрики: только станки (без воздуховодов и воды)."""
-    return render_template('air/map_3d.html',
+    # без кеша: браузер не должен показывать старую версию карты
+    resp = make_response(render_template('air/map_3d.html',
                            module_title=_('General map'),
                            back_url='/machines',
-                           map_mode='common')
+                           map_mode='common'))
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 
 @bp.route('/new', methods=['GET', 'POST'])

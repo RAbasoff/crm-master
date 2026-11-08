@@ -511,7 +511,6 @@
             updatePipePreview();
         }
         if (drag) return;
-        if (!SHOW_HOVER_LABELS) return;
         const now = Date.now();
         if (now - hoverTick < 90) return;
         hoverTick = now;
@@ -520,6 +519,11 @@
         edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
         edRay.setFromCamera(edNdc, camera);
         const hits = edRay.intersectObjects([machinesGroup, editGroup, wallsLayer, pipesLayer], true);
+        // курсор-рука: объект можно перетащить (в режимах «Выбор» и «Переместить»)
+        const grabMode = (curTool === 'select' || curTool === 'move') &&
+                         (curTool === 'move' || (hits.length && hits[0].object.userData && hits[0].object.userData.kind === 'machine'));
+        renderer.domElement.style.cursor = grabMode ? 'grab' : '';
+        if (!SHOW_HOVER_LABELS) return;
         let ref = null;
         for (let i = 0; i < hits.length && !ref; i++) {
             let o = hits[i].object;
@@ -1304,6 +1308,7 @@
                     drag = { grp: grp, kind: u.kind, idx: u.idx, start: p,
                              orig: { x: grp.position.x, y: grp.position.y, z: grp.position.z } };
                     controls.enabled = false;
+                    renderer.domElement.style.cursor = 'grabbing';
                 }
             }
         }
@@ -1336,6 +1341,7 @@
                 rebuildDesign();
             }
             controls.enabled = true;
+            renderer.domElement.style.cursor = 'grab';
             drag = null;
         }
         if (curTool === 'move') { downXY = null; return; }

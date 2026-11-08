@@ -2,7 +2,7 @@
 Water Supply (ВОДОСНАБЖЕНИЕ) — connection points, lines, factory map
 """
 import json
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
@@ -50,10 +50,13 @@ def check_water_access():
 @login_required
 def water_map_3d():
     """3D-карта фабрики — копия карты сжатого воздуха для раздела воды."""
-    return render_template('air/map_3d.html',
+    # без кеша: браузер не должен показывать старую версию карты
+    resp = make_response(render_template('air/map_3d.html',
                            module_title=_('Water Supply'),
                            back_url='/water',
-                           map_mode='water')
+                           map_mode='water'))
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 @bp.route('/')
 @login_required

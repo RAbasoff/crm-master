@@ -2,7 +2,7 @@
 Compressed Air (СЖАТЫЙ ВОЗДУХ) — connection points, lines, factory map
 """
 import json
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
@@ -312,7 +312,10 @@ def air_map():
 @login_required
 def air_map_3d():
     """3D-обзор фабрики: цеха, станки, оборудование, воздуховоды."""
-    return render_template('air/map_3d.html', map_mode='air')
+    # без кеша: браузер не должен показывать старую версию карты
+    resp = make_response(render_template('air/map_3d.html', map_mode='air'))
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 
 @bp.route('/api/map/point-position', methods=['POST'])
