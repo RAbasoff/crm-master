@@ -7325,3 +7325,7 @@ msgstr "Общая карта"
 #: templates/air/map_3d.html:0
 msgid "Hidden on this map — click to show"
 msgstr "Скрыт на этой карте — нажмите, чтобы показать"
+
+#: templates/air/map_3d.html:0
+msgid "Show machine list"
+msgstr "Показывать список станков"

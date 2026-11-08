@@ -60,7 +60,12 @@
     <div id="scene3d" style="width:100%;height:70vh;background:#14161c;position:relative">
         <div id="sceneLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b95a5;font-size:14px">{{ _('Loading') }}…</div>
         <div class="no-print" id="machListCard" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:6;width:max-content;max-width:min(92%,880px);max-height:36%;overflow:auto;background:rgba(22,25,32,0.82);border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:8px 12px">
-            <strong style="font-size:12px;color:#e8eef5">⚙ {{ _('Machines by workshop') }}</strong>
+            <div style="display:flex;align-items:center;gap:12px">
+                <strong style="font-size:12px;color:#e8eef5">⚙ {{ _('Machines by workshop') }}</strong>
+                <label style="font-size:11px;color:#c7d2de;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap">
+                    <input type="checkbox" id="machListToggle" onchange="toggleMachList(this.checked)"> {{ _('Show machine list') }}
+                </label>
+            </div>
             <div id="machList" style="display:flex;flex-direction:column;gap:7px;margin-top:8px"></div>
         </div>
     <div style="position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:5">
@@ -918,6 +923,17 @@
     };
 
     // ── Список станков по цехам (над картой) + мягкая оранжевая подсветка ──
+    function toggleMachList(show) {
+        const el = document.getElementById('machList');
+        if (el) el.style.display = show ? 'flex' : 'none';
+        const cb = document.getElementById('machListToggle');
+        if (cb && cb.checked !== show) cb.checked = show;
+        try { localStorage.setItem('map3d_machlist', show ? '1' : '0'); } catch (e) {}
+    }
+    window.toggleMachList = toggleMachList; // inline onchange в HTML
+    // восстановить состояние списка (по умолчанию показан)
+    try { toggleMachList(localStorage.getItem('map3d_machlist') !== '0'); } catch (e) {}
+
     function isMachineHidden(id) {
         const arr = design.hidden && design.hidden[MAP_MODE];
         return !!arr && arr.indexOf(id) !== -1;
