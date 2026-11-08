@@ -364,6 +364,61 @@
             cpanel.position.set(-0.7, 1.9, 0.68); g.add(cpanel);
             const cscreen = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.24, 0.03), glassM);
             cscreen.position.set(-0.7, 1.9, 0.73); g.add(cscreen);
+        } else if (d.style === 'ishida') {
+            // ISHIDA — мультиголовочный весовой дозатор: основание, конус,
+            // два яруса дозаторов по кругу, центральная колонна
+            const whiteM = new THREE.MeshStandardMaterial({ color: 0xeceff1, roughness: 0.6 });
+            const base = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.5, 2.6), steel);
+            base.position.y = 0.85; g.add(base);
+            const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.75, 0.18, 2.75), dark);
+            plinth.position.y = 0.12; g.add(plinth);
+            const badge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.34, 0.04), whiteM);
+            badge.position.set(0, 0.95, 1.32); g.add(badge);
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (p) {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.75, 8), dark);
+                leg.position.set(p[0], 1.95, p[1]); g.add(leg);
+            });
+            const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 0.5, 1.15, 22), steel);
+            cone.position.y = 2.75; g.add(cone);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.06, 8, 24), dark);
+            rim.position.y = 3.32; rim.rotation.x = Math.PI / 2; g.add(rim);
+            const column = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.6, 12), dark);
+            column.position.y = 4.0; g.add(column);
+            for (let tier = 0; tier < 2; tier++) {
+                const count = 12, rad = 1.75 - tier * 0.12, yy = 3.75 + tier * 0.62;
+                for (let i = 0; i < count; i++) {
+                    const a = (i / count) * Math.PI * 2 + tier * 0.26;
+                    const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.5, 0.34), tier ? steel : dark);
+                    head.position.set(Math.cos(a) * rad, yy, Math.sin(a) * rad);
+                    head.lookAt(0, yy, 0);
+                    g.add(head);
+                    const flap = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.1, 0.3), dark);
+                    flap.position.set(Math.cos(a) * (rad + 0.24), yy - 0.28, Math.sin(a) * (rad + 0.24));
+                    flap.rotation.x = 0.5;
+                    g.add(flap);
+                }
+            }
+            const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.22, 14), dark);
+            topCap.position.y = 4.9; g.add(topCap);
+        } else if (d.style === 'conveyor') {
+            // Транспортёр (transportband): лента с направляющими на ножках
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(5.7, 0.16, 1.25), steel);
+            frame.position.y = 0.92; g.add(frame);
+            const belt = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.12, 1.1), dark);
+            belt.position.y = 1.05; g.add(belt);
+            [-0.58, 0.58].forEach(function (zz) {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.22, 0.06), steel);
+                rail.position.set(0, 1.22, zz); g.add(rail);
+            });
+            for (let i = -2; i <= 2; i++) {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 0.12), dark);
+                leg.position.set(i * 1.35, 0.5, -0.5); g.add(leg);
+                const leg2 = leg.clone(); leg2.position.z = 0.5; g.add(leg2);
+            }
+            const roller1 = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.16, 12), steel);
+            roller1.rotation.x = Math.PI / 2;
+            roller1.position.set(-2.82, 1.05, 0); g.add(roller1);
+            const roller2 = roller1.clone(); roller2.position.x = 2.82; g.add(roller2);
         } else {
             const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 1.8), steel);
             body.position.y = 1.45; g.add(body);
