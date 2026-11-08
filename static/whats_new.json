@@ -1,4 +1,22 @@
 {
+  "2.19.0": {
+    "ru": [
+      "Баллоны: честный учёт — приход по дате доставки, расход без двойного счёта",
+      "Баллоны: пустые автоматически возвращаются поставщику при поставке новых (обмен)",
+      "Склад: устранён крах главной страницы склада",
+      "3D: станки можно перетаскивать в любом режиме, поворот на 90° (↻ в списке и клавиша R)",
+      "3D: список станков по цехам над картой с подсветкой, чекбоксы видимости",
+      "3D: общая карта без инженерии + копия карты в раздел «Водоснабжение»"
+    ],
+    "nl": [
+      "Ballonnen: eerlijke registratie — inkomst op leverdatum, verbruik zonder dubbele telling",
+      "Ballonnen: lege cilinders gaan automatisch retour bij levering van nieuwe (ruil)",
+      "Magazijn: crash van de magazijnpagina verholpen",
+      "3D: machines slepen in elke modus, draaien 90° (↻ in lijst en toets R)",
+      "3D: machinelijst per afdeling boven de kaart met markering, zichtbaarheidsvinkjes",
+      "3D: algemene kaart zonder techniek + kopie naar «Watervoorziening»"
+    ]
+  },
   "2.18.1": {
     "ru": [
       "Уведомления на телефоны: надёжная доставка push, кнопка «Включить уведомления» теперь не пропадает",

@@ -4,7 +4,7 @@
 
 #define MyAppName "CRM Мастерская"
 #define MyAppNameEn "CRM Masterworkshop"
-#define MyAppVersion "2.18.1"
+#define MyAppVersion "2.19.0"
 #define MyAppPublisher "A.B.A.S.O.F.F."
 #define MyAppExeName "CRM_Masterworkshop.exe"
 #define BuildDir "dist\CRM_Masterworkshop"
