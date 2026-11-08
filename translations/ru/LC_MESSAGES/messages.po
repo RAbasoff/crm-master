@@ -7337,3 +7337,7 @@ msgstr "Виден на этой карте"
 #: templates/air/map_3d.html:0
 msgid "Disabled"
 msgstr "Отключён"
+
+#: templates/air/map_3d.html:0
+msgid "Rotate 90°"
+msgstr "Повернуть на 90°"

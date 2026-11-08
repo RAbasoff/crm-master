@@ -997,11 +997,13 @@
             groups[sec].sort(function (a, b) { return a.name.localeCompare(b.name); });
             groups[sec].forEach(function (it) {
                 const hidden = it.off || it.hid;
-                const item = document.createElement('label');
-                item.style.cssText = 'display:inline-flex;align-items:center;gap:5px;font-size:11px;' +
-                    'padding:2px 9px 2px 5px;border-radius:11px;cursor:pointer;' +
+                const item = document.createElement('div');
+                item.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:11px;' +
+                    'padding:2px 6px 2px 5px;border-radius:11px;' +
                     'background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.22);' +
                     'color:' + (hidden ? '#7d8896' : '#e8eef5');
+                const lbl = document.createElement('label');
+                lbl.style.cssText = 'display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0';
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.checked = !hidden;
@@ -1012,8 +1014,25 @@
                 const nm = document.createElement('span');
                 nm.textContent = it.name;
                 if (hidden) nm.style.textDecoration = 'line-through';
-                item.appendChild(cb);
-                item.appendChild(nm);
+                lbl.appendChild(cb);
+                lbl.appendChild(nm);
+                item.appendChild(lbl);
+                // поворот станка на 90° прямо из списка
+                const rot = document.createElement('span');
+                rot.textContent = '↻';
+                rot.title = '{{ _("Rotate 90°") }}';
+                rot.style.cssText = 'cursor:pointer;font-size:13px;line-height:1;opacity:.85;padding:0 2px';
+                rot.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const m = design.machines[it.i];
+                    if (!m) return;
+                    saveHist();
+                    m.rot = ((m.rot || 0) + Math.PI / 2) % (Math.PI * 2);
+                    rebuildDesign();
+                });
+                rot.addEventListener('mouseenter', function () { rot.style.opacity = '1'; rot.style.color = '#ff8c42'; });
+                rot.addEventListener('mouseleave', function () { rot.style.opacity = '.85'; rot.style.color = ''; });
+                item.appendChild(rot);
                 if (!hidden) {
                     item.addEventListener('mouseenter', function () {
                         item.style.background = 'rgba(255,140,66,0.30)';
@@ -1282,6 +1301,16 @@
         rebuildDesign();
         syncPanel();
     };
+
+    // R — повернуть выбранный объект (станок) на 90°
+    document.addEventListener('keydown', function (e) {
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            window.rotSelected();
+        }
+    });
 
     renderer.domElement.addEventListener('pointerdown', function (ev) {
         if (ev.button === 0) downXY = { x: ev.clientX, y: ev.clientY };

@@ -7160,3 +7160,7 @@ msgstr "Zichtbaar op deze kaart"
 #: templates/air/map_3d.html:0
 msgid "Disabled"
 msgstr "Uitgeschakeld"
+
+#: templates/air/map_3d.html:0
+msgid "Rotate 90°"
+msgstr "Draai 90°"
