@@ -7329,3 +7329,11 @@ msgstr "Скрыт на этой карте — нажмите, чтобы по�
 #: templates/air/map_3d.html:0
 msgid "Show machine list"
 msgstr "Показывать список станков"
+
+#: templates/air/map_3d.html:0
+msgid "Visible on this map"
+msgstr "Виден на этой карте"
+
+#: templates/air/map_3d.html:0
+msgid "Disabled"
+msgstr "Отключён"

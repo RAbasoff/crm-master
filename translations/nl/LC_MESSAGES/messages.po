@@ -7152,3 +7152,11 @@ msgstr "Verborgen op deze kaart — klik om te tonen"
 #: templates/air/map_3d.html:0
 msgid "Show machine list"
 msgstr "Machinellijst tonen"
+
+#: templates/air/map_3d.html:0
+msgid "Visible on this map"
+msgstr "Zichtbaar op deze kaart"
+
+#: templates/air/map_3d.html:0
+msgid "Disabled"
+msgstr "Uitgeschakeld"

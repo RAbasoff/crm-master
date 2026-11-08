@@ -5,6 +5,9 @@
     <h1>🧊 3D — {{ module_title or _('Compressed Air') }} / {{ _('Factory Map') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a href="{{ back_url or '/air/map' }}" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="/air/3d" class="btn btn-sm" style="background:{% if (map_mode or 'air') == 'air' %}#2c3e50;color:#fff{% else %}#eee{% endif %}">🌀 {{ _('Compressed Air') }}</a>
+        <a href="/water/3d" class="btn btn-sm" style="background:{% if map_mode == 'water' %}#2c3e50;color:#fff{% else %}#eee{% endif %}">💧 {{ _('Water Supply') }}</a>
+        <a href="/machines/3d" class="btn btn-sm" style="background:{% if map_mode == 'common' %}#2c3e50;color:#fff{% else %}#eee{% endif %}">⚙ {{ _('General map') }}</a>
         <button class="btn btn-sm" style="background:#2c3e50;color:#fff" onclick="resetCam()">🎥 {{ _('Reset view') }}</button>
         <button class="btn btn-sm" id="btnWalls" style="background:#9fb3c8;color:#222" onclick="toggleWalls()">🧱 {{ _('Walls') }}</button>
         <button class="btn btn-sm" id="btnMach" style="background:#27ae60;color:#fff" onclick="toggleMachines()">⚙ {{ _('Machines') }}</button>
@@ -990,30 +993,36 @@
             groups[sec].sort(function (a, b) { return a.name.localeCompare(b.name); });
             groups[sec].forEach(function (it) {
                 const hidden = it.off || it.hid;
-                const chip = document.createElement('span');
-                chip.textContent = it.name;
-                chip.style.cssText = 'font-size:11px;padding:3px 9px;border-radius:11px;cursor:pointer;' +
-                    'background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.22);color:' +
-                    (hidden ? '#7d8896' : '#e8eef5') + (hidden ? ';text-decoration:line-through' : '');
-                if (it.hid) {
-                    // скрыт на ЭТОЙ карте — клик возвращает обратно
-                    chip.title = '{{ _("Hidden on this map — click to show") }}';
-                    chip.addEventListener('click', function () {
-                        toggleMachineHidden(it.id);
-                    });
-                } else if (!it.off) {
-                    chip.addEventListener('mouseenter', function () {
-                        chip.style.background = 'rgba(255,140,66,0.30)';
-                        chip.style.borderColor = '#ff8c42';
+                const item = document.createElement('label');
+                item.style.cssText = 'display:inline-flex;align-items:center;gap:5px;font-size:11px;' +
+                    'padding:2px 9px 2px 5px;border-radius:11px;cursor:pointer;' +
+                    'background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.22);' +
+                    'color:' + (hidden ? '#7d8896' : '#e8eef5');
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = !hidden;
+                cb.disabled = !!it.off;
+                cb.style.cssText = 'margin:0;cursor:' + (it.off ? 'not-allowed' : 'pointer');
+                cb.title = it.off ? '{{ _("Disabled") }}' : '{{ _("Visible on this map") }}';
+                cb.addEventListener('change', function () { toggleMachineHidden(it.id); });
+                const nm = document.createElement('span');
+                nm.textContent = it.name;
+                if (hidden) nm.style.textDecoration = 'line-through';
+                item.appendChild(cb);
+                item.appendChild(nm);
+                if (!hidden) {
+                    item.addEventListener('mouseenter', function () {
+                        item.style.background = 'rgba(255,140,66,0.30)';
+                        item.style.borderColor = '#ff8c42';
                         setMachineGlow(it.i, true);
                     });
-                    chip.addEventListener('mouseleave', function () {
-                        chip.style.background = 'rgba(255,255,255,0.10)';
-                        chip.style.borderColor = 'rgba(255,255,255,0.22)';
+                    item.addEventListener('mouseleave', function () {
+                        item.style.background = 'rgba(255,255,255,0.10)';
+                        item.style.borderColor = 'rgba(255,255,255,0.22)';
                         setMachineGlow(it.i, false);
                     });
                 }
-                row.appendChild(chip);
+                row.appendChild(item);
             });
             host.appendChild(row);
         });
@@ -1272,7 +1281,8 @@
 
     renderer.domElement.addEventListener('pointerdown', function (ev) {
         if (ev.button === 0) downXY = { x: ev.clientX, y: ev.clientY };
-        if (curTool === 'move' && ev.button === 0) {
+        // перетаскивание доступно и в режиме «Выбор» (прямое манипулирование)
+        if ((curTool === 'move' || curTool === 'select') && ev.button === 0) {
             const r = renderer.domElement.getBoundingClientRect();
             edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
             edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
