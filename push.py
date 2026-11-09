@@ -55,17 +55,31 @@ def send_web_push(subscription_info, title, body, url=None, tag=None):
         'tag': tag or 'promaster',
     }
     try:
-        resp = webpush(
-            subscription_info=subscription_info,
-            data=json.dumps(payload, ensure_ascii=False),
-            vapid_private_key=_private_key_for_webpush(priv),
-            # Apple требует валидный контакт в sub; https-URL надёжнее mailto с .local
-            vapid_claims={'sub': 'https://rabasoff.pythonanywhere.com'},
-            ttl=60 * 60 * 6,
-            # iOS: без Urgency:high Apple ставит push в низкий приоритет —
-            # уведомление приходит с задержкой или вообще молчит (на ПК всё ок)
-            headers={'Urgency': 'high'},
-        )
+        # timeout обязателен: без него зависший HTTPS-коннект к FCM/Apple
+        # занимает поток навсегда (был 504 на весь сайт)
+        try:
+            resp = webpush(
+                subscription_info=subscription_info,
+                data=json.dumps(payload, ensure_ascii=False),
+                vapid_private_key=_private_key_for_webpush(priv),
+                # Apple требует валидный контакт в sub; https-URL надёжнее mailto с .local
+                vapid_claims={'sub': 'https://rabasoff.pythonanywhere.com'},
+                ttl=60 * 60 * 6,
+                # iOS: без Urgency:high Apple ставит push в низкий приоритет —
+                # уведомление приходит с задержкой или вообще молчит (на ПК всё ок)
+                headers={'Urgency': 'high'},
+                timeout=15,
+            )
+        except TypeError:
+            # старый pywebpush без параметра timeout
+            resp = webpush(
+                subscription_info=subscription_info,
+                data=json.dumps(payload, ensure_ascii=False),
+                vapid_private_key=_private_key_for_webpush(priv),
+                vapid_claims={'sub': 'https://rabasoff.pythonanywhere.com'},
+                ttl=60 * 60 * 6,
+                headers={'Urgency': 'high'},
+            )
         return 'ok' if (resp and resp.status_code < 300) else 'error'
     except WebPushException as e:
         # 404/410 — подписка протухла; 403 BadJwtToken — подписка создана с другим
