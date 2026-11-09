@@ -575,9 +575,10 @@
         edRay.setFromCamera(edNdc, camera);
         const hits = edRay.intersectObjects([machinesGroup, editGroup, wallsLayer, pipesLayer], true);
         // курсор-рука: над объектом можно перетаскивать (в «Выборе» — только
-        // станки; над трубой/стеной остаётся стрелка, чтобы их было видно кликнуть)
-        const grabMode = (curTool === 'select' || curTool === 'move') && hits.length > 0 &&
-                         (curTool === 'move' || (hits[0].object.userData && hits[0].object.userData.kind === 'machine'));
+        // станки; стены зафиксированы; над трубой/стеной остаётся стрелка)
+        const h0k = (hits.length && hits[0].object.userData) ? hits[0].object.userData.kind : null;
+        const grabMode = (curTool === 'select' || curTool === 'move') && h0k && h0k !== 'wall' &&
+                         (curTool === 'move' || h0k === 'machine');
         renderer.domElement.style.cursor = grabMode ? 'grab' : '';
         if (!SHOW_HOVER_LABELS) return;
         let ref = null;
@@ -1383,6 +1384,8 @@
             const hits = edRay.intersectObjects([editGroup, wallsLayer, pipesLayer, machinesGroup], true);
             if (hits.length) {
                 const u = hits[0].object.userData;
+                // стены зафиксированы: их нельзя случайно перетащить и потерять
+                if (u && u.kind === 'wall') return;
                 let grp = null;
                 [editGroup, wallsLayer, pipesLayer, machinesGroup].forEach(function (root) {
                     root.traverse(function (g) {
