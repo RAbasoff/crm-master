@@ -574,9 +574,10 @@
         edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
         edRay.setFromCamera(edNdc, camera);
         const hits = edRay.intersectObjects([machinesGroup, editGroup, wallsLayer, pipesLayer], true);
-        // курсор-рука: объект можно перетащить (в режимах «Выбор» и «Переместить»)
-        const grabMode = (curTool === 'select' || curTool === 'move') &&
-                         (curTool === 'move' || (hits.length && hits[0].object.userData && hits[0].object.userData.kind === 'machine'));
+        // курсор-рука: над объектом можно перетаскивать (в «Выборе» — только
+        // станки; над трубой/стеной остаётся стрелка, чтобы их было видно кликнуть)
+        const grabMode = (curTool === 'select' || curTool === 'move') && hits.length > 0 &&
+                         (curTool === 'move' || (hits[0].object.userData && hits[0].object.userData.kind === 'machine'));
         renderer.domElement.style.cursor = grabMode ? 'grab' : '';
         if (!SHOW_HOVER_LABELS) return;
         let ref = null;
@@ -1365,6 +1366,10 @@
             e.preventDefault();
             window.rotSelected();
         }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            window.delSelected();
+        }
     });
 
     renderer.domElement.addEventListener('pointerdown', function (ev) {
@@ -1412,7 +1417,7 @@
             const d = (drag.kind === 'opening')
                 ? ((design.walls[drag.idx] || {}).openings || [])[drag.oidx]
                 : arrOf(drag.kind)[drag.idx];
-            if (d) {
+            if (d && (dx || dz)) {
                 saveHist();
                 if (drag.kind === 'wall') {
                     d.x1 += dx; d.z1 += dz; d.x2 += dx; d.z2 += dz;
@@ -1428,12 +1433,13 @@
             renderer.domElement.style.cursor = 'grab';
             drag = null;
         }
-        if (curTool === 'move') { downXY = null; return; }
         if (ev.button !== 0 || !downXY) return;
         const moved = Math.hypot(ev.clientX - downXY.x, ev.clientY - downXY.y);
         downXY = null;
         if (moved > 6) return; // orbit drag
-        if (curTool === 'select') {
+        // Клик без движения — выделение объекта (и в «Выборе», и в «Переместить»):
+        // раньше в режиме перемещения трубу/стену нельзя было выделить для удаления
+        if (curTool === 'select' || curTool === 'move') {
             const r = renderer.domElement.getBoundingClientRect();
             edNdc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
             edNdc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
