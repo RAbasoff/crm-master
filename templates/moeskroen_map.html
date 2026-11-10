@@ -25,6 +25,7 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/moeskroen" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
         <a href="/moeskroen/plan" class="btn btn-sm" style="background:#2980b9;color:white">📐 {{ _('Plan') }}</a>
+        <a href="/moeskroen/map3d" class="btn btn-sm" style="background:#2c3e50;color:white">🧊 3D</a>
         <a href="/moeskroen/markers/new" class="btn btn-sm btn-primary">➕ {{ _('Add Marker') }}</a>
         <a href="/moeskroen/lines/new" class="btn btn-sm" style="background:#e67e22;color:white">➕ {{ _('Add line') }}</a>
     </div>
@@ -60,8 +61,8 @@
 
 <div id="mapWrap">
     <div id="mapGrid"></div>
-    <img id="mapBg" src="/static/uploads/{{ map_bg }}" alt=""
-         onerror="this.onerror=null;this.src='/static/floor_plan.jpeg'">
+    <img id="mapBg" src="{{ map_bg_url }}" alt=""
+         onerror="this.onerror=null;this.src='/static/moeskroen_plan_2d.jpg'">
     <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="markers"></div>
 </div>

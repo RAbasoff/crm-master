@@ -5,9 +5,11 @@
     <h1>🧊 3D — {{ module_title or _('Compressed Air') }} / {{ _('Factory Map') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a href="{{ back_url or '/air/map' }}" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        {% if (map_mode or 'air') != 'moeskroen' %}
         <a href="/air/3d" class="btn btn-sm" style="background:{% if (map_mode or 'air') == 'air' %}#2c3e50;color:#fff{% else %}#eee{% endif %}">🌀 {{ _('Compressed Air') }}</a>
         <a href="/water/3d" class="btn btn-sm" style="background:{% if map_mode == 'water' %}#2c3e50;color:#fff{% else %}#eee{% endif %}">💧 {{ _('Water Supply') }}</a>
         <a href="/machines/3d" class="btn btn-sm" style="background:{% if map_mode == 'common' %}#2c3e50;color:#fff{% else %}#eee{% endif %}">⚙ {{ _('General map') }}</a>
+        {% endif %}
         <button class="btn btn-sm" style="background:#2c3e50;color:#fff" onclick="resetCam()">🎥 {{ _('Reset view') }}</button>
         <button class="btn btn-sm" id="btnWalls" style="background:#9fb3c8;color:#222" onclick="toggleWalls()">🧱 {{ _('Walls') }}</button>
         <button class="btn btn-sm" id="btnMach" style="background:#27ae60;color:#fff" onclick="toggleMachines()">⚙ {{ _('Machines') }}</button>
@@ -40,6 +42,21 @@
         <button class="btn btn-sm" id="tool-wye" onclick="setTool('wye')" style="background:#4e342e;color:#fff">&#10010; {{ _('3-way splitter') }}</button>
         <button class="btn btn-sm" id="tool-quick" onclick="setTool('quick')" style="background:#00695c;color:#fff">&#9889; {{ _('Quick coupling') }}</button>
         <button class="btn btn-sm" id="btnFinishPipe" onclick="finishPipe()" style="background:#27ae60;color:#fff;display:none">&#9989; {{ _('Finish') }}</button>
+        <span class="tool-sep"></span>
+        <select id="pipeKindSel" class="tool-btn" style="padding:4px 6px" title="{{ _('Pipe') }}">
+            <option value="std">🔵</option>
+            <option value="air">🌀</option>
+            <option value="water">💧</option>
+        </select>
+        <select id="newMachStyle" class="tool-btn" style="padding:4px 6px" title="{{ _('Style') }}">
+            <option value="cabinet">🗄</option>
+            <option value="wrapper">📦</option>
+            <option value="filler">🫙</option>
+            <option value="compressor">💨</option>
+            <option value="ishida">⚖️</option>
+            <option value="conveyor">➡️</option>
+        </select>
+        <button class="btn btn-sm" onclick="addMachineAt()" style="background:#27ae60;color:#fff">➕ {{ _('Machine') }}</button>
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px">
@@ -83,7 +100,7 @@
         <span><span style="display:inline-block;width:12px;height:12px;background:#3498db;vertical-align:middle"></span> {{ _('Sections') }}</span>
         <span><span style="display:inline-block;width:12px;height:12px;background:#27ae60;vertical-align:middle"></span> {{ _('Machines') }}</span>
         <span><span style="display:inline-block;width:12px;height:12px;background:#e67e22;border-radius:50%;vertical-align:middle"></span> {{ _('Compressed Air') }}</span>
-        <span style="margin-left:auto;color:#999">120 × 45 × 4,5 m</span>
+        <span style="margin-left:auto;color:#999">{{ map_w or 120 }} × {{ map_d or 45 }} × {{ map_h or 4.5 }} m</span>
     </div>
 </div>
 <p style="color:#888;font-size:12px;margin-top:8px">{{ _('Drag to rotate, wheel to zoom, right-drag to pan.') }}</p>
@@ -92,15 +109,15 @@
 <script src="/static/js/OrbitControls.js"></script>
 <script>
 (function () {
-    // Фабрика: 120м (X плана) × 45м (Y плана) × 4.5м (потолок) — реальные метры
-    const W = 120, D = 45, H = 4.5;
+    // Фабрика: реальные метры (Moeskroen — из чертежа DWG)
+    const W = {{ map_w or 120 }}, D = {{ map_d or 45 }}, H = {{ map_h or 4.5 }};
     const host = document.getElementById('scene3d');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x14161c);
-    scene.fog = new THREE.Fog(0x14161c, 110, 320);
+    scene.fog = new THREE.Fog(0x14161c, {{ fog_near or 110 }}, {{ fog_far or 320 }});
 
-    const camera = new THREE.PerspectiveCamera(50, host.clientWidth / Math.max(1, host.clientHeight), 0.1, 500);
-    camera.position.set(75, 55, 85);
+    const camera = new THREE.PerspectiveCamera(50, host.clientWidth / Math.max(1, host.clientHeight), 0.1, {{ cam_far or 500 }});
+    camera.position.set({{ cam_x or 75 }}, {{ cam_y or 55 }}, {{ cam_z or 85 }});
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(host.clientWidth, Math.max(200, host.clientHeight));
@@ -130,7 +147,7 @@
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(W, D), groundMat);
     ground.rotation.x = -Math.PI / 2;
     scene.add(ground);
-    texLoader.load('/static/floor_plan.jpeg', function (tex) {
+    texLoader.load('{{ map_tex or "/static/floor_plan.jpeg" }}', function (tex) {
         groundMat.map = tex;
         groundMat.color.set(0xffffff);
         groundMat.needsUpdate = true;
@@ -141,7 +158,9 @@
     const machSectionMap = {};  // id станка → название цеха (для списка над картой)
     let machGroups = [];        // группы станков по индексу в design.machines
     // режим карты и данные чертежа — объявляются ДО первого использования
-    const MAP_MODE = '{{ map_mode or "air" }}'; // air | water | common — свой набор станков на карте
+    const MAP_MODE = '{{ map_mode or "air" }}'; // air | water | common | moeskroen
+    const DESIGN_API = '{{ design_api or "/air/api/3d-design" }}';
+    const LSK = (MAP_MODE === 'moeskroen') ? 'map3d_design_moeskroen' : 'map3d_design';
     const design = { walls: [], gates: [], pipes: [], valves: [], machines: [], hidden: {} };
     const airGroup = new THREE.Group();   // воздуховоды
     const wallsGroup = new THREE.Group(); // стены + проходы
@@ -173,7 +192,7 @@
     });
     const openings = []; // {x, z, w} — центры проёмов (ворота + входы в цеха)
     // Контуры стен из плана цеха (проценты 0..100 как у остальных объектов)
-    const PLAN_WALLS = [{"x1":71.49,"y1":0.37,"x2":71.49,"y2":41.48},{"x1":60.1,"y1":3.43,"x2":60.1,"y2":38.43},{"x1":60.0,"y1":9.49,"x2":65.86,"y2":9.49},{"x1":67.96,"y1":9.49,"x2":71.71,"y2":9.49},{"x1":65.86,"y1":10.05,"x2":67.96,"y2":10.05},{"x1":10.13,"y1":16.02,"x2":10.13,"y2":80.93},{"x1":49.8,"y1":16.02,"x2":49.8,"y2":64.17},{"x1":77.0,"y1":16.02,"x2":77.0,"y2":39.54},{"x1":95.07,"y1":16.02,"x2":95.07,"y2":39.54},{"x1":96.91,"y1":16.02,"x2":96.91,"y2":26.76},{"x1":10.13,"y1":16.12,"x2":50.0,"y2":16.12},{"x1":76.97,"y1":16.12,"x2":97.04,"y2":16.12},{"x1":15.3,"y1":16.2,"x2":15.3,"y2":31.48},{"x1":25.44,"y1":16.2,"x2":25.44,"y2":31.48},{"x1":35.53,"y1":16.2,"x2":35.53,"y2":33.15},{"x1":41.05,"y1":16.2,"x2":41.05,"y2":23.89},{"x1":77.17,"y1":16.2,"x2":77.17,"y2":39.35},{"x1":85.99,"y1":16.2,"x2":85.99,"y2":32.69},{"x1":86.12,"y1":16.2,"x2":86.12,"y2":32.69},{"x1":90.03,"y1":17.87,"x2":90.03,"y2":26.67},{"x1":86.12,"y1":17.96,"x2":90.13,"y2":17.96},{"x1":35.53,"y1":18.66,"x2":41.12,"y2":18.66},{"x1":35.53,"y1":20.97,"x2":41.12,"y2":20.97},{"x1":86.12,"y1":22.69,"x2":90.13,"y2":22.69},{"x1":35.53,"y1":23.75,"x2":41.12,"y2":23.75},{"x1":88.09,"y1":24.72,"x2":90.13,"y2":24.72},{"x1":29.61,"y1":25.65,"x2":29.61,"y2":87.59},{"x1":25.39,"y1":25.68,"x2":35.46,"y2":25.68},{"x1":84.9,"y1":26.48,"x2":84.9,"y2":39.54},{"x1":92.17,"y1":26.48,"x2":92.17,"y2":39.54},{"x1":84.87,"y1":26.53,"x2":95.07,"y2":26.53},{"x1":29.74,"y1":27.64,"x2":33.55,"y2":27.64},{"x1":80.33,"y1":28.33,"x2":90.33,"y2":28.33},{"x1":31.78,"y1":29.44,"x2":31.78,"y2":74.63},{"x1":88.55,"y1":29.44,"x2":88.55,"y2":39.54},{"x1":29.74,"y1":29.48,"x2":35.46,"y2":29.48},{"x1":86.38,"y1":29.48,"x2":90.33,"y2":29.48},{"x1":80.59,"y1":30.83,"x2":80.59,"y2":39.35},{"x1":77.17,"y1":30.88,"x2":92.3,"y2":30.88},{"x1":10.26,"y1":31.39,"x2":29.67,"y2":31.39},{"x1":60.0,"y1":32.87,"x2":71.71,"y2":32.87},{"x1":38.82,"y1":33.06,"x2":38.82,"y2":36.76},{"x1":35.39,"y1":33.08,"x2":38.88,"y2":33.08},{"x1":8.36,"y1":35.09,"x2":8.36,"y2":41.57},{"x1":31.78,"y1":36.57,"x2":49.8,"y2":36.57},{"x1":76.97,"y1":39.35,"x2":96.64,"y2":39.35},{"x1":60.0,"y1":41.3,"x2":71.71,"y2":41.3},{"x1":31.78,"y1":42.41,"x2":49.8,"y2":42.41},{"x1":46.74,"y1":42.5,"x2":46.74,"y2":48.24},{"x1":54.08,"y1":44.26,"x2":58.09,"y2":44.26},{"x1":54.08,"y1":44.26,"x2":54.08,"y2":52.69},{"x1":57.96,"y1":44.26,"x2":57.96,"y2":52.69},{"x1":31.78,"y1":48.06,"x2":49.8,"y2":48.06},{"x1":77.11,"y1":49.17,"x2":85.79,"y2":49.17},{"x1":77.17,"y1":49.17,"x2":77.17,"y2":76.85},{"x1":85.66,"y1":49.17,"x2":85.66,"y2":53.8},{"x1":54.08,"y1":52.59,"x2":58.09,"y2":52.59},{"x1":49.74,"y1":53.15,"x2":97.04,"y2":53.15},{"x1":57.17,"y1":53.24,"x2":57.17,"y2":64.17},{"x1":62.47,"y1":53.24,"x2":62.47,"y2":64.17},{"x1":66.18,"y1":53.24,"x2":66.18,"y2":91.3},{"x1":71.49,"y1":53.24,"x2":71.49,"y2":64.17},{"x1":77.0,"y1":53.24,"x2":77.0,"y2":76.85},{"x1":96.91,"y1":53.52,"x2":96.91,"y2":64.26},{"x1":10.26,"y1":53.57,"x2":29.67,"y2":53.57},{"x1":16.71,"y1":53.61,"x2":16.71,"y2":73.15},{"x1":23.36,"y1":53.61,"x2":23.36,"y2":73.15},{"x1":10.26,"y1":53.7,"x2":29.67,"y2":53.7},{"x1":78.09,"y1":53.7,"x2":96.91,"y2":53.7},{"x1":81.71,"y1":53.7,"x2":81.71,"y2":64.17},{"x1":86.45,"y1":53.7,"x2":86.45,"y2":64.17},{"x1":93.03,"y1":53.7,"x2":93.03,"y2":64.17},{"x1":49.87,"y1":58.06,"x2":57.17,"y2":58.06},{"x1":62.43,"y1":58.06,"x2":66.18,"y2":58.06},{"x1":78.55,"y1":60.0,"x2":78.55,"y2":64.17},{"x1":77.17,"y1":60.05,"x2":79.8,"y2":60.05},{"x1":81.84,"y1":60.05,"x2":84.54,"y2":60.05},{"x1":90.33,"y1":63.98,"x2":90.33,"y2":68.52},{"x1":95.07,"y1":63.98,"x2":95.07,"y2":77.04},{"x1":31.78,"y1":64.07,"x2":96.91,"y2":64.07},{"x1":83.06,"y1":66.85,"x2":83.06,"y2":76.85},{"x1":31.78,"y1":66.9,"x2":90.33,"y2":66.9},{"x1":35.35,"y1":67.04,"x2":35.35,"y2":74.63},{"x1":43.45,"y1":67.04,"x2":43.45,"y2":87.41},{"x1":70.66,"y1":67.04,"x2":70.66,"y2":76.57},{"x1":29.74,"y1":67.45,"x2":31.91,"y2":67.45},{"x1":84.61,"y1":68.33,"x2":84.61,"y2":76.85},{"x1":92.17,"y1":68.33,"x2":92.17,"y2":76.85},{"x1":83.03,"y1":68.38,"x2":92.3,"y2":68.38},{"x1":89.84,"y1":72.59,"x2":89.84,"y2":76.85},{"x1":89.8,"y1":72.64,"x2":92.17,"y2":72.64},{"x1":14.64,"y1":72.96,"x2":14.64,"y2":80.74},{"x1":10.26,"y1":72.98,"x2":29.8,"y2":72.98},{"x1":77.17,"y1":73.75,"x2":83.16,"y2":73.75},{"x1":34.08,"y1":74.44,"x2":34.08,"y2":78.8},{"x1":31.78,"y1":74.49,"x2":43.55,"y2":74.49},{"x1":22.11,"y1":75.74,"x2":22.11,"y2":80.93},{"x1":24.67,"y1":75.74,"x2":24.67,"y2":80.93},{"x1":26.05,"y1":75.74,"x2":26.05,"y2":80.93},{"x1":28.62,"y1":75.74,"x2":28.62,"y2":80.93},{"x1":22.11,"y1":75.77,"x2":24.74,"y2":75.77},{"x1":26.05,"y1":75.77,"x2":28.68,"y2":75.77},{"x1":34.14,"y1":75.77,"x2":37.3,"y2":75.77},{"x1":66.05,"y1":76.48,"x2":96.51,"y2":76.48},{"x1":96.58,"y1":76.76,"x2":96.58,"y2":91.02},{"x1":92.57,"y1":76.94,"x2":92.57,"y2":90.83},{"x1":29.61,"y1":78.7,"x2":43.55,"y2":78.7},{"x1":10.13,"y1":80.83,"x2":29.67,"y2":80.83},{"x1":20.46,"y1":80.83,"x2":20.46,"y2":95.74},{"x1":78.55,"y1":85.65,"x2":78.55,"y2":91.76},{"x1":29.61,"y1":87.5,"x2":66.32,"y2":87.5},{"x1":89.01,"y1":90.83,"x2":96.64,"y2":90.83},{"x1":56.58,"y1":91.2,"x2":68.88,"y2":91.2},{"x1":56.58,"y1":91.57,"x2":68.62,"y2":91.57},{"x1":78.49,"y1":91.57,"x2":89.28,"y2":91.57}];
+    const PLAN_WALLS = {{ plan_walls_json|safe if plan_walls_json else 'null' }} || [{"x1":71.49,"y1":0.37,"x2":71.49,"y2":41.48},{"x1":60.1,"y1":3.43,"x2":60.1,"y2":38.43},{"x1":60.0,"y1":9.49,"x2":65.86,"y2":9.49},{"x1":67.96,"y1":9.49,"x2":71.71,"y2":9.49},{"x1":65.86,"y1":10.05,"x2":67.96,"y2":10.05},{"x1":10.13,"y1":16.02,"x2":10.13,"y2":80.93},{"x1":49.8,"y1":16.02,"x2":49.8,"y2":64.17},{"x1":77.0,"y1":16.02,"x2":77.0,"y2":39.54},{"x1":95.07,"y1":16.02,"x2":95.07,"y2":39.54},{"x1":96.91,"y1":16.02,"x2":96.91,"y2":26.76},{"x1":10.13,"y1":16.12,"x2":50.0,"y2":16.12},{"x1":76.97,"y1":16.12,"x2":97.04,"y2":16.12},{"x1":15.3,"y1":16.2,"x2":15.3,"y2":31.48},{"x1":25.44,"y1":16.2,"x2":25.44,"y2":31.48},{"x1":35.53,"y1":16.2,"x2":35.53,"y2":33.15},{"x1":41.05,"y1":16.2,"x2":41.05,"y2":23.89},{"x1":77.17,"y1":16.2,"x2":77.17,"y2":39.35},{"x1":85.99,"y1":16.2,"x2":85.99,"y2":32.69},{"x1":86.12,"y1":16.2,"x2":86.12,"y2":32.69},{"x1":90.03,"y1":17.87,"x2":90.03,"y2":26.67},{"x1":86.12,"y1":17.96,"x2":90.13,"y2":17.96},{"x1":35.53,"y1":18.66,"x2":41.12,"y2":18.66},{"x1":35.53,"y1":20.97,"x2":41.12,"y2":20.97},{"x1":86.12,"y1":22.69,"x2":90.13,"y2":22.69},{"x1":35.53,"y1":23.75,"x2":41.12,"y2":23.75},{"x1":88.09,"y1":24.72,"x2":90.13,"y2":24.72},{"x1":29.61,"y1":25.65,"x2":29.61,"y2":87.59},{"x1":25.39,"y1":25.68,"x2":35.46,"y2":25.68},{"x1":84.9,"y1":26.48,"x2":84.9,"y2":39.54},{"x1":92.17,"y1":26.48,"x2":92.17,"y2":39.54},{"x1":84.87,"y1":26.53,"x2":95.07,"y2":26.53},{"x1":29.74,"y1":27.64,"x2":33.55,"y2":27.64},{"x1":80.33,"y1":28.33,"x2":90.33,"y2":28.33},{"x1":31.78,"y1":29.44,"x2":31.78,"y2":74.63},{"x1":88.55,"y1":29.44,"x2":88.55,"y2":39.54},{"x1":29.74,"y1":29.48,"x2":35.46,"y2":29.48},{"x1":86.38,"y1":29.48,"x2":90.33,"y2":29.48},{"x1":80.59,"y1":30.83,"x2":80.59,"y2":39.35},{"x1":77.17,"y1":30.88,"x2":92.3,"y2":30.88},{"x1":10.26,"y1":31.39,"x2":29.67,"y2":31.39},{"x1":60.0,"y1":32.87,"x2":71.71,"y2":32.87},{"x1":38.82,"y1":33.06,"x2":38.82,"y2":36.76},{"x1":35.39,"y1":33.08,"x2":38.88,"y2":33.08},{"x1":8.36,"y1":35.09,"x2":8.36,"y2":41.57},{"x1":31.78,"y1":36.57,"x2":49.8,"y2":36.57},{"x1":76.97,"y1":39.35,"x2":96.64,"y2":39.35},{"x1":60.0,"y1":41.3,"x2":71.71,"y2":41.3},{"x1":31.78,"y1":42.41,"x2":49.8,"y2":42.41},{"x1":46.74,"y1":42.5,"x2":46.74,"y2":48.24},{"x1":54.08,"y1":44.26,"x2":58.09,"y2":44.26},{"x1":54.08,"y1":44.26,"x2":54.08,"y2":52.69},{"x1":57.96,"y1":44.26,"x2":57.96,"y2":52.69},{"x1":31.78,"y1":48.06,"x2":49.8,"y2":48.06},{"x1":77.11,"y1":49.17,"x2":85.79,"y2":49.17},{"x1":77.17,"y1":49.17,"x2":77.17,"y2":76.85},{"x1":85.66,"y1":49.17,"x2":85.66,"y2":53.8},{"x1":54.08,"y1":52.59,"x2":58.09,"y2":52.59},{"x1":49.74,"y1":53.15,"x2":97.04,"y2":53.15},{"x1":57.17,"y1":53.24,"x2":57.17,"y2":64.17},{"x1":62.47,"y1":53.24,"x2":62.47,"y2":64.17},{"x1":66.18,"y1":53.24,"x2":66.18,"y2":91.3},{"x1":71.49,"y1":53.24,"x2":71.49,"y2":64.17},{"x1":77.0,"y1":53.24,"x2":77.0,"y2":76.85},{"x1":96.91,"y1":53.52,"x2":96.91,"y2":64.26},{"x1":10.26,"y1":53.57,"x2":29.67,"y2":53.57},{"x1":16.71,"y1":53.61,"x2":16.71,"y2":73.15},{"x1":23.36,"y1":53.61,"x2":23.36,"y2":73.15},{"x1":10.26,"y1":53.7,"x2":29.67,"y2":53.7},{"x1":78.09,"y1":53.7,"x2":96.91,"y2":53.7},{"x1":81.71,"y1":53.7,"x2":81.71,"y2":64.17},{"x1":86.45,"y1":53.7,"x2":86.45,"y2":64.17},{"x1":93.03,"y1":53.7,"x2":93.03,"y2":64.17},{"x1":49.87,"y1":58.06,"x2":57.17,"y2":58.06},{"x1":62.43,"y1":58.06,"x2":66.18,"y2":58.06},{"x1":78.55,"y1":60.0,"x2":78.55,"y2":64.17},{"x1":77.17,"y1":60.05,"x2":79.8,"y2":60.05},{"x1":81.84,"y1":60.05,"x2":84.54,"y2":60.05},{"x1":90.33,"y1":63.98,"x2":90.33,"y2":68.52},{"x1":95.07,"y1":63.98,"x2":95.07,"y2":77.04},{"x1":31.78,"y1":64.07,"x2":96.91,"y2":64.07},{"x1":83.06,"y1":66.85,"x2":83.06,"y2":76.85},{"x1":31.78,"y1":66.9,"x2":90.33,"y2":66.9},{"x1":35.35,"y1":67.04,"x2":35.35,"y2":74.63},{"x1":43.45,"y1":67.04,"x2":43.45,"y2":87.41},{"x1":70.66,"y1":67.04,"x2":70.66,"y2":76.57},{"x1":29.74,"y1":67.45,"x2":31.91,"y2":67.45},{"x1":84.61,"y1":68.33,"x2":84.61,"y2":76.85},{"x1":92.17,"y1":68.33,"x2":92.17,"y2":76.85},{"x1":83.03,"y1":68.38,"x2":92.3,"y2":68.38},{"x1":89.84,"y1":72.59,"x2":89.84,"y2":76.85},{"x1":89.8,"y1":72.64,"x2":92.17,"y2":72.64},{"x1":14.64,"y1":72.96,"x2":14.64,"y2":80.74},{"x1":10.26,"y1":72.98,"x2":29.8,"y2":72.98},{"x1":77.17,"y1":73.75,"x2":83.16,"y2":73.75},{"x1":34.08,"y1":74.44,"x2":34.08,"y2":78.8},{"x1":31.78,"y1":74.49,"x2":43.55,"y2":74.49},{"x1":22.11,"y1":75.74,"x2":22.11,"y2":80.93},{"x1":24.67,"y1":75.74,"x2":24.67,"y2":80.93},{"x1":26.05,"y1":75.74,"x2":26.05,"y2":80.93},{"x1":28.62,"y1":75.74,"x2":28.62,"y2":80.93},{"x1":22.11,"y1":75.77,"x2":24.74,"y2":75.77},{"x1":26.05,"y1":75.77,"x2":28.68,"y2":75.77},{"x1":34.14,"y1":75.77,"x2":37.3,"y2":75.77},{"x1":66.05,"y1":76.48,"x2":96.51,"y2":76.48},{"x1":96.58,"y1":76.76,"x2":96.58,"y2":91.02},{"x1":92.57,"y1":76.94,"x2":92.57,"y2":90.83},{"x1":29.61,"y1":78.7,"x2":43.55,"y2":78.7},{"x1":10.13,"y1":80.83,"x2":29.67,"y2":80.83},{"x1":20.46,"y1":80.83,"x2":20.46,"y2":95.74},{"x1":78.55,"y1":85.65,"x2":78.55,"y2":91.76},{"x1":29.61,"y1":87.5,"x2":66.32,"y2":87.5},{"x1":89.01,"y1":90.83,"x2":96.64,"y2":90.83},{"x1":56.58,"y1":91.2,"x2":68.88,"y2":91.2},{"x1":56.58,"y1":91.57,"x2":68.62,"y2":91.57},{"x1":78.49,"y1":91.57,"x2":89.28,"y2":91.57}];
 
 
     function addWall(ax, az, bx, bz) {
@@ -437,7 +456,7 @@
         return g;
     }
 
-    fetch('/api/map/all').then(r => r.json()).then(function (d) {
+    fetch('{{ map_all_api or "/api/map/all" }}').then(r => r.json()).then(function (d) {
         // станок → цех: список над картой, сгруппированный по цехам
         (d.sections || []).forEach(function (s) {
             (s.machines || []).forEach(function (m) { machSectionMap[m.id] = s.name; });
@@ -675,6 +694,20 @@
             });
         }
     }
+    window.addMachineAt = function () {
+        const name = (prompt('{{ _("Machine name") }}', '{{ _("Machine") }}') || '').trim();
+        if (!name) return;
+        const styleEl = document.getElementById('newMachStyle');
+        let minId = -1;
+        design.machines.forEach(function (m) { if (m.id < minId) minId = m.id; });
+        design.machines.push({
+            id: minId - 1, name: name,
+            x: controls.target.x, z: controls.target.z,
+            rot: 0, s: 1, off: false,
+            style: (styleEl && styleEl.value) || 'cabinet'
+        });
+        rebuildDesign();
+    };
     const canEdit3d = {{ 'true' if current_user.has_role('admin', 'director', 'technician') else 'false' }};
     let serverLoaded = false, saveTimer = null;
     function api3dFetch(url, opts) {
@@ -710,7 +743,7 @@
         if (!canEdit3d || !serverLoaded) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(function () {
-            api3dFetch('/air/api/3d-design', {
+            api3dFetch(DESIGN_API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ walls: design.walls, gates: design.gates, pipes: design.pipes, valves: design.valves, machines: design.machines, hidden: design.hidden || {} })
@@ -1159,12 +1192,12 @@
             });
         });
         rebuildMachineList();
-        try { localStorage.setItem('map3d_design', JSON.stringify(design)); } catch (e) {}
+        try { localStorage.setItem(LSK, JSON.stringify(design)); } catch (e) {}
         saveDesignToServer();
     }
 
     try {
-        const saved = JSON.parse(localStorage.getItem('map3d_design') || 'null');
+        const saved = JSON.parse(localStorage.getItem(LSK) || 'null');
         if (saved) {
             design.walls = saved.walls || [];
             design.gates = saved.gates || [];
@@ -1176,14 +1209,14 @@
     if (!design.hasPlan) {
         PLAN_WALLS.forEach(function (w) {
             design.walls.push({ x1: px(w.x1), z1: pz(w.y1), x2: px(w.x2), z2: pz(w.y2),
-                                h: 4.5, t: 0.28, openings: [], plan: true });
+                                h: H, t: 0.28, openings: [], plan: true });
         });
         design.hasPlan = true;
     }
     rebuildDesign();
 
     // ── Серверное сохранение: сервер главнее локального кэша ──
-    api3dFetch('/air/api/3d-design').then(function (r) { return r.json(); }).then(function (srv) {
+    api3dFetch(DESIGN_API).then(function (r) { return r.json(); }).then(function (srv) {
         serverLoaded = true;
         const hasSrv = srv && ((srv.walls && srv.walls.length) || (srv.gates && srv.gates.length) ||
                                (srv.pipes && srv.pipes.length) || (srv.valves && srv.valves.length) ||
@@ -1654,13 +1687,19 @@
             const tool = curTool;
             const isHose = tool === 'hose';
             const dMM = isHose ? params.hoseD : params.pipeD;
+            const kindEl = document.getElementById('pipeKindSel');
+            const pcolor = (kindEl && kindEl.value === 'water') ? '#2980b9'
+                         : (kindEl && kindEl.value === 'air') ? '#e67e22' : null;
             const addLocal = function (dbId) {
                 saveHist();
-                design.pipes.push({ pts: pts, d: dMM, h: params.pipeH, type: tool, db_id: dbId || null });
+                const rec = { pts: pts, d: dMM, h: params.pipeH, type: tool, db_id: dbId || null };
+                if (pcolor) rec.color = pcolor;
+                design.pipes.push(rec);
                 rebuildDesign();
             };
             pipeBuf = [];
             updatePipePreview();
+            if (MAP_MODE === 'moeskroen') { addLocal(null); return; }
             api3dFetch('/air/api/lines', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

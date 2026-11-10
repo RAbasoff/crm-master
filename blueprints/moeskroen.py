@@ -18,6 +18,14 @@ from security import director_only
 bp = Blueprint('moeskroen', __name__, url_prefix='/moeskroen')
 
 MAP_BG = 'moeskroen_map_bg.jpeg'
+PLAN_2D = '/static/moeskroen_plan_2d.jpg'
+
+
+def _plan_bg_url():
+    p = os.path.join(current_app.root_path, 'static', 'uploads', MAP_BG)
+    if os.path.exists(p):
+        return '/static/uploads/' + MAP_BG
+    return PLAN_2D
 
 
 def _opt_float(value):
@@ -76,7 +84,7 @@ def dashboard():
 @role_required('admin', 'director')
 def plan():
     zones = MoeskroenZone.query.order_by(MoeskroenZone.name).all()
-    return render_template('moeskroen_plan.html', zones=zones, map_bg=MAP_BG)
+    return render_template('moeskroen_plan.html', zones=zones, map_bg_url=_plan_bg_url())
 
 
 @bp.route('/zones/new', methods=['GET', 'POST'])
@@ -199,10 +207,31 @@ def plan_bg_upload():
 @login_required
 @role_required('admin', 'director')
 def factory_map():
+    """Fabriekskaart — 3D-карта (станки, воздух, вода)."""
+    return render_template(
+        'air/map_3d.html',
+        map_mode='moeskroen',
+        module_title='Moeskroen',
+        back_url='/moeskroen',
+        map_w=246.9, map_d=46.8, map_h=6,
+        cam_x=150, cam_y=110, cam_z=170,
+        fog_near=240, fog_far=720,
+        cam_far=1200,
+        map_tex='/static/moeskroen_floor_plan.png',
+        plan_walls_json=json.dumps(_load_plan_walls()),
+        design_api='/moeskroen/api/3d-design',
+        map_all_api='/moeskroen/api/map/all',
+    )
+
+
+@bp.route('/map2d')
+@login_required
+@role_required('admin', 'director')
+def factory_map_2d():
     markers = MoeskroenMarker.query.order_by(MoeskroenMarker.number).all()
     lines = MoeskroenLine.query.order_by(MoeskroenLine.name).all()
     return render_template('moeskroen_map.html', markers=markers, lines=lines,
-                           map_bg=MAP_BG)
+                           map_bg_url=_plan_bg_url())
 
 
 def _next_marker_number():
@@ -247,7 +276,7 @@ def marker_new():
             return redirect(url_for('moeskroen.marker_new'))
         log_audit('create', 'moeskroen_marker', m.id, f'#{m.number} {m.name}')
         flash(_('Saved'), 'success')
-        return redirect(url_for('moeskroen.factory_map'))
+        return redirect(url_for('moeskroen.factory_map_2d'))
     return render_template('moeskroen_marker_form.html', marker=None,
                            next_number=_next_marker_number())
 
@@ -281,7 +310,7 @@ def marker_edit(marker_id):
             return redirect(url_for('moeskroen.marker_edit', marker_id=marker_id))
         log_audit('update', 'moeskroen_marker', m.id, m.name)
         flash(_('Saved'), 'success')
-        return redirect(url_for('moeskroen.factory_map'))
+        return redirect(url_for('moeskroen.factory_map_2d'))
     return render_template('moeskroen_marker_form.html', marker=m,
                            next_number=m.number)
 
@@ -296,10 +325,10 @@ def marker_delete(marker_id):
     db.session.delete(m)
     if not safe_commit():
         flash(_('Delete failed'), 'error')
-        return redirect(url_for('moeskroen.factory_map'))
+        return redirect(url_for('moeskroen.factory_map_2d'))
     log_audit('delete', 'moeskroen_marker', marker_id, name)
     flash(_('Deleted'), 'success')
-    return redirect(url_for('moeskroen.factory_map'))
+    return redirect(url_for('moeskroen.factory_map_2d'))
 
 
 @bp.route('/lines/new', methods=['GET', 'POST'])
@@ -327,7 +356,7 @@ def line_new():
             return redirect(url_for('moeskroen.line_new'))
         log_audit('create', 'moeskroen_line', ln.id, ln.name)
         flash(_('Saved'), 'success')
-        return redirect(url_for('moeskroen.factory_map'))
+        return redirect(url_for('moeskroen.factory_map_2d'))
     return render_template('moeskroen_line_form.html', line=None)
 
 
@@ -349,7 +378,7 @@ def line_edit(line_id):
             return redirect(url_for('moeskroen.line_edit', line_id=line_id))
         log_audit('update', 'moeskroen_line', ln.id, ln.name)
         flash(_('Saved'), 'success')
-        return redirect(url_for('moeskroen.factory_map'))
+        return redirect(url_for('moeskroen.factory_map_2d'))
     return render_template('moeskroen_line_form.html', line=ln)
 
 
@@ -363,10 +392,10 @@ def line_delete(line_id):
     db.session.delete(ln)
     if not safe_commit():
         flash(_('Delete failed'), 'error')
-        return redirect(url_for('moeskroen.factory_map'))
+        return redirect(url_for('moeskroen.factory_map_2d'))
     log_audit('delete', 'moeskroen_line', line_id, name)
     flash(_('Deleted'), 'success')
-    return redirect(url_for('moeskroen.factory_map'))
+    return redirect(url_for('moeskroen.factory_map_2d'))
 
 
 def _save_vertices(ln, verts, replace=False):
@@ -379,6 +408,69 @@ def _save_vertices(ln, verts, replace=False):
         if x is None or y is None:
             continue
         db.session.add(MoeskroenLineVertex(line_id=ln.id, seq=i, map_x=x, map_y=y))
+
+
+# ───────────────────────── 3D-карта (Fabriekskaart) ─────────────────────────
+
+MAP3D_WALLS_FILE = 'moeskroen_plan_walls.json'
+
+
+def _load_plan_walls():
+    path = os.path.join(current_app.root_path, 'static', MAP3D_WALLS_FILE)
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+@bp.route('/map3d')
+@login_required
+@role_required('admin', 'director')
+def map3d():
+    return redirect(url_for('moeskroen.factory_map'))
+
+
+@bp.route('/api/map/all')
+@login_required
+@role_required('admin', 'director')
+def api_map_all():
+    """Пустая геометрия для 3D: Moeskroen строится прямо в редакторе."""
+    return jsonify(sections=[], machines=[])
+
+
+@bp.route('/api/3d-design', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director')
+def api_3d_design():
+    path = os.path.join(current_app.instance_path, 'map_3d_design_moeskroen.json')
+    if request.method == 'POST':
+        data = request.get_json(force=True, silent=True) or {}
+        clean = {
+            'walls': data.get('walls') or [],
+            'gates': data.get('gates') or [],
+            'pipes': data.get('pipes') or [],
+            'valves': data.get('valves') or [],
+            'machines': data.get('machines') or [],
+            'hidden': data.get('hidden') or {},
+        }
+        os.makedirs(current_app.instance_path, exist_ok=True)
+        if os.path.exists(path):
+            try:
+                import shutil
+                shutil.copyfile(path, path + '.bak')
+            except Exception:
+                pass
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(clean, f, ensure_ascii=False)
+        return jsonify({'ok': True})
+    if os.path.exists(path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                return jsonify(json.load(f))
+        except Exception:
+            pass
+    return jsonify({})
 
 
 @bp.route('/api/map/data')
