@@ -16,6 +16,21 @@ from utils import role_required, safe_commit, safe_float
 bp = Blueprint('damage', __name__, url_prefix='/damage')
 
 
+
+WORK_HOURS_PER_DAY = 8
+
+
+def _downtime_working_hours(start, end):
+    """Простой в РАБОЧИХ часах: сутки = 8ч, а не 24ч.
+
+    Календарное время простоя переводится в смены:
+    3 дня простоя = 24 рабочих часа (а не 72).
+    """
+    if not start or not end:
+        return 0.0
+    days = max(0.0, (end - start).total_seconds()) / 86400.0
+    return days * WORK_HOURS_PER_DAY
+
 def get_setting(key, default=''):
     s = db.session.get(AppSetting, key)
     return s.value if s and s.value not in (None, '') else default
@@ -64,7 +79,7 @@ def damage_report():
     for f in faults:
         start = f.created_at
         end = f.resolved_at or now
-        downtime_h = max(0.0, (end - start).total_seconds() / 3600) if start else 0.0
+        downtime_h = _downtime_working_hours(start, end)
         mm = mmap.get(f.machine_id)
         rate = safe_float(getattr(mm, 'loss_per_hour', None)) or 0.0
         downtime_cost = downtime_h * rate
@@ -174,7 +189,7 @@ def damage_export():
     for f in faults:
         start = f.created_at
         end = f.resolved_at or now
-        dh = max(0.0, (end - start).total_seconds() / 3600) if start else 0
+        dh = _downtime_working_hours(start, end)
         mm = mmap.get(f.machine_id)
         rate = safe_float(getattr(mm, 'loss_per_hour', None)) or 0.0
         dc = dh * rate
