@@ -529,6 +529,8 @@
                     rot: 0, s: 1, off: false,
                     style: /vulbus|vemag/i.test(m.name || '') ? 'filler'
                         : /caveco|ypsilon|magic|pack|inpak/i.test(m.name || '') ? 'wrapper'
+                        : /ishida/i.test(m.name || '') ? 'ishida'
+                        : /band|conveyor|transport/i.test(m.name || '') ? 'conveyor'
                         : 'cabinet'
                 });
             }
