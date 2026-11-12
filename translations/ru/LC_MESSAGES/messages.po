@@ -2426,7 +2426,7 @@ msgid "Fault Types & Priorities"
 msgstr "Типы неисправностей и приоритеты"
 
 msgid "Fault closed"
-msgstr "Неисправность закрыта"
+msgstr "Заявка закрыта"Неисправность закрыта"
 
 msgid "Fault created but video upload failed"
 msgstr "Заявка создана, но загрузка видео не удалась"
@@ -4990,7 +4990,7 @@ msgid "Fault Statistics"
 msgstr "Статистика неисправностей"
 
 msgid "Fault accepted"
-msgstr "Неисправность принята"
+msgstr "Заявка прочтена"Неисправность принята"
 
 msgid "Fault assigned"
 msgstr "Неисправность назначена"
@@ -6248,7 +6248,7 @@ msgstr "Пауза"
 
 #: faults status
 msgid "Fault created"
-msgstr "Заявка создана"
+msgstr "Заявка получена"Заявка создана"
 
 #: faults status
 msgid "Select a pause reason"
@@ -6829,13 +6829,13 @@ msgid "Saving..."
 msgstr "Сохранение..."
 
 msgid "CREATED"
-msgstr "ЗАЯВКА СОЗДАНА"
+msgstr "ЗАЯВКА ПОЛУЧЕНА"ЗАЯВКА СОЗДАНА"
 
 msgid "ACCEPTED"
 msgstr "ЗАЯВКА ПРОЧИТАНА"
 
 msgid "RESOLVED"
-msgstr "РЕШЕНО"
+msgstr "НЕИСПРАВНОСТЬ УСТРАНЕНА"РЕШЕНО"
 
 msgid "CLOSED"
 msgstr "ЗАЯВКА ЗАКРЫТА"
@@ -7341,3 +7341,9 @@ msgstr "Отключён"
 #: templates/air/map_3d.html:0
 msgid "Rotate 90°"
 msgstr "Повернуть на 90°"
+
+msgid "Mechanic assigned"
+msgstr "Назначен механик"
+
+msgid "ASSIGNED"
+msgstr "НАЗНАЧЕН МЕХАНИК"

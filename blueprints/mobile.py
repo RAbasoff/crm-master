@@ -94,6 +94,8 @@ def mobile_fault_new():
 
         # Notify all technicians
         for tech in User.query.filter_by(role='technician', is_active_user=True).all():
+            if tech.id == fault.reporter_id:
+                continue  # заявитель получает только свои 5 сообщений
             create_notification(tech.id, 'New fault report',
                 f"{_('Machine')}: {target} - {title} ({_('Reporter')}: {who})",
                 'fault',

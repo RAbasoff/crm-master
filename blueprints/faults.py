@@ -308,10 +308,12 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
     if new_status == 'reopened':
         f.resolved_at = None
         # reopened — транзитом дальше в diagnosis/in_progress
+    _prev_tech = f.technician_id
     if new_status == 'accepted' and not f.accepted_at:
         f.accepted_at = now_local()
         if not f.technician_id:
             f.technician_id = user.id
+    _new_tech = f.technician_id if f.technician_id != _prev_tech else None
 
     f.status = new_status
     history = FaultStatusHistory(
@@ -326,6 +328,14 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
         if new_status != old_status and new_status in ('accepted', 'resolved', 'closed'):
             detail = reason if (new_status == 'closed' and reason and reason != 'closed by head') else None
             _notify_reporter_status(f, new_status, detail=detail)
+        # Заявителю: НАЗНАЧЕН МЕХАНИК (когда механик только что назначен)
+        if _new_tech:
+            _tu = db.session.get(User, _new_tech)
+            if _tu is not None:
+                _an = _reporter_row(f, 'assigned',
+                                    detail=_tu.display_name or _tu.username)
+                if _an:
+                    create_notifications([_an])
         # Директор: только создание / пауза (с причиной) / решение / закрытие
         if new_status != old_status and new_status in ('paused', 'resolved', 'closed'):
             detail = None
@@ -346,6 +356,7 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
 _LIFECYCLE_WORDS = {
     'created':  ('Fault created',  'CREATED'),
     'accepted': ('Fault accepted', 'ACCEPTED'),
+    'assigned': ('Mechanic assigned', 'ASSIGNED'),
     'paused':   ('Fault paused',   'PAUSED'),
     'resolved': ('Fault resolved', 'RESOLVED'),
     'closed':   ('Fault closed',   'CLOSED'),
@@ -386,7 +397,7 @@ def _notify_reporter_status(f, kind, detail=None):
 
 def _reporter_row(f, kind, detail=None):
     """Строка уведомления заявителю (или None)."""
-    if not getattr(f, 'reporter_id', None) or kind not in ('created', 'accepted', 'resolved', 'closed'):
+    if not getattr(f, 'reporter_id', None) or kind not in ('created', 'accepted', 'assigned', 'resolved', 'closed'):
         return None
     title, msg = _lifecycle_msg(f, kind, detail=detail, lang=_lang_for(f))
     return {'user_id': f.reporter_id, 'title': title, 'message': msg,
@@ -635,6 +646,8 @@ def fault_new():
             # Все уведомления события — одной пачкой (один commit на диск)
             _notif_rows = []
             for tech in f.assigned_technicians:
+                if tech.id == f.reporter_id:
+                    continue
                 _notif_rows.append(_notify_i18n_row(tech.id, 'Fault assigned to you',
                     lambda _f: f"{_f('Machine')}: {target} - {f.title} ({_f('Priority')}: {f.priority}, {_f('Reporter')}: {who})",
                     _link))
@@ -656,6 +669,8 @@ def fault_new():
                 if 'ruslan' in n or 'abasoff' in n:
                     notify_ids.add(u.id)
             for tid in notify_ids:
+                if tid == f.reporter_id:
+                    continue  # заявитель получает только свои 5 сообщений
                 _notif_rows.append(_notify_i18n_row(tid, 'New fault report',
                     lambda _f: f"{_f('Machine')}: {target} - {f.title} ({_f('Reporter')}: {who})",
                     _link))
@@ -934,6 +949,7 @@ def fault_work_end(fault_id):
 @director_only()
 def fault_accept(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
+    _prev_tech = f.technician_id
     ok, err = _set_fault_status(f, 'accepted', current_user, reason='accepted')
     if not ok:
         flash(err, 'error')
@@ -941,6 +957,15 @@ def fault_accept(fault_id):
     f.technician_id = current_user.id
     f.accepted_at = f.accepted_at or now_local()
     f.first_response_at = f.first_response_at or now_local()
+    # Смена механика (заявка перехвачена) — заявителю: НАЗНАЧЕН МЕХАНИК
+    if _prev_tech and _prev_tech != current_user.id:
+        try:
+            _an = _reporter_row(f, 'assigned',
+                                detail=current_user.display_name or current_user.username)
+            if _an:
+                create_notifications([_an])
+        except Exception:
+            pass
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
@@ -979,20 +1004,26 @@ def fault_assign(fault_id):
         c = Contractor.query.get(int(contractor_id))
         if c:
             names.append(f"🏢 {c.company_name}")
+    _was_accepted = (f.status == 'accepted')
     f.status = 'accepted'
-    f.accepted_at = now_local()
+    f.accepted_at = f.accepted_at or now_local()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
     _a_rows = [_notify_i18n_row(tech.id, 'Fault assigned to you',
         lambda _f: f"{_f('Admin assigned fault to you')}: {f.title} ({_f('Machine')}: {f.target_name})",
-        url_for('faults.fault_detail', fault_id=f.id)) for tech in f.assigned_technicians]
-    # Заявителю: ПРОЧИТАНА (назначение = заявка принята в работу)
+        url_for('faults.fault_detail', fault_id=f.id)) for tech in f.assigned_technicians
+        if tech.id != f.reporter_id]
+    # Заявителю — строго из 5: ПРОЧТЕНА (один раз) и НАЗНАЧЕН МЕХАНИК (с именами)
     try:
-        _ar = _reporter_row(f, 'accepted')
-        if _ar:
-            _a_rows.append(_ar)
+        if not _was_accepted:
+            _ar = _reporter_row(f, 'accepted')
+            if _ar:
+                _a_rows.append(_ar)
+        _as = _reporter_row(f, 'assigned', detail=', '.join(names))
+        if _as:
+            _a_rows.append(_as)
     except Exception:
         pass
     create_notifications(_a_rows)
@@ -1022,7 +1053,7 @@ def fault_resolve(fault_id):
                 'type': 'info',
                 'link': url_for('faults.fault_detail', fault_id=f.id)}
                for head in User.query.filter(User.role == 'admin', User.is_active_user == True).all()
-               if head.id != current_user.id]
+               if head.id != current_user.id and head.id != f.reporter_id]
     create_notifications(_h_rows)
     flash(_('Fault report resolved') + '. ' + _('Awaiting close by head'), 'success')
     return redirect(url_for('faults.fault_detail', fault_id=f.id))

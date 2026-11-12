@@ -2128,7 +2128,7 @@ msgid "Fault Types & Priorities"
 msgstr "Storingstypes en prioriteiten"
 
 msgid "Fault accepted"
-msgstr "Storing geaccepteerd"
+msgstr "Melding gelezen"Storing geaccepteerd"
 
 msgid "Fault assigned"
 msgstr "Storing toegewezen"
@@ -2140,7 +2140,7 @@ msgid "Fault assigned to you"
 msgstr "Storing aan u toegewezen"
 
 msgid "Fault closed"
-msgstr "Storing gesloten"
+msgstr "Melding gesloten"Storing gesloten"
 
 msgid "Fault created but video upload failed"
 msgstr "Storing aangemaakt, maar video-upload mislukt"
@@ -6643,16 +6643,16 @@ msgid "Saving..."
 msgstr "Opslaan..."
 
 msgid "Fault created"
-msgstr "Melding aangemaakt"
+msgstr "Melding ontvangen"Melding aangemaakt"
 
 msgid "CREATED"
-msgstr "MELDING AANGEMAAKT"
+msgstr "MELDING ONTVANGEN"MELDING AANGEMAAKT"
 
 msgid "ACCEPTED"
 msgstr "MELDING GELEZEN"
 
 msgid "RESOLVED"
-msgstr "OPGELOST"
+msgstr "STORING OPGELOST"OPGELOST"
 
 msgid "CLOSED"
 msgstr "MELDING GESLOTEN"
@@ -7164,3 +7164,9 @@ msgstr "Uitgeschakeld"
 #: templates/air/map_3d.html:0
 msgid "Rotate 90°"
 msgstr "Draai 90°"
+
+msgid "Mechanic assigned"
+msgstr "Monteur toegewezen"
+
+msgid "ASSIGNED"
+msgstr "MONTEUR TOEGEWEZEN"
