@@ -2128,7 +2128,7 @@ msgid "Fault Types & Priorities"
 msgstr "Storingstypes en prioriteiten"
 
 msgid "Fault accepted"
-msgstr "Melding gelezen"Storing geaccepteerd"
+msgstr "Melding gelezen"
 
 msgid "Fault assigned"
 msgstr "Storing toegewezen"
@@ -2140,7 +2140,7 @@ msgid "Fault assigned to you"
 msgstr "Storing aan u toegewezen"
 
 msgid "Fault closed"
-msgstr "Melding gesloten"Storing gesloten"
+msgstr "Melding gesloten"
 
 msgid "Fault created but video upload failed"
 msgstr "Storing aangemaakt, maar video-upload mislukt"
@@ -6643,16 +6643,16 @@ msgid "Saving..."
 msgstr "Opslaan..."
 
 msgid "Fault created"
-msgstr "Melding ontvangen"Melding aangemaakt"
+msgstr "Melding ontvangen"
 
 msgid "CREATED"
-msgstr "MELDING ONTVANGEN"MELDING AANGEMAAKT"
+msgstr "MELDING ONTVANGEN"
 
 msgid "ACCEPTED"
 msgstr "MELDING GELEZEN"
 
 msgid "RESOLVED"
-msgstr "STORING OPGELOST"OPGELOST"
+msgstr "STORING OPGELOST"
 
 msgid "CLOSED"
 msgstr "MELDING GESLOTEN"
