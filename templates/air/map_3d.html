@@ -54,9 +54,13 @@
             <option value="filler">🫙</option>
             <option value="compressor">💨</option>
             <option value="ishida">⚖️</option>
+            <option value="ypsilon">🖇 CAVECO</option>
+            <option value="incline">📐 {{ _("Conveyor") }}</option>
             <option value="conveyor">➡️</option>
         </select>
         <button class="btn btn-sm" onclick="addMachineAt()" style="background:#27ae60;color:#fff">➕ {{ _('Machine') }}</button>
+        <button class="btn btn-sm" onclick="copyMachine()" style="background:#3498db;color:#fff">&#128203; {{ _('Copy') }}</button>
+        <button class="btn btn-sm" onclick="pasteMachine()" style="background:#8e44ad;color:#fff">&#128203; {{ _('Paste') }}</button>
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px">
@@ -438,6 +442,132 @@
             roller1.rotation.x = Math.PI / 2;
             roller1.position.set(-2.82, 1.05, 0); g.add(roller1);
             const roller2 = roller1.clone(); roller2.position.x = 2.82; g.add(roller2);
+        } else if (d.style === 'ypsilon') {
+            // CAVECO Ypsilon — вакуумный клиппер: нерж. корпус на колёсах,
+            // подающая лента слева, синий кожух клиппера, пульт с экраном справа
+            const inox = new THREE.MeshStandardMaterial({ color: 0xd7dde3, metalness: 0.72, roughness: 0.32 });
+            const inoxDark = new THREE.MeshStandardMaterial({ color: 0xaeb7bf, metalness: 0.68, roughness: 0.4 });
+            const blueGlass = new THREE.MeshStandardMaterial({ color: 0x2f7fd0, metalness: 0.15, roughness: 0.18, transparent: true, opacity: 0.42, side: THREE.DoubleSide });
+            const rubber = new THREE.MeshStandardMaterial({ color: 0x2b2f36, metalness: 0.25, roughness: 0.75 });
+            const yellow = new THREE.MeshStandardMaterial({ color: 0xf2c31d, roughness: 0.5, metalness: 0.15 });
+            const redBtn = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.45 });
+            // корпус
+            const body = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.9, 1.9), inox);
+            body.position.set(0, 1.25, 0); g.add(body);
+            const base = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.16, 2.0), inoxDark);
+            base.position.y = 0.32; g.add(base);
+            // колёса
+            [[-1.45, -0.72], [1.45, -0.72], [-1.45, 0.72], [1.45, 0.72]].forEach(function (w) {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.12, 12), rubber);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(w[0], 0.17, w[1]); g.add(wheel);
+            });
+            // подающая лента слева
+            const inBelt = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.12, 1.1), rubber);
+            inBelt.position.set(-4.4, 1.06, 0); g.add(inBelt);
+            const inFrame = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.14, 1.2), inoxDark);
+            inFrame.position.set(-4.4, 0.94, 0); g.add(inFrame);
+            [-0.5, 0.5].forEach(function (zz) {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.18, 0.06), inox);
+                rail.position.set(-4.4, 1.22, zz); g.add(rail);
+            });
+            for (let i = 0; i < 3; i++) {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), inoxDark);
+                leg.position.set(-5.7 + i * 1.35, 0.5, -0.5); g.add(leg);
+                const leg2 = leg.clone(); leg2.position.z = 0.5; g.add(leg2);
+            }
+            // синий прозрачный кожух клиппера (центр-право)
+            const hood = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.25, 1.75), blueGlass);
+            hood.position.set(0.55, 2.6, 0); g.add(hood);
+            const hoodTop = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.1, 1.83), inoxDark);
+            hoodTop.position.set(0.55, 3.26, 0); g.add(hoodTop);
+            // клиппер-голова внутри кожуха
+            const clipHead = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 1.0, 14), steel);
+            clipHead.position.set(0.55, 2.6, 0); g.add(clipHead);
+            // пульт с экраном и аварийной кнопкой (справа сверху)
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.15, 1.35), inox);
+            panel.position.set(3.0, 3.05, 0); g.add(panel);
+            const panelBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.1, 1.2), inoxDark);
+            panelBase.position.set(3.0, 1.95, 0); g.add(panelBase);
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.55, 0.05), dark);
+            screen.position.set(3.0, 3.15, 0.7); g.add(screen);
+            const screenGlow = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.42, 0.02), glassM);
+            screenGlow.position.set(3.0, 3.15, 0.73); g.add(screenGlow);
+            const estop = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.12, 12), yellow);
+            estop.rotation.x = Math.PI / 2;
+            estop.position.set(3.45, 2.75, 0.72); g.add(estop);
+            const estopBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.1, 12), redBtn);
+            estopBtn.rotation.x = Math.PI / 2;
+            estopBtn.position.set(3.45, 2.75, 0.8); g.add(estopBtn);
+            // выпускная лента справа
+            const outBelt = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 1.1), rubber);
+            outBelt.position.set(5.0, 1.06, 0); g.add(outBelt);
+            const outFrame = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.14, 1.2), inoxDark);
+            outFrame.position.set(5.0, 0.94, 0); g.add(outFrame);
+            [-0.5, 0.5].forEach(function (zz) {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.18, 0.06), inox);
+                rail.position.set(5.0, 1.22, zz); g.add(rail);
+            });
+            const outLeg1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), inoxDark);
+            outLeg1.position.set(5.6, 0.5, -0.5); g.add(outLeg1);
+            const outLeg2 = outLeg1.clone(); outLeg2.position.z = 0.5; g.add(outLeg2);
+        } else if (d.style === 'incline') {
+            // Наклонный ленточный транспортёр: синяя лента с перегородками,
+            // мотор сверху, пульт с аварийной кнопкой, рама на колёсах
+            const steelW = new THREE.MeshStandardMaterial({ color: 0xe8ecef, metalness: 0.6, roughness: 0.35 });
+            const steelD = new THREE.MeshStandardMaterial({ color: 0xb8c0c8, metalness: 0.55, roughness: 0.45 });
+            const beltBlue = new THREE.MeshStandardMaterial({ color: 0x2a4fd0, metalness: 0.1, roughness: 0.6 });
+            const cleatTeal = new THREE.MeshStandardMaterial({ color: 0x1d9c8c, metalness: 0.1, roughness: 0.6 });
+            const yellowBtn = new THREE.MeshStandardMaterial({ color: 0xf2c31d, roughness: 0.5 });
+            const redBtn2 = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.45 });
+            const ANG = Math.PI / 6.2;
+            const LEN = 6.2;
+            const belt = new THREE.Mesh(new THREE.BoxGeometry(LEN, 0.1, 1.25), beltBlue);
+            belt.rotation.z = ANG;
+            belt.position.set(0, 2.2, 0); g.add(belt);
+            for (let i = -2; i <= 2; i++) {
+                const cleat = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.28, 1.25), cleatTeal);
+                const t = i * 1.15;
+                cleat.position.set(t * Math.cos(ANG), 2.2 + t * Math.sin(ANG) + 0.18, 0);
+                cleat.rotation.z = ANG; g.add(cleat);
+            }
+            [-0.72, 0.72].forEach(function (zz) {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(LEN, 0.22, 0.07), steelW);
+                rail.rotation.z = ANG;
+                rail.position.set(0, 2.32, zz); g.add(rail);
+            });
+            const base = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.14, 1.7), steelD);
+            base.position.set(-1.6, 0.85, 0); g.add(base);
+            const upright = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.2, 0.18), steelD);
+            upright.position.set(-1.6, 1.85, -0.7); g.add(upright);
+            const upright2 = upright.clone(); upright2.position.z = 0.7; g.add(upright2);
+            [[-2.7, -0.65], [-2.7, 0.65], [-0.5, -0.65], [-0.5, 0.65]].forEach(function (w) {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 12), steelD);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(w[0], 0.22, w[1]); g.add(wheel);
+            });
+            const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 1.1, 14), steelW);
+            motor.rotation.x = Math.PI / 2;
+            motor.position.set(2.55, 3.95, -0.85); g.add(motor);
+            const gearbox = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.75, 0.7), steelD);
+            gearbox.position.set(2.55, 3.95, -0.15); g.add(gearbox);
+            const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.35, 14), steelD);
+            drum.rotation.x = Math.PI / 2;
+            drum.position.set(3.05, 3.95, 0); g.add(drum);
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.28), steelW);
+            panel.position.set(1.6, 3.35, -0.85); g.add(panel);
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.03), dark);
+            screen.position.set(1.6, 3.55, -0.71); g.add(screen);
+            const ebtn = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.1, 12), redBtn2);
+            ebtn.rotation.x = Math.PI / 2;
+            ebtn.position.set(1.6, 3.15, -0.68); g.add(ebtn);
+            const ebase = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), yellowBtn);
+            ebase.rotation.x = Math.PI / 2;
+            ebase.position.set(1.6, 3.15, -0.72); g.add(ebase);
+            const hopper = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.9, 1.5), steelW);
+            hopper.position.set(-3.4, 1.0, 0); g.add(hopper);
+            const hopperT = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.1, 1.7), steelD);
+            hopperT.position.set(-3.4, 1.5, 0); g.add(hopperT);
         } else {
             const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 1.8), steel);
             body.position.y = 1.45; g.add(body);
@@ -528,7 +658,8 @@
                     x: px(m.x == null ? 50 : m.x), z: pz(m.y == null ? 50 : m.y),
                     rot: 0, s: 1, off: false,
                     style: /vulbus|vemag/i.test(m.name || '') ? 'filler'
-                        : /caveco|ypsilon|magic|pack|inpak/i.test(m.name || '') ? 'wrapper'
+                        : /ypsilon|caveco/i.test(m.name || '') ? 'ypsilon'
+                        : /magic|pack|inpak/i.test(m.name || '') ? 'wrapper'
                         : /ishida/i.test(m.name || '') ? 'ishida'
                         : /band|conveyor|transport/i.test(m.name || '') ? 'conveyor'
                         : 'cabinet'
@@ -709,6 +840,27 @@
             style: (styleEl && styleEl.value) || 'cabinet'
         });
         rebuildDesign();
+    };
+    // Копировать / вставить станок
+    let _clipMachine = null;
+    window.copyMachine = function () {
+        if (!selected || selected.kind !== 'machine') { alert('{{ _("Select a machine first") }}'); return; }
+        const m = design.machines[selected.idx];
+        if (!m) return;
+        _clipMachine = JSON.parse(JSON.stringify(m));
+        alert('{{ _("Machine copied") }}: ' + (m.name || ''));
+    };
+    window.pasteMachine = function () {
+        if (!_clipMachine) { alert('{{ _("Nothing to paste") }}'); return; }
+        let minId = -1;
+        design.machines.forEach(function (m) { if (m.id < minId) minId = m.id; });
+        const nm = JSON.parse(JSON.stringify(_clipMachine));
+        nm.id = minId - 1;
+        nm.x = controls.target.x + 3;
+        nm.z = controls.target.z;
+        design.machines.push(nm);
+        rebuildDesign();
+        _clipMachine = JSON.parse(JSON.stringify(nm));
     };
     const canEdit3d = {{ 'true' if current_user.has_role('admin', 'director', 'technician') else 'false' }};
     let serverLoaded = false, saveTimer = null;
