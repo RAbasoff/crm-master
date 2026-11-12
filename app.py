@@ -209,6 +209,7 @@ def _set_sqlite_pragma(dbapi_conn, connection_record):
     if isinstance(dbapi_conn, sqlite3.Connection):
         try:
             cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")  # контроль ссылочной целостности
             cursor.execute("PRAGMA journal_mode=DELETE")
             cursor.execute("PRAGMA busy_timeout=30000")
             cursor.execute("PRAGMA synchronous=NORMAL")

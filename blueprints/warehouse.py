@@ -328,6 +328,15 @@ def warehouse_delete(item_id):
     if item.mutaties:
         flash(_('Cannot delete item with movement history. Deactivate instead.'), 'error')
         return redirect(url_for('warehouse.warehouse_edit', item_id=item.id))
+    # Чистим связи (consumables/spare parts) перед удалением — FK-контроль включён
+    try:
+        from models import MachineConsumable, MachineSparePart
+        MachineConsumable.query.filter_by(warehouse_item_id=item.id).update(
+            {'warehouse_item_id': None}, synchronize_session=False)
+        MachineSparePart.query.filter_by(warehouse_item_id=item.id).update(
+            {'warehouse_item_id': None}, synchronize_session=False)
+    except Exception:
+        pass
     db.session.delete(item)
     if not safe_commit():
         flash(_('Delete failed. Please try again.'), 'error')
