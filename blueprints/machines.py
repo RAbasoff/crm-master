@@ -856,17 +856,44 @@ def machine_transfer_act_save(machine_id):
     if not html:
         html = f"<html><body><h1>{number}</h1><p>{m.name}</p></body></html>"
 
-    doc = SavedDocument(
-        number=number,
-        doc_type='transfer_act',
-        module='machines',
-        title=title,
-        machine_id=m.id,
-        content_html=html,
-        pdf_file=pdf_rel if pdf_bytes else None,
-        created_by=current_user.id,
-    )
-    db.session.add(doc)
+    # Гонка номеров: при дубле пересчитываем номер и переименовываем PDF
+    from sqlalchemy.exc import IntegrityError
+    from utils import next_document_number as _next_no
+    doc = None
+    for _try in range(5):
+        doc = SavedDocument(
+            number=number,
+            doc_type='transfer_act',
+            module='machines',
+            title=title,
+            machine_id=m.id,
+            content_html=html,
+            pdf_file=pdf_rel if pdf_bytes else None,
+            created_by=current_user.id,
+        )
+        db.session.add(doc)
+        try:
+            db.session.flush()
+            break
+        except IntegrityError:
+            db.session.rollback()
+            doc = None
+            old_path = pdf_path
+            number = _next_no('ACT')
+            pdf_name = f'{number}.pdf'
+            pdf_path = os.path.join(abs_dir, pdf_name)
+            pdf_rel = os.path.join('uploads', 'docs', year, pdf_name)
+            if pdf_bytes:
+                try:
+                    if os.path.exists(old_path):
+                        os.replace(old_path, pdf_path)
+                    else:
+                        with open(pdf_path, 'wb') as f:
+                            f.write(pdf_bytes)
+                except OSError:
+                    pass
+    if doc is None:
+        return jsonify({'ok': False, 'error': 'duplicate number'}), 409
     try:
         if not safe_commit():
             return jsonify({'ok': False, 'error': 'save failed'}), 500

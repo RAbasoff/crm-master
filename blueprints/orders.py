@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, Monteur, Opdracht, Verantwoordelijke, VoorraadMutatie, VoorraadItem, now_local)
-from utils import genereer_nummer, log_audit, role_required, safe_commit, safe_float
+from utils import genereer_nummer, retry_unique_number, log_audit, role_required, safe_commit, safe_float
 
 bp = Blueprint('orders', __name__)
 
@@ -35,18 +35,23 @@ def orders_list():
 @role_required('admin', 'director', 'technician')
 def order_new():
     if request.method == 'POST':
-        o = Opdracht(
-            nummer=genereer_nummer(),
-            responsible_id=request.form['klant_id'],
-            monteur_id=request.form.get('monteur_id') or None,
-            apparaat=request.form['apparaat'],
-            model=request.form.get('model', ''),
-            serienummer=request.form.get('serienummer', ''),
-            probleem=request.form['probleem'],
-            arbeidskosten=safe_float(request.form.get('arbeidskosten'), 0),
-            status='aangenomen'
-        )
-        db.session.add(o)
+        def _make():
+            return Opdracht(
+                nummer=genereer_nummer(),
+                responsible_id=request.form['klant_id'],
+                monteur_id=request.form.get('monteur_id') or None,
+                apparaat=request.form['apparaat'],
+                model=request.form.get('model', ''),
+                serienummer=request.form.get('serienummer', ''),
+                probleem=request.form['probleem'],
+                arbeidskosten=safe_float(request.form.get('arbeidskosten'), 0),
+                status='aangenomen'
+            )
+        try:
+            o = retry_unique_number(_make)
+        except RuntimeError:
+            flash(_('Save failed'), 'error')
+            return redirect(url_for('orders.orders_list'))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             if o.id:

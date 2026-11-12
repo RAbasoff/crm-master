@@ -147,13 +147,13 @@ def two_new():
             notes=request.form.get('notes', ''),
             created_by=current_user.id
         )
-        # Assign workers
+        # Assign workers (сначала add в сессию — иначе SQLAlchemy Warning)
         worker_ids = request.form.getlist('worker_ids')
+        db.session.add(two)
         for wid in worker_ids:
             w = Monteur.query.get(int(wid))
             if w:
                 two.workers.append(w)
-        db.session.add(two)
         db.session.flush()
 
         # Process section assignments

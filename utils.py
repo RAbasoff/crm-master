@@ -59,6 +59,24 @@ def genereer_nummer():
     return f'WO-{day}-{num:04d}'
 
 
+def retry_unique_number(make_obj, number_attr='nummer', attempts=5):
+    """Создать объект с уникальным номером: при гонке (IntegrityError)
+    пересоздаёт номер и повторяет. Номер генерирует make_obj() — колбэк."""
+    from sqlalchemy.exc import IntegrityError
+    last = None
+    for _ in range(attempts):
+        obj = make_obj()
+        db.session.add(obj)
+        try:
+            db.session.flush()
+            return obj
+        except IntegrityError:
+            db.session.rollback()
+            last = 'duplicate number'
+            continue
+    raise RuntimeError(f'unique number generation failed: {last}')
+
+
 def next_document_number(prefix='ACT'):
     """Номер документа: ACT-NNN-DDMMYY (порядковый + дата).
     Пример: ACT-001-091026
