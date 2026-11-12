@@ -433,7 +433,16 @@ def _director_rows(f, kind, detail=None):
     except Exception:
         _user_language = lambda uid: 'nl'
     rows = []
-    for d in User.query.filter(User.role == 'director', User.is_active_user == True).all():
+    _ids = set()
+    try:
+        from notify import director_recipients
+        _ids = director_recipients()
+    except Exception:
+        pass
+    _directors = (User.query.filter(User.id.in_(_ids)).all() if _ids
+                  else User.query.filter(User.role == 'director',
+                                         User.is_active_user == True).all())
+    for d in _directors:
         if getattr(f, 'reporter_id', None) and d.id == f.reporter_id:
             continue
         try:
@@ -631,9 +640,13 @@ def fault_new():
                     _link))
             # Уведомляем: механиков + админ (+ Peter/Ruslan по имени).
             # Директорам идёт отдельное «ЗАЯВКА СОЗДАНА» — без лишних сообщений.
-            notify_ids = set()
-            for tech in User.query.filter(User.is_active_user == True, User.role.in_(('technician', 'admin'))).all():
-                notify_ids.add(tech.id)
+            try:
+                from notify import technician_recipients
+                notify_ids = set(technician_recipients())
+            except Exception:
+                notify_ids = set()
+                for tech in User.query.filter(User.is_active_user == True, User.role.in_(('technician', 'admin'))).all():
+                    notify_ids.add(tech.id)
             for u in User.query.filter(User.is_active_user == True).all():
                 if u.role == 'director':
                     continue

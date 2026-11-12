@@ -414,6 +414,12 @@ with app.app_context():
                           _u.username, _u.role)
         _sub_n = PushSubscription.query.count()
         _nlog.warning("NOTIFY CFG: push subscriptions = %s", _sub_n)
+        # Ежедневная самопроверка отправки уведомлений (фоновый цикл)
+        try:
+            from notify import start_daily_check
+            start_daily_check()
+        except Exception as _dce:
+            _nlog.warning("NOTIFY DAILY CHECK: start failed: %s", _dce)
     except Exception as _ne:
         print("NOTIFY CFG: check skipped", _ne)
     # ── Анонс обновления: новая версия -> оповещение всем (колокольчик + push/тост) ──

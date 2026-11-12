@@ -156,6 +156,170 @@ def notify_fault_done(fault, reporter_user=None, head_users=None):
     return sent
 
 
+
+
+# ─────────────── Получатели: группы Director / механики ───────────────
+
+def group_member_user_ids(group_names):
+    """ID пользователей — участников групп ResponsibleGroup (по имени).
+
+    Связь: ResponsibleGroup.members (Verantwoordelijke) -> User.person_id.
+    Членство в группе — источник истины: все члены группы получают
+    уведомления, даже если аккаунт помечен неактивным.
+    """
+    from models import ResponsibleGroup, User
+    ids = set()
+    try:
+        groups = ResponsibleGroup.query.filter(
+            ResponsibleGroup.name.in_(list(group_names))).all()
+        person_ids = [m.id for g in groups for m in g.members]
+        if person_ids:
+            for u in User.query.filter(User.person_id.in_(person_ids)).all():
+                ids.add(u.id)
+    except Exception as e:
+        log.warning('group_member_user_ids: %s', e)
+    return ids
+
+
+def director_recipients():
+    """Директора: все члены группы Director + роль director (активные)."""
+    from models import User
+    ids = group_member_user_ids(('Director',))
+    try:
+        for u in User.query.filter(User.role == 'director',
+                                   User.is_active_user == True).all():
+            ids.add(u.id)
+    except Exception:
+        pass
+    return ids
+
+
+def technician_recipients():
+    """Механики + админы: группа Technician + роли technician/admin (активные)."""
+    from models import User
+    ids = group_member_user_ids(('Technician',))
+    try:
+        for u in User.query.filter(User.role.in_(('technician', 'admin')),
+                                   User.is_active_user == True).all():
+            ids.add(u.id)
+    except Exception:
+        pass
+    return ids
+
+
+# ─────────────── Ежедневная проверка отправки уведомлений ───────────────
+
+def daily_notify_check(force=False):
+    """Самопроверка цепочки уведомлений: библиотека push, живые подписки,
+    контрольный push админам. Не чаще 1 раза в 20 часов (воркеров несколько —
+    координация через AppSetting). При сбое — уведомление админам.
+    """
+    from datetime import timedelta
+    from models import AppSetting, PushSubscription, User, db
+    from logs import create_notification
+    now = datetime.now()
+    try:
+        rec = AppSetting.query.get('notify_daily_check_at')
+        last = None
+        if rec and rec.value:
+            try:
+                last = datetime.fromisoformat(rec.value)
+            except Exception:
+                last = None
+        if not force and last and (now - last) < timedelta(hours=20):
+            return None
+        if rec:
+            rec.value = now.isoformat(timespec='seconds')
+        else:
+            db.session.add(AppSetting(
+                key='notify_daily_check_at',
+                value=now.isoformat(timespec='seconds')))
+        db.session.commit()
+    except Exception as e:
+        log.warning('daily_notify_check guard: %s', e)
+        return None
+
+    problems = []
+    try:
+        import pywebpush  # noqa: F401
+    except Exception as e:
+        problems.append('pywebpush: %s' % e)
+
+    subs = []
+    try:
+        subs = PushSubscription.query.all()
+        if not subs:
+            problems.append('нет push-подписок')
+    except Exception as e:
+        problems.append('подписки: %s' % e)
+
+    sent_ok = sent_err = 0
+    try:
+        from push import send_web_push
+        admin_ids = {u.id for u in User.query.filter(User.role == 'admin').all()}
+        for s in subs:
+            if s.user_id not in admin_ids:
+                continue
+            res = send_web_push(
+                {'endpoint': s.endpoint, 'keys': {'p256dh': s.p256dh, 'auth': s.auth}},
+                'Dagelijkse notificatietest',
+                'Automatische controle: meldingen werken.',
+                url='/notifications', tag='info')
+            if res == 'ok':
+                sent_ok += 1
+            else:
+                sent_err += 1
+    except Exception as e:
+        problems.append('push: %s' % e)
+        sent_err += 1
+    if sent_err:
+        problems.append('push-ошибок: %d' % sent_err)
+
+    status = 'ok subs=%d test-ok=%d' % (len(subs), sent_ok) if not problems \
+        else 'FAIL: ' + '; '.join(problems)
+    try:
+        rec = AppSetting.query.get('notify_daily_check')
+        if rec:
+            rec.value = status[:190]
+        else:
+            db.session.add(AppSetting(key='notify_daily_check', value=status[:190]))
+        db.session.commit()
+    except Exception:
+        pass
+    if problems:
+        log.warning('NOTIFY DAILY CHECK: %s', status)
+        try:
+            for u in User.query.filter(User.role == 'admin',
+                                       User.is_active_user == True).all():
+                create_notification(u.id, 'Notification check failed',
+                                    status[:300], 'warning', '/notifications')
+        except Exception:
+            pass
+    else:
+        log.info('NOTIFY DAILY CHECK: %s', status)
+    return status
+
+
+def start_daily_check(initial_delay=120):
+    """Фоновый цикл: раз в сутки проверять отправку уведомлений."""
+    import threading
+    import time
+
+    def _loop():
+        time.sleep(initial_delay)
+        while True:
+            try:
+                daily_notify_check()
+            except Exception as e:
+                log.warning('NOTIFY DAILY CHECK loop: %s', e)
+            time.sleep(6 * 3600)
+
+    try:
+        threading.Thread(target=_loop, daemon=True).start()
+    except Exception as e:
+        log.warning('start_daily_check: %s', e)
+
+
 def maybe_email_logs():
     """Отправка логов на почту (если задан LOG_EMAIL) — как в Рекламации."""
     to = _env('LOG_EMAIL')

@@ -948,6 +948,7 @@ def equipment_order():
 def equipment_order_status(order_id):
     o = EquipmentPartOrder.query.get_or_404(order_id)
     new_status = request.form.get('status')
+    old_status = o.status
     if new_status in ('pending', 'ordered', 'delivered', 'cancelled'):
         o.status = new_status
         if new_status == 'delivered':
@@ -955,4 +956,18 @@ def equipment_order_status(order_id):
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('equipment.equipment_list'))
+    # Создателю заказа: статус / отчёт о доставке
+    try:
+        if o.created_by and new_status and new_status != old_status:
+            from logs import create_notification as _cn
+            if new_status == 'delivered':
+                _cn(o.created_by, 'Order delivered',
+                    f'{o.order_number}: {o.part_name} x{o.quantity}', 'info',
+                    url_for('equipment.equipment_list'))
+            else:
+                _cn(o.created_by, 'Order status changed',
+                    f'{o.order_number}: {o.part_name} — {new_status}', 'info',
+                    url_for('equipment.equipment_list'))
+    except Exception:
+        pass
     return redirect(url_for('equipment.equipment_list'))

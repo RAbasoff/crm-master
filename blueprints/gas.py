@@ -802,8 +802,31 @@ def order_status(order_id):
         else:
             flash(_('Order marked delivered (cylinders already in stock)'), 'info')
         log_audit('deliver', 'cylinder_order', o.id, f'{o.gas_type} x{qty}, created={created}, returned={returned}')
+        # Создателю заказа: отчёт о доставке
+        try:
+            if o.ordered_by:
+                from logs import create_notification as _cn
+                _detail = f'{o.gas_type} x{qty}'
+                if created:
+                    _detail += f' · +{created}'
+                if returned:
+                    _detail += f' · -{returned}'
+                _cn(o.ordered_by, 'Order delivered',
+                    f'#{o.id} {_detail} ({o.supplier or "-"})', 'info',
+                    url_for('gas.orders_list'))
+        except Exception:
+            pass
     else:
         flash(_('Order status updated'), 'success')
+        # Создателю заказа: смена статуса (кроме доставки — там отчёт выше)
+        try:
+            if o.ordered_by and new_status != old_status:
+                from logs import create_notification as _cn
+                _cn(o.ordered_by, 'Order status changed',
+                    f'#{o.id} {o.gas_type} x{o.quantity}: {new_status}', 'info',
+                    url_for('gas.orders_list'))
+        except Exception:
+            pass
     return redirect(url_for('gas.orders_list'))
 
 
