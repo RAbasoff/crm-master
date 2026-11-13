@@ -5,22 +5,30 @@
     python run_server.py
 
 Пользователи заходят в браузере:  http://IP_СЕРВЕРА:8000
+
+Если порт 8000 занят — укажите другой через переменную PORT:
+    PowerShell:  $env:PORT=80; python run_server.py
+    Порт 80: адрес без двоеточия  http://IP_СЕРВЕРА
 """
 import os
 import sys
 import webbrowser
 from threading import Timer
 
+# Порт: настраивается через переменную окружения PORT (по умолчанию 8000)
+PORT = int(os.environ.get('PORT', 8000))
+
 # Один раз вывести адреса в консоль
 def _print_urls():
     import socket
     host = socket.gethostbyname(socket.gethostname())
+    suffix = '' if PORT == 80 else f':{PORT}'
     print('')
     print('=' * 50)
-    print('ProMaster запущен как веб-сервер')
-    print(f'  На этом компьютере:  http://127.0.0.1:8000')
-    print(f'  Для сотрудников:     http://{host}:8000')
-    print('  (адрес можно раздать в чат / на бумаге)')
+    print(f'ProMaster запущен как веб-сервер (порт {PORT})')
+    print(f'  На этом компьютере:  http://127.0.0.1{suffix}')
+    print(f'  Для сотрудников:     http://{host}{suffix}')
+    print(f'  (адрес можно раздать в чат / на бумаге)')
     print('=' * 50)
     print('')
 
@@ -33,10 +41,11 @@ if __name__ == '__main__':
 
     # Открыть браузер через 1 сек (необязательно)
     try:
-        Timer(1.0, lambda: webbrowser.open('http://127.0.0.1:8000')).start()
+        suffix = '' if PORT == 80 else f':{PORT}'
+        Timer(1.0, lambda: webbrowser.open('http://127.0.0.1' + suffix)).start()
     except Exception:
         pass
 
     _print_urls()
     # 0.0.0.0 — слушать всю сеть, чтобы пользователи могли зайти
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    app.run(host='0.0.0.0', port=PORT, debug=False)
