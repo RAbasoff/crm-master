@@ -14,27 +14,11 @@ _push_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='webpush')
 
 
 def _user_language(user_id):
-    """Язык пользователя для уведомлений.
+    """Язык уведомлений.
 
-    Жёсткое правило: НЕ владельцу — всегда нидерландский.
-    Владельцу (Ruslan) — ru или nl по его выбору.
+    Жёсткое правило (запрос владельца): ВСЕ уведомления — на нидерландском.
     """
-    try:
-        from models import User
-        u = db.session.get(User, user_id)
-        lang = None
-        if u and getattr(u, 'preferred_language', None):
-            lang = u.preferred_language
-        if not lang and u and u.id == getattr(current_user, 'id', None):
-            lang = session.get('lang') or None
-        if lang == 'ru':
-            from security import is_owner_user
-            if not is_owner_user(u):
-                lang = 'nl'
-        return lang or 'nl'
-    except Exception:
-        return 'nl'
-
+    return 'nl'
 
 def _send_push_job(row, title, message, ntype, link, lang='ru'):
     """Фоновая задача: ТОЛЬКО сетевая отправка (без БД!).
