@@ -53,9 +53,18 @@
                             if (d.subscribed) {
                                 el.style.color = '#27ae60';
                                 el.textContent = '✅ {{ _("Subscription active") }}';
+                                // кнопка должна быть зелёной — подписка уже работает
+                                if (b) {
+                                    b.style.background = '#27ae60';
+                                    b.textContent = '✓ {{ _("Notifications enabled") }}';
+                                }
                             } else {
                                 el.style.color = '#e67e22';
                                 el.textContent = '⚠️ {{ _("No subscription — open the app from the home screen icon") }}';
+                                if (b) {
+                                    b.style.background = '#f39c12';
+                                    b.textContent = '{{ _("Enable notifications") }}';
+                                }
                             }
                         }).catch(function () {});
                     }
@@ -73,7 +82,21 @@
                                 refreshStatus();
                             });
                         } else {
-                            refreshStatus();
+                            // base-app.js ещё не зарегистрировал SW — ждём и повторяем
+                            var tries = 0;
+                            var iv = setInterval(function () {
+                                tries++;
+                                if (window.__pushSubscribe) {
+                                    clearInterval(iv);
+                                    window.__pushSubscribe().then(function () {
+                                        setEnabled();
+                                        refreshStatus();
+                                    }, function () { refreshStatus(); });
+                                } else if (tries > 40) {
+                                    clearInterval(iv);
+                                    refreshStatus();
+                                }
+                            }, 250);
                         }
                     } else if (Notification.permission === 'denied') {
                         setBlocked();

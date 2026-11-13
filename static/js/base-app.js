@@ -482,7 +482,7 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                 const b = document.createElement('button');
                 b.id = 'pushEnableBtn';
                 b.textContent = '🔔 ' + __T('Enable notifications');
-                b.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9000;padding:12px 22px;font-size:14px;font-weight:700;background:#5b9cf6;color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+                b.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9000;padding:14px 26px;font-size:15px;font-weight:700;background:#e67e22;color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);width:min(92vw,560px);text-align:center';
                 function run() {
                     subscribeNow().then(function() {
                         b.remove();
@@ -513,17 +513,19 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                 window.__showPushEnable();
             }
             if (typeof Notification !== 'undefined' && 'PushManager' in window) {
-                navigator.serviceWorker.ready
-                    .then(function (reg) { return reg.pushManager.getSubscription(); })
-                    .then(function (sub) {
-                        if (sub) {
-                            syncPushSub(sub).catch(function () {});
-                            refreshPushBtn(true);
-                        } else {
-                            refreshPushBtn(false);
-                        }
-                    })
-                    .catch(function () { refreshPushBtn(false); });
+                if (Notification.permission === 'granted') {
+                    // Разрешение уже есть — восстанавливаем подписку БЕЗ клика
+                    // (браузер меняет push-endpoint; без этого уведомления «отваливаются»)
+                    subscribeNow().then(function () {
+                        refreshPushBtn(true);
+                        try { localStorage.setItem('push_autoheal', String(Date.now())); } catch (e) {}
+                    }, function () { refreshPushBtn(false); });
+                } else {
+                    navigator.serviceWorker.ready
+                        .then(function (reg) { return reg.pushManager.getSubscription(); })
+                        .then(function (sub) { refreshPushBtn(!sub); })
+                        .catch(function () { refreshPushBtn(false); });
+                }
             }
         }
     
