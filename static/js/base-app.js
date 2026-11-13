@@ -400,7 +400,8 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
         function initWebPush(reg) {
             // текущий пользователь — для перепривязки подписки при смене аккаунта
             window.APP_USER_ID = window.__BOOT.USER_ID;
-            if (!('PushManager' in window) || !('Notification' in window)) return;
+            // НЕ выходим: даже без Notification/PushManager (iPhone вне PWA)
+            // пользователь должен увидеть кнопку-подсказку при входе.
 
             function syncPushSub(sub) {
                 return csrfFetch('/api/push/subscribe', {
@@ -482,6 +483,9 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                 const b = document.createElement('button');
                 b.id = 'pushEnableBtn';
                 b.textContent = '🔔 ' + __T('Enable notifications');
+                // iOS вне PWA: Notification не определён — всё равно показываем
+                // кнопку с подсказкой, иначе пользователь не найдёт подписку
+                const noNotif = (typeof Notification === 'undefined');
                 b.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9000;padding:14px 26px;font-size:15px;font-weight:700;background:#e67e22;color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);width:min(92vw,560px);text-align:center';
                 function run() {
                     subscribeNow().then(function() {
@@ -492,6 +496,10 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                     });
                 }
                 b.onclick = function() {
+                    if (noNotif) {
+                        showToast(__T('Open from the home screen icon to enable notifications'), 'error');
+                        return;
+                    }
                     if (Notification.permission === 'denied') {
                         showToast(__T('Allow notifications in the browser settings'), 'error');
                         return;
@@ -512,20 +520,27 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                 if (hasSub) { if (b) b.remove(); return; }
                 window.__showPushEnable();
             }
-            if (typeof Notification !== 'undefined' && 'PushManager' in window) {
-                if (Notification.permission === 'granted') {
+            // Показываем кнопку СРАЗУ при входе всем, кто ещё не включил
+            // уведомления (нет разрешения) — иначе её никто не находит.
+            if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+                try { refreshPushBtn(false); } catch (e) {}
+            }
+            if (typeof Notification === 'undefined' || !('PushManager' in window)) {
+                // iOS Safari вне PWA / старые браузеры — баннер с подсказкой,
+                // чтобы пользователь видел кнопку при входе и понял, что делать
+                refreshPushBtn(false);
+            } else if (Notification.permission === 'granted') {
                     // Разрешение уже есть — восстанавливаем подписку БЕЗ клика
                     // (браузер меняет push-endpoint; без этого уведомления «отваливаются»)
                     subscribeNow().then(function () {
                         refreshPushBtn(true);
                         try { localStorage.setItem('push_autoheal', String(Date.now())); } catch (e) {}
                     }, function () { refreshPushBtn(false); });
-                } else {
-                    navigator.serviceWorker.ready
-                        .then(function (reg) { return reg.pushManager.getSubscription(); })
-                        .then(function (sub) { refreshPushBtn(!sub); })
-                        .catch(function () { refreshPushBtn(false); });
-                }
+            } else {
+                navigator.serviceWorker.ready
+                    .then(function (reg) { return reg.pushManager.getSubscription(); })
+                    .then(function (sub) { refreshPushBtn(!sub); })
+                    .catch(function () { refreshPushBtn(false); });
             }
         }
     
