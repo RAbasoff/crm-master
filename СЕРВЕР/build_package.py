@@ -126,8 +126,8 @@ def main():
         '3. .env.example -> .env: SECRET_KEY, APP_TIMEZONE, VAPID.\n'
         '4. Данные: instance\\werkplaats.db, static\\uploads\\, backups\\\n'
         '5. pip install -r requirements.txt\n'
-        '6. Запуск: python wsgi.py  или  gunicorn wsgi:app --bind 127.0.0.1:8000\n'
-        '7. nginx proxy_pass -> 127.0.0.1:8000, HTTPS обязателен.\n'
+        '6. Запуск: python wsgi.py  или  gunicorn wsgi:app --bind 127.0.0.1:8080\n'
+        '7. nginx proxy_pass -> 127.0.0.1:8080, HTTPS обязателен.\n'
         'Обновление: только код. Не трогать instance, uploads, .env, backups.\n',
         encoding='utf-8')
 
