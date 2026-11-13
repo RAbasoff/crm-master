@@ -40,7 +40,12 @@ Name: "{app}\backups"
 Name: "{group}\Инструкция по установке"; Filename: "{app}\README_SERVER.txt"
 Name: "{group}\Удалить ProMaster Server"; Filename: "{uninstallexe}"
 
+[Icons]
+Name: "{group}\Запустить ProMaster Server"; Filename: "python.exe"; Parameters: "run_server.py"; WorkingDir: "{app}"; IconFilename: "{app}\static\crm.ico"
+
 [Run]
+; Открыть порт 8080 в брандмауэре Windows — иначе другие компьютеры не подключатся
+Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=""ProMaster Server 8080"" dir=in action=allow protocol=TCP localport=8080"; Flags: runhidden waituntilterminated
 Filename: "notepad.exe"; Parameters: """{app}\README_SERVER.txt"""; Description: "Открыть инструкцию"; Flags: postinstall nowait shellexec skipifsilent
 
 [Code]
