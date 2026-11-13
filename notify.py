@@ -312,7 +312,13 @@ def start_daily_check(initial_delay=120):
                 daily_notify_check()
             except Exception as e:
                 log.warning('NOTIFY DAILY CHECK loop: %s', e)
-            time.sleep(6 * 3600)
+            try:
+                # износ ножей >= 85% — напоминание техслужбе (раз в 3 часа внутри)
+                from utils import check_tool_wear_notifications
+                check_tool_wear_notifications()
+            except Exception as e:
+                log.warning('TOOL WEAR CHECK loop: %s', e)
+            time.sleep(60 * 60)  # цикл каждый час; повторы глушатся троттлингом 3ч
 
     try:
         threading.Thread(target=_loop, daemon=True).start()

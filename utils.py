@@ -430,103 +430,74 @@ def add_work_report(entry_text):
 
 
 # User preference (2026-10-09): knife/tool-wear reminder at most once per 2 hours — not every page load.
-TOOL_WEAR_REMINDER_HOURS = 2
+TOOL_WEAR_REMINDER_HOURS = 3
 
 
 def check_tool_wear_notifications():
-    """Notify users with tool_wear access when knife wear reaches 80%."""
-    from models import ToolWear, User, Machine, Notification, GroupPermission, Verantwoordelijke, UserSectionAccess
+    """Износ ножей >= 85% — уведомление техслужбе (начальник ТС, механики) + админ.
+
+    Формат (нид.): "Messen slijtage (85%) op machine X. Vervangingsdatum - <дата>".
+    Не чаще 1 раза в 3 часа на пользователя по каждому инструменту.
+    """
+    from models import ToolWear, User
+    from logs import create_notifications
+    from security import is_head_of_ts
+    from datetime import timedelta
     today = now_local().date()
     tools = ToolWear.query.all()
     if not tools:
         return
 
-    # Начальник ТС, администратор и механики
-    notify_user_ids = set()
+    # Получатели: механики + начальник ТС + админ (НЕ все директора)
+    notify_ids = set()
     for u in User.query.filter(User.is_active_user == True,
-                               User.role.in_(('admin', 'director', 'technician'))).all():
-        notify_user_ids.add(u.id)
-
-    if not notify_user_ids:
+                               User.role.in_(('technician', 'admin'))).all():
+        notify_ids.add(u.id)
+        if is_head_of_ts(u):
+            notify_ids.add(u.id)
+    # системный аккаунт начальника ТС (username=director)
+    for u in User.query.filter(User.is_active_user == True).all():
+        try:
+            if is_head_of_ts(u):
+                notify_ids.add(u.id)
+        except Exception:
+            pass
+    if not notify_ids:
         return
 
-    # Не дублируем чаще, чем раз в TOOL_WEAR_REMINDER_HOURS (по требованию пользователя)
-    # + не плодим, если уже есть непрочитанное уведомление
     cutoff = now_local() - timedelta(hours=TOOL_WEAR_REMINDER_HOURS)
-    existing_notifs = set()
+    from models import Notification
+    recent = set()
     for n in Notification.query.filter(
         Notification.type == 'tool_wear',
         Notification.created_at >= cutoff
     ).all():
-        existing_notifs.add(n.user_id)
-    for n in Notification.query.filter(
-        Notification.type == 'tool_wear',
-        Notification.is_read == False
-    ).all():
-        existing_notifs.add(n.user_id)
+        recent.add((n.user_id, n.link))
 
+    rows = []
     for t in tools:
         cycle = t.cycle_days or 14
         if t.last_replaced:
             days_since = (today - t.last_replaced).days
             wear = min(100.0, round((days_since / cycle) * 100, 1))
+            next_date = t.last_replaced + timedelta(days=cycle)
+            date_s = next_date.strftime('%d-%m-%Y')
         else:
             wear = 100.0
-        if wear < 80:
+            date_s = '—'
+        if wear < 85:
             continue
-        msg = f"{t.machine_name}: {t.tool_name} — {wear}% {_('wear')}"
-        for uid in notify_user_ids:
-            if uid in existing_notifs:
+        # текст на нидерландском (все уведомления — нидерландский)
+        msg = f'Messen slijtage ({wear}%) op machine {t.machine_name}. Vervangingsdatum - {date_s}'
+        link = '/tool-wear'
+        for uid in notify_ids:
+            if (uid, link) in recent:
                 continue
-            create_notification(uid, 'Knife replacement needed', msg, 'tool_wear', '/tool-wear')
-            existing_notifs.add(uid)
-
-    # ── Спец-оповещение «Замена ножей» при 90% выработки ──
-    # Только для закреплённых за машиной (Bartek / Safa / Hashim и т.п.).
-    # Все остальные уведомления — без изменений.
-    knife_users = {u.id: u for u in User.query.filter(
-        User.is_active_user == True,
-        User.username.in_(('bartek', 'safa', 'hashim', 'hashem'))).all()}
-    if knife_users:
-        knife_seen = set()
-        for nk in Notification.query.filter(
-                Notification.type == 'knife_90',
-                (Notification.created_at >= cutoff) | (Notification.is_read == False)).all():
-            knife_seen.add(nk.user_id)
-        for t in tools:
-            cycle = t.cycle_days or 14
-            if t.last_replaced:
-                days_k = (today - t.last_replaced).days
-                wear_k = min(100.0, round((days_k / cycle) * 100, 1))
-            else:
-                wear_k = 100.0
-            if wear_k < 90:
-                continue
-            machine = Machine.query.filter(
-                Machine.name.ilike((t.machine_name or '').strip())).first()
-            for uid, u in knife_users.items():
-                if uid in knife_seen:
-                    continue
-                resp = bool(machine) and (
-                    machine.responsible_user_id == uid or
-                    (u.person_id and machine.responsible_person_id == u.person_id))
-                if not resp:
-                    continue
-                msg_k = f"{t.machine_name}: {t.tool_name} — {wear_k}% {_('wear')}"
-                create_notification(uid, _('Knife replacement 90%'), msg_k, 'knife_90', '/tool-wear')
-                knife_seen.add(uid)
-
-
-BELGIAN_HOLIDAYS_FIXED = {
-    (1, 1): "Nieuwjaar / Jour de l'An",
-    (5, 1): "Dag van de Arbeid / Fête du Travail",
-    (7, 21): "Nationale Feestdag / Fête nationale",
-    (8, 15): "O-L-V-Hemelvaart / Assomption",
-    (11, 1): "Allerheiligen / Toussaint",
-    (11, 11): "Wapenstilstand / Armistice",
-    (12, 25): "Kerstmis / Noël",
-}
-
+            rows.append({'user_id': uid, 'title': 'Messen slijtage — vervanging nodig',
+                         'message': msg, 'type': 'tool_wear', 'link': link})
+            recent.add((uid, link))
+    if rows:
+        create_notifications(rows)
 
 def get_easter(year):
     """Calculate Easter Sunday using Meeus/Jones/Butcher algorithm."""
