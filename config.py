@@ -1,7 +1,7 @@
 import os, secrets
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = '2.19.0'
+APP_VERSION = '2.20.0'
 
 # Час самоочистки (0-23, локальное время): старые логи/уведомления + VACUUM.
 # Переопределяется без перезаливки файлом instance/.cleanup_hour (число).

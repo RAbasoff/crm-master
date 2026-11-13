@@ -174,5 +174,27 @@
       "Powiadomienia: cykl zgłoszenia, osobny widok dyrektora",
       "Szybsze działanie: przyciski reagują natychmiast"
     ]
+  },
+  "2.20.0": {
+    "ru": [
+      "Уведомления: все тексты на нидерландском, подписка восстанавливается автоматически при каждом открытии программы",
+      "Уведомления: надёжная доставка на телефон — исправлена ошибка библиотеки отправки (aiohttp)",
+      "Заявки: заявитель получает ровно 5 уведомлений (получена / прочтена / назначен механик / устранена / закрыта)",
+      "3D: новые модели — CAVECO Ypsilon и наклонный транспортёр, копировать/вставить станки",
+      "3D: стены закреплены, выбор объектов в режиме «Перемещение», ISHIDA и конвейеры при импорте",
+      "Moeskroen: план из чертежа DWG в разделе «Plan», 3D-карта с станками и трубами в «Fabriekskaart»",
+      "Экономический ущерб: простой считается по 8-часовому рабочему дню (раньше 24 часа)",
+      "Надёжность: уникальные номера документов без задвоения, контроль целостности базы данных"
+    ],
+    "nl": [
+      "Meldingen: alle teksten in het Nederlands, abonnement herstelt automatisch bij elke start",
+      "Meldingen: betrouwbare levering op de telefoon — fout in verzendbibliotheek (aiohttp) verholpen",
+      "Storingen: melder krijgt precies 5 meldingen (ontvangen / gelezen / monteur toegewezen / opgelost / gesloten)",
+      "3D: nieuwe modellen — CAVECO Ypsilon en hellende transporteur, machines kopiëren/plakken",
+      "3D: wanden vastgezet, objecten selecteren in verplaatsmodus, ISHIDA en transportbanden bij import",
+      "Moeskroen: tekening uit DWG-bestand in «Plan», 3D-kaart met machines en leidingen in «Fabriekskaart»",
+      "Economische schade: stilstand gerekend met 8-urige werkdag (was 24 uur)",
+      "Betrouwbaarheid: unieke documentnummers zonder duplicaten, integriteitscontrole database"
+    ]
   }
 }
