@@ -17,6 +17,8 @@ const ScannerCommon = (function () {
         }
         // iPad on iOS 13+ reports as Mac
         if (navigator.maxTouchPoints > 1 && /MacIntel/.test(navigator.platform)) return true;
+        // mouse/trackpad present → desktop: use USB scanner, never auto-open camera
+        if (window.matchMedia && window.matchMedia('(pointer: fine)').matches) return false;
         // touch-primary small screens
         if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024) return true;
         return false;

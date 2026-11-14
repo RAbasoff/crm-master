@@ -6,7 +6,7 @@
     <a href="/warehouse/qr-codes" class="btn btn-sm" style="background:#2c3e50;color:#fff" target="_blank">&#128247; {{ _('QR codes') }}</a>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="/" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
-        <button class="btn btn-sm camera-btn" style="background:#3498db;color:white" onclick="toggleWhScanner()">📷 {{ _('Scan') }}</button>
+        <button class="btn btn-sm" id="whScanBtn" style="background:#3498db;color:white" onclick="toggleWhScanner()">📷 {{ _('Scan') }}</button>
         <a href="/warehouse/movements" class="btn btn-sm" style="background:#2c3e50;color:white">📋 {{ _('Movements') }}</a>
         <a href="/warehouse/report" class="btn btn-sm" style="background:#3498db;color:white">🔍 {{ _('Search & Reports') }}</a>
         <a href="/warehouse/groups" class="btn btn-sm" style="background:#2c3e50;color:white">📦 {{ _('Groups') }}</a>
@@ -28,6 +28,12 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <h3 style="margin:0;font-size:14px">📷 {{ _('Scan Warehouse QR / Barcode') }}</h3>
         <button type="button" onclick="toggleWhScanner()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
+    </div>
+    <div id="whManualBlock" style="display:none">
+        <input type="text" id="whScanInput" placeholder="{{ _('Scan warehouse barcode or type name/code...') }}"
+            style="width:100%;padding:12px;border:2px solid #3498db;border-radius:8px;font-size:16px;font-family:monospace;outline:none"
+            autocomplete="off">
+        <div style="font-size:11px;color:#888;margin-top:4px">{{ _('Honeywell scanner ready — scan to auto-submit') }}</div>
     </div>
     <div id="whScanRegion" style="width:100%;max-width:500px;margin:0 auto"></div>
     <div id="whScanResult" style="margin-top:10px;padding:8px 12px;border-radius:8px;display:none;font-size:13px"></div>
@@ -196,6 +202,7 @@
 </div>
 
 <script src="/static/js/html5-qrcode.min.js"></script>
+<script src="/static/js/scanner-common.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
 function showBarcode(id, name, spn) {
@@ -241,7 +248,19 @@ function toggleWhScanner() {
     } else {
         block.style.display = 'block';
         whActive = true;
-        startWhScan();
+        const mobile = (typeof ScannerCommon !== 'undefined') ? ScannerCommon.isMobile() : false;
+        if (mobile) {
+            document.getElementById('whManualBlock').style.display = 'none';
+            document.getElementById('whScanRegion').style.display = '';
+            startWhScan();
+        } else {
+            // PC: external USB scanner types into the input — no camera
+            document.getElementById('whScanRegion').style.display = 'none';
+            document.getElementById('whManualBlock').style.display = '';
+            const inp = document.getElementById('whScanInput');
+            inp.value = '';
+            inp.focus();
+        }
     }
 }
 
@@ -276,39 +295,7 @@ function startWhScan() {
                 ]
             },
             function(text) {
-                document.getElementById('whScanResult').style.display = 'block';
-                document.getElementById('whScanResult').style.background = '#fff3cd';
-                document.getElementById('whScanResult').textContent = 'Searching: ' + text + '...';
-                
-                // Always search via API (works for SPN, name, QR data)
-                csrfFetch('/api/warehouse/scan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: text}) })
-                .then(function(r) { return r.json(); }).then(function(d) {
-                    if (d.found) {
-                        document.getElementById('whScanResult').style.background = '#f0fff0';
-                        document.getElementById('whScanResult').innerHTML = '<strong>' + d.name + '</strong> — Qty: ' + d.quantity + ' ' + (d.unit || '') + ' — <a href="/warehouse/' + d.id + '/edit">Open</a>';
-                        // Highlight row if visible
-                        const rows = document.querySelectorAll('table tr');
-                        rows.forEach(function(row) {
-                            if (row.querySelector('a[href*="/warehouse/' + d.id + '/edit"]')) {
-                                row.style.background = '#fff3cd';
-                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                setTimeout(function() { row.style.background = ''; }, 3000);
-                            }
-                        });
-                    } else {
-                        document.getElementById('whScanResult').style.background = '#fff3cd';
-                        document.getElementById('whScanResult').innerHTML =
-                            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
-                            '<strong>❓ ' + text + '</strong> — {{ _("Unknown barcode") }}' +
-                            '<a href="/warehouse/new?barcode=' + encodeURIComponent(text) + '" class="btn btn-sm" style="background:#27ae60;color:white;text-decoration:none">+ {{ _("Add New") }}</a>' +
-                            '<button class="btn btn-sm" style="background:#eee" onclick="document.getElementById(\'whScanResult\').style.display=\'none\'">{{ _("Ignore") }}</button>' +
-                            '</div>';
-                    }
-                }).catch(function(err) {
-                    document.getElementById('whScanResult').style.background = '#fdf0f0';
-                    document.getElementById('whScanResult').textContent = 'Error: ' + err;
-                });
-                
+                whSearch(text);
                 if (whScanner) { whScanner.stop(); whScanner = null; }
                 whActive = false;
             },
@@ -319,6 +306,60 @@ function startWhScan() {
             document.getElementById('whScanResult').textContent = 'Camera error: ' + err;
         });
     }, 300);
+}
+
+function whSearch(text) {
+    if (typeof ScannerCommon !== 'undefined') text = ScannerCommon.normalizeCode(text);
+    document.getElementById('whScanResult').style.display = 'block';
+    document.getElementById('whScanResult').style.background = '#fff3cd';
+    document.getElementById('whScanResult').textContent = 'Searching: ' + text + '...';
+
+    // Always search via API (works for SPN, name, QR data)
+    csrfFetch('/api/warehouse/scan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: text}) })
+    .then(function(r) { return r.json(); }).then(function(d) {
+        if (d.found) {
+            document.getElementById('whScanResult').style.background = '#f0fff0';
+            document.getElementById('whScanResult').innerHTML = '<strong>' + d.name + '</strong> — Qty: ' + d.quantity + ' ' + (d.unit || '') + ' — <a href="/warehouse/' + d.id + '/edit">Open</a>';
+            // Highlight row if visible
+            const rows = document.querySelectorAll('table tr');
+            rows.forEach(function(row) {
+                if (row.querySelector('a[href*="/warehouse/' + d.id + '/edit"]')) {
+                    row.style.background = '#fff3cd';
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(function() { row.style.background = ''; }, 3000);
+                }
+            });
+        } else {
+            document.getElementById('whScanResult').style.background = '#fff3cd';
+            document.getElementById('whScanResult').innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+                '<strong>❓ ' + text + '</strong> — {{ _("Unknown barcode") }}' +
+                '<a href="/warehouse/new?barcode=' + encodeURIComponent(text) + '" class="btn btn-sm" style="background:#27ae60;color:white;text-decoration:none">+ {{ _("Add New") }}</a>' +
+                '<button class="btn btn-sm" style="background:#eee" onclick="document.getElementById(\'whScanResult\').style.display=\'none\'">{{ _("Ignore") }}</button>' +
+                '</div>';
+        }
+    }).catch(function(err) {
+        document.getElementById('whScanResult').style.background = '#fdf0f0';
+        document.getElementById('whScanResult').textContent = 'Error: ' + err;
+    });
+}
+
+// USB scanner (keyboard-wedge): types code + Enter into the manual input
+document.getElementById('whScanInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const code = this.value.trim();
+        if (code) {
+            this.value = '';
+            whSearch(code);
+        }
+        this.focus();
+    }
+});
+
+// Button label: camera on phone, USB scanner on PC
+if (!(typeof ScannerCommon !== 'undefined' && ScannerCommon.isMobile())) {
+    document.getElementById('whScanBtn').textContent = '⌨️ {{ _('Scan') }}';
 }
 </script>
 <style>#whScanRegion{border:2px solid #3498db;border-radius:12px;overflow:hidden}#whScanRegion video{border-radius:10px}</style>
