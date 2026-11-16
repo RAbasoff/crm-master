@@ -18,11 +18,12 @@ bp = Blueprint('equipment', __name__)
 
 
 def mule_machines():
-    """Машины модуля Mule (ТО/ремонт): только CAVECO / Skin / Ypsilon."""
+    """Машины модуля Mule (ТО/ремонт): CAVECO / Skin / Ypsilon / ProSeal."""
     return Machine.query.filter(db.or_(
         Machine.name.ilike('%caveco%'),
         Machine.name.ilike('%skin%'),
         Machine.name.ilike('%ypsilon%'),
+        Machine.name.ilike('%pro%seal%'),
     )).order_by(Machine.name).all()
 
 
