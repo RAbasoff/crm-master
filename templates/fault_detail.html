@@ -4,6 +4,9 @@
 <div class="page-header">
     <h1>⚠️ {{ _('Fault') }} №{{ fault.serial_no or fault.id }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% for w in fault.work_orders %}
+        <a href="/two/{{ w.id }}" class="btn btn-sm" style="background:#8e44ad;color:white;text-decoration:none">🧾 TWO {{ w.number }}</a>
+        {% endfor %}
         {% if fault.status == 'open' and current_user.has_role('technician', 'admin', 'director') and can_operate() %}
         <form method="POST" action="/faults/{{ fault.id }}/accept" style="display:inline">
             <button type="submit" class="btn btn-sm btn-success">{{ _('Accept') }}</button>

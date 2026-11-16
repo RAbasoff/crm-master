@@ -14,7 +14,9 @@ from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOA
                     ResponsibleGroup, TWOPhoto, now_local)
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    is_work_date, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift,
-                   get_belgian_holidays, save_uploaded_file, log_audit, create_notification)
+                   get_belgian_holidays, save_uploaded_file, log_audit, create_notification,
+                   add_work_report)
+from security import director_only
 
 bp = Blueprint('two', __name__)
 
@@ -35,6 +37,37 @@ def gen_two_number():
         num += 1
         candidate = f'TWO-{day}-{num:04d}'
     return candidate
+
+
+def auto_two_for_fault(fault):
+    """Авто-TWO на заявку: создаётся для приоритетов кроме low (решение владельца).
+
+    Подписанного наряда нет — просто рабочий документ in_progress,
+    закрывается подписью (приёмка) или вместе с заявкой.
+    """
+    if not fault or (fault.priority or '').lower() == 'low':
+        return None
+    two = TechnicalWorkOrder(
+        number=gen_two_number(),
+        fault_id=fault.id,
+        machine_id=fault.machine_id,
+        section_id=(fault.machine.section_id if fault.machine else None),
+        description=(fault.title or '') + '\n\n' + (fault.description or ''),
+        status='in_progress',
+        created_by=fault.reporter_id,
+    )
+    db.session.add(two)
+    return two
+
+
+def close_linked_twos(fault_id):
+    """Закрыть TWO, связанные с заявкой (при закрытии заявки админом/ТС)."""
+    if not fault_id:
+        return
+    for two in TechnicalWorkOrder.query.filter_by(fault_id=fault_id).all():
+        if two.status not in ('completed', 'cancelled'):
+            two.status = 'completed'
+            two.completed_at = now_local()
 
 def _load_machine_to_checklist(machine_id, period=None):
     """Чек-лист ТО для машины из machine_to_checklist (по виду обслуживания)."""
@@ -592,7 +625,13 @@ def two_submit(two_id):
 @bp.route('/two/<int:two_id>/signature', methods=['POST'])
 @login_required
 @role_required('admin', 'director', 'technician')
+@director_only()
 def two_add_signature(two_id):
+    """Подпись = приёмка работы. Подписывают механики, начальник ТС, админ.
+
+    Заявитель принимает работу подписью на устройстве механика (signer_name).
+    Для связанной заявки подпись закрывает заявку и TWO сразу.
+    """
     two = TechnicalWorkOrder.query.get_or_404(two_id)
     signer_name = request.form.get('signer_name', '').strip()
     signature_data = request.form.get('signature_data', '')
@@ -605,6 +644,26 @@ def two_add_signature(two_id):
             flash(_('Save failed'), 'error')
             return redirect(url_for('two.two_detail', two_id=two_id))
         flash(_('Signature saved'), 'success')
+        # Подпись = работа принята: связанная заявка тоже закрывается
+        if two.fault_id:
+            try:
+                from blueprints.faults import _set_fault_status
+                f = FaultReport.query.get(two.fault_id)
+                if f and f.status != 'closed':
+                    ok, _err = _set_fault_status(f, 'closed', current_user,
+                                                 reason=f'accepted and signed by {signer_name}')
+                    if ok and safe_commit():
+                        from notify import notify_fault_done
+                        ru = User.query.get(f.reporter_id) if f.reporter_id else None
+                        heads = list(User.query.filter(
+                            User.role.in_(('admin', 'director')), User.is_active_user == True).all())
+                        notify_fault_done(f, ru, heads)
+                        add_work_report(f"#{f.id} {f.title} — {_('Closed')}. accepted and signed by {signer_name}")
+            except Exception as _fe:
+                try:
+                    current_app.logger.warning('fault close on two-sign: %s', _fe)
+                except Exception:
+                    pass
     return redirect(url_for('two.two_detail', two_id=two_id))
 
 @bp.route('/two/<int:two_id>/edit', methods=['GET', 'POST'])

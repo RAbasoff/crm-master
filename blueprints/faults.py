@@ -732,6 +732,14 @@ def fault_new():
                             f"<p><a href=\"https://rabasoff.pythonanywhere.com/faults/{f.id}\">{_('View')}</a></p>"
                         )
 
+            # Авто-TWO на заявку (не low): наряд + подпись как приёмка работы
+            try:
+                from blueprints.two import auto_two_for_fault
+                if auto_two_for_fault(f) is not None:
+                    safe_commit()
+            except Exception as _te:
+                _lg_faults.warning('auto TWO: %s', _te)
+
             flash(_('Fault report created'), 'success')
             return redirect(url_for('faults.faults_list'))
         except Exception as e:
@@ -1129,6 +1137,13 @@ def fault_close(fault_id):
         notify_fault_done(f, ru, heads)
     except Exception as _ne:
         print('notify done', _ne)
+    # Заявка закрыта — связанные TWO тоже закрываем
+    try:
+        from blueprints.two import close_linked_twos
+        close_linked_twos(f.id)
+        safe_commit()
+    except Exception as _te:
+        print('two close on fault-close', _te)
     log_audit('close', 'fault', f.id, close_notes)
     add_work_report(f"#{f.id} {f.title} — {_('Closed')}. {close_notes}")
     flash(_('Fault report closed'), 'success')

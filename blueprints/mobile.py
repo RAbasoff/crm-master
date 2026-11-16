@@ -112,6 +112,14 @@ def mobile_fault_new():
         except Exception:
             pass
 
+        # Авто-TWO на заявку (не low): наряд + подпись как приёмка работы
+        try:
+            from blueprints.two import auto_two_for_fault
+            if auto_two_for_fault(fault) is not None:
+                safe_commit()
+        except Exception:
+            pass
+
         flash(_('Fault reported'), 'success')
         return redirect(url_for('mobile.mobile_dashboard'))
 
