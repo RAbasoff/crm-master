@@ -480,11 +480,14 @@ def faults_list():
     if current_user.has_role('admin', 'director'):
         q = base
     elif current_user.has_role('technician'):
+        # Механик видит ВСЕ незакрытые заявки (открытые, в работе, решённые до
+        # закрытия) + свои собственные в любом статусе.
         q = base.filter(
+            (FaultReport.status.is_(None)) |
+            (FaultReport.status.notin_(('closed', 'rejected'))) |
             (FaultReport.technician_id == current_user.id) |
             (FaultReport.reporter_id == current_user.id) |
-            (FaultReport.assigned_technicians.any(User.id == current_user.id)) |
-            (FaultReport.status == 'open')
+            (FaultReport.assigned_technicians.any(User.id == current_user.id))
         )
     else:
         uid = current_user.id

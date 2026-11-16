@@ -23,7 +23,8 @@ def mobile_dashboard():
         (FaultReport.technician_id == current_user.id) |
         (FaultReport.reporter_id == current_user.id)
     ).filter(
-        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+        (FaultReport.status.is_(None)) |
+        (FaultReport.status.notin_(('closed', 'rejected')))
     ).order_by(FaultReport.created_at.desc()).limit(10).all()
 
     # План дня механика: TWO с датами (первый блок на телефоне)
@@ -39,10 +40,12 @@ def mobile_dashboard():
 
     # Quick stats
     active_faults = FaultReport.query.filter(
-        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+        (FaultReport.status.is_(None)) |
+        (FaultReport.status.notin_(('closed', 'rejected')))
     ).count()
     critical_faults = FaultReport.query.filter(
-        FaultReport.status.in_(['open', 'accepted', 'in_progress']),
+        (FaultReport.status.is_(None)) |
+        (FaultReport.status.notin_(('closed', 'rejected'))),
         FaultReport.priority == 'critical'
     ).count()
     low_stock = VoorraadItem.query.filter(VoorraadItem.hoeveelheid <= VoorraadItem.minimum).count()
@@ -123,7 +126,8 @@ def machine_qr_page(machine_id):
     m = Machine.query.get_or_404(machine_id)
     faults = FaultReport.query.filter(
         FaultReport.machine_id == m.id,
-        FaultReport.status.in_(['open', 'accepted', 'in_progress'])
+        (FaultReport.status.is_(None)) |
+        (FaultReport.status.notin_(('closed', 'rejected')))
     ).order_by(FaultReport.created_at.desc()).limit(5).all()
 
     return render_template('machine_qr.html', machine=m, faults=faults)
