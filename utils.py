@@ -499,6 +499,18 @@ def check_tool_wear_notifications():
     if rows:
         create_notifications(rows)
 
+
+BELGIAN_HOLIDAYS_FIXED = {
+    (1, 1): "Nieuwjaar / Jour de l'An",
+    (5, 1): "Dag van de Arbeid / Fête du Travail",
+    (7, 21): "Nationale Feestdag / Fête nationale",
+    (8, 15): "O-L-V-Hemelvaart / Assomption",
+    (11, 1): "Allerheiligen / Toussaint",
+    (11, 11): "Wapenstilstand / Armistice",
+    (12, 25): "Kerstmis / Noël",
+}
+
+
 def get_easter(year):
     """Calculate Easter Sunday using Meeus/Jones/Butcher algorithm."""
     a = year % 19
