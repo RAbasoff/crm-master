@@ -7347,3 +7347,6 @@ msgstr "Назначен механик"
 
 msgid "ASSIGNED"
 msgstr "НАЗНАЧЕН МЕХАНИК"
+
+msgid "Photos from fault"
+msgstr "Фото из заявки"

@@ -7170,3 +7170,6 @@ msgstr "Monteur toegewezen"
 
 msgid "ASSIGNED"
 msgstr "MONTEUR TOEGEWEZEN"
+
+msgid "Photos from fault"
+msgstr "Foto's van de melding"

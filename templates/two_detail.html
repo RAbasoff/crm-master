@@ -192,6 +192,18 @@
 </div>
 {% endif %}
 
+{% if two.fault and two.fault.photos %}
+<div class="card" style="margin-top:16px">
+    <h2>📎 {{ _('Photos from fault') }}</h2>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">#{{ two.fault_id }} — {{ two.fault.title }}</div>
+    <div class="photo-grid" data-gallery>
+        {% for p in two.fault.photos %}
+        <img src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="openPhotoViewer(this)">
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 {% if two.notes %}
 <div class="card" style="margin-top:16px">
     <h2>📝 {{ _('Notes') }}</h2>
