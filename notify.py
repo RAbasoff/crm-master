@@ -309,15 +309,20 @@ def start_daily_check(initial_delay=120):
         time.sleep(initial_delay)
         while True:
             try:
-                daily_notify_check()
+                from app import app as _app
+                with _app.app_context():
+                    try:
+                        daily_notify_check()
+                    except Exception as e:
+                        log.warning('NOTIFY DAILY CHECK loop: %s', e)
+                    try:
+                        # износ ножей >= 85% — напоминание техслужбе (раз в 3 часа внутри)
+                        from utils import check_tool_wear_notifications
+                        check_tool_wear_notifications()
+                    except Exception as e:
+                        log.warning('TOOL WEAR CHECK loop: %s', e)
             except Exception as e:
-                log.warning('NOTIFY DAILY CHECK loop: %s', e)
-            try:
-                # износ ножей >= 85% — напоминание техслужбе (раз в 3 часа внутри)
-                from utils import check_tool_wear_notifications
-                check_tool_wear_notifications()
-            except Exception as e:
-                log.warning('TOOL WEAR CHECK loop: %s', e)
+                log.warning('daily check ctx: %s', e)
             time.sleep(60 * 60)  # цикл каждый час; повторы глушатся троттлингом 3ч
 
     try:

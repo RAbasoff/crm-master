@@ -9,10 +9,11 @@ import os
 import sys
 from datetime import datetime
 
-# pywebpush ставится в ~/.local (user site) — веб-воркеры uWSGI его не видят.
-for _sp in (
-        os.path.expanduser('~/.local/lib/python3.12/site-packages'),
-        '/home/rabasoff/.local/lib/python3.12/site-packages'):
+# pywebpush/aiohttp ставятся в ~/.local (user site) — веб-воркеры uWSGI их не видят.
+# Все версии python: после обновления интерпретатора (3.12 → 3.13) хардкод
+# версии оставлял aiohttp «не найденным».
+import glob as _glob
+for _sp in _glob.glob(os.path.expanduser('~/.local/lib/python*/site-packages')):
     if os.path.isdir(_sp) and _sp not in sys.path:
         sys.path.append(_sp)
 
