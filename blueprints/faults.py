@@ -1184,6 +1184,27 @@ def fault_reopen(fault_id):
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
     log_audit('reopen', 'fault', f.id, f'{old_status} → reopened: {reason} ({reopen_date})')
     add_work_report(f"#{f.id} {f.title} — {_('Reopened')}. {_('Reason')}: {reason}")
+    # Обязательное оповещение ВСЕМ механикам (включая работавшего по заявке):
+    # заявка снова открыта + причина
+    try:
+        from logs import create_notifications
+        link = url_for('faults.fault_detail', fault_id=f.id)
+        mech_ids = set()
+        if getattr(f, 'technician_id', None):
+            mech_ids.add(f.technician_id)
+        for t in (f.assigned_technicians or []):
+            if getattr(t, 'id', None):
+                mech_ids.add(t.id)
+        for m in User.query.filter(User.role == 'technician', User.is_active_user == True).all():
+            mech_ids.add(m.id)
+        mech_ids.discard(current_user.id)
+        rows = [_notify_i18n_row(
+            uid, 'Fault reopened',
+            lambda _f: f"{_f('Fault reopened')}: {f.title} — {_f('Reason')}: {reason}",
+            link) for uid in sorted(mech_ids)]
+        create_notifications(rows)
+    except Exception as _ne:
+        print('reopen notify', _ne)
     if request.is_json:
         return jsonify({'ok': True})
     flash(_('Fault reopened'), 'success')
