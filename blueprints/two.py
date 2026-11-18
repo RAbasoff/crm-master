@@ -640,6 +640,20 @@ def two_add_signature(two_id):
         db.session.add(sig)
         two.status = 'completed'
         two.completed_at = now_local()
+        # Описание работ / детали — приходят с той же формы (Work report)
+        two.result = request.form.get('result') or two.result
+        two.notes = request.form.get('notes') or two.notes
+        two.parts_used = request.form.get('parts_used') or two.parts_used
+        ts = safe_float(request.form.get('time_spent_hours'))
+        if ts is not None:
+            two.time_spent_hours = ts
+        # фото из той же формы
+        if 'photos' in request.files:
+            for photo in request.files.getlist('photos'):
+                if photo and photo.filename:
+                    fn = save_uploaded_file(photo, prefix=f"two_{two.id}_")
+                    if fn:
+                        db.session.add(TWOPhoto(two_id=two.id, filename=fn))
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('two.two_detail', two_id=two_id))

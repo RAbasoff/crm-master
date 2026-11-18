@@ -137,7 +137,7 @@
 {% if two.status not in ('completed', 'approved', 'cancelled') and (current_user.has_role('technician', 'admin', 'director') or current_user.worker_profile) %}
 <div class="card" style="margin-top:16px;border-left:4px solid #27ae60">
     <h2>🛠 {{ _('Work report') }}</h2>
-    <form method="POST" action="/two/{{ two.id }}/complete" enctype="multipart/form-data">
+    <form method="POST" action="/two/{{ two.id }}/complete" enctype="multipart/form-data" id="twoWorkForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div>
@@ -396,21 +396,22 @@
     {% if two.status != 'completed' %}
     <div style="border:2px dashed #dde1e8;border-radius:12px;padding:16px">
         <h3 style="font-size:14px;margin-bottom:12px">{{ _('Add Signature') }}</h3>
-        <form method="POST" action="/two/{{ two.id }}/signature" id="signatureForm">
-            <input type="hidden" name="signature_data" id="signatureData">
-            <div class="form-group">
-                <label>{{ _('Signer Name') }}</label>
-                <input type="text" name="signer_name" required placeholder="{{ _('Name of person accepting work') }}">
+        {# Поля привязаны к форме Work report (form="twoWorkForm"): кнопка подписи
+           отправляет ОПИСАНИЕ, ФОТО и подпись одним запросом. Раньше «Sign & Complete»
+           была отдельной формой и теряла всё, что введено выше. #}
+        <input type="hidden" name="signature_data" id="signatureData" form="twoWorkForm">
+        <div class="form-group">
+            <label>{{ _('Signer Name') }}</label>
+            <input type="text" name="signer_name" form="twoWorkForm" required placeholder="{{ _('Name of person accepting work') }}">
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="font-size:13px;font-weight:600;color:#444;display:block;margin-bottom:6px">{{ _('Sign below') }}</label>
+            <canvas id="signatureCanvas" width="400" height="150" style="width:100%;height:150px;border:1px solid #dde1e8;border-radius:8px;background:white;touch-action:none"></canvas>
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <button type="button" class="btn btn-sm btn-ghost" onclick="clearSignature()">{{ _('Clear') }}</button>
             </div>
-            <div style="margin-bottom:12px">
-                <label style="font-size:13px;font-weight:600;color:#444;display:block;margin-bottom:6px">{{ _('Sign below') }}</label>
-                <canvas id="signatureCanvas" width="400" height="150" style="width:100%;height:150px;border:1px solid #dde1e8;border-radius:8px;background:white;touch-action:none"></canvas>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                    <button type="button" class="btn btn-sm btn-ghost" onclick="clearSignature()">{{ _('Clear') }}</button>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-success" id="signBtn" disabled>✍️ {{ _('Sign & Complete') }}</button>
-        </form>
+        </div>
+        <button type="submit" form="twoWorkForm" formaction="/two/{{ two.id }}/signature" formmethod="post" formenctype="multipart/form-data" class="btn btn-success" id="signBtn" disabled>✍️ {{ _('Sign & Complete') }}</button>
     </div>
     {% endif %}
 </div>
@@ -445,11 +446,12 @@ function toggleChecklist(itemId, checkbox) {
 
 // Signature pad
 const canvas = document.getElementById('signatureCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let drawing = false;
 let hasSignature = false;
 
 function resizeCanvas() {
+    if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * 2;
     canvas.height = rect.height * 2;
@@ -459,22 +461,23 @@ function resizeCanvas() {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+if (canvas) {
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, {passive: false});
+    canvas.addEventListener('touchmove', draw, {passive: false});
+    canvas.addEventListener('touchend', stopDraw);
+}
 
 function getPos(e) {
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches ? e.touches[0] : e;
     return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
 }
-
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDraw);
-canvas.addEventListener('mouseleave', stopDraw);
-canvas.addEventListener('touchstart', startDraw, {passive: false});
-canvas.addEventListener('touchmove', draw, {passive: false});
-canvas.addEventListener('touchend', stopDraw);
 
 function startDraw(e) {
     e.preventDefault();
@@ -499,17 +502,26 @@ function stopDraw() {
 }
 
 function clearSignature() {
+    if (!canvas) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     hasSignature = false;
     document.getElementById('signBtn').disabled = true;
 }
 
-document.getElementById('signatureForm').addEventListener('submit', function(e) {
-    if (!hasSignature) {
-        e.preventDefault();
-        return;
-    }
-    document.getElementById('signatureData').value = canvas.toDataURL('image/png');
-});
+// Подпись и Work report — ОДНА форма: при отправке кладём росчерк в hidden-поле.
+// Блокируем только «Sign & Complete» без росчерка; «Complete TWO» работает без подписи.
+const workForm = document.getElementById('twoWorkForm');
+if (workForm) {
+    workForm.addEventListener('submit', function(e) {
+        const signBtn = document.getElementById('signBtn');
+        if (e.submitter && signBtn && e.submitter === signBtn && !hasSignature) {
+            e.preventDefault();
+            return;
+        }
+        if (hasSignature && canvas) {
+            document.getElementById('signatureData').value = canvas.toDataURL('image/png');
+        }
+    });
+}
 </script>
 {% endblock %}
