@@ -241,6 +241,7 @@ def daily_notify_check(force=False):
 
     problems = []
     try:
+        import push  # noqa: F401  — добавляет user-site в sys.path (воркеры uWSGI не видят его)
         import pywebpush  # noqa: F401
     except Exception as e:
         problems.append('pywebpush: %s' % e)

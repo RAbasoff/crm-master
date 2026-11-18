@@ -288,11 +288,13 @@ def scheduled_backup():
     Хранение — последние 30 файлов."""
     now = datetime.now()
     slot, suffix = None, ''
+    # окна по ЦЕЛОМУ часу: фоновый цикл тикает произвольной минутой,
+    # узкое окно (напр. 23:30-23:59) могло никогда не совпасть с тиком
     if now.hour == 23 and now.minute >= 30:
         slot, suffix = 'evening', ''
-    elif now.hour == 0 and now.minute < 30:
+    elif now.hour == 0:
         slot, suffix = 'evening', ''   # запасное окно после полуночи
-    elif now.hour == 12 and now.minute >= 30:
+    elif now.hour == 12 or (now.hour == 13 and now.minute < 30):
         slot, suffix = 'midday', '_1230'
     if not slot:
         return None
