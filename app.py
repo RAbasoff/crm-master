@@ -248,11 +248,12 @@ except ImportError:
 # IMPROVEMENTS: Backup, Email, Cost Tracking
 # ============================================================
 
-def backup_database(force=False):
+def backup_database(force=False, suffix=''):
     """Daily DB backup with 30-day rotation.
 
     Skips the copy when today's backup already exists unless force=True
     (startup is cheap; login/settings can force a fresh snapshot).
+    suffix — метка времени в имени (напр. '_1230' для дневного бэкапа).
     """
     import shutil
     # Ежедневная синхронизация времени программы с часами сервера
@@ -266,7 +267,7 @@ def backup_database(force=False):
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     date_str = datetime.now().strftime('%Y%m%d')
-    backup_path = os.path.join(backup_dir, f'werkplaats_{date_str}.db')
+    backup_path = os.path.join(backup_dir, f'werkplaats_{date_str}{suffix}.db')
     if not os.path.exists(db_path):
         return None
     if not force and os.path.exists(backup_path):
@@ -279,32 +280,49 @@ def backup_database(force=False):
     return backup_path
 
 
-def maybe_evening_backup():
-    """Автобэкап каждый день в 23:59 (первый запрос после 23:59)."""
+def scheduled_backup():
+    """Автоматический бэкап БД по расписанию: 23:30 (основной) и 12:30 (страховочный).
+
+    Вызывается из фонового цикла — не зависит от запросов пользователей.
+    Имена: werkplaats_YYYYMMDD.db (вечерний) и werkplaats_YYYYMMDD_1230.db (дневной).
+    Хранение — последние 30 файлов."""
     now = datetime.now()
-    if not (now.hour == 23 and now.minute >= 59) and not (now.hour == 0 and now.minute < 10):
-        return
+    slot, suffix = None, ''
+    if now.hour == 23 and now.minute >= 30:
+        slot, suffix = 'evening', ''
+    elif now.hour == 0 and now.minute < 30:
+        slot, suffix = 'evening', ''   # запасное окно после полуночи
+    elif now.hour == 12 and now.minute >= 30:
+        slot, suffix = 'midday', '_1230'
+    if not slot:
+        return None
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
-    stamp = os.path.join(backup_dir, '.evening_stamp')
+    stamp = os.path.join(backup_dir, f'.stamp_{slot}')
     today = now.strftime('%Y%m%d')
-    # после полуночи бэкап относится к вчерашнему 23:59
     if now.hour == 0:
         from datetime import timedelta
-        today = (now - timedelta(hours=1)).strftime('%Y%m%d')
+        today = (now - timedelta(hours=2)).strftime('%Y%m%d')  # вечерний после полуночи = вчерашний
     try:
         if os.path.exists(stamp) and open(stamp, 'r', encoding='utf-8').read().strip() == today:
-            return
+            return None
     except Exception:
         pass
-    path = backup_database(force=True)
+    path = backup_database(force=True, suffix=suffix)
     if path:
         try:
             with open(stamp, 'w', encoding='utf-8') as f:
                 f.write(today)
         except Exception:
             pass
-        print(f'EVENING BACKUP 23:59: {path}')
+        print(f'SCHEDULED BACKUP {slot}: {path}')
+    return path
+
+
+def maybe_evening_backup():
+    """Обратная совместимость: раньше бэкап был только в 23:59 по запросам.
+    Теперь — scheduled_backup() из фонового цикла (12:30 и 23:30)."""
+    return scheduled_backup()
 
 def send_email(to_email, subject, body):
     """Send email notification"""

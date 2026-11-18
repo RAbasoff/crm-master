@@ -321,6 +321,12 @@ def start_daily_check(initial_delay=120):
                         check_tool_wear_notifications()
                     except Exception as e:
                         log.warning('TOOL WEAR CHECK loop: %s', e)
+                    try:
+                        # бэкап БД по расписанию (12:30 и 23:30) — не зависит от запросов
+                        from app import scheduled_backup
+                        scheduled_backup()
+                    except Exception as e:
+                        log.warning('SCHEDULED BACKUP: %s', e)
             except Exception as e:
                 log.warning('daily check ctx: %s', e)
             time.sleep(60 * 60)  # цикл каждый час; повторы глушатся троттлингом 3ч
