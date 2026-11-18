@@ -121,8 +121,8 @@ def two_list():
 
     # Группировка: сначала блок «Открытые», затем по году → месяцу.
     from collections import OrderedDict
-    MONTHS_RU = {1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель', 5: 'Май', 6: 'Июнь',
-                 7: 'Июль', 8: 'Август', 9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'}
+    MONTHS_RU = {1: 'Januari', 2: 'Februari', 3: 'Maart', 4: 'April', 5: 'Mei', 6: 'Juni',
+                 7: 'Juli', 8: 'Augustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'December'}
     OPEN_ST = ('completed', 'cancelled', 'done', 'closed', 'finished')
     open_orders = [o for o in orders if (o.status or '').lower() not in OPEN_ST]
     closed_orders = [o for o in orders if (o.status or '').lower() in OPEN_ST]

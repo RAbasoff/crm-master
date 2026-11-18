@@ -479,7 +479,6 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
             // а прежний автозапрос давал молчаливый отказ и прятал кнопку навсегда).
             window.__showPushEnable = function() {
                 if (document.getElementById('pushEnableBtn')) return;
-                if (typeof Notification === 'undefined') return;
                 const b = document.createElement('button');
                 b.id = 'pushEnableBtn';
                 b.textContent = '🔔 ' + __T('Enable notifications');
