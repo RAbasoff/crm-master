@@ -1518,11 +1518,21 @@ class Opdracht(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     creator = db.relationship('User', foreign_keys=[created_by])
     photos = db.relationship('OpdrachtPhoto', backref='opdracht', lazy=True, cascade='all, delete-orphan')
+    videos = db.relationship('OpdrachtVideo', backref='opdracht', lazy=True, cascade='all, delete-orphan')
     mutaties = db.relationship('VoorraadMutatie', backref='opdracht', lazy=True)
 
 class OpdrachtPhoto(db.Model):
     """Фото к наряду (Werkorder)."""
     __tablename__ = 'opdracht_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    opdracht_id = db.Column(db.Integer, db.ForeignKey('opdracht.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=now_local)
+
+class OpdrachtVideo(db.Model):
+    """Видео к наряду (Werkorder)."""
+    __tablename__ = 'opdracht_video'
     id = db.Column(db.Integer, primary_key=True)
     opdracht_id = db.Column(db.Integer, db.ForeignKey('opdracht.id'), nullable=False, index=True)
     filename = db.Column(db.String(300), nullable=False)

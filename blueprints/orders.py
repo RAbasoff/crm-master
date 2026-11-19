@@ -9,8 +9,8 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, Monteur, Opdracht, OpdrachtPhoto, User, Verantwoordelijke,
-                    VoorraadMutatie, VoorraadItem, now_local)
+from models import (db, Monteur, Opdracht, OpdrachtPhoto, OpdrachtVideo, User,
+                    Verantwoordelijke, VoorraadMutatie, VoorraadItem, now_local)
 from utils import (genereer_nummer, retry_unique_number, log_audit, role_required,
                    safe_commit, safe_float, save_uploaded_file)
 
@@ -51,6 +51,23 @@ def _notify_order_event(order, title_msgid):
         create_notifications(rows)
     except Exception as _ne:
         print('order notify', _ne)
+
+
+def _save_order_media(order_id):
+    """Фото и видео из формы вложений (Werkorder)."""
+    try:
+        for photo in request.files.getlist('photos'):
+            if photo and photo.filename:
+                fn = save_uploaded_file(photo, prefix=f"order_{order_id}_")
+                if fn:
+                    db.session.add(OpdrachtPhoto(opdracht_id=order_id, filename=fn))
+        for video in request.files.getlist('videos'):
+            if video and video.filename:
+                fn = save_uploaded_file(video, prefix=f"order_{order_id}_")
+                if fn:
+                    db.session.add(OpdrachtVideo(opdracht_id=order_id, filename=fn))
+    except Exception as _pe:
+        print('order media', _pe)
 
 @bp.route('/orders')
 @login_required
@@ -96,16 +113,9 @@ def order_new():
             if o.id:
                 return redirect(url_for('orders.order_detail', order_id=o.id))
             return redirect(url_for('orders.orders_list'))
-        # фото к наряду
-        try:
-            for photo in request.files.getlist('photos'):
-                if photo and photo.filename:
-                    fn = save_uploaded_file(photo, prefix=f"order_{o.id}_")
-                    if fn:
-                        db.session.add(OpdrachtPhoto(opdracht_id=o.id, filename=fn))
-            safe_commit()
-        except Exception as _pe:
-            print('order photos', _pe)
+        # фото и видео к наряду
+        _save_order_media(o.id)
+        safe_commit()
         _notify_order_event(o, 'New work order')
         flash(_('Work Order created') + f' {o.nummer}', 'success')
         return redirect(url_for('orders.order_detail', order_id=o.id))
@@ -138,15 +148,8 @@ def order_edit(order_id):
         order.arbeidskosten = safe_float(request.form.get('arbeidskosten'), 0)
         order.onderdelenkosten = safe_float(request.form.get('onderdelenkosten'), 0)
         order.totaal = order.arbeidskosten + order.onderdelenkosten
-        # фото к наряду (добавление)
-        try:
-            for photo in request.files.getlist('photos'):
-                if photo and photo.filename:
-                    fn = save_uploaded_file(photo, prefix=f"order_{order.id}_")
-                    if fn:
-                        db.session.add(OpdrachtPhoto(opdracht_id=order.id, filename=fn))
-        except Exception as _pe:
-            print('order photos', _pe)
+        # фото и видео к наряду (добавление)
+        _save_order_media(order.id)
         ns = request.form.get('status', order.status)
         old_status = order.status
         if ns != old_status:

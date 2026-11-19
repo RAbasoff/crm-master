@@ -56,6 +56,16 @@
     </div>
 </div>
 {% endif %}
+{% if order.videos %}
+<div class="card">
+    <h2>🎬 {{ _('Videos') }}</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        {% for v in order.videos %}
+        <video src="/static/uploads/{{ v.filename }}" controls style="height:180px;border-radius:8px;max-width:100%"></video>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 <div class="card" style="text-align:center">
     <h2>QR-code</h2>
     <img src="/qr/generate/{{ order.id }}" alt="QR" style="max-width:180px;border:1px solid #eee;border-radius:8px;padding:8px">
