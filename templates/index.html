@@ -371,6 +371,34 @@
         {% endif %}
     </div>
     {% endif %}
+
+    <!-- Werkorders -->
+    {% if dashboard_stats.wo_total_active is defined %}
+    <div class="card" style="border-left:4px solid #8e44ad">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0;font-size:14px">📋 {{ _('Work Orders') }}</h2>
+            <a href="/orders" style="font-size:11px;color:#5b9cf6;text-decoration:none">{{ _('View all') }} →</a>
+        </div>
+        <div style="display:flex;gap:12px">
+            <div style="text-align:center;padding:8px;background:#f0f7ff;border-radius:8px;flex:1">
+                <div style="font-size:20px;font-weight:bold;color:#3498db">{{ dashboard_stats.wo_open }}</div>
+                <div style="font-size:10px;color:#888">Open</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:#fff7e6;border-radius:8px;flex:1">
+                <div style="font-size:20px;font-weight:bold;color:#e67e22">{{ dashboard_stats.wo_progress }}</div>
+                <div style="font-size:10px;color:#888">In behandeling</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:#f0fff0;border-radius:8px;flex:1">
+                <div style="font-size:20px;font-weight:bold;color:#27ae60">{{ dashboard_stats.wo_ready }}</div>
+                <div style="font-size:10px;color:#888">Gereed</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:#f4f4f4;border-radius:8px;flex:1">
+                <div style="font-size:20px;font-weight:bold;color:#7f8c8d">{{ dashboard_stats.wo_delivered }}</div>
+                <div style="font-size:10px;color:#888">Afgeleverd</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Charts: faults & TO last 6 months -->

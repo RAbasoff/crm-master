@@ -1888,6 +1888,16 @@ def index():
         dashboard_stats['overdue_twos'] = len(overdue_twos)
         dashboard_stats['overdue_two_list'] = overdue_twos[:5]
 
+        # Werkorders (opdrachten) — разбивка по статусам
+        wo_rows = db.session.query(Opdracht.status, func.count()).group_by(Opdracht.status).all()
+        wo_map = {s: int(c or 0) for s, c in wo_rows}
+        dashboard_stats['wo_open'] = wo_map.get('aangenomen', 0) + wo_map.get('diagnose', 0)
+        dashboard_stats['wo_progress'] = wo_map.get('in behandeling', 0)
+        dashboard_stats['wo_ready'] = wo_map.get('gereed', 0)
+        dashboard_stats['wo_delivered'] = wo_map.get('afgeleverd', 0)
+        dashboard_stats['wo_total_active'] = (
+            dashboard_stats['wo_open'] + dashboard_stats['wo_progress'] + dashboard_stats['wo_ready'])
+
         # ── Charts data (last 6 months) ─────────────────────
         today = now_local().date()
         months = []
