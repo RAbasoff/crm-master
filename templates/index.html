@@ -239,30 +239,30 @@
 
 {% else %}
 <div class="stats">
-    <div class="stat-card" style="border-left:4px solid #5b9cf6">
+    <a href="/orders" class="stat-card" style="border-left:4px solid #5b9cf6;text-decoration:none;color:inherit;cursor:pointer;display:block">
         <div class="stat-accent" style="background:#5b9cf6"></div>
         <div class="stat-icon">📋</div>
         <div class="number">{{ stats.opdrachten_actief }}</div>
         <div class="label">{{ _('Active Work Orders') }}</div>
-    </div>
+    </a>
     <a href="/faults" class="stat-card {% if stats.faults_active > 0 %}warn{% else %}ok{% endif %}" style="border-left:4px solid {% if stats.faults_active > 0 %}#e74c3c{% else %}#27ae60{% endif %};text-decoration:none;color:inherit;cursor:pointer;display:block">
         <div class="stat-accent" style="background:{% if stats.faults_active > 0 %}#e74c3c{% else %}#27ae60{% endif %}"></div>
         <div class="stat-icon">{% if stats.faults_active > 0 %}⚠️{% else %}✅{% endif %}</div>
         <div class="number">{{ stats.faults_active }}</div>
         <div class="label">{{ _('Active Faults') }}</div>
     </a>
-    <div class="stat-card" style="border-left:4px solid #f39c12">
+    <a href="/orders" class="stat-card" style="border-left:4px solid #f39c12;text-decoration:none;color:inherit;cursor:pointer;display:block">
         <div class="stat-accent" style="background:#f39c12"></div>
         <div class="stat-icon">📅</div>
         <div class="number">{{ stats.opdrachten_vandaag }}</div>
         <div class="label">{{ _('Today') }}</div>
-    </div>
-    <div class="stat-card {% if stats.voorraad_laag > 0 %}warn{% endif %}" style="border-left:4px solid {% if stats.voorraad_laag > 0 %}#e74c3c{% else %}#27ae60{% endif %}">
+    </a>
+    <a href="/warehouse" class="stat-card {% if stats.voorraad_laag > 0 %}warn{% endif %}" style="border-left:4px solid {% if stats.voorraad_laag > 0 %}#e74c3c{% else %}#27ae60{% endif %};text-decoration:none;color:inherit;cursor:pointer;display:block">
         <div class="stat-accent" style="background:{% if stats.voorraad_laag > 0 %}#e74c3c{% else %}#27ae60{% endif %}"></div>
         <div class="stat-icon">📦</div>
         <div class="number">{{ stats.voorraad_laag }}</div>
         <div class="label">{{ _('Low Stock') }}</div>
-    </div>
+    </a>
 </div>
 
 <!-- Quick Actions -->
