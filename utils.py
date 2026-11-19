@@ -53,8 +53,9 @@ def next_number_suffix(model_cls, field_name, day_prefix):
 
 
 def genereer_nummer():
+    """Номер Werkorder: WO-ддммгггг-NNNN, порядковый +1 в пределах дня."""
     from models import Opdracht
-    day = now_local().strftime('%Y%m%d')
+    day = now_local().strftime('%d%m%Y')
     num = next_number_suffix(Opdracht, 'nummer', f'WO-{day}')
     return f'WO-{day}-{num:04d}'
 
