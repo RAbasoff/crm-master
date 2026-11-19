@@ -196,5 +196,27 @@
       "Economische schade: stilstand gerekend met 8-urige werkdag (was 24 uur)",
       "Betrouwbaarheid: unieke documentnummers zonder duplicaten, integriteitscontrole database"
     ]
+  },
+  "2.21.0": {
+    "ru": [
+      "Werkorders: фото и видео, уведомления механикам/админу/начальнику ТС + создателю о процессе, завершении и закрытии",
+      "Werkorders: номера вида WO-ддммгггг-0001 с порядковым счётом, закрытие только админом или начальником ТС, пункт меню под TWO",
+      "TWO: подпись «Ondertekenen en voltooien» теперь сохраняет описание работ и фото (раньше терялись)",
+      "TWO: фото из заявки отображаются в наряде, месяцы списка на нидерландском",
+      "Storingen: механики видят все незакрытые заявки; при переоткрытии заявки все механики получают уведомление с причиной",
+      "Дашборд: карточки Werkorders и кликабельные карточки-ссылки (заявки, наряды, склад)",
+      "Резервные копии базы: автоматически дважды в сутки (12:30 и 23:30)",
+      "Уведомления: кнопка «Meldingen inschakelen» теперь показывается на всех устройствах"
+    ],
+    "nl": [
+      "Werkorders: foto's en video's, meldingen aan monteurs/beheerder/hoofd TD + aan de aanmaker over proces, voltooiing en sluiting",
+      "Werkorders: nummers als WO-ddmmjjjj-0001 met volgnummer, sluiten alleen door beheerder of hoofd TD, menu onder TWO",
+      "TWO: \"Ondertekenen en voltooien\" bewaart nu de werkomschrijving en foto's (ging eerder verloren)",
+      "TWO: foto's van de melding in de werkbon, maandnamen in de lijst in het Nederlands",
+      "Storingen: monteurs zien alle niet-gesloten meldingen; bij heropenen krijgen alle monteurs bericht met de reden",
+      "Dashboard: kaart Werkorders en klikbare kaarten (meldingen, werkorders, magazijn)",
+      "Database back-ups: automatisch tweemaal per dag (12:30 en 23:30)",
+      "Meldingen: knop \"Meldingen inschakelen\" verschijnt nu op alle apparaten"
+    ]
   }
 }

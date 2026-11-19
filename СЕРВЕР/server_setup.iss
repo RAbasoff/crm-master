@@ -2,7 +2,7 @@
 ; Сборка: ISCC.exe server_setup.iss  (из папки СЕРВЕР)
 
 #define MyAppName "ProMaster Server"
-#define MyAppVersion "2.20.0"
+#define MyAppVersion "2.21.0"
 #define MyAppPublisher "A.B.A.S.O.F.F."
 #define SrcDir "CRM_Server"
 
@@ -42,10 +42,13 @@ Name: "{group}\Удалить ProMaster Server"; Filename: "{uninstallexe}"
 
 [Icons]
 Name: "{group}\Запустить ProMaster Server"; Filename: "python.exe"; Parameters: "run_server.py"; WorkingDir: "{app}"; IconFilename: "{app}\static\crm.ico"
+; Автозапуск вместе с Windows — сервер поднимается сам после перезагрузки
+Name: "{commonstartup}\ProMaster Server"; Filename: "python.exe"; Parameters: "run_server.py"; WorkingDir: "{app}"; IconFilename: "{app}\static\crm.ico"
 
 [Run]
 ; Открыть порт 8080 в брандмауэре Windows — иначе другие компьютеры не подключатся
 Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=""ProMaster Server 8080"" dir=in action=allow protocol=TCP localport=8080"; Flags: runhidden waituntilterminated
+Filename: "python.exe"; Parameters: "run_server.py"; WorkingDir: "{app}"; Description: "Запустить ProMaster Server"; Flags: nowait postinstall skipifsilent
 Filename: "notepad.exe"; Parameters: """{app}\README_SERVER.txt"""; Description: "Открыть инструкцию"; Flags: postinstall nowait shellexec skipifsilent
 
 [Code]
