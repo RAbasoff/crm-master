@@ -135,6 +135,9 @@
             {% if has_access('two') %}
             <a href="/two" class="sb-item {% if 'two' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📝</span>TWO</a>
             {% endif %}
+            {% if has_access('orders') %}
+            <a href="/orders" class="sb-item {% if request.endpoint and request.endpoint.startswith('orders') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Orders') }}</a>
+            {% endif %}
             </div>
             
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Communication') }} <span class="sb-arrow">▼</span></div>
@@ -165,9 +168,6 @@
             {% if has_access('orders') or has_access('clients') or has_access('workers') or has_access('invoices') or has_access('contractors') %}
             <div class="sb-section" onclick="toggleSbGroup(this)">{{ _('Business') }} <span class="sb-arrow">▼</span></div>
             <div class="sb-group-items">
-            {% if has_access('orders') %}
-            <a href="/orders" class="sb-item {% if 'order' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">📋</span>{{ _('Work Orders') }}</a>
-            {% endif %}
             {% if has_access('clients') %}
             <a href="/responsible" class="sb-item {% if 'responsible' in (request.endpoint or '') %}active{% endif %}"><span class="sb-icon">👤</span>{{ _('Responsible') }}</a>
             {% endif %}

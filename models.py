@@ -1514,7 +1514,20 @@ class Opdracht(db.Model):
     afgeleverd = db.Column(db.DateTime)
     # Без delete-orphan: при удалении наряда история движений склада сохраняется
     # (opdracht_id обнуляется, т.к. колонка nullable).
+    # Кто создал наряд (для уведомлений о процессе/завершении/закрытии)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+    photos = db.relationship('OpdrachtPhoto', backref='opdracht', lazy=True, cascade='all, delete-orphan')
     mutaties = db.relationship('VoorraadMutatie', backref='opdracht', lazy=True)
+
+class OpdrachtPhoto(db.Model):
+    """Фото к наряду (Werkorder)."""
+    __tablename__ = 'opdracht_photo'
+    id = db.Column(db.Integer, primary_key=True)
+    opdracht_id = db.Column(db.Integer, db.ForeignKey('opdracht.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(300))
+    uploaded_at = db.Column(db.DateTime, default=now_local)
 
 class AuditLog(db.Model):
     __tablename__ = 'audit_log'

@@ -7171,5 +7171,29 @@ msgstr "Monteur toegewezen"
 msgid "ASSIGNED"
 msgstr "MONTEUR TOEGEWEZEN"
 
+msgid "New work order"
+msgstr "Nieuwe werkorder"
+
+msgid "Work order accepted"
+msgstr "Werkorder aangenomen"
+
+msgid "Work order in progress"
+msgstr "Werkorder in behandeling"
+
+msgid "Work order ready"
+msgstr "Werkorder gereed"
+
+msgid "Work order closed"
+msgstr "Werkorder afgeleverd"
+
+msgid "Work order cancelled"
+msgstr "Werkorder geannuleerd"
+
+msgid "Work order status changed"
+msgstr "Werkorder status gewijzigd"
+
+msgid "Only admin or head of technical service can close a work order"
+msgstr "Alleen beheerder of hoofd technische dienst kan een werkorder sluiten"
+
 msgid "Photos from fault"
 msgstr "Foto's van de melding"

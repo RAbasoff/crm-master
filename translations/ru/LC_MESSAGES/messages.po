@@ -7348,5 +7348,29 @@ msgstr "Назначен механик"
 msgid "ASSIGNED"
 msgstr "НАЗНАЧЕН МЕХАНИК"
 
+msgid "New work order"
+msgstr "Новый наряд-заказ"
+
+msgid "Work order accepted"
+msgstr "Наряд-заказ принят"
+
+msgid "Work order in progress"
+msgstr "Наряд-заказ в работе"
+
+msgid "Work order ready"
+msgstr "Наряд-заказ готов"
+
+msgid "Work order closed"
+msgstr "Наряд-заказ закрыт"
+
+msgid "Work order cancelled"
+msgstr "Наряд-заказ отменён"
+
+msgid "Work order status changed"
+msgstr "Статус наряда-заказа изменён"
+
+msgid "Only admin or head of technical service can close a work order"
+msgstr "Закрыть наряд-заказ может только админ или начальник технической службы"
+
 msgid "Photos from fault"
 msgstr "Фото из заявки"

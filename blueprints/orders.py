@@ -9,10 +9,48 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, Monteur, Opdracht, Verantwoordelijke, VoorraadMutatie, VoorraadItem, now_local)
-from utils import genereer_nummer, retry_unique_number, log_audit, role_required, safe_commit, safe_float
+from models import (db, Monteur, Opdracht, OpdrachtPhoto, User, Verantwoordelijke,
+                    VoorraadMutatie, VoorraadItem, now_local)
+from utils import (genereer_nummer, retry_unique_number, log_audit, role_required,
+                   safe_commit, safe_float, save_uploaded_file)
 
 bp = Blueprint('orders', __name__)
+
+
+# События Werkorder → msgid уведомлений (перевод — на нидерландском в force_locale)
+_ORDER_STATUS_MSG = {
+    'aangenomen': 'Work order accepted',
+    'diagnose': 'Work order in progress',
+    'in behandeling': 'Work order in progress',
+    'gereed': 'Work order ready',
+    'afgeleverd': 'Work order closed',
+    'geannuleerd': 'Work order cancelled',
+}
+
+
+def _notify_order_event(order, title_msgid):
+    """Обязательные оповещения: механики + админ + начальник ТС + создатель наряда."""
+    try:
+        from blueprints.faults import _notify_i18n_row
+        from logs import create_notifications
+        from security import is_head_of_ts
+        link = url_for('orders.order_detail', order_id=order.id)
+
+        def build(_f):
+            return f"{order.nummer}: {order.apparaat or ''} — {_f('Status')}: {order.status}"
+
+        targets = set()
+        for u in User.query.filter(User.is_active_user == True).all():
+            if u.has_role('admin') or u.has_role('technician') or is_head_of_ts(u):
+                targets.add(u.id)
+        if order.created_by:
+            targets.add(order.created_by)
+        targets.discard(current_user.id)
+        rows = [_notify_i18n_row(uid, title_msgid, build, link, ntype='info')
+                for uid in sorted(targets)]
+        create_notifications(rows)
+    except Exception as _ne:
+        print('order notify', _ne)
 
 @bp.route('/orders')
 @login_required
@@ -45,7 +83,8 @@ def order_new():
                 serienummer=request.form.get('serienummer', ''),
                 probleem=request.form['probleem'],
                 arbeidskosten=safe_float(request.form.get('arbeidskosten'), 0),
-                status='aangenomen'
+                status='aangenomen',
+                created_by=current_user.id
             )
         try:
             o = retry_unique_number(_make)
@@ -57,6 +96,17 @@ def order_new():
             if o.id:
                 return redirect(url_for('orders.order_detail', order_id=o.id))
             return redirect(url_for('orders.orders_list'))
+        # фото к наряду
+        try:
+            for photo in request.files.getlist('photos'):
+                if photo and photo.filename:
+                    fn = save_uploaded_file(photo, prefix=f"order_{o.id}_")
+                    if fn:
+                        db.session.add(OpdrachtPhoto(opdracht_id=o.id, filename=fn))
+            safe_commit()
+        except Exception as _pe:
+            print('order photos', _pe)
+        _notify_order_event(o, 'New work order')
         flash(_('Work Order created') + f' {o.nummer}', 'success')
         return redirect(url_for('orders.order_detail', order_id=o.id))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()
@@ -88,13 +138,29 @@ def order_edit(order_id):
         order.arbeidskosten = safe_float(request.form.get('arbeidskosten'), 0)
         order.onderdelenkosten = safe_float(request.form.get('onderdelenkosten'), 0)
         order.totaal = order.arbeidskosten + order.onderdelenkosten
+        # фото к наряду (добавление)
+        try:
+            for photo in request.files.getlist('photos'):
+                if photo and photo.filename:
+                    fn = save_uploaded_file(photo, prefix=f"order_{order.id}_")
+                    if fn:
+                        db.session.add(OpdrachtPhoto(opdracht_id=order.id, filename=fn))
+        except Exception as _pe:
+            print('order photos', _pe)
         ns = request.form.get('status', order.status)
-        if ns != order.status:
+        old_status = order.status
+        if ns != old_status:
+            # Закрыть (afgeleverd) может только админ / начальник ТС
+            if ns == 'afgeleverd' and old_status != 'afgeleverd':
+                from security import is_head_of_ts
+                if not (current_user.has_role('admin') or is_head_of_ts(current_user)):
+                    flash(_('Only admin or head of technical service can close a work order'), 'error')
+                    return redirect(url_for('orders.order_detail', order_id=order.id))
             if ns == 'in behandeling' and not order.gestart: order.gestart = now_local()
             elif ns == 'gereed' and not order.gereed: order.gereed = now_local()
             elif ns == 'afgeleverd' and not order.afgeleverd: order.afgeleverd = now_local()
             # Отмена заказа — возврат списанных запчастей на склад
-            if ns == 'geannuleerd' and order.status != 'geannuleerd':
+            if ns == 'geannuleerd' and old_status != 'geannuleerd':
                 for m in VoorraadMutatie.query.filter_by(opdracht_id=order.id, type='uitgaand').all():
                     item = VoorraadItem.query.get(m.item_id) if m.item_id else None
                     if item:
@@ -108,6 +174,8 @@ def order_edit(order_id):
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(url_for('orders.order_detail', order_id=order.id))
+        if ns != old_status:
+            _notify_order_event(order, _ORDER_STATUS_MSG.get(ns, 'Work order status changed'))
         flash(_('Work Order updated'), 'success')
         return redirect(url_for('orders.order_detail', order_id=order.id))
     verantwoordelijken = Verantwoordelijke.query.order_by(Verantwoordelijke.naam).all()

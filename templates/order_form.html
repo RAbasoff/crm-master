@@ -8,7 +8,7 @@
     {% endif %}
 </div>
 <div class="card">
-    <form method="POST" id="order-form">
+    <form method="POST" id="order-form" enctype="multipart/form-data">
         <div class="form-row">
             <div class="form-group">
                 <label>{{ _('Responsible person') }}</label>
@@ -68,6 +68,15 @@
         {% else %}
         <div class="form-group"><label>{{ _('Labor Cost') }} (€)</label><input type="number" name="arbeidskosten" value="0" step="10"></div>
         {% endif %}
+        <div class="form-group">
+            <label>📷 {{ _('Photos') }}</label>
+            <input type="file" name="photos" accept="image/*" capture="environment" multiple style="width:100%;padding:8px">
+            {% if order and order.photos %}
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                {% for p in order.photos %}<img src="/static/uploads/{{ p.filename }}" style="height:60px;border-radius:6px">{% endfor %}
+            </div>
+            {% endif %}
+        </div>
         <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
         <a href="/orders" class="btn" style="background:#eee">{{ _('Cancel') }}</a>
     </form>
