@@ -488,7 +488,16 @@ function endWorkById(faultId) {
                 {% if report.photos %}
                 <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap" data-gallery>
                     {% for p in report.photos %}
-                    <img src="/static/uploads/{{ p.filename }}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openPhotoViewer(this)">
+                    <div style="position:relative;width:60px;height:60px">
+                        <img src="/static/uploads/{{ p.filename }}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openPhotoViewer(this)">
+                        {% if can_close or (report.technician_id == current_user.id) %}
+                        <form method="POST" action="/faults/{{ fault.id }}/work-report/photo/{{ p.id }}/delete" style="position:absolute;top:-4px;right:-4px;margin:0"
+                              onsubmit="return confirm('{{ _('Delete this photo?') }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" style="background:#e74c3c;color:white;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;line-height:1;padding:0">✕</button>
+                        </form>
+                        {% endif %}
+                    </div>
                     {% endfor %}
                 </div>
                 {% endif %}

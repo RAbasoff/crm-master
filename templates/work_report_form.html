@@ -47,6 +47,20 @@
 
         <div class="form-group">
             <label>{{ _('Photos') }} ({{ _('installed parts') }})</label>
+            {% if report and report.photos %}
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+                {% for p in report.photos %}
+                <div style="position:relative">
+                    <img src="/static/uploads/{{ p.filename }}" alt="" style="height:110px;border-radius:8px;display:block">
+                    <form method="POST" action="/faults/{{ fault.id }}/work-report/photo/{{ p.id }}/delete" style="position:absolute;top:4px;right:4px;margin:0"
+                          onsubmit="return confirm('{{ _('Delete this photo?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" title="{{ _('Delete') }}" style="background:#e74c3c;color:white;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1">✕</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
             <input type="file" name="photos" multiple accept="image/*" style="padding:10px">
             <small style="color:#888">{{ _('Upload photos of installed parts') }}</small>
         </div>

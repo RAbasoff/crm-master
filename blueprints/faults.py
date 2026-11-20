@@ -1262,6 +1262,39 @@ def fault_photo_delete(fault_id, photo_id):
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
 
+@bp.route('/<int:fault_id>/work-report/photo/<int:photo_id>/delete', methods=['POST'])
+@login_required
+def work_report_photo_delete(fault_id, photo_id):
+    """Удаление фото рабочего отчёта: админ/начальник ТС или автор отчёта."""
+    import os
+    from security import is_head_of_ts
+    f = FaultReport.query.get_or_404(fault_id)
+    photo = WorkReportPhoto.query.filter_by(id=photo_id).first_or_404()
+    wr = WorkReport.query.get(photo.report_id)
+    allowed = (current_user.has_role('admin') or is_head_of_ts(current_user)
+               or (wr and wr.technician_id == current_user.id))
+    if not allowed:
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+    try:
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'uploads', photo.filename)
+        if os.path.exists(p):
+            os.remove(p)
+    except Exception:
+        pass
+    db.session.delete(photo)
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+    else:
+        log_audit('delete', 'work_report_photo', photo_id, f'#{f.id}')
+        flash(_('Photo deleted'), 'success')
+    # назад на форму редактирования отчёта, если удаляли оттуда
+    back = request.referrer or ''
+    if '/work-report' in back and wr is not None:
+        return redirect(url_for('faults.work_report_edit', fault_id=f.id, report_id=wr.id))
+    return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+
 @bp.route('/<int:fault_id>/work-report', methods=['GET', 'POST'])
 @login_required
 @role_required('technician', 'admin', 'director')
