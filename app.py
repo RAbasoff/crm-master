@@ -326,6 +326,78 @@ def maybe_evening_backup():
     Теперь — scheduled_backup() из фонового цикла (12:30 и 23:30)."""
     return scheduled_backup()
 
+
+def nightly_self_check(force=False):
+    """Ежедневная проверка в 02:30 (правило владельца 2026-11-20).
+
+    1) push-библиотеки импортируются (иначе молча не доходят уведомления)
+    2) PRAGMA quick_check базы
+    3) свободное место на диске
+    Отчёт админу, затем ПРОФИЛАКТИЧЕСКИЙ перезапуск веб-воркеров
+    (touch wsgi) — защита от зависаний вроде инцидента 504."""
+    now = now_local()
+    if not force and not (now.hour == 2 and now.minute >= 30):
+        return None
+    backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+    os.makedirs(backup_dir, exist_ok=True)
+    stamp = os.path.join(backup_dir, '.stamp_night')
+    today = now.strftime('%Y%m%d')
+    try:
+        if os.path.exists(stamp) and open(stamp, 'r', encoding='utf-8').read().strip() == today:
+            return None
+    except Exception:
+        pass
+
+    problems = []
+    try:
+        import push  # noqa: F401  — добавляет user-site в sys.path
+        import pywebpush, aiohttp, attr  # noqa: F401
+    except Exception as e:
+        problems.append('push libs: %s' % e)
+    try:
+        from models import db
+        r = db.session.execute(db.text('PRAGMA quick_check')).fetchone()
+        if r and str(r[0]).lower() != 'ok':
+            problems.append('db: %s' % r[0])
+    except Exception as e:
+        problems.append('db: %s' % e)
+    try:
+        import shutil as _sh
+        du = _sh.disk_usage(backup_dir)
+        if du.free < 100 * 1024 * 1024:
+            problems.append('disk low: %d MB free' % (du.free // 1024 // 1024))
+    except Exception:
+        pass
+
+    status = 'OK' if not problems else 'PROBLEM: ' + '; '.join(problems)
+    try:
+        from logs import create_notification
+        from models import User
+        for u in User.query.filter(User.role == 'admin', User.is_active_user == True).all():
+            create_notification(u.id, 'Nightly check 02:30',
+                                'Nachtcontrole: %s' % status, 'info', '/settings')
+    except Exception as _ne:
+        print('nightly notify', _ne)
+    try:
+        with open(stamp, 'w', encoding='utf-8') as f:
+            f.write(today)
+    except Exception:
+        pass
+    print('NIGHTLY CHECK 02:30:', status)
+
+    # Профилактический перезапуск веб-воркеров (свежие процессы до утра).
+    # Небольшая пауза — дать уведомлениям уйти до перезагрузки.
+    try:
+        import time as _t
+        _t.sleep(8)
+        wsgi = '/var/www/rabasoff_pythonanywhere_com_wsgi.py'
+        if os.path.exists(wsgi):
+            os.utime(wsgi, None)
+            print('NIGHTLY CHECK: wsgi touched (workers reload)')
+    except Exception as _te:
+        print('nightly reload', _te)
+    return status
+
 def send_email(to_email, subject, body):
     """Send email notification"""
     import smtplib
