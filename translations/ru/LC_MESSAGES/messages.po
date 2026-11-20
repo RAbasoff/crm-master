@@ -7372,5 +7372,11 @@ msgstr "Статус наряда-заказа изменён"
 msgid "Only admin or head of technical service can close a work order"
 msgstr "Закрыть наряд-заказ может только админ или начальник технической службы"
 
+msgid "Delete this photo?"
+msgstr "Удалить это фото?"
+
+msgid "Fault updated"
+msgstr "Заявка обновлена"
+
 msgid "Photos from fault"
 msgstr "Фото из заявки"

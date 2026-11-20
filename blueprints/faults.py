@@ -1211,6 +1211,57 @@ def fault_reopen(fault_id):
     return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
 
+@bp.route('/<int:fault_id>/edit-info', methods=['POST'])
+@login_required
+def fault_edit_info(fault_id):
+    """Корректировка заявки админом/начальником ТС: заголовок и описание."""
+    from security import is_head_of_ts
+    f = FaultReport.query.get_or_404(fault_id)
+    if not (current_user.has_role('admin') or is_head_of_ts(current_user)):
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+    title = (request.form.get('title') or '').strip()
+    description = (request.form.get('description') or '').strip()
+    if title:
+        f.title = title[:200]
+    if description:
+        f.description = description
+    if not safe_commit():
+        flash(_('Save failed. Please try again.'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+    log_audit('edit', 'fault', f.id, f'Корректировка описания: {f.title}')
+    add_work_report(f"#{f.id} {f.title} — {_('Fault updated')} ({current_user.display_name or current_user.username})")
+    flash(_('Fault updated'), 'success')
+    return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+
+@bp.route('/<int:fault_id>/photo/<int:photo_id>/delete', methods=['POST'])
+@login_required
+def fault_photo_delete(fault_id, photo_id):
+    """Удаление фото заявки админом/начальником ТС."""
+    import os
+    from security import is_head_of_ts
+    f = FaultReport.query.get_or_404(fault_id)
+    if not (current_user.has_role('admin') or is_head_of_ts(current_user)):
+        flash(_('Access denied'), 'error')
+        return redirect(url_for('faults.fault_detail', fault_id=f.id))
+    photo = FaultPhoto.query.filter_by(id=photo_id, fault_id=f.id).first()
+    if photo:
+        try:
+            p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'uploads', photo.filename)
+            if os.path.exists(p):
+                os.remove(p)
+        except Exception:
+            pass
+        db.session.delete(photo)
+        if not safe_commit():
+            flash(_('Save failed. Please try again.'), 'error')
+            return redirect(url_for('faults.fault_detail', fault_id=f.id))
+        log_audit('delete', 'fault_photo', photo_id, f'#{f.id}')
+        flash(_('Photo deleted'), 'success')
+    return redirect(url_for('faults.fault_detail', fault_id=f.id))
+
+
 @bp.route('/<int:fault_id>/work-report', methods=['GET', 'POST'])
 @login_required
 @role_required('technician', 'admin', 'director')

@@ -7195,5 +7195,11 @@ msgstr "Werkorder status gewijzigd"
 msgid "Only admin or head of technical service can close a work order"
 msgstr "Alleen beheerder of hoofd technische dienst kan een werkorder sluiten"
 
+msgid "Delete this photo?"
+msgstr "Deze foto verwijderen?"
+
+msgid "Fault updated"
+msgstr "Melding bijgewerkt"
+
 msgid "Photos from fault"
 msgstr "Foto's van de melding"

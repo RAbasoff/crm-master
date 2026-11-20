@@ -370,8 +370,24 @@ function endWorkById(faultId) {
             {% endif %}
         </div>
         <div>
-            <h2>{{ _('Description') }}</h2>
+            <h2 style="display:flex;justify-content:space-between;align-items:center">
+                {{ _('Description') }}
+                {% if can_close %}
+                <button type="button" class="btn btn-sm" style="background:#3498db;color:white"
+                    onclick="var f=document.getElementById('editInfoForm');f.style.display=(f.style.display==='none'?'block':'none')">✏️ {{ _('Edit') }}</button>
+                {% endif %}
+            </h2>
             <p>{{ fault.description }}</p>
+            {% if can_close %}
+            <form id="editInfoForm" method="POST" action="/faults/{{ fault.id }}/edit-info" style="display:none;margin-top:10px;background:#f8f9fa;padding:12px;border-radius:8px">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">{{ _('Title') }}</label>
+                <input type="text" name="title" value="{{ fault.title }}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">{{ _('Description') }}</label>
+                <textarea name="description" rows="4" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">{{ fault.description }}</textarea>
+                <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white;margin-top:8px">{{ _('Save') }}</button>
+            </form>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -381,7 +397,16 @@ function endWorkById(faultId) {
     <h2>{{ _('Photos') }}</h2>
     <div class="photo-grid" data-gallery>
         {% for p in fault.photos %}
-        <img class="photo-fit" src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="openPhotoViewer(this)" style="cursor:pointer">
+        <div style="position:relative">
+            <img class="photo-fit" src="/static/uploads/{{ p.filename }}" alt="{{ p.description or '' }}" onclick="openPhotoViewer(this)" style="cursor:pointer">
+            {% if can_close %}
+            <form method="POST" action="/faults/{{ fault.id }}/photo/{{ p.id }}/delete" style="position:absolute;top:6px;right:6px;margin:0"
+                  onsubmit="return confirm('{{ _('Delete this photo?') }}')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" title="{{ _('Delete') }}" style="background:#e74c3c;color:white;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1">✕</button>
+            </form>
+            {% endif %}
+        </div>
         {% endfor %}
     </div>
 </div>
