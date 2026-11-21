@@ -388,6 +388,9 @@ def cylinders_list():
     q = GasCylinder.query
     if gas_type:
         q = q.filter_by(gas_type=gas_type)
+    # Пустые забирает поставщик при поставке, возвращённые — история:
+    # в основном списке их быть не должно (правило владельца 2026-11-21).
+    q = q.filter(GasCylinder.status.notin_(('empty', 'returned')))
     cylinders = q.order_by(GasCylinder.gas_type, GasCylinder.cylinder_number).all()
     return render_template('gas/cylinders.html', cylinders=cylinders, gas_filter=gas_type)
 
@@ -775,13 +778,12 @@ def order_status(order_id):
                 notes=f'Received via order #{o.id} x{qty}'
             ))
             created += 1
-        # Обмен: при поставке новых пустые возвращаются поставщику.
-        # Списываем до qty пустых (ждали возврата) — без этого «остаток»
-        # накапливал пустые, а возврат надо было делать вручную.
+        # Обмен: при поставке ВСЕ пустые забирает поставщик (правило владельца
+        # 2026-11-21: пустых в списке быть не должно вообще).
         returned = 0
         empties = GasCylinder.query.filter_by(
             gas_type=o.gas_type, status='empty'
-        ).order_by(GasCylinder.id.asc()).limit(qty).all()
+        ).order_by(GasCylinder.id.asc()).all()
         for c in empties:
             c.status = 'returned'
             c.side = None

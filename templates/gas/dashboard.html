@@ -45,8 +45,7 @@
             <div style="font-size:11px;color:#555;line-height:1.7">
                 <span>🟢 {{ _('Full') }}: <b>{{ mix_full|length }}</b></span><br>
                 <span>🟠 {{ _('Use') }}: <b>{{ mix_use|length }}</b></span><br>
-                <span>🔴 {{ _('Empty') }}: <b>{{ mix_empty|length }}</b></span><br>
-                <span style="color:#888">{{ _('Total') }}: {{ (mixed_cylinders or [])|length }}</span>
+                <span style="color:#888">{{ _('Total') }}: {{ mix_full|length + mix_use|length }}</span>
             </div>
         </div>
         <div style="flex:1;display:flex;gap:14px;flex-wrap:wrap;font-size:10px">
@@ -60,12 +59,6 @@
                 <div style="font-weight:700;color:#e65100;margin-bottom:3px">🟠 {{ _('In use') }} (1)</div>
                 {% for c in mix_use %}
                 <div class="cylinder-card" data-id="{{ c.id }}" data-type="mixed" data-num="{{ c.cylinder_number }}" data-status="in_use" style="cursor:pointer;padding:2px 6px;border-radius:3px;border:1px solid #f39c12;background:#fff8f0;font-size:10px;margin-bottom:2px"><b>{{ c.cylinder_number }}</b></div>
-                {% endfor %}
-            </div>
-            <div>
-                <div style="font-weight:700;color:#c62828;margin-bottom:3px">🔴 {{ _('Empty') }}</div>
-                {% for c in mix_empty %}
-                <div class="cylinder-card" data-id="{{ c.id }}" data-type="mixed" data-num="{{ c.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:2px 6px;border-radius:3px;border:1px solid #c62828;background:#fdecea;font-size:10px;margin-bottom:2px"><b>{{ c.cylinder_number }}</b></div>
                 {% endfor %}
             </div>
         </div>
@@ -238,15 +231,10 @@
             </svg>
         </div>
         <div style="width:130px;flex-shrink:0;font-size:10px">
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ stats.n2_full }}</b> {{ _('Full') }}</div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ stats.n2_in_use }}</b> {{ _('Use') }}</div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#c62828"></div><b style="color:#c62828">{{ stats.n2_empty }}</b> {{ _('Empty') }}</div>
-            <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin:3px 0 12px">{{ _('Total') }}: {{ stats.n2_full + stats.n2_in_use + stats.n2_empty }}</div>
-            {% set _emp = [] %}{% for c in n2_cylinders if c.status == 'empty' %}{% if _emp.append(c) %}{% endif %}{% endfor %}
-            <div style="font-weight:700;color:#c62828;margin-bottom:4px">{{ _('Empty') }}: {{ _emp|length }}</div>
-            {% for cyl in _emp %}
-            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="nitrogen" data-num="{{ cyl.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:3px 6px;border-radius:3px;border:1px solid #c62828;background:#fdecea;font-size:9px;margin-bottom:3px"><b style="color:#c62828">{{ cyl.cylinder_number }}</b></div>
-            {% endfor %}
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ _full|length }}</b> {{ _('Full') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ _iu|length }}</b> {{ _('Use') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#3498db"></div><b style="color:#3498db">{{ _if|length }}</b> {{ _('Full waiting') }}</div>
+            <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin:3px 0 12px">{{ _('Total') }}: {{ _full|length + _iu|length + _if|length }}</div>
         </div>
     </div>
 </div>
@@ -333,15 +321,10 @@
             </svg>
         </div>
         <div style="width:130px;flex-shrink:0;font-size:10px">
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ stats.co2_full }}</b> {{ _('Full') }}</div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ stats.co2_in_use }}</b> {{ _('Use') }}</div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#c62828"></div><b style="color:#c62828">{{ stats.co2_empty }}</b> {{ _('Empty') }}</div>
-            <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin:3px 0 12px">{{ _('Total') }}: {{ stats.co2_full + stats.co2_in_use + stats.co2_empty }}</div>
-            {% set _emp = [] %}{% for c in co2_cylinders if c.status == 'empty' %}{% if _emp.append(c) %}{% endif %}{% endfor %}
-            <div style="font-weight:700;color:#c62828;margin-bottom:4px">{{ _('Empty') }}: {{ _emp|length }}</div>
-            {% for cyl in _emp %}
-            <div class="cylinder-card" data-id="{{ cyl.id }}" data-type="co2" data-num="{{ cyl.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:3px 6px;border-radius:3px;border:1px solid #c62828;background:#fdecea;font-size:9px;margin-bottom:3px"><b style="color:#c62828">{{ cyl.cylinder_number }}</b></div>
-            {% endfor %}
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#27ae60"></div><b style="color:#27ae60">{{ _full|length }}</b> {{ _('Full') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#f39c12"></div><b style="color:#f39c12">{{ _iu|length }}</b> {{ _('Use') }}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><div style="width:8px;height:8px;border-radius:50%;background:#3498db"></div><b style="color:#3498db">{{ _if|length }}</b> {{ _('Full waiting') }}</div>
+            <div style="font-size:8px;color:#999;border-top:1px solid #eee;padding-top:3px;margin:3px 0 12px">{{ _('Total') }}: {{ _full|length + _iu|length + _if|length }}</div>
         </div>
     </div>
 </div>
@@ -376,9 +359,9 @@
         {% endfor %}
       </div>
       <div>
-        <b style="color:#c62828">{{ _('Empty') }}</b>
-        {% for c in _cyls if c.status == 'empty' %}
-        <div class="cylinder-card" data-id="{{ c.id }}" data-type="{{ gt }}" data-num="{{ c.cylinder_number }}" data-status="empty" style="cursor:pointer;padding:1px 5px;border:1px solid #c62828;background:#fdecea;border-radius:3px;margin:2px 0">{{ c.cylinder_number }}</div>
+        <b style="color:#3498db">{{ _('Full waiting') }}</b>
+        {% for c in _cyls if c.status == 'full' and c.installed_at %}
+        <div class="cylinder-card" data-id="{{ c.id }}" data-type="{{ gt }}" data-num="{{ c.cylinder_number }}" data-status="full" style="cursor:pointer;padding:1px 5px;border:1px solid #3498db;background:#eaf3ff;border-radius:3px;margin:2px 0">{{ c.cylinder_number }}</div>
         {% endfor %}
       </div>
     </div>
