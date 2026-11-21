@@ -364,7 +364,12 @@ def weekly_offsite_backup(force=False):
         msg = 'weekly backup %s' % now.strftime('%Y-%m-%d %H:%M')
         add = subprocess.run(['git', 'add', '-f', 'werkplaats_latest.db'], cwd=tmp, capture_output=True, text=True)
         com = subprocess.run(['git', 'commit', '-m', msg], cwd=tmp, capture_output=True, text=True)
-        push = subprocess.run(['git', 'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
+        tok = os.environ.get('GITHUB_TOKEN') or os.environ.get('PROMASTER_GITHUB_TOKEN') or ''
+        if tok:
+            push = subprocess.run(['git', '-c', 'http.extraheader=Authorization: Bearer %s' % tok,
+                                   'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
+        else:
+            push = subprocess.run(['git', 'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
         if push.returncode != 0:
             result = 'push-failed: ' + (push.stderr or push.stdout or '')[-120:]
         try:
