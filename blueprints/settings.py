@@ -19,6 +19,21 @@ from sqlalchemy import func, case
 bp = Blueprint('settings', __name__)
 
 
+@bp.route('/settings/audit-log')
+@login_required
+@role_required('admin')
+def audit_log_page():
+    """Журнал аудита: кто, что и когда менял (админ)."""
+    page = request.args.get('page', 1, type=int)
+    action = (request.args.get('action') or '').strip()
+    q = AuditLog.query.order_by(AuditLog.id.desc())
+    if action:
+        q = q.filter(AuditLog.action == action)
+    pagination = q.paginate(page=page, per_page=100, error_out=False)
+    return render_template('audit_log.html', logs=pagination.items,
+                           pagination=pagination, action=action)
+
+
 @bp.route('/settings/activity')
 @login_required
 @role_required('admin')

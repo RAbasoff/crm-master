@@ -324,8 +324,9 @@ def start_daily_check(initial_delay=120):
                         log.warning('TOOL WEAR CHECK loop: %s', e)
                     try:
                         # бэкап БД по расписанию (12:30 и 23:30) + ночная проверка 02:30
-                        from app import scheduled_backup, nightly_self_check
+                        from app import scheduled_backup, nightly_self_check, weekly_offsite_backup
                         scheduled_backup()
+                        weekly_offsite_backup()
                         nightly_self_check()
                     except Exception as e:
                         log.warning('SCHEDULED BACKUP: %s', e)

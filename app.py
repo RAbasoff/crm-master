@@ -322,6 +322,78 @@ def scheduled_backup():
     return path
 
 
+def weekly_offsite_backup(force=False):
+    """Раз в неделю (воскресенье с 03:00) — копия БД в git-ветку backups.
+
+    Внешний носитель по стратегии бэкапов: отдельная ветка репозитория,
+    живёт независимо от рабочего дерева. Плюс попытка push в origin
+    (при отсутствии прав — уведомление админу, копия остаётся локально)."""
+    import subprocess, tempfile, shutil
+    now = now_local()
+    if not force and not (now.weekday() == 6 and now.hour >= 3):
+        return None
+    base = os.path.dirname(os.path.abspath(__file__))
+    backup_dir = os.path.join(base, 'backups')
+    stamp = os.path.join(backup_dir, '.stamp_offsite')
+    today = now.strftime('%Y%m%d')
+    try:
+        if os.path.exists(stamp) and open(stamp, 'r', encoding='utf-8').read().strip() == today:
+            return None
+    except Exception:
+        pass
+    # новейшая копия БД
+    cands = [f for f in os.listdir(backup_dir) if f.startswith('werkplaats_') and f.endswith('.db')] if os.path.isdir(backup_dir) else []
+    if not cands:
+        path = backup_database(force=True)
+    else:
+        path = os.path.join(backup_dir, sorted(cands)[-1])
+    if not path or not os.path.exists(path):
+        return 'no-backup-file'
+    result = 'ok'
+    tmp = tempfile.mkdtemp(prefix='offsite_wt_')
+    try:
+        br = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/backups'], cwd=base)
+        if br.returncode == 0:
+            subprocess.run(['git', 'worktree', 'add', '--force', tmp, 'backups'], cwd=base,
+                           capture_output=True, text=True, timeout=120)
+        else:
+            subprocess.run(['git', 'worktree', 'add', '-b', 'backups', tmp], cwd=base,
+                           capture_output=True, text=True, timeout=120)
+        dst = os.path.join(tmp, 'werkplaats_latest.db')
+        shutil.copy2(path, dst)
+        msg = 'weekly backup %s' % now.strftime('%Y-%m-%d %H:%M')
+        add = subprocess.run(['git', 'add', '-f', 'werkplaats_latest.db'], cwd=tmp, capture_output=True, text=True)
+        com = subprocess.run(['git', 'commit', '-m', msg], cwd=tmp, capture_output=True, text=True)
+        push = subprocess.run(['git', 'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
+        if push.returncode != 0:
+            result = 'push-failed: ' + (push.stderr or push.stdout or '')[-120:]
+        try:
+            with open(stamp, 'w', encoding='utf-8') as f:
+                f.write(today)
+        except Exception:
+            pass
+        print('OFFSITE BACKUP:', result)
+        if result != 'ok':
+            try:
+                from logs import create_notification
+                from models import User
+                for u in User.query.filter(User.role == 'admin', User.is_active_user == True).all():
+                    create_notification(u.id, 'Nightly check 02:30',
+                                        'Wekelijkse back-up: %s' % result, 'warning', '/settings')
+            except Exception:
+                pass
+        return result
+    except Exception as e:
+        result = 'error: %s' % e
+        print('OFFSITE BACKUP:', result)
+        return result
+    finally:
+        try:
+            subprocess.run(['git', 'worktree', 'remove', '--force', tmp], cwd=base, capture_output=True, timeout=60)
+        except Exception:
+            pass
+
+
 def maybe_evening_backup():
     """Обратная совместимость: раньше бэкап был только в 23:59 по запросам.
     Теперь — scheduled_backup() из фонового цикла (12:30 и 23:30)."""

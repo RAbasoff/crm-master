@@ -13,7 +13,7 @@ from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie, FaultWorkSession, now_local)
 from utils import resolve_user_id
-from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
+from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file, sanitize_like
 from logs import create_notifications
 from security import director_only
 
@@ -514,7 +514,15 @@ _FAULTS_EAGER = (
 @login_required
 def faults_list():
     page = request.args.get('page', 1, type=int)
+    q_txt = (request.args.get('q') or '').strip()
     base = FaultReport.query.options(*_FAULTS_EAGER)
+    if q_txt:
+        _like = f'%{sanitize_like(q_txt)}%'
+        base = base.filter(db.or_(
+            FaultReport.title.ilike(_like),
+            FaultReport.description.ilike(_like),
+            FaultReport.machine.has(Machine.name.ilike(_like)),
+        ))
     if current_user.has_role('admin', 'director'):
         q = base
     elif current_user.has_role('technician'):
@@ -567,6 +575,7 @@ def faults_list():
                            month_groups=month_groups,
                            current_month=current_key,
                            sort_dir=sort_dir,
+                           q=q_txt,
                            pagination=None,
                            status_msgs=STATUS_MSGIDS)
 

@@ -3,8 +3,14 @@
 {% block content %}
 <div class="page-header">
     <h1>⚠️ {{ _('Fault Reports') }}</h1>
-    <div style="display:flex;gap:8px;align-items:center">
-        <a href="/faults?sort={% if sort_dir == 'asc' %}desc{% else %}asc{% endif %}" class="btn btn-sm" style="background:#eee" title="{{ _('Sort by number') }}">№ {% if sort_dir == 'desc' %}▼{% else %}▲{% endif %}</a>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <form method="GET" action="/faults" style="display:flex;gap:6px;align-items:center">
+            <input type="text" name="q" value="{{ q or '' }}" placeholder="🔍 {{ _('Search by name...') }}"
+                style="padding:7px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:190px">
+            {% if sort_dir %}<input type="hidden" name="sort" value="{{ sort_dir }}">{% endif %}
+            {% if q %}<a href="/faults" class="btn btn-sm" style="background:#eee">✕</a>{% endif %}
+        </form>
+        <a href="/faults?sort={% if sort_dir == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-sm" style="background:#eee" title="{{ _('Sort by number') }}">№ {% if sort_dir == 'desc' %}▼{% else %}▲{% endif %}</a>
         <a href="/faults/new" class="btn btn-warning">+ {{ _('New Fault Report') }}</a>
     </div>
 </div>
