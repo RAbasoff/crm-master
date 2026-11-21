@@ -231,19 +231,41 @@
     </div>
     {% endif %}
 
-    <!-- Документы -->
-    {% if eq.manual_file or eq.certificate_file or eq.documents %}
+    <!-- Документы и отчёты о работе (PDF) -->
     <div class="card" style="grid-column:1/-1">
-        <h2 style="cursor:pointer" onclick="toggleSection(this)">{{ _('Documents') }} <span style="font-size:11px;color:#999">▼</span></h2>
-        <div class="section-body" style="display:flex;gap:12px;flex-wrap:wrap">
-            {% if eq.manual_file %}<a href="/static/uploads/{{ eq.manual_file }}" target="_blank" class="btn btn-sm" style="background:#e3f2fd">📄 {{ _('Manual') }}</a>{% endif %}
-            {% if eq.certificate_file %}<a href="/static/uploads/{{ eq.certificate_file }}" target="_blank" class="btn btn-sm" style="background:#e8f5e9">📜 {{ _('Certificate') }}</a>{% endif %}
-            {% for doc in eq.documents %}
-            <a href="/static/uploads/{{ doc.filename }}" target="_blank" class="btn btn-sm" style="background:#f3e5f5">📎 {{ doc.original_name or doc.filename }}</a>
-            {% endfor %}
+        <h2 style="cursor:pointer" onclick="toggleSection(this)">📄 {{ _('Work reports') }} / {{ _('Documents') }} <span style="font-size:11px;color:#999">▼</span></h2>
+        <div class="section-body">
+            {% if current_user.has_role('admin', 'director', 'technician') %}
+            <form method="POST" action="/assets/{{ eq.id }}/documents" enctype="multipart/form-data"
+                  style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:#f0f7ff;padding:12px;border-radius:10px">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="documents" accept=".pdf,application/pdf" multiple style="padding:8px">
+                <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">📥 {{ _('Upload') }} PDF</button>
+                <small style="color:#888">{{ _('Work reports in PDF format') }}</small>
+            </form>
+            {% endif %}
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                {% if eq.manual_file %}<a href="/static/uploads/{{ eq.manual_file }}" target="_blank" class="btn btn-sm" style="background:#e3f2fd">📄 {{ _('Manual') }}</a>{% endif %}
+                {% if eq.certificate_file %}<a href="/static/uploads/{{ eq.certificate_file }}" target="_blank" class="btn btn-sm" style="background:#e8f5e9">📜 {{ _('Certificate') }}</a>{% endif %}
+                {% for doc in eq.documents %}
+                <div style="display:flex;align-items:center;gap:8px;background:#f3e5f5;border-radius:8px;padding:8px 12px">
+                    <a href="/static/uploads/{{ doc.filename }}" target="_blank" style="color:#333;text-decoration:none;font-size:12px;font-weight:600">📎 {{ doc.original_name or doc.filename }}</a>
+                    <small style="color:#888">{{ doc.uploaded_at.strftime('%d-%m-%Y') if doc.uploaded_at else '' }}</small>
+                    {% if current_user.has_role('admin', 'director', 'technician') %}
+                    <form method="POST" action="/assets/{{ eq.id }}/documents/{{ doc.id }}/delete" style="margin:0" onsubmit="return confirm('{{ _('Delete this file?') }}')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" title="{{ _('Delete') }}" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:14px;line-height:1">✕</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% else %}
+                {% if not eq.manual_file and not eq.certificate_file %}
+                <p style="color:#888;font-size:12px">{{ _('No data') }}</p>
+                {% endif %}
+                {% endfor %}
+            </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- История обслуживания -->
     {% if eq.service_logs %}

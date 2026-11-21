@@ -7396,5 +7396,14 @@ msgstr "Среднее время ремонта"
 msgid "By Mechanic"
 msgstr "По механику"
 
+msgid "Work reports"
+msgstr "Отчёты о работе"
+
+msgid "Work reports in PDF format"
+msgstr "Отчёты о работе в формате PDF"
+
+msgid "Delete this file?"
+msgstr "Удалить этот файл?"
+
 msgid "Photos from fault"
 msgstr "Фото из заявки"

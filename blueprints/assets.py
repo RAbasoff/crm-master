@@ -9,7 +9,8 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, Contractor, Equipment, EquipmentServiceLog, FactorySection, User, Verantwoordelijke)
+from models import (db, Contractor, Equipment, EquipmentDocument, EquipmentServiceLog,
+                    FactorySection, User, Verantwoordelijke)
 from utils import log_audit, role_required, safe_commit, safe_date, safe_float, safe_int, save_uploaded_file, ensure_fpdf, find_pdf_font
 
 bp = Blueprint('assets', __name__)
@@ -202,6 +203,55 @@ def assets_delete(eq_id):
         return redirect(url_for('assets.assets_list'))
     flash(_('Equipment deleted'), 'success')
     return redirect(url_for('assets.assets_list'))
+
+
+@bp.route('/assets/<int:eq_id>/documents', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def assets_upload_document(eq_id):
+    """Загрузка PDF-файлов как отчёты о работе (Werkverslagen)."""
+    eq = Equipment.query.get_or_404(eq_id)
+    saved = 0
+    for f in request.files.getlist('documents'):
+        if not f or not f.filename:
+            continue
+        # по требованию: в карточку — только PDF как отчёт о работе
+        if not (f.filename or '').lower().endswith('.pdf'):
+            continue
+        fn = save_uploaded_file(f, prefix='eqdoc_')
+        if fn:
+            db.session.add(EquipmentDocument(
+                equipment_id=eq.id, filename=fn,
+                original_name=(f.filename or '')[:300], doc_type='work_report'))
+            saved += 1
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('assets.assets_detail', eq_id=eq.id))
+    log_audit('upload', 'equipment_document', eq.id, f'PDF отчётов: {saved}')
+    flash(_('Work reports uploaded') + f': {saved}', 'success')
+    return redirect(url_for('assets.assets_detail', eq_id=eq.id))
+
+
+@bp.route('/assets/<int:eq_id>/documents/<int:doc_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def assets_delete_document(eq_id, doc_id):
+    """Удаление PDF-отчёта из карточки оборудования."""
+    eq = Equipment.query.get_or_404(eq_id)
+    doc = EquipmentDocument.query.filter_by(id=doc_id, equipment_id=eq.id).first_or_404()
+    try:
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'uploads', doc.filename)
+        if os.path.exists(p):
+            os.remove(p)
+    except Exception:
+        pass
+    db.session.delete(doc)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        log_audit('delete', 'equipment_document', doc_id, f'#{eq.id}')
+        flash(_('Document deleted'), 'success')
+    return redirect(url_for('assets.assets_detail', eq_id=eq.id))
 
 
 @bp.route('/assets/<int:eq_id>/service', methods=['POST'])
