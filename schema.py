@@ -154,6 +154,12 @@ def ensure_perf():
                         "CREATE INDEX IF NOT EXISTS ix_fault_report_status ON fault_report (status, created_at)",
                         "CREATE INDEX IF NOT EXISTS ix_fault_report_reporter ON fault_report (reporter_id, status)",
                         "CREATE INDEX IF NOT EXISTS ix_audit_log_created ON audit_log (created_at)",
+                        "CREATE INDEX IF NOT EXISTS ix_fault_report_created ON fault_report (created_at)",
+                        "CREATE INDEX IF NOT EXISTS ix_opdracht_created ON opdracht (aangemaakt)",
+                        "CREATE INDEX IF NOT EXISTS ix_supplier_price_item ON supplier_price (item_id)",
+                        "CREATE INDEX IF NOT EXISTS ix_work_report_entry_created ON work_report_entry (created_at)",
+                        "CREATE INDEX IF NOT EXISTS ix_equipment_maint_date ON equipment_maintenance (date)",
+                        "CREATE INDEX IF NOT EXISTS ix_user_activity_created ON user_activity_log (created_at)",
                     ]
                     for sql in indexes:
                         cur.execute(sql)

@@ -508,7 +508,8 @@ def warehouse_inventory_check():
 def warehouse_prices(item_id):
     item = VoorraadItem.query.get_or_404(item_id)
     prices = SupplierPrice.query.filter_by(item_id=item_id).order_by(SupplierPrice.price).all()
-    return render_template('warehouse_prices.html', item=item, prices=prices)
+    contractors = Contractor.query.order_by(Contractor.company_name).all()
+    return render_template('warehouse_prices.html', item=item, prices=prices, contractors=contractors)
 
 
 @bp.route('/<int:item_id>/prices/add', methods=['POST'])
@@ -521,9 +522,19 @@ def warehouse_price_add(item_id):
     except (ValueError, TypeError):
         flash(_('Invalid price'), 'error')
         return redirect(url_for('warehouse.warehouse_prices', item_id=item_id))
+    # Поставщик — только из справочника контрагентов (единый справочник)
+    contractor_id = safe_int(request.form.get('contractor_id'))
+    supplier_name = ''
+    if contractor_id:
+        c = Contractor.query.get(contractor_id)
+        supplier_name = (c.company_name if c else '') or ''
+    if not supplier_name:
+        flash(_('Supplier') + ': ' + _('Select...'), 'error')
+        return redirect(url_for('warehouse.warehouse_prices', item_id=item_id))
     p = SupplierPrice(
         item_id=item_id,
-        supplier_name=request.form.get('supplier_name', ''),
+        contractor_id=contractor_id,
+        supplier_name=supplier_name,
         price=price,
         delivery_days=safe_int(request.form.get('delivery_days')) or None,
         min_order=(safe_float(request.form.get('min_order'), 0)

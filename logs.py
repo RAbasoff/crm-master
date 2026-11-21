@@ -20,6 +20,51 @@ def _user_language(user_id):
     """
     return 'nl'
 
+
+# ── Единый слой событийных уведомлений (правило владельца 2026-11-21) ──────
+# Одно место: «событие → получатели → строка в локали получателя →
+# колокольчик + push». Новые события шлют через notify_row/notify_users,
+# чтобы не раскидывать правила по модулям.
+
+def notify_row(user_id, title_msgid, build_msg, link, ntype='info'):
+    """Строка уведомления в языке получателя (msgid → перевод в force_locale).
+
+    build_msg — строка или callable(_f) для сборки текста в локали.
+    """
+    from flask_babel import force_locale, gettext as _f
+    try:
+        lang = _user_language(user_id)
+    except Exception:
+        lang = 'nl'
+    with force_locale(lang):
+        title = _f(title_msgid)
+        msg = build_msg(_f) if callable(build_msg) else (build_msg or '')
+    return {'user_id': user_id, 'title': title, 'message': msg, 'type': ntype, 'link': link}
+
+
+def mechanic_team_ids(exclude=None, include_admin=True, include_head=True):
+    """Кому шлём служебные события: механики + админ + начальник ТС.
+
+    exclude — id, который не должен получить (обычно автор действия).
+    """
+    from models import User
+    from security import is_head_of_ts
+    ids = set()
+    for u in User.query.filter(User.is_active_user == True).all():
+        role = (getattr(u, 'role', '') or '').lower()
+        if role == 'technician' or (include_admin and role == 'admin'):
+            ids.add(u.id)
+        elif include_head:
+            try:
+                if is_head_of_ts(u):
+                    ids.add(u.id)
+            except Exception:
+                pass
+    if exclude:
+        ids.discard(exclude)
+    return sorted(ids)
+
+
 def _send_push_job(row, title, message, ntype, link, lang='ru'):
     """Фоновая задача: ТОЛЬКО сетевая отправка (без БД!).
 

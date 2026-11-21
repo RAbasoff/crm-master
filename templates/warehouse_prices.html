@@ -26,7 +26,7 @@
         </tr>
         {% for p in prices %}
         <tr {% if loop.first %}style="background:#f0fff0"{% endif %}>
-            <td><strong>{{ p.supplier_name }}</strong></td>
+            <td><strong>{% if p.contractor_id %}<a href="/contractors/{{ p.contractor_id }}" style="color:#3498db">{{ p.supplier_name }}</a>{% else %}{{ p.supplier_name }}{% endif %}</strong></td>
             <td style="font-weight:bold;color:{% if loop.first %}#27ae60{% else %}#333{% endif %}">€{{ "%.2f"|format(p.price) }}</td>
             <td>{{ p.delivery_days or '—' }} {{ _('days') }}</td>
             <td>{{ p.min_order or '—' }}</td>
@@ -42,7 +42,14 @@
     <h2>+ {{ _('Add Supplier Price') }}</h2>
     <form method="POST" action="/warehouse/{{ item.id }}/prices/add">
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Supplier') }} *</label><input type="text" name="supplier_name" required></div>
+            <div class="form-group"><label>{{ _('Supplier') }} *</label>
+                <select name="contractor_id" required>
+                    <option value="">{{ _('Select...') }}</option>
+                    {% for c in contractors %}
+                    <option value="{{ c.id }}">{{ c.company_name }}{% if c.contact_person %} ({{ c.contact_person }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="form-group"><label>{{ _('Price') }} (€) *</label><input type="number" name="price" step="0.01" required></div>
         </div>
         <div class="form-row">

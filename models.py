@@ -850,10 +850,15 @@ class WarehouseReservation(db.Model):
     user = db.relationship('User', foreign_keys=[reserved_by])
 
 class SupplierPrice(db.Model):
-    """Цены от разных поставщиков на один товар"""
+    """Цены от разных поставщиков на один товар.
+
+    Поставщик — из справочника контрагентов (единый справочник, решение
+    владельца 2026-11-21): contractor_id + копия имени для отображения.
+    """
     __tablename__ = 'supplier_price'
     id = db.Column(db.Integer, primary_key=True)
     item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'), nullable=False)
+    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))
     supplier_name = db.Column(db.String(200), nullable=False)
     price = db.Column(Numeric(10, 2), nullable=False)
     delivery_days = db.Column(db.Integer)  # срок доставки
@@ -861,6 +866,7 @@ class SupplierPrice(db.Model):
     notes = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=now_local)
     item = db.relationship('VoorraadItem', backref='supplier_prices')
+    contractor = db.relationship('Contractor', backref='supplier_prices')
 
 class Invoice(db.Model):
     __tablename__ = 'invoice'

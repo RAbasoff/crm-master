@@ -30,24 +30,20 @@ _ORDER_STATUS_MSG = {
 
 
 def _notify_order_event(order, title_msgid):
-    """Обязательные оповещения: механики + админ + начальник ТС + создатель наряда."""
+    """Обязательные оповещения: механики + админ + начальник ТС + создатель наряда.
+    Единый слой: logs.notify_row + logs.mechanic_team_ids."""
     try:
-        from blueprints.faults import _notify_i18n_row
-        from logs import create_notifications
-        from security import is_head_of_ts
+        from logs import create_notifications, mechanic_team_ids, notify_row
         link = url_for('orders.order_detail', order_id=order.id)
 
         def build(_f):
             return f"{order.nummer}: {order.apparaat or ''} — {_f('Status')}: {order.status}"
 
-        targets = set()
-        for u in User.query.filter(User.is_active_user == True).all():
-            if u.has_role('admin') or u.has_role('technician') or is_head_of_ts(u):
-                targets.add(u.id)
+        targets = set(mechanic_team_ids(exclude=current_user.id))
         if order.created_by:
             targets.add(order.created_by)
         targets.discard(current_user.id)
-        rows = [_notify_i18n_row(uid, title_msgid, build, link, ntype='info')
+        rows = [notify_row(uid, title_msgid, build, link, ntype='info')
                 for uid in sorted(targets)]
         create_notifications(rows)
     except Exception as _ne:

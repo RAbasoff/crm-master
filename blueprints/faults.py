@@ -448,21 +448,9 @@ def fault_work_hours(f):
 
 
 def _notify_i18n_row(user_id, title_msgid, build_msg, link, ntype='fault'):
-    """Строка уведомления в локали ПОЛУЧАТЕЛЯ: title и msg строятся в force_locale.
-
-    Раньше сообщения фан-аута собирались на языке отправителя —
-    получатель видел чужой язык и в списке, и в тосте.
-    """
-    from flask_babel import force_locale, gettext as _f
-    try:
-        from logs import _user_language
-        lang = _user_language(user_id)
-    except Exception:
-        lang = 'nl'
-    with force_locale(lang):
-        title = _f(title_msgid)
-        msg = build_msg(_f)
-    return {'user_id': user_id, 'title': title, 'message': msg, 'type': ntype, 'link': link}
+    """Строка уведомления в локали получателя — единый слой logs.notify_row."""
+    from logs import notify_row
+    return notify_row(user_id, title_msgid, build_msg, link, ntype=ntype)
 
 
 def _notify_director_status(f, kind, detail=None):
@@ -1235,16 +1223,14 @@ def fault_reopen(fault_id):
     # Обязательное оповещение ВСЕМ механикам (включая работавшего по заявке):
     # заявка снова открыта + причина
     try:
-        from logs import create_notifications
+        from logs import create_notifications, mechanic_team_ids
         link = url_for('faults.fault_detail', fault_id=f.id)
-        mech_ids = set()
+        mech_ids = set(mechanic_team_ids(exclude=current_user.id))
         if getattr(f, 'technician_id', None):
             mech_ids.add(f.technician_id)
         for t in (f.assigned_technicians or []):
             if getattr(t, 'id', None):
                 mech_ids.add(t.id)
-        for m in User.query.filter(User.role == 'technician', User.is_active_user == True).all():
-            mech_ids.add(m.id)
         mech_ids.discard(current_user.id)
         rows = [_notify_i18n_row(
             uid, 'Fault reopened',
