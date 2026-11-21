@@ -370,6 +370,18 @@ def nightly_self_check(force=False):
     except Exception:
         pass
 
+    # Ночной смоук ключевых страниц (изолированный процесс — живой воркер не трогаем)
+    try:
+        import subprocess, sys as _sys
+        _smoke = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nightly_smoke.py')
+        r = subprocess.run([_sys.executable, _smoke],
+                           capture_output=True, text=True, timeout=300)
+        if r.returncode != 0:
+            bad = [l for l in ((r.stdout or '') + (r.stderr or '')).splitlines() if 'PROBLEM' in l]
+            problems.append('smoke: ' + ('; '.join(bad[:5]) or 'failed'))
+    except Exception as e:
+        problems.append('smoke: %s' % e)
+
     status = 'OK' if not problems else 'PROBLEM: ' + '; '.join(problems)
     try:
         from logs import create_notification
