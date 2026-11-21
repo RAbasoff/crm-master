@@ -15,7 +15,7 @@ OUT = ROOT / 'СЕРВЕР' / 'CRM_Server'
 INCLUDE = [
     'app.py', 'models.py', 'schema.py', 'config.py', 'utils.py',
     'security.py', 'logs.py', 'logs_util.py', 'pdf_utils.py', 'push.py',
-    'notify.py', 'sms_counter.py', 'wsgi.py',
+    'notify.py', 'wsgi.py',
     'run_server.py',
     'license.py',
     'maintenance_jobs.py',

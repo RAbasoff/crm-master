@@ -183,7 +183,7 @@ MECHANIC_DENIED_PREFIXES = (
 )
 
 MECHANIC_DENIED_PATHS = (
-    '/reports', '/stats', '/archive', '/work-report',
+    '/reports', '/stats', '/archive',
     '/settings', '/users', '/audit-log',
     '/invoices', '/export',
     '/purchase-requests',

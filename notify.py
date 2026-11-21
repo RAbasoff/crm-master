@@ -93,7 +93,7 @@ def _name_of(u):
     return ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
 
 
-def fault_sms_recipients():
+def fault_notify_recipients():
     """Кому слать уведомления о новой заявке (email):
     механики + начальник ТС + админ + Peter."""
     from models import User
@@ -127,7 +127,7 @@ def notify_fault_created(fault, mechanics, head_of_ts_users=None):
     )
     sent = 0
     try:
-        extra = fault_sms_recipients()
+        extra = fault_notify_recipients()
     except Exception:
         extra = []
     seen = {}
