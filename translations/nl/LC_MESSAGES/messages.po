@@ -7231,5 +7231,8 @@ msgstr "Dit bestand verwijderen?"
 msgid "Sort by number"
 msgstr "Sorteren op nummer"
 
+msgid "Full waiting"
+msgstr "Wachtend (rechts)"
+
 msgid "Photos from fault"
 msgstr "Foto's van de melding"
