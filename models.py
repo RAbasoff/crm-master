@@ -1076,6 +1076,8 @@ class FaultReport(db.Model):
     created_at = db.Column(db.DateTime, default=now_local, index=True)
     accepted_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
+    # Подтверждённое время ремонта (часы); None = авто-расчёт от принятия до решения
+    work_hours = db.Column(db.Float)
     # Метки времени для SLA
     first_response_at = db.Column(db.DateTime)  # первая реакция (accepted)
     # Старший в группе механиков (ведёт записи, фото, отчёты)

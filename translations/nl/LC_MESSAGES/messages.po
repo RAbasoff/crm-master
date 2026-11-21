@@ -7201,5 +7201,23 @@ msgstr "Deze foto verwijderen?"
 msgid "Fault updated"
 msgstr "Melding bijgewerkt"
 
+msgid "Repair time"
+msgstr "Reparatieduur"
+
+msgid "Lead time"
+msgstr "Doorlooptijd"
+
+msgid "auto"
+msgstr "automatisch"
+
+msgid "Repair time in hours (auto-calculated)"
+msgstr "Reparatieduur in uren (automatisch berekend)"
+
+msgid "Average repair time"
+msgstr "Gemiddelde reparatieduur"
+
+msgid "By Mechanic"
+msgstr "Per monteur"
+
 msgid "Photos from fault"
 msgstr "Foto's van de melding"

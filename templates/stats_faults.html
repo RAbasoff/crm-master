@@ -14,6 +14,34 @@
     <div class="stat-card warn"><div class="number">{{ open_count }}</div><div class="label">{{ _('Open') }}</div></div>
     <div class="stat-card"><div class="number">{{ in_progress }}</div><div class="label">{{ _('In Progress') }}</div></div>
     <div class="stat-card ok"><div class="number">{{ resolved }}</div><div class="label">{{ _('Resolved') }}</div></div>
+    {% if avg_repair_time is not none %}
+    <div class="stat-card"><div class="number">{{ avg_repair_time }} h</div><div class="label">{{ _('Average repair time') }}</div></div>
+    {% endif %}
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>{{ _('By Mechanic') }} — {{ _('Average repair time') }}</h2>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('By Mechanic') }}</th><th>{{ _('hours') }}</th><th>{{ _('Count') }}</th></tr>
+            {% for name, avg_h, cnt in by_mechanic_time %}
+            <tr><td>{{ name }}</td><td><strong>{{ avg_h }}</strong></td><td>{{ cnt }}</td></tr>
+            {% else %}
+            <tr><td colspan="3" style="color:#888">{{ _('No data') }}</td></tr>
+            {% endfor %}
+        </table></div>
+    </div>
+    <div class="card">
+        <h2>{{ _('By Machine') }} — {{ _('Average repair time') }}</h2>
+        <div class="table-wrap"><table>
+            <tr><th>{{ _('Machine') }}</th><th>{{ _('hours') }}</th><th>{{ _('Count') }}</th></tr>
+            {% for name, avg_h, cnt in by_machine_time %}
+            <tr><td>{{ name }}</td><td><strong>{{ avg_h }}</strong></td><td>{{ cnt }}</td></tr>
+            {% else %}
+            <tr><td colspan="3" style="color:#888">{{ _('No data') }}</td></tr>
+            {% endfor %}
+        </table></div>
+    </div>
 </div>
 
 <div class="detail-grid">

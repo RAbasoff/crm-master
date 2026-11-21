@@ -7378,5 +7378,23 @@ msgstr "Удалить это фото?"
 msgid "Fault updated"
 msgstr "Заявка обновлена"
 
+msgid "Repair time"
+msgstr "Время ремонта"
+
+msgid "Lead time"
+msgstr "Время выполнения"
+
+msgid "auto"
+msgstr "авто"
+
+msgid "Repair time in hours (auto-calculated)"
+msgstr "Время ремонта в часах (рассчитано автоматически)"
+
+msgid "Average repair time"
+msgstr "Среднее время ремонта"
+
+msgid "By Mechanic"
+msgstr "По механику"
+
 msgid "Photos from fault"
 msgstr "Фото из заявки"

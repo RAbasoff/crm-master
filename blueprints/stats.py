@@ -35,10 +35,35 @@ def stats_faults():
     by_priority = db.session.query(
         FaultReport.priority, db.func.count(FaultReport.id)
     ).group_by(FaultReport.priority).all()
-    
+
+    # Среднее время ремонта по механикам и по машинам (подтверждённое или авто-расчёт)
+    from blueprints.faults import fault_work_hours
+    done = (FaultReport.query
+            .filter(FaultReport.status.in_(['resolved', 'closed']))
+            .order_by(FaultReport.id.desc()).limit(200).all())
+    mech_hours, mach_hours, all_hours = {}, {}, []
+    for f in done:
+        h = fault_work_hours(f)
+        if h is None:
+            continue
+        all_hours.append(h)
+        t = f.technician or (f.assigned_technicians[0] if f.assigned_technicians else None)
+        name = ((t.display_name or t.username) if t else '?')
+        mech_hours.setdefault(name, []).append(h)
+        mach_hours.setdefault((f.machine.name if f.machine else f.target_name or '?'), []).append(h)
+
+    def _avg_rows(d):
+        return sorted(((k, round(sum(v) / len(v), 1), len(v)) for k, v in d.items()),
+                      key=lambda x: -x[1])
+    avg_repair_time = round(sum(all_hours) / len(all_hours), 1) if all_hours else None
+    by_mechanic_time = _avg_rows(mech_hours)
+    by_machine_time = _avg_rows(mach_hours)
+
     return render_template('stats_faults.html',
         total=total, open_count=open_count, in_progress=in_progress, resolved=resolved,
-        by_machine=by_machine, by_priority=by_priority)
+        by_machine=by_machine, by_priority=by_priority,
+        avg_repair_time=avg_repair_time,
+        by_mechanic_time=by_mechanic_time, by_machine_time=by_machine_time)
 
 @bp.route('/stats/full')
 @login_required

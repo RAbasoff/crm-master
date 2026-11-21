@@ -362,6 +362,12 @@ function endWorkById(faultId) {
             {% if fault.resolved_at %}
             <p><strong>{{ _('Resolved') }}:</strong> {{ fault.resolved_at.strftime('%d-%m-%Y %H:%M') }}</p>
             {% endif %}
+            {% if work_hours is not none %}
+            <p><strong>⏱ {{ _('Repair time') }}:</strong> {{ work_hours }} {{ _('hours') }}{% if fault.work_hours %} ✓{% else %} <small style="color:#888">({{ _('auto') }})</small>{% endif %}</p>
+            {% endif %}
+            {% if lead_hours is not none %}
+            <p><strong>{{ _('Lead time') }}:</strong> {{ lead_hours }} {{ _('hours') }}</p>
+            {% endif %}
             {% if fault.contractor %}
             <p><strong>🏢 {{ _('Contractor') }}:</strong> <a href="/contractors/{{ fault.contractor.id }}" style="color:#3498db">{{ fault.contractor.company_name }}</a>
                 {% if fault.contractor.contact_person %} · {{ fault.contractor.contact_person }}{% endif %}
@@ -552,6 +558,16 @@ function endWorkById(faultId) {
 </div>
 
 <script>
+window.__autoWorkHours = {{ work_hours if work_hours is not none else 0 }};
+
+// Подтверждение времени ремонта при «Opgelost» (авто-расчёт + правка механиком)
+function askRepairHours() {
+    const auto = String(window.__autoWorkHours || '0');
+    const v = prompt('{{ _("Repair time in hours (auto-calculated)") }}', auto);
+    if (v === null) return null;
+    return v.trim().replace(',', '.');
+}
+
 function changeFaultStatus(newStatus) {
     if (!newStatus) return;
     // Пауза / ожидание — всегда с обязательной причиной и описанием
@@ -566,10 +582,16 @@ function changeFaultStatus(newStatus) {
         openRejectModal();
         return;
     }
+    const body = {status: newStatus};
+    if (newStatus === 'resolved') {
+        const wh = askRepairHours();
+        if (wh === null) { document.getElementById('statusSelect').value = ''; return; }
+        if (wh !== '') body.work_hours = wh;
+    }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({status: newStatus})
+        body: JSON.stringify(body)
     }).then(r => r.json()).then(d => {
         if (d.ok) location.reload();
         else alert(d.error || 'Error');
@@ -586,10 +608,16 @@ function setStatus(st) {
         openRejectModal();
         return;
     }
+    const body = {status: st};
+    if (st === 'resolved') {
+        const wh = askRepairHours();
+        if (wh === null) return;
+        if (wh !== '') body.work_hours = wh;
+    }
     csrfFetch('/faults/{{ fault.id }}/status', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({status: st})
+        body: JSON.stringify(body)
     }).then(r => r.json()).then(d => {
         if (d.ok) location.reload();
         else alert(d.error || 'Error');

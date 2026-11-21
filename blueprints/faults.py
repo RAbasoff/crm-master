@@ -409,6 +409,43 @@ def _notify_i18n(user_id, title_msgid, build_msg, link, ntype='fault'):
     create_notifications([_notify_i18n_row(user_id, title_msgid, build_msg, link, ntype)])
 
 
+def fault_work_hours(f):
+    """Чистое время ремонта (часы): подтверждённое (work_hours) или авто-расчёт
+    «от принятия до решения минус паузы» (правило владельца 2026-11-21)."""
+    if f is None:
+        return None
+    if f.work_hours:
+        try:
+            return round(float(f.work_hours), 2)
+        except (TypeError, ValueError):
+            pass
+    start = f.accepted_at or f.created_at
+    end = f.resolved_at or now_local()
+    if not start or not end:
+        return None
+    total = (end - start).total_seconds() / 3600.0
+    pause_st = ('paused', 'waiting_parts', 'parts_ordered')
+    try:
+        pauses = 0.0
+        t_pause = None
+        hist = (FaultStatusHistory.query.filter_by(fault_id=f.id)
+                .order_by(FaultStatusHistory.changed_at).all())
+        for h in hist:
+            st = (h.new_status or '')
+            if st in pause_st and t_pause is None:
+                t_pause = h.changed_at
+            elif t_pause is not None and st not in pause_st:
+                if h.changed_at:
+                    pauses += (h.changed_at - t_pause).total_seconds() / 3600.0
+                t_pause = None
+        if t_pause is not None:
+            pauses += (now_local() - t_pause).total_seconds() / 3600.0
+        total -= pauses
+    except Exception:
+        pass
+    return round(max(total, 0.0), 2)
+
+
 def _notify_i18n_row(user_id, title_msgid, build_msg, link, ntype='fault'):
     """Строка уведомления в локали ПОЛУЧАТЕЛЯ: title и msg строятся в force_locale.
 
@@ -848,6 +885,11 @@ def fault_detail(fault_id):
     timeline.sort(key=lambda t: (t['at'] or datetime.min))
 
     from security import is_head_of_ts
+    try:
+        _lead = ((f.resolved_at or now_local()) - f.created_at).total_seconds() / 3600.0 if f.created_at else None
+        lead_hours = round(_lead, 1) if _lead is not None else None
+    except Exception:
+        lead_hours = None
     return render_template(
         'fault_detail.html', fault=f, technicians=technicians, contractors=contractors,
         can_close=is_head_of_ts(current_user),
@@ -859,6 +901,7 @@ def fault_detail(fault_id):
         timeline=timeline,
         status_msgs=STATUS_MSGIDS, pause_reason_msgs=PAUSE_REASON_MSGIDS,
         sla=sla, sla_minutes=SLA_MINUTES, sla_labels=SLA_LABELS,
+        work_hours=fault_work_hours(f), lead_hours=lead_hours,
     )
 
 
@@ -1096,6 +1139,13 @@ def fault_status_change(fault_id):
     )
     if not ok:
         return jsonify({'error': err}), 400
+    # Подтверждённое время ремонта (с вопроса при «Opgelost»)
+    wh_raw = data.get('work_hours')
+    if wh_raw not in (None, ''):
+        try:
+            f.work_hours = float(str(wh_raw).replace(',', '.'))
+        except ValueError:
+            pass
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
     log_audit('status_change', 'fault', f.id, f'{old_status} → {new_status}')
