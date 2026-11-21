@@ -9,6 +9,7 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import db, User, ChatRoom, ChatParticipant, ChatMessage
+from utils import resolve_user_id
 from utils import role_required, safe_commit, safe_int, create_notification
 from logs import create_notifications
 
@@ -78,7 +79,7 @@ def get_unread_count(user_id):
 @login_required
 def chat_list():
     """Chat list — all conversations."""
-    participations = ChatParticipant.query.filter_by(user_id=current_user.id).all()
+    participations = ChatParticipant.query.filter_by(user_id=resolve_user_id()).all()
     rooms = []
     for p in participations:
         room = p.room
@@ -108,7 +109,7 @@ def chat_room(room_id):
     """Chat room — view messages."""
     room = ChatRoom.query.get_or_404(room_id)
     # Check membership
-    participant = ChatParticipant.query.filter_by(room_id=room_id, user_id=current_user.id).first()
+    participant = ChatParticipant.query.filter_by(room_id=room_id, user_id=resolve_user_id()).first()
     if not participant:
         flash(_('Not a member of this chat'), 'error')
         return redirect(url_for('chat.chat_list'))
@@ -155,12 +156,12 @@ def chat_group_new():
         flash(_('Select at least one member'), 'error')
         return redirect(url_for('chat.chat_list'))
 
-    room = ChatRoom(name=name, is_group=True, created_by=current_user.id)
+    room = ChatRoom(name=name, is_group=True, created_by=resolve_user_id())
     db.session.add(room)
     db.session.flush()
 
     # Add creator
-    db.session.add(ChatParticipant(room_id=room.id, user_id=current_user.id))
+    db.session.add(ChatParticipant(room_id=room.id, user_id=resolve_user_id()))
     # Add members
     for mid in member_ids:
         mid = safe_int(mid)
@@ -188,7 +189,7 @@ def api_send():
         return jsonify({'error': 'Missing room_id or body'}), 400
 
     # Verify membership
-    participant = ChatParticipant.query.filter_by(room_id=room_id, user_id=current_user.id).first()
+    participant = ChatParticipant.query.filter_by(room_id=room_id, user_id=resolve_user_id()).first()
     if not participant:
         return jsonify({'error': 'Not a member'}), 403
 
@@ -229,7 +230,7 @@ def api_send():
 def api_messages(room_id):
     """Get new messages for a room (polling)."""
     after_id = safe_int(request.args.get('after', 0))
-    participant = ChatParticipant.query.filter_by(room_id=room_id, user_id=current_user.id).first()
+    participant = ChatParticipant.query.filter_by(room_id=room_id, user_id=resolve_user_id()).first()
     if not participant:
         return jsonify({'error': 'Not a member'}), 403
 

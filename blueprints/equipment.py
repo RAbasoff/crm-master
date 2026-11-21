@@ -12,6 +12,7 @@ import os, io, json
 from models import (db, EquipmentMaintenance, EquipmentPart, EquipmentComponent,
                     EquipmentPartOrder, EquipmentMROPhoto, Machine, VoorraadItem,
                     VoorraadMutatie)
+from utils import resolve_user_id
 from utils import ensure_fpdf, find_pdf_font, log_audit, log_system, role_required, safe_commit, safe_date, safe_float, safe_int, sanitize_like, save_uploaded_file
 
 bp = Blueprint('equipment', __name__)
@@ -746,7 +747,7 @@ def equipment_new():
             next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,
             periodicity=request.form.get('periodicity', ''),
             notes=request.form.get('notes', ''),
-            created_by=current_user.id
+            created_by=resolve_user_id()
         )
         db.session.add(eq)
         db.session.flush()
@@ -774,7 +775,7 @@ def equipment_new():
                         db.session.add(VoorraadMutatie(
                             item_id=wh_id, type='uitgaand', hoeveelheid=qty,
                             opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
-                            user_id=current_user.id
+                            user_id=resolve_user_id()
                         ))
         # Add components
         comp_types = request.form.getlist('comp_type')
@@ -854,7 +855,7 @@ def equipment_edit(eq_id):
                         db.session.add(VoorraadMutatie(
                             item_id=wh_id, type='uitgaand', hoeveelheid=qty,
                             opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
-                            user_id=current_user.id
+                            user_id=resolve_user_id()
                         ))
         # Update components
         EquipmentComponent.query.filter_by(equipment_id=eq.id).delete()
@@ -933,7 +934,7 @@ def equipment_order():
         supplier=request.form.get('supplier', ''),
         urgency=request.form.get('urgency', 'normal'),
         notes=request.form.get('notes', ''),
-        created_by=current_user.id
+        created_by=resolve_user_id()
     )
     db.session.add(o)
     if not safe_commit():

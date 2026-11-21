@@ -16,6 +16,7 @@ from models import (db, now_local, MaintenancePlan, MaintenanceSchedule, Mainten
                     MachinePart, PartMaintenanceLog, MachineTOChecklist, Machine, Monteur, FactorySection, User,
                     Equipment, EquipmentMaintenance, TechnicalWorkOrder, VoorraadItem, WorkEvent)
 from security import director_only
+from utils import resolve_user_id
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    create_notification, log_audit, log_system, save_uploaded_file,
                    find_pdf_font, ensure_fpdf)
@@ -579,7 +580,7 @@ def maintenance_calendar_complete():
                             machine_id=plan.machine_id,
                             maintenance_type=plan.maintenance_type,
                             description=f'{plan.title} ({event_date}) — completed by {current_user.display_name or current_user.username}',
-                            performed_by=current_user.id,
+                            performed_by=resolve_user_id(),
                             date_performed=event_dt,
                             next_maintenance=event_dt,
                             cost=0
@@ -592,7 +593,7 @@ def maintenance_calendar_complete():
                                 part_id=first_part.id,
                                 action='maintenance',
                                 description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
-                                performed_by=current_user.id,
+                                performed_by=resolve_user_id(),
                                 date=event_dt
                             ))
                     else:
@@ -610,7 +611,7 @@ def maintenance_calendar_complete():
                             machine_id=plan.machine_id,
                             maintenance_type=plan.maintenance_type,
                             description=f'{plan.title} — completed by {current_user.display_name or current_user.username}',
-                            performed_by=current_user.id,
+                            performed_by=resolve_user_id(),
                             date_performed=event_dt,
                             next_maintenance=event_dt,
                             cost=0
@@ -622,7 +623,7 @@ def maintenance_calendar_complete():
                                 part_id=first_part.id,
                                 action='maintenance',
                                 description=f'{plan.title[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
-                                performed_by=current_user.id,
+                                performed_by=resolve_user_id(),
                                 date=event_dt
                             ))
                     db.session.commit()
@@ -643,7 +644,7 @@ def maintenance_calendar_complete():
                     part_id=part.id,
                     action=action,
                     description=f'Completed from calendar by {current_user.display_name or current_user.username}',
-                    performed_by=current_user.id,
+                    performed_by=resolve_user_id(),
                     date=datetime.combine(ev_d, datetime.min.time())
                 )
                 db.session.add(log)
@@ -705,7 +706,7 @@ def maintenance_calendar_complete():
                         part_id=first_part.id,
                         action='maintenance',
                         description=f'{mr.description[:80]} — completed from calendar by {current_user.display_name or current_user.username}',
-                        performed_by=current_user.id,
+                        performed_by=resolve_user_id(),
                         date=ev_d
                     )
                     db.session.add(log)
@@ -1416,7 +1417,7 @@ def works_calendar_new():
             date_start=safe_date(request.form.get('date_start')),
             date_end=safe_date(request.form.get('date_end')),
             recurrence=request.form.get('recurrence', 'none') or 'none',
-            created_by=current_user.id if isinstance(current_user.id, int) else None,
+            created_by=resolve_user_id(),
         )
         if not ev.date_start:
             flash(_('Date is required'), 'error')
@@ -1750,7 +1751,7 @@ def maintenance_plan_new():
                 next_maintenance=(d := safe_date(request.form.get('next_maintenance'))) and d.date() or None,
                 recurrence=request.form.get('recurrence', '') or None,
                 notes=request.form.get('notes', ''),
-                created_by=current_user.id if isinstance(current_user.id, int) else None
+                created_by=resolve_user_id()
             )
             for wid in worker_ids:
                 w = Monteur.query.get(wid)
@@ -1793,7 +1794,7 @@ def maintenance_plan_new():
                         description=f'{p.title}\n{p.description or ""}',
                         planned_date=p.planned_start,
                         status='assigned',
-                        created_by=current_user.id if isinstance(current_user.id, int) else None
+                        created_by=resolve_user_id()
                     )
                     db.session.add(two)
                     db.session.flush()
@@ -1940,7 +1941,7 @@ def maintenance_plan_edit(plan_id):
                     status='planned',
                     planned_start=new_date,
                     recurrence=p.recurrence,
-                    created_by=current_user.id
+                    created_by=resolve_user_id()
                 )
                 db.session.add(new_plan)
                 if not safe_commit():
@@ -2276,7 +2277,7 @@ def maintenance_schedule_generate():
                     status='planned',
                     planned_start=d,
                     recurrence=sched.recurrence,
-                    created_by=current_user.id
+                    created_by=resolve_user_id()
                 )
                 db.session.add(p)
                 created += 1

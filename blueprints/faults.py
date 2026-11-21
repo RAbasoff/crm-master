@@ -12,6 +12,7 @@ from sqlalchemy.orm import joinedload, subqueryload
 from models import (db, FaultReport, FaultPhoto, FaultVideo, FaultStatusHistory,
                     WorkReport, WorkReportPhoto, User, Machine, Equipment, Contractor,
                     VoorraadItem, VoorraadMutatie, FaultWorkSession, now_local)
+from utils import resolve_user_id
 from utils import role_required, log_audit, create_notification, add_work_report, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 from logs import create_notifications
 from security import director_only
@@ -586,7 +587,7 @@ def fault_new():
                 priority=request.form.get('priority', 'normal'),
                 machine_id=int(machine_id) if machine_id else None,
                 equipment_id=int(equipment_id) if equipment_id else None,
-                reporter_id=current_user.id if isinstance(current_user.id, int) else None
+                reporter_id=resolve_user_id()
             )
             # ResponsibleAuth (id «r_N») → связанный User
             if f.reporter_id is None:
@@ -785,7 +786,7 @@ def fault_detail(fault_id):
     f = FaultReport.query.get_or_404(fault_id)
     # Цеховой пользователь — только свои заявки
     if not current_user.has_role('admin', 'director', 'technician'):
-        uid = current_user.id if isinstance(current_user.id, int) else None
+        uid = resolve_user_id()
         if uid is None:
             person_id = getattr(current_user, 'person_id', None)
             linked = User.query.filter_by(person_id=person_id).first() if person_id else None
@@ -796,10 +797,10 @@ def fault_detail(fault_id):
     technicians = User.query.filter_by(role='technician', is_active_user=True).order_by(User.display_name).all()
     contractors = Contractor.query.filter_by(is_active=True).order_by(Contractor.company_name).all()
     my_session = FaultWorkSession.query.filter_by(
-        fault_id=f.id, user_id=current_user.id, ended_at=None
+        fault_id=f.id, user_id=resolve_user_id(), ended_at=None
     ).first()
     open_session = FaultWorkSession.query.filter_by(
-        user_id=current_user.id, ended_at=None
+        user_id=resolve_user_id(), ended_at=None
     ).first()
     sessions = FaultWorkSession.query.filter_by(fault_id=f.id).order_by(
         FaultWorkSession.started_at.desc()
@@ -925,7 +926,7 @@ def fault_work_start(fault_id):
         flash(msg, 'error')
         return redirect(url_for('faults.fault_detail', fault_id=f.id))
 
-    sess = FaultWorkSession(fault_id=f.id, user_id=current_user.id, started_at=now_local())
+    sess = FaultWorkSession(fault_id=f.id, user_id=resolve_user_id(), started_at=now_local())
     db.session.add(sess)
     if f.status in ('open', 'accepted'):
         f.status = 'in_progress'
@@ -954,7 +955,7 @@ def fault_work_end(fault_id):
     """Окончить работы по заявке (снять таймер)."""
     f = FaultReport.query.get_or_404(fault_id)
     sess = FaultWorkSession.query.filter_by(
-        fault_id=f.id, user_id=current_user.id, ended_at=None
+        fault_id=f.id, user_id=resolve_user_id(), ended_at=None
     ).first()
     if not sess:
         msg = _('No active work session on this fault')
@@ -1343,7 +1344,7 @@ def work_report_new(fault_id):
     if request.method == 'POST':
         wr = WorkReport(
             fault_id=f.id,
-            technician_id=current_user.id,
+            technician_id=resolve_user_id(),
             work_description=request.form['work_description'],
             parts_used=request.form.get('parts_used', '[]'),
             time_spent_hours=safe_float(request.form.get('time_spent_hours'), 0)

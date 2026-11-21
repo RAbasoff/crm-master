@@ -11,6 +11,7 @@ import os, io, json
 
 from config import SECTIONS_TREE
 from models import (db, FactorySection, FaultReport, Machine, ResponsibleGroup, User, UserSectionAccess, Verantwoordelijke, UserActivityLog, AuditLog, FloorMapLine, SystemLog)
+from utils import resolve_user_id
 from utils import log_audit, role_required, safe_commit
 from security import director_only
 from sqlalchemy import func, case
@@ -337,7 +338,7 @@ def map_line_save():
         color=data.get('color') or '#2980b9',
         width=width,
         points_json=json.dumps(pts),
-        created_by=current_user.id,
+        created_by=resolve_user_id(),
     )
     db.session.add(ln)
     if not safe_commit():
@@ -739,12 +740,12 @@ def test_push():
     try:
         from logs import create_notifications
         from models import Notification
-        before = Notification.query.filter_by(user_id=current_user.id).count()
+        before = Notification.query.filter_by(user_id=resolve_user_id()).count()
         create_notifications([{'user_id': current_user.id,
                                'title': 'Test notification / Тестовое уведомление',
                                'message': 'Push notifications are working / Pushmeldingen werken',
                                'type': 'info', 'link': '/settings'}])
-        after = Notification.query.filter_by(user_id=current_user.id).count()
+        after = Notification.query.filter_by(user_id=resolve_user_id()).count()
         if after > before:
             flash(_('Test notification sent') + ' (✓ ' + _('Notifications') + ')', 'success')
         else:

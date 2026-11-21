@@ -63,6 +63,7 @@ from models import (db, User, UserSectionAccess, FactorySection, Machine, Machin
                     WarehouseReservation, SupplierPrice,
                     GasCylinder, CylinderLog, CylinderOrder,
                     ChatRoom, ChatParticipant, ChatMessage, OfflineMutation, now_local)
+from utils import resolve_user_id
 from utils import (get_belgian_holidays, role_required, user_has_section_access,
                    create_notification, log_audit, genereer_nummer, date_plus_days,
                    save_uploaded_file, translate_text, run_migrations,
@@ -1540,7 +1541,7 @@ def me_day_plan():
 def work_hours_block():
     """Блокировка доступа вне рабочих часов по графику."""
     from models import WorkSchedule
-    sched = WorkSchedule.query.filter_by(user_id=current_user.id, is_active=True).first()
+    sched = WorkSchedule.query.filter_by(user_id=resolve_user_id(), is_active=True).first()
     return render_template('work_hours_block.html', schedule=sched)
 
 
@@ -1809,7 +1810,7 @@ def index():
 
     # ── Дашборд цехового USER: только свои заявки/TWO, без склада ──
     if is_floor_user():
-        uid = current_user.id if isinstance(current_user.id, int) else None
+        uid = resolve_user_id()
         if uid is None:
             person_id = getattr(current_user, 'person_id', None)
             linked = User.query.filter_by(person_id=person_id).first() if person_id else None
@@ -2026,7 +2027,7 @@ def index():
     return render_template('index.html', stats=stats, recent_orders=recent, low_stock=laag, recent_faults=recent_faults, users=users, now=now_local(), dashboard_stats=dashboard_stats,
                            gas_quality=gas_quality, show_gas_quality=show_gas_quality,
                            my_twos=my_twos, my_overdue_to=my_overdue_to,
-                           today_time_entry=TimeEntry.query.filter_by(user_id=current_user.id, date=now_local().date()).first())
+                           today_time_entry=TimeEntry.query.filter_by(user_id=resolve_user_id(), date=now_local().date()).first())
 
 # ============================================================
 # ROUTES — OPDRACHTEN (existing)

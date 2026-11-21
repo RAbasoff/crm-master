@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, FaultReport, Machine, PurchaseRequest, User)
+from utils import resolve_user_id
 from utils import add_work_report, create_notification, log_audit, role_required, safe_commit, safe_float
 from security import director_only
 
@@ -23,7 +24,7 @@ def purchase_requests_list():
     if current_user.has_role('admin', 'director'):
         requests = PurchaseRequest.query.order_by(PurchaseRequest.created_at.desc()).all()
     else:
-        requests = PurchaseRequest.query.filter_by(requester_id=current_user.id).order_by(PurchaseRequest.created_at.desc()).all()
+        requests = PurchaseRequest.query.filter_by(requester_id=resolve_user_id()).order_by(PurchaseRequest.created_at.desc()).all()
     return render_template('purchase_requests.html', requests=requests)
 
 
@@ -41,7 +42,7 @@ def purchase_request_new():
         pr = PurchaseRequest(
             fault_id=request.form.get('fault_id') or None,
             machine_id=machine_id,
-            requester_id=current_user.id,
+            requester_id=resolve_user_id(),
             machine_serial=request.form.get('machine_serial', ''),
             fault_number=request.form.get('fault_number', ''),
             fault_description=request.form.get('fault_description', ''),

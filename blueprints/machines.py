@@ -15,6 +15,7 @@ from models import (db, Machine, MachinePart, PartMaintenanceLog, MachineDocumen
                     MaintenancePlan, FactorySection, User, Contractor, Verantwoordelijke, FaultReport,
                     TechnicalWorkOrder, PurchaseRequest, MachinePassword,
                     VoorraadItem, VoorraadMutatie, now_local)
+from utils import resolve_user_id
 from utils import (role_required, log_audit, save_uploaded_file, safe_commit,
                    safe_int, safe_float, safe_date, sanitize_like,
                    find_pdf_font, ensure_fpdf)
@@ -759,7 +760,7 @@ def machine_add_maintenance(machine_id):
             machine_id=m.id,
             maintenance_type=request.form['maintenance_type'],
             description=request.form['description'],
-            performed_by=current_user.id,
+            performed_by=resolve_user_id(),
             date_performed=date_performed,
             next_maintenance=safe_date(request.form.get('next_maintenance')),
             cost=safe_float(request.form.get('cost'), 0),
@@ -883,7 +884,7 @@ def machine_transfer_act_save(machine_id):
             machine_id=m.id,
             content_html=html,
             pdf_file=pdf_rel if pdf_bytes else None,
-            created_by=current_user.id,
+            created_by=resolve_user_id(),
         )
         db.session.add(doc)
         try:
@@ -1234,7 +1235,7 @@ def machines_bulk():
                 status='planned',
                 planned_start=planned,
                 recurrence=rec,
-                created_by=current_user.id,
+                created_by=resolve_user_id(),
             )
             db.session.add(p)
             created += 1
@@ -1346,7 +1347,7 @@ def machine_consumables_consume(machine_id, mc_id):
         item_id=wi.id,
         type='uitgaand',
         hoeveelheid=qty,
-        user_id=current_user.id if current_user.is_authenticated else None,
+        user_id=resolve_user_id() if current_user.is_authenticated else None,
         opmerking=f'Consumable used on machine #{machine_id}'
     )
     db.session.add(mut)
@@ -1421,7 +1422,7 @@ def password_new():
         password=password,
         kind=request.form.get('kind') or 'other',
         notes=(request.form.get('notes') or '').strip(),
-        created_by=current_user.id,
+        created_by=resolve_user_id(),
     )
     db.session.add(mp)
     if not safe_commit():

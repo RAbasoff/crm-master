@@ -8,6 +8,7 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import db, Notification, MachinePart, VoorraadItem, User, UserReminder, now_local
+from utils import resolve_user_id
 from utils import role_required, safe_commit, create_notification
 from logs import create_notifications
 
@@ -17,7 +18,7 @@ bp = Blueprint('notifications', __name__)
 @bp.route('/notifications')
 @login_required
 def notifications_list():
-    notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(50).all()
+    notifications = Notification.query.filter_by(user_id=resolve_user_id()).order_by(Notification.created_at.desc()).limit(50).all()
     return render_template('notifications.html', notifications=notifications)
 
 @bp.route('/notifications/unread')
@@ -148,7 +149,7 @@ def reminder_new():
                 due_at = datetime.strptime(due_raw, '%Y-%m-%d')
             except ValueError:
                 due_at = None
-    r = UserReminder(created_by=current_user.id, title=title, body=body, due_at=due_at)
+    r = UserReminder(created_by=resolve_user_id(), title=title, body=body, due_at=due_at)
     target_ids = request.form.getlist('target_ids')
     for tid in target_ids:
         try:

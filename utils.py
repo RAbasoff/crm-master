@@ -416,12 +416,43 @@ def refresh_lock(record_type, record_id, user_id):
         lock.expires_at = now + timedelta(minutes=LOCK_TTL_MINUTES)
         safe_commit()
 
+def resolve_user_id(user=None):
+    """int user_id для FK-колонок (user_id/created_by/performed_by/...).
+
+    Цеховой (ResponsibleAuth) имеет id вида 'r_22' — запись строки в int-FK
+    падала с FOREIGN KEY constraint failed (user_activity_log, audit_log,
+    cylinder_log, work_report_entry...), а в газовом модуле это откатывало
+    всю операцию. Возвращаем id связанного User (person_id) или None.
+    """
+    u = user
+    if u is None:
+        try:
+            from flask_login import current_user
+            u = current_user if current_user.is_authenticated else None
+        except Exception:
+            u = None
+    if u is None:
+        return None
+    i = getattr(u, 'id', None)
+    if isinstance(i, int):
+        return i
+    try:
+        from models import User
+        pid = getattr(u, 'person_id', None)
+        if pid is not None:
+            linked = User.query.filter_by(person_id=pid).first()
+            return linked.id if linked else None
+    except Exception:
+        pass
+    return None
+
+
 def add_work_report(entry_text):
     """Add entry to Work Report log from anywhere in the app"""
     from flask_login import current_user
     try:
         entry = WorkReportEntry(
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=resolve_user_id(current_user) if current_user.is_authenticated else None,
             entry=entry_text
         )
         db.session.add(entry)

@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, Invoice, InvoiceItem, VoorraadItem)
+from utils import resolve_user_id
 from utils import role_required, safe_commit, safe_date, safe_float
 from security import director_only
 
@@ -23,7 +24,7 @@ def invoices_list():
     if current_user.has_role('admin', 'director'):
         invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
     else:
-        invoices = Invoice.query.filter_by(created_by=current_user.id).order_by(Invoice.created_at.desc()).all()
+        invoices = Invoice.query.filter_by(created_by=resolve_user_id()).order_by(Invoice.created_at.desc()).all()
     return render_template('invoices.html', invoices=invoices)
 
 
@@ -46,7 +47,7 @@ def invoice_new():
             total=safe_float(request.form.get('total'), 0),
             status='pending',
             notes=request.form.get('notes', ''),
-            created_by=current_user.id
+            created_by=resolve_user_id()
         )
         db.session.add(inv)
         if not safe_commit():

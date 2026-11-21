@@ -9,6 +9,7 @@ from flask_babel import gettext as _
 
 from models import (db, VoorraadItem, VoorraadMutatie, WarehouseGroup, WarehouseReservation,
                     SupplierPrice, Machine, Contractor)
+from utils import resolve_user_id
 from utils import role_required, log_audit, sanitize_like, safe_commit, safe_int, safe_float, safe_date
 from security import director_only
 
@@ -378,7 +379,7 @@ def warehouse_move(item_id):
     m = VoorraadMutatie(item_id=item_id, type=mt, hoeveelheid=qty,
                         opdracht_id=request.form.get('opdracht_id') or None,
                         opmerking=request.form.get('opmerking',''),
-                        user_id=current_user.id)
+                        user_id=resolve_user_id())
     if mt == 'inkomend': item.hoeveelheid += qty
     else: item.hoeveelheid -= qty
     db.session.add(m)
@@ -490,7 +491,7 @@ def warehouse_inventory_check():
             type='inkomend' if diff > 0 else 'uitgaand',
             hoeveelheid=abs(diff),
             opmerking=f'Инвентаризация: было {item.hoeveelheid}, стало {actual_qty}',
-            user_id=current_user.id
+            user_id=resolve_user_id()
         )
         item.hoeveelheid = actual_qty
         db.session.add(m)
@@ -685,7 +686,7 @@ def warehouse_qty_update():
             type='inkomend' if diff > 0 else 'uitgaand',
             hoeveelheid=abs(diff),
             opmerking=f'Quick edit: {old_qty} → {qty}',
-            user_id=current_user.id
+            user_id=resolve_user_id()
         )
         db.session.add(m)
     if not safe_commit():
@@ -756,7 +757,7 @@ def warehouse_transfer(item_id):
         m = VoorraadMutatie(
             item_id=item_id, type='uitgaand', hoeveelheid=qty,
             opmerking=f'Transfer to: {person.naam}' + (f' — {notes}' if notes else ''),
-            user_id=current_user.id
+            user_id=resolve_user_id()
         )
         item.hoeveelheid -= qty
 

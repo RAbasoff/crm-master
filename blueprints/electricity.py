@@ -8,6 +8,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 
 from models import db, ElectricalCabinet, CircuitBreaker, ElectricalSwitchLog, ElectricalDocument, PowerOutlet, PowerOutletPhoto, FactorySection
+from utils import resolve_user_id
 from utils import role_required, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file, log_audit
 from security import director_only
 from sqlalchemy.orm import subqueryload, joinedload
@@ -281,7 +282,7 @@ def switch_log_add(cabinet_id):
         to_breaker_id=to_id,
         reason=reason,
         notes=request.form.get('notes', ''),
-        performed_by=current_user.id
+        performed_by=resolve_user_id()
     )
     db.session.add(log)
     if not safe_commit():
@@ -417,7 +418,7 @@ def switch_log_add_global():
         to_breaker_id=to_id,
         reason=reason,
         notes=request.form.get('notes', ''),
-        performed_by=current_user.id
+        performed_by=resolve_user_id()
     )
     db.session.add(log)
     if not safe_commit():

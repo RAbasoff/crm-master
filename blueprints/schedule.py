@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, Monteur, User, WeekendShift, WorkSchedule, now_local)
+from utils import resolve_user_id
 from utils import (get_belgian_holidays, role_required, safe_commit, safe_int,
                    log_audit, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift)
 from security import director_only
@@ -250,7 +251,7 @@ def schedule_monthly_shift():
         if existing:
             existing.shift_type = shift_type
         else:
-            s = WeekendShift(user_id=user_id, date=date, shift_type=shift_type, created_by=current_user.id)
+            s = WeekendShift(user_id=user_id, date=date, shift_type=shift_type, created_by=resolve_user_id())
             db.session.add(s)
     elif action == 'remove' and existing:
         db.session.delete(existing)
@@ -387,7 +388,7 @@ def saturdays_set():
         else:
             db.session.add(WeekendShift(
                 user_id=user_id, date=date, shift_type=shift_type,
-                notes=_('Working Saturday'), created_by=current_user.id))
+                notes=_('Working Saturday'), created_by=resolve_user_id()))
     else:  # remove
         if existing:
             db.session.delete(existing)

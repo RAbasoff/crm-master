@@ -12,6 +12,7 @@ from models import (db, TechnicalWorkOrder, TWOChecklistItem, TWOSignature, TWOA
                     two_workers, Monteur, Machine, FactorySection, User, FaultReport,
                     WorkSchedule, WeekendShift, Vacation, MaintenancePlan, PartMaintenanceLog,
                     ResponsibleGroup, TWOPhoto, now_local)
+from utils import resolve_user_id
 from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    is_work_date, WORK_SHIFT_TYPES, OFF_SHIFT_TYPES, get_day_shift,
                    get_belgian_holidays, save_uploaded_file, log_audit, create_notification,
@@ -96,7 +97,7 @@ def two_list():
         q = q.filter(TechnicalWorkOrder.status == status_f)
     if mine and current_user.is_authenticated:
         from models import Monteur, two_workers
-        monteur = Monteur.query.filter_by(user_id=current_user.id).first()
+        monteur = Monteur.query.filter_by(user_id=resolve_user_id()).first()
         if monteur:
             q = q.join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id).filter(
                 two_workers.c.worker_id == monteur.id)
@@ -106,7 +107,7 @@ def two_list():
         orders = q.order_by(TechnicalWorkOrder.created_at.desc()).all()
     else:
         try:
-            orders = q.filter_by(created_by=current_user.id).order_by(TechnicalWorkOrder.created_at.desc()).all()
+            orders = q.filter_by(created_by=resolve_user_id()).order_by(TechnicalWorkOrder.created_at.desc()).all()
         except Exception:
             orders = []
 
@@ -178,7 +179,7 @@ def two_new():
             planned_date=(d := safe_date(request.form.get('planned_date'))) and d.date() or None,
             status=request.form.get('status', 'draft'),
             notes=request.form.get('notes', ''),
-            created_by=current_user.id
+            created_by=resolve_user_id()
         )
         # Assign workers (сначала add в сессию — иначе SQLAlchemy Warning)
         worker_ids = request.form.getlist('worker_ids')

@@ -11,6 +11,7 @@ import os, io, json
 
 from models import (db, Monteur, Opdracht, OpdrachtPhoto, OpdrachtVideo, User,
                     Verantwoordelijke, VoorraadMutatie, VoorraadItem, now_local)
+from utils import resolve_user_id
 from utils import (genereer_nummer, retry_unique_number, log_audit, role_required,
                    safe_commit, safe_float, save_uploaded_file)
 
@@ -101,7 +102,7 @@ def order_new():
                 probleem=request.form['probleem'],
                 arbeidskosten=safe_float(request.form.get('arbeidskosten'), 0),
                 status='aangenomen',
-                created_by=current_user.id
+                created_by=resolve_user_id()
             )
         try:
             o = retry_unique_number(_make)
@@ -171,7 +172,7 @@ def order_edit(order_id):
                     db.session.add(VoorraadMutatie(
                         item_id=m.item_id, type='inkomend', hoeveelheid=m.hoeveelheid,
                         opmerking=f'Возврат: отмена заказа {order.nummer}',
-                        user_id=current_user.id
+                        user_id=resolve_user_id()
                     ))
             order.status = ns
         if not safe_commit():

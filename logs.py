@@ -139,8 +139,9 @@ def create_notification(user_id, title, message, ntype='info', link=None):
 
 def log_audit(action, entity_type=None, entity_id=None, details=None):
     try:
+        from utils import resolve_user_id
         log = AuditLog(
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=resolve_user_id(),
             action=action, entity_type=entity_type, entity_id=entity_id,
             details=details, ip_address=request.remote_addr
         )
@@ -165,7 +166,8 @@ def log_user_activity(action, page=None, method=None, entity_type=None, entity_i
         uid = uname = ip = ua = sid = None
         if has_request_context():
             if current_user.is_authenticated:
-                uid = current_user.id
+                from utils import resolve_user_id
+                uid = resolve_user_id()
                 uname = current_user.username
             ip = request.remote_addr
             ua = str(request.user_agent)[:300] if request.user_agent else None
@@ -249,13 +251,14 @@ def log_system(level, category, message, details=None, source=None):
     """Log system events (errors, warnings, info)"""
     try:
         from models import SystemLog
+        from utils import resolve_user_id
         log = SystemLog(
             level=level,
             category=category,
             message=message,
             details=details,
             source=source,
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=resolve_user_id(),
             ip_address=request.remote_addr if request else None
         )
         db.session.add(log)

@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import os, io, json
 
 from models import (db, TimeEntry, User, Vacation, now_local)
+from utils import resolve_user_id
 from utils import create_notification, role_required, safe_commit, safe_int
 from security import director_only
 
@@ -47,7 +48,7 @@ def _clock_redirect():
 @login_required
 def clock_in():
     today = now_local().date()
-    existing = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
+    existing = TimeEntry.query.filter_by(user_id=resolve_user_id(), date=today).first()
     if existing and existing.clock_in:
         flash(_('Already clocked in today'), 'error')
         return _clock_redirect()
@@ -57,7 +58,7 @@ def clock_in():
         existing.status = 'present'
     else:
         entry = TimeEntry(
-            user_id=current_user.id,
+            user_id=resolve_user_id(),
             date=today,
             clock_in=now_local(),
             status='present'
@@ -74,7 +75,7 @@ def clock_in():
 @login_required
 def clock_out():
     today = now_local().date()
-    entry = TimeEntry.query.filter_by(user_id=current_user.id, date=today).first()
+    entry = TimeEntry.query.filter_by(user_id=resolve_user_id(), date=today).first()
     if not entry or not entry.clock_in:
         flash(_('Not clocked in today'), 'error')
         return _clock_redirect()
@@ -146,7 +147,7 @@ def vacations_list():
     if current_user.has_role('admin', 'director'):
         vacations = Vacation.query.order_by(Vacation.created_at.desc()).all()
     else:
-        vacations = Vacation.query.filter_by(user_id=current_user.id).order_by(Vacation.created_at.desc()).all()
+        vacations = Vacation.query.filter_by(user_id=resolve_user_id()).order_by(Vacation.created_at.desc()).all()
     return render_template('vacations.html', vacations=vacations)
 
 
@@ -163,7 +164,7 @@ def vacation_new():
             return redirect(url_for('timekeeping.vacation_new'))
         days = (d_to - d_from).days + 1
         v = Vacation(
-            user_id=current_user.id,
+            user_id=resolve_user_id(),
             vacation_type=request.form['vacation_type'],
             date_from=d_from,
             date_to=d_to,

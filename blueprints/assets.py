@@ -11,6 +11,7 @@ import os, io, json
 
 from models import (db, Contractor, Equipment, EquipmentDocument, EquipmentServiceLog,
                     FactorySection, User, Verantwoordelijke)
+from utils import resolve_user_id
 from utils import log_audit, role_required, safe_commit, safe_date, safe_float, safe_int, save_uploaded_file, ensure_fpdf, find_pdf_font
 
 bp = Blueprint('assets', __name__)
@@ -263,7 +264,7 @@ def assets_add_service(eq_id):
         equipment_id=eq.id,
         service_type=request.form.get('service_type', 'maintenance'),
         description=request.form.get('description', ''),
-        performed_by=current_user.id,
+        performed_by=resolve_user_id(),
         cost=safe_float(request.form.get('cost'), 0),
         date=safe_date(request.form.get('date')) or datetime.utcnow(),
         next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,

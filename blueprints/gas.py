@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
                     CylinderOrder, EquipmentRepair, User, MonthlyArchive,
                     GasQualityCheck, Monteur, now_local)
+from utils import resolve_user_id
 from utils import role_required, log_audit, create_notification, safe_commit, safe_int, safe_float, safe_date, save_uploaded_file
 from security import director_only
 
@@ -413,7 +414,7 @@ def cylinder_new():
             cylinder_id=c.id,
             action='created',
             new_cylinder_number=c.cylinder_number,
-            performed_by=current_user.id,
+            performed_by=resolve_user_id(),
             notes=f'New {c.gas_type} cylinder added'
         )
         db.session.add(log)
@@ -450,7 +451,7 @@ def cylinder_edit(cyl_id):
             log = CylinderLog(
                 cylinder_id=c.id,
                 action=f'status_{old_status}_to_{c.status}',
-                performed_by=current_user.id,
+                performed_by=resolve_user_id(),
                 notes=f'Status: {old_status} → {c.status}'
             )
             db.session.add(log)
@@ -502,7 +503,7 @@ def cylinder_status(cyl_id):
         return redirect(url_for('gas.gas_dashboard'))
 
     if new_status == 'empty':
-        _mark_empty_leaves_site(c, user_id=current_user.id)
+        _mark_empty_leaves_site(c, user_id=resolve_user_id())
     else:
         c.status = new_status
         if new_status == 'in_use' and not c.installed_at:
@@ -523,7 +524,7 @@ def cylinder_status(cyl_id):
             db.session.add(CylinderLog(
                 cylinder_id=other.id,
                 action='in_use_to_full',
-                performed_by=current_user.id if isinstance(current_user.id, int) else None,
+                performed_by=resolve_user_id(),
                 notes=f'Standby: switched to {c.cylinder_number} ({c.gas_type})',
             ))
 
@@ -532,7 +533,7 @@ def cylinder_status(cyl_id):
         promoted = _promote_full_to_in_use(
             c.gas_type,
             reason=f'Auto-switch: backup activated after {c.cylinder_number} emptied',
-            user_id=current_user.id,
+            user_id=resolve_user_id(),
         )
         if not promoted:
             flash(_('No full spare cylinder to activate! Order new %(gas)s cylinders.',
@@ -550,7 +551,7 @@ def cylinder_status(cyl_id):
         db.session.add(CylinderLog(
             cylinder_id=c.id,
             action='status_%s_to_%s' % (old_status, new_status),
-            performed_by=current_user.id,
+            performed_by=resolve_user_id(),
             notes='Status: %s -> %s' % (old_status, new_status)
         ))
         if not safe_commit():
@@ -770,7 +771,7 @@ def order_status(order_id):
                 cylinder_id=cyl.id,
                 action='created',
                 new_cylinder_number=number,
-                performed_by=current_user.id,
+                performed_by=resolve_user_id(),
                 notes=f'Received via order #{o.id} x{qty}'
             ))
             created += 1
@@ -786,7 +787,7 @@ def order_status(order_id):
             c.side = None
             db.session.add(CylinderLog(
                 cylinder_id=c.id, action='return_empty',
-                performed_by=current_user.id,
+                performed_by=resolve_user_id(),
                 notes=f'Returned to supplier on delivery of order #{o.id}'
             ))
             returned += 1
@@ -864,7 +865,7 @@ def cylinder_scan_refill():
     if code:
         c.barcode = code
     db.session.add(CylinderLog(cylinder_id=c.id, action='refill_date',
-                               performed_by=current_user.id,
+                               performed_by=resolve_user_id(),
                                notes=f'Refill {refill.isoformat()}'))
     if not safe_commit():
         return jsonify({'error': 'Save failed'}), 500
@@ -958,7 +959,7 @@ def cylinder_scan_list_add():
         db.session.flush()
         created = True
         db.session.add(CylinderLog(cylinder_id=c.id, action='received' if accept else 'created',
-                                   performed_by=current_user.id,
+                                   performed_by=resolve_user_id(),
                                    new_cylinder_number=number,
                                    notes='Scan list (added to stock)' if accept else 'Scan list (not in stock yet)'))
     elif accept and (not c.received_at or c.status in ('scanned', None, '')):
@@ -967,7 +968,7 @@ def cylinder_scan_list_add():
         if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
-            cylinder_id=c.id, action='received', performed_by=current_user.id,
+            cylinder_id=c.id, action='received', performed_by=resolve_user_id(),
             notes='Added to stock on scan'))
     elif c.status == 'scanned' and not c.received_at:
         pass
@@ -1000,7 +1001,7 @@ def cylinder_scan_list_add_stock():
         if c.status in ('scanned', None, '') or c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
-            cylinder_id=c.id, action='received', performed_by=current_user.id,
+            cylinder_id=c.id, action='received', performed_by=resolve_user_id(),
             notes='Added to stock from scan list'
         ))
         n += 1
@@ -1082,7 +1083,7 @@ def cylinder_assign_work():
         db.session.add(c)
         db.session.flush()
         db.session.add(CylinderLog(cylinder_id=c.id, action='created',
-                                   performed_by=current_user.id,
+                                   performed_by=resolve_user_id(),
                                    new_cylinder_number=number,
                                    notes=f'Scan install action={action or "install"}'))
     elif action == 'add_stock' and (not c.received_at or c.status == 'scanned'):
@@ -1091,7 +1092,7 @@ def cylinder_assign_work():
         if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
-            cylinder_id=c.id, action='received', performed_by=current_user.id,
+            cylinder_id=c.id, action='received', performed_by=resolve_user_id(),
             notes='Accepted to stock on install'
         ))
 
@@ -1103,7 +1104,7 @@ def cylinder_assign_work():
         GasCylinder.id != c.id
     ).all():
         _mark_empty_leaves_site(
-            other, user_id=current_user.id,
+            other, user_id=resolve_user_id(),
             note=f'Replaced by #{c.cylinder_number} on {side}'
         )
     c.status = 'in_use'
@@ -1118,7 +1119,7 @@ def cylinder_assign_work():
     c.gas_type = gas_type if gas_type in GAS_TYPES else c.gas_type
     c.installed_at = datetime.utcnow()
     db.session.add(CylinderLog(cylinder_id=c.id, action='install',
-                               performed_by=current_user.id,
+                               performed_by=resolve_user_id(),
                                notes=f'Installed on {side}'))
     # Соседний баллон становится IN USE (рабочая пара переключается)
     other_activated = None
@@ -1133,7 +1134,7 @@ def cylinder_assign_work():
         neighbor.installed_at = datetime.utcnow()
         db.session.add(CylinderLog(
             cylinder_id=neighbor.id, action='status_full_to_in_use',
-            performed_by=current_user.id,
+            performed_by=resolve_user_id(),
             notes=f'Working pair: switched after install of {c.cylinder_number} on {side}'
         ))
         other_activated = neighbor.cylinder_number
@@ -1226,7 +1227,7 @@ def gas_quality_new():
             co2_percent=co2,
             notes=request.form.get('notes', ''),
             mixed_gas_used=bool(request.form.get('mixed_gas_used')),
-            created_by=current_user.id if isinstance(current_user.id, int) else None,
+            created_by=resolve_user_id(),
         )
         if 'photo' in request.files and request.files['photo'].filename:
             fn = save_uploaded_file(request.files['photo'], prefix='gq_')
@@ -1446,7 +1447,7 @@ def gas_returns():
             c.status = 'returned'
             c.side = None
             db.session.add(CylinderLog(
-                cylinder_id=c.id, action='return_empty', performed_by=current_user.id,
+                cylinder_id=c.id, action='return_empty', performed_by=resolve_user_id(),
                 notes=f'Returned empty {ret_date}: {reason}'
             ))
             n += 1
@@ -1460,7 +1461,7 @@ def gas_returns():
                 old = c.status
                 c.status = 'returned'
                 db.session.add(CylinderLog(
-                    cylinder_id=c.id, action='return_full', performed_by=current_user.id,
+                    cylinder_id=c.id, action='return_full', performed_by=resolve_user_id(),
                     notes=f'Returned ({old}) {ret_date}: {reason}'
                 ))
                 n += 1
