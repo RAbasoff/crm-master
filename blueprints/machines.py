@@ -240,14 +240,28 @@ def _optf(value):
 @login_required
 def machines_list():
     page = request.args.get('page', 1, type=int)
-    if current_user.has_role('admin', 'director'):
-        pagination = Machine.query.order_by(Machine.id).paginate(page=page, per_page=25, error_out=False)
-    elif current_user.has_role('technician'):
-        pagination = Machine.query.order_by(Machine.id).paginate(page=page, per_page=25, error_out=False)
+    q = (request.args.get('q') or '').strip()
+
+    def _filtered(query):
+        if q:
+            like = f'%{sanitize_like(q)}%'
+            query = query.filter(db.or_(
+                Machine.name.ilike(like),
+                Machine.machine_type.ilike(like),
+                Machine.serial_number.ilike(like),
+                Machine.manufacturer.ilike(like),
+                Machine.description.ilike(like),
+            ))
+        return query
+
+    if current_user.has_role('admin', 'director', 'technician'):
+        # все машины одним списком + поиск — иначе новые станки «теряются»
+        # на последней странице пагинации (случай Meat slicer MBC 330)
+        pagination = _filtered(Machine.query.order_by(Machine.name)).paginate(page=page, per_page=200, error_out=False)
     else:
         machines = current_user.assigned_machines
-        return render_template('machines.html', machines=machines, pagination=None)
-    return render_template('machines.html', machines=pagination.items, pagination=pagination)
+        return render_template('machines.html', machines=machines, pagination=None, q=q)
+    return render_template('machines.html', machines=pagination.items, pagination=pagination, q=q)
 
 
 @bp.route('/3d')

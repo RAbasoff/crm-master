@@ -28,6 +28,11 @@
 <div class="machines-page">
 <div class="page-header">
     <h1>⚙️ {{ _('Machines') }}</h1>
+    <form method="GET" action="/machines" style="display:flex;gap:6px;align-items:center">
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="🔍 {{ _('Search by name...') }}"
+            style="padding:7px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:200px">
+        {% if q %}<a href="/machines" class="btn btn-sm" style="background:#eee">✕</a>{% endif %}
+    </form>
     <div class="page-actions">
         <a href="/machines/qr/batch" class="btn btn-sm" style="background:#9b59b6;color:white">📱 QR</a>
         <a href="/machines/3d" class="btn btn-sm" style="background:#16a085;color:white">🧊 3D</a>
