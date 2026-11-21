@@ -3,7 +3,10 @@
 {% block content %}
 <div class="page-header">
     <h1>⚠️ {{ _('Fault Reports') }}</h1>
-    <a href="/faults/new" class="btn btn-warning">+ {{ _('New Fault Report') }}</a>
+    <div style="display:flex;gap:8px;align-items:center">
+        <a href="/faults?sort={% if sort_dir == 'asc' %}desc{% else %}asc{% endif %}" class="btn btn-sm" style="background:#eee" title="{{ _('Sort by number') }}">№ {% if sort_dir == 'desc' %}▼{% else %}▲{% endif %}</a>
+        <a href="/faults/new" class="btn btn-warning">+ {{ _('New Fault Report') }}</a>
+    </div>
 </div>
 
 <!-- Quick Stats -->
@@ -54,11 +57,11 @@
 <div class="card" style="padding:0;margin-bottom:8px">
     <div onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.ic').textContent=b.style.display==='none'?'▶':'▼'"
          style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;background:#2c3e50;color:#fff;border-radius:8px">
-        <span class="ic" style="font-size:12px">{% if key == current_month %}▼{% else %}▶{% endif %}</span>
+        <span class="ic" style="font-size:12px">▶</span>
         <strong>🗓 {{ mg.label }}</strong>
         <span style="opacity:.75;font-size:12px">{{ mg.orders|length }} {{ _('orders') }}</span>
     </div>
-    <div style="display:{% if key == current_month %}block{% else %}none{% endif %};border:1px solid #dee2e6;border-top:none">
+    <div style="display:none;border:1px solid #dee2e6;border-top:none">
         <div class="table-wrap"><table>
             <tr><th>#</th><th>{{ _('Title') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Status') }}</th><th>{{ _('Date') }}</th><th></th></tr>
             {% for f in mg.orders %}

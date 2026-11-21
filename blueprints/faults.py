@@ -534,50 +534,38 @@ def faults_list():
             uid = linked.id if linked else -1
         q = base.filter_by(reporter_id=uid)
 
-    # Все заявки (без жёсткой пагинации — группируем по месяцам)
-    all_f = q.order_by(FaultReport.id.asc()).all()
-
-    # Сортировка: open → работа (отметка механика) → resolved (зелёная зона) → closed по номеру
-    ACTIVE = ('accepted', 'in_progress', 'paused', 'waiting_parts', 'parts_ordered', 'testing')
+    # Сортировка по порядковому номеру: desc (новые первыми, по умолчанию) / asc
     CLOSED = ('closed', 'rejected')
+    sort_dir = (request.args.get('sort') or 'desc').lower()
+    if sort_dir not in ('asc', 'desc'):
+        sort_dir = 'desc'
+    reverse = (sort_dir == 'desc')
 
-    def _fkey(f):
-        st = (f.status or 'open').lower()
-        if st == 'open' or st == 'reopened':
-            band = 0
-        elif st == 'resolved':
-            band = 2
-        elif st in CLOSED:
-            band = 3
-        else:
-            band = 1  # active work — наверху зелёной/рабочей зоны
-        # внутри band: недавно тронутые сверху (1/2), закрытые — по номеру
-        upd = f.resolved_at or f.accepted_at or f.created_at
-        ts = upd.toordinal() * 86400 + (upd.hour * 3600 + upd.minute * 60 + upd.second if upd else 0)
-        if band in (0, 1, 2):
-            return (band, -ts, f.id)
-        return (band, f.id)
+    def _num(f):
+        return f.serial_no or f.id
 
-    all_f = sorted(all_f, key=_fkey)
-    active_list = [f for f in all_f if (f.status or '').lower() not in CLOSED]
-    closed_list = [f for f in all_f if (f.status or '').lower() in CLOSED]
+    all_f = q.order_by(FaultReport.id.asc()).all()
+    active_list = sorted([f for f in all_f if (f.status or '').lower() not in CLOSED],
+                         key=_num, reverse=reverse)
+    closed_list = sorted([f for f in all_f if (f.status or '').lower() in CLOSED],
+                         key=_num, reverse=reverse)
 
-    # Месяцы закрытых: текущий — открыт, прошлые — свёрнуты
+    # Месяцы закрытых: все свёрнуты (включая текущий), внутри — по номеру
     from collections import OrderedDict
-    now = now_local()
     month_groups = OrderedDict()
     for f in closed_list:
-        d = f.created_at.date() if f.created_at else now.date()
+        d = f.created_at.date() if f.created_at else now_local().date()
         key = d.strftime('%Y-%m')
         month_groups.setdefault(key, {'label': d.strftime('%m.%Y'), 'orders': []})
         month_groups[key]['orders'].append(f)
-    current_key = now.strftime('%Y-%m')
+    current_key = now_local().strftime('%Y-%m')
 
     return render_template('faults.html',
                            faults=active_list,
                            closed_list=closed_list,
                            month_groups=month_groups,
                            current_month=current_key,
+                           sort_dir=sort_dir,
                            pagination=None,
                            status_msgs=STATUS_MSGIDS)
 

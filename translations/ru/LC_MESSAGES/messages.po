@@ -7405,5 +7405,8 @@ msgstr "Отчёты о работе в формате PDF"
 msgid "Delete this file?"
 msgstr "Удалить этот файл?"
 
+msgid "Sort by number"
+msgstr "Сортировка по номеру"
+
 msgid "Photos from fault"
 msgstr "Фото из заявки"

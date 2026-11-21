@@ -7228,5 +7228,8 @@ msgstr "Werkverslagen in PDF-formaat"
 msgid "Delete this file?"
 msgstr "Dit bestand verwijderen?"
 
+msgid "Sort by number"
+msgstr "Sorteren op nummer"
+
 msgid "Photos from fault"
 msgstr "Foto's van de melding"
