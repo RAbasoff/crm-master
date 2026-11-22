@@ -350,3 +350,7 @@ d245817 — checklists collapsed+edit — PA DEPLOY_OK
   MuleDevice/MuleDevicePart, карточка муле, чек-лист месяца, закреплённые запчасти в форме ТО
   Нумерация ТО OH-YYYYMMDD-NNNN (EQ->OH, журнальные отметки планов -> OJ-), safe_commit без ложного ретрая
   Локально: 18/18 smoke PASS; деплой PA + серверный smoke
+
+
+4b17258 — 2026-11-22 — Fix review findings: JS-скоуп автозаполнения, ключи чек-листа, ремонты вне реестра, XSS в имени запчасти
+  По итогам независимого review (general-4): 4 фикса + 4 регресс-проверки, smoke 22/22 PASS локально и на PA
