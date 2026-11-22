@@ -333,3 +333,20 @@ SSH-ДЕПЛОЙ (настроено 30.09.2026)
   ssh rabasoff@ssh.pythonanywhere.com "touch /var/www/rabasoff_pythonanywhere_com_wsgi.py"
 
 
+
+4b8eba6 — 2026-10-09 — feat: GitHub self-update + System license/updates UI; quiet knife reminder
+  github_update.py, settings System tab (license+updates), knife toast, Setup 2.14.0
+  Деплой PA: git pull + touch wsgi — OK
+f9ec325 — gas scan list + labels + orders by month — PA DEPLOY_OK
+3716dee — Storingen chart colors + v2.15.0 — PA DEPLOY_OK
+aef165a — PDF transfer act with embedded photos — PA DEPLOY_OK
+11d9384 — version 2.15.2 — PA DEPLOY_OK
+bf87252 — TO checklists + multi-mechanic plans — PA DEPLOY_OK
+d245817 — checklists collapsed+edit — PA DEPLOY_OK
+5f22b3c — repairs menu under Gas System — PA DEPLOY_OK
+
+
+08cf86f — 2026-11-22 — Mule: one-time registry + device card + monthly TO checklist + attached parts
+  MuleDevice/MuleDevicePart, карточка муле, чек-лист месяца, закреплённые запчасти в форме ТО
+  Нумерация ТО OH-YYYYMMDD-NNNN (EQ->OH, журнальные отметки планов -> OJ-), safe_commit без ложного ретрая
+  Локально: 18/18 smoke PASS; деплой PA + серверный smoke
