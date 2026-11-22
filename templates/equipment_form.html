@@ -99,9 +99,16 @@
 
         // ── Автозаполнение из реестра муле (данные вводятся один раз) ──
         var MULES = {{ (mule_devices_json or [])|tojson }};
+        function escMule(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
         function onMuleSelect(sel) {
             var opt = sel.options[sel.selectedIndex];
             if (!opt || !opt.value) return;
+            var serialInput = document.getElementById('eqSerial');
+            var hint = document.getElementById('serialHint');
             var nameInput = document.querySelector('input[name="name"]');
             var modelInput = document.querySelector('input[name="model_name"]');
             if (nameInput) nameInput.value = opt.dataset.name || '';
@@ -128,7 +135,7 @@
             var h = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
             dev.parts.forEach(function (p) {
                 h += '<button type="button" class="btn btn-sm" style="background:#eaf7ee;border:1px solid #9fd3ad;color:#1e7e34" onclick="addQuickPart(' + p.id + ')">'
-                    + '+ ' + p.name + (p.number ? ' (' + p.number + ')' : '') + ' ×' + p.qty + ' ' + p.unit + '</button>';
+                    + '+ ' + escMule(p.name) + (p.number ? ' (' + escMule(p.number) + ')' : '') + ' ×' + escMule(p.qty) + ' ' + escMule(p.unit) + '</button>';
             });
             h += '</div>';
             box.innerHTML = h;

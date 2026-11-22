@@ -387,13 +387,42 @@ def equipment_mule_checklist():
                     EquipmentMaintenance.date >= month_start,
                     EquipmentMaintenance.date < month_end)
             .order_by(EquipmentMaintenance.date.asc()).all())
+    # соответствие записей ↔ строк реестра: device_id → серийник → имя;
+    # как в карточке, чтобы legacy-записи не терялись
+    dev_by_id = {d.id: d for d in MuleDevice.query.all()}
+
+    def _rec_key(r):
+        dev = dev_by_id.get(r.device_id) if r.device_id else None
+        if dev is None:
+            ns = _norm_serial(r.serial)
+            if ns:
+                for d2 in dev_by_id.values():
+                    if d2.normalized_serial() == ns:
+                        dev = d2
+                        break
+        if dev is not None:
+            return 'd:%s' % dev.id
+        ns = _norm_serial(r.serial)
+        if ns:
+            return 's:' + ns
+        nn = _re.sub(r'\s+', ' ', (r.name or '').strip().lower())
+        return ('n:' + nn) if nn else ''
+
     done_map = {}
     for r in recs:
-        key = ('d:%s' % r.device_id) if r.device_id else ('s:%s' % _norm_serial(r.serial))
-        done_map.setdefault(key, []).append(r)
+        key = _rec_key(r)
+        if key:
+            done_map.setdefault(key, []).append(r)
     rows = []
     for d in devices:
-        key = ('d:%s' % d['device_id']) if d.get('device_id') else ('s:%s' % _norm_serial(d.get('serial')))
+        if d.get('device_id'):
+            key = 'd:%s' % d['device_id']
+        else:
+            ns = _norm_serial(d.get('serial'))
+            if ns:
+                key = 's:' + ns
+            else:
+                key = 'n:' + _re.sub(r'\s+', ' ', (d.get('name') or '').strip().lower())
         rows.append({'device': d, 'records': done_map.get(key, []),
                      'done': bool(done_map.get(key))})
     month_label = f'{y}-{m:02d}'
@@ -967,10 +996,13 @@ def equipment_new():
             notes=request.form.get('notes', ''),
             created_by=resolve_user_id()
         )
-        # реестр муле: данные вводятся один раз, дальше только выбираются
-        _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
-        if _dev is not None:
-            eq.device_id = _dev.id
+        # реестр муле: данные вводятся один раз, дальше только выбираются.
+        # Ремонты реестр НЕ пополняют (иначе в чек-листе ТО появляются мусорные
+        # устройства с вечным «не сделано»).
+        if rec_type != 'repair':
+            _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
+            if _dev is not None:
+                eq.device_id = _dev.id
         db.session.add(eq)
         db.session.flush()
         # Add parts + deduct from warehouse
@@ -1062,8 +1094,9 @@ def equipment_edit(eq_id):
         eq.serial = request.form.get('serial', '')
         eq.model_name = _md
         eq.machine_id = safe_int(request.form.get('machine_id')) or None
-        _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
-        eq.device_id = _dev.id if _dev is not None else None
+        if (eq.record_type or 'maintenance') != 'repair':
+            _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
+            eq.device_id = _dev.id if _dev is not None else None
         eq.reason = request.form['reason']
         eq.next_date = (d := safe_date(request.form.get('next_date'))) and d.date() or None
         eq.periodicity = request.form.get('periodicity', '')
