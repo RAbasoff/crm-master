@@ -68,6 +68,10 @@
                         &nbsp;·&nbsp; {{ _('Power') }}: {{ machine.power_kw if machine.power_kw is not none else '—' }} {{ _('kW') }}</div>
                     <div>💨 {{ _('Compressed air') }}: {{ machine.air_usage_m3h if machine.air_usage_m3h is not none else '—' }} {{ _('m3h') }}</div>
                     <div>💧 {{ _('Water') }}: {{ machine.water_usage_lmin if machine.water_usage_lmin is not none else '—' }} {{ _('lmin') }}</div>
+                    {% set has_gas = machine.gas_natural or machine.gas_nitrogen or machine.gas_co2
+                        or machine.gas_usage_m3h is not none or machine.nitrogen_usage_m3h is not none
+                        or machine.co2_usage_m3h is not none %}
+                    {% if has_gas %}
                     <div style="margin-top:4px">
                         <strong>{{ _('Gases used') }}:</strong>
                         {% set gases = [] %}
@@ -84,6 +88,7 @@
                     {% endif %}
                     {% if machine.gas_co2 or machine.co2_usage_m3h is not none %}
                     <div style="padding-left:12px;color:#666">💨 {{ _('Carbon dioxide') }}: {{ machine.co2_usage_m3h if machine.co2_usage_m3h is not none else '—' }} {{ _('m3h') }}</div>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
