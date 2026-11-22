@@ -100,15 +100,36 @@ def split_mule_name(name):
         return s, ''
     return new_name, new_model
 
-def gen_eq_number(record_type='maintenance'):
-    from utils import next_number_suffix
+def gen_eq_number(record_type='maintenance', on_date=None):
+    """Номер документа ТО/ремонта.
+
+    Правило владельца (2026-11-22, «ИСПРАВЬ и ЗАПОМНИ»):
+    ТО = OH-{дата проведения обслуживания}-{порядковый}, где порядковый —
+    СКВОЗНОЙ в пределах года (каждое следующее ТО = +1, «на единицу выше»),
+    НЕ заново с единицы на каждую дату. С 1 января порядковый обнуляется и
+    идёт с 1 до 31 декабря. Дата в номере — дата ПРОВЕДЕНИЯ (поле date
+    записи), а не дата ввода. Исторические номера не перенумеровываются.
+    Ремонты — REP-{дата}-{номер} как раньше.
+    """
     from models import now_local
-    day = now_local().strftime('%Y%m%d')
-    # OH = onderhoud (ТО) — правило владельца 2026-11-22: OH-дата-порядковый.
-    # Ремонты — как раньше: REP-дата-номер.
-    prefix = 'REP' if record_type == 'repair' else 'OH'
-    num = next_number_suffix(EquipmentMaintenance, 'number', f'{prefix}-{day}')
-    return f'{prefix}-{day}-{num:04d}'
+    d = on_date or now_local().date()
+    day = d.strftime('%Y%m%d') if hasattr(d, 'strftime') else str(d).replace('-', '')
+    if record_type == 'repair':
+        from utils import next_number_suffix
+        num = next_number_suffix(EquipmentMaintenance, 'number', f'REP-{day}')
+        return f'REP-{day}-{num:04d}'
+    # порядковый за ГОД (год даты проведения): максимум по OH-{год}% + 1
+    year = day[:4]
+    max_n = 0
+    for (val,) in db.session.query(EquipmentMaintenance.number).filter(
+            EquipmentMaintenance.number.like(f'OH-{year}%')).all():
+        tail = str(val).rsplit('-', 1)[-1]
+        if not tail.isdigit() or len(tail) > 6:
+            continue
+        n = int(tail)
+        if n > max_n:
+            max_n = n
+    return f'OH-{day}-{max_n + 1:04d}'
 
 
 def _norm_serial(s):
@@ -983,7 +1004,7 @@ def equipment_new():
             if _sm:
                 _nm, _md = _sn, _sm
         eq = EquipmentMaintenance(
-            number=gen_eq_number(rec_type),
+            number=gen_eq_number(rec_type, date),
             record_type=rec_type,
             name=_nm,
             serial=request.form.get('serial', ''),

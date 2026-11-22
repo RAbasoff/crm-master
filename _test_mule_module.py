@@ -99,6 +99,29 @@ if dev_id:
     b = client.get(f'/equipment/new?device_id={dev_id}')
     check('prefill device', b'TestMule X1' in b.data and b'TEST-SN-998877' in b.data)
 
+# 8.4 numbering scheme (правило 2026-11-22):
+# OH-{дата проведения}-{сквозной годовой +1}, с 1 января обнуляется
+for _i, _dt in (('1', '2026-12-05'), ('2', '2026-12-20'), ('3', '2027-01-10')):
+    r = client.post('/equipment/new', data={
+        'record_type': 'maintenance', 'name': 'TestMule X1', 'serial': SN,
+        'model_name': 'TM-1', 'date': _dt, 'reason': f'num check {_i}',
+    }, follow_redirects=False)
+    check(f'num rec{_i} created', r.status_code in (302, 303), r.status_code)
+with app.app_context():
+    _m = {rr.reason: rr.number for rr in EquipmentMaintenance.query.filter(
+        EquipmentMaintenance.reason.in_(('num check 1', 'num check 2', 'num check 3'))).all()}
+    n1, n2, n3 = _m.get('num check 1', ''), _m.get('num check 2', ''), _m.get('num check 3', '')
+
+    def _ord(s):
+        t = (s or '').rsplit('-', 1)[-1]
+        return int(t) if t.isdigit() else -1
+
+    check('num1 date part = service date', n1.startswith('OH-20261205-'), n1)
+    check('num2 date part = service date', n2.startswith('OH-20261220-'), n2)
+    check('num3 date part = service date', n3.startswith('OH-20270110-'), n3)
+    check('num2 = num1 + 1 (сквозной)', _ord(n2) == _ord(n1) + 1, f'{n1} -> {n2}')
+    check('num3 yearly reset to 1', _ord(n3) == 1, n3)
+
 # 8.5 regressions from independent review
 # (a) repair must NOT create a registry device
 r = client.post('/equipment/new', data={
