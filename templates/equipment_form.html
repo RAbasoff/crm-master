@@ -17,13 +17,26 @@
     <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="record_type" value="{{ record_type or (eq.record_type if eq else '') or 'maintenance' }}">
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Equipment Name') }} *</label><input type="text" name="name" value="{{ eq.name if eq else '' }}" required placeholder="Mule-01, Press-02..."></div>
-            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial" id="eqSerial" value="{{ eq.serial if eq and eq.serial else '' }}" placeholder="SN-12345" autocomplete="off">
+            <div class="form-group" style="grid-column:1/-1">
+                <label>🧰 {{ _('Mule (select — data filled automatically)') }}</label>
+                <select id="muleSelect" onchange="onMuleSelect(this)">
+                    <option value="">{{ _('Select Mule') }}</option>
+                    {% for d in mule_devices or [] %}
+                    <option value="{{ d.id }}" data-name="{{ d.name }}" data-model="{{ d.model_name or '' }}" data-serial="{{ d.serial_number or '' }}" data-machine="{{ d.machine_id or '' }}"
+                        {% if prefill_device and prefill_device.id == d.id %}selected{% elif eq and eq.device_id == d.id %}selected{% endif %}>{{ d.name }}{% if d.model_name %} — {{ d.model_name }}{% endif %}{% if d.serial_number %} ({{ d.serial_number }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+                <small style="display:block;margin-top:3px;color:#888;font-size:11px">{{ _('Mule data is entered once — then just pick it from the list.') }}</small>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>{{ _('Equipment Name') }} *</label><input type="text" name="name" id="eqName" value="{{ eq.name if eq else (prefill_device.name if prefill_device else '') }}" required placeholder="Mule-01, Press-02..."></div>
+            <div class="form-group"><label>{{ _('Serial Number') }}</label><input type="text" name="serial" id="eqSerial" value="{{ eq.serial if eq and eq.serial else (prefill_device.serial_number if prefill_device and prefill_device.serial_number else '') }}" placeholder="SN-12345" autocomplete="off">
                 <small id="serialHint" style="display:block;margin-top:3px;min-height:14px;font-size:11px"></small>
             </div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>{{ _('Model') }}</label><input type="text" name="model_name" value="{{ eq.model_name if eq and eq.model_name else '' }}" placeholder="C2941 M5821"></div>
+            <div class="form-group"><label>{{ _('Model') }}</label><input type="text" name="model_name" value="{{ eq.model_name if eq and eq.model_name else (prefill_device.model_name if prefill_device and prefill_device.model_name else '') }}" placeholder="C2941 M5821"></div>
             <div class="form-group"><label>{{ _('Date') }} *</label><input type="date" name="date" value="{{ eq.date.strftime('%Y-%m-%d') if eq else '' }}" required></div>
         </div>
         <div class="form-row">
@@ -83,6 +96,71 @@
             serialInput.addEventListener('change', applySerial);
             if (serialInput.value) applySerial();
         })();
+
+        // ── Автозаполнение из реестра муле (данные вводятся один раз) ──
+        var MULES = {{ (mule_devices_json or [])|tojson }};
+        function onMuleSelect(sel) {
+            var opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) return;
+            var nameInput = document.querySelector('input[name="name"]');
+            var modelInput = document.querySelector('input[name="model_name"]');
+            if (nameInput) nameInput.value = opt.dataset.name || '';
+            if (modelInput) modelInput.value = opt.dataset.model || '';
+            if (serialInput) serialInput.value = opt.dataset.serial || '';
+            if (document.getElementById('eqMachine') && opt.dataset.machine) {
+                document.getElementById('eqMachine').value = opt.dataset.machine;
+            }
+            if (hint && opt.dataset.serial) {
+                hint.textContent = '✓ ' + (opt.dataset.name || '') + ' · ' + opt.dataset.serial;
+                hint.style.color = '#27ae60';
+            }
+            renderQuickParts(parseInt(opt.value, 10));
+        }
+        function renderQuickParts(deviceId) {
+            var box = document.getElementById('quickParts');
+            if (!box) return;
+            var dev = null, i;
+            for (i = 0; i < MULES.length; i++) { if (MULES[i].id === deviceId) { dev = MULES[i]; break; } }
+            if (!dev || !dev.parts || !dev.parts.length) {
+                box.innerHTML = '<small style="color:#999">{{ _("No parts attached to this mule") }} — {{ _("attach them in the mule card") }}</small>';
+                return;
+            }
+            var h = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+            dev.parts.forEach(function (p) {
+                h += '<button type="button" class="btn btn-sm" style="background:#eaf7ee;border:1px solid #9fd3ad;color:#1e7e34" onclick="addQuickPart(' + p.id + ')">'
+                    + '+ ' + p.name + (p.number ? ' (' + p.number + ')' : '') + ' ×' + p.qty + ' ' + p.unit + '</button>';
+            });
+            h += '</div>';
+            box.innerHTML = h;
+        }
+        function addQuickPart(pid) {
+            var p = null, i, j;
+            for (i = 0; i < MULES.length && !p; i++) {
+                for (j = 0; j < (MULES[i].parts || []).length; j++) {
+                    if (MULES[i].parts[j].id === pid) { p = MULES[i].parts[j]; break; }
+                }
+            }
+            if (!p) return;
+            addPart();
+            var rows = document.querySelectorAll('#partsList .part-row');
+            var row = rows[rows.length - 1];
+            if (!row) return;
+            row.querySelector('[name="part_name"]').value = p.name;
+            row.querySelector('[name="part_number"]').value = p.number || '';
+            row.querySelector('[name="part_qty"]').value = p.qty || 1;
+            if (p.warehouse_item_id) {
+                var sel = row.querySelector('[name="part_warehouse_id"]');
+                sel.value = String(p.warehouse_item_id);
+                if (typeof onWarehousePartSelect === 'function') onWarehousePartSelect(sel);
+                row.querySelector('[name="part_name"]').value = p.name;
+                row.querySelector('[name="part_number"]').value = p.number || '';
+                row.querySelector('[name="part_qty"]').value = p.qty || 1;
+            }
+        }
+        (function () {
+            var ms = document.getElementById('muleSelect');
+            if (ms && ms.value) renderQuickParts(parseInt(ms.value, 10));
+        })();
         </script>
         <div class="form-group"><label>{{ _('Reason') }} *</label><textarea name="reason" rows="3" required placeholder="{{ _('Reason for maintenance...') }}">{{ eq.reason if eq else '' }}</textarea></div>
         <div class="form-row">
@@ -97,6 +175,12 @@
                     <option value="yearly" {% if eq and eq.periodicity=='yearly' %}selected{% endif %}>{{ _('Yearly') }}</option>
                 </select>
             </div>
+        </div>
+
+        <!-- QUICK PARTS (закреплённые за мулой) -->
+        <div class="card" style="background:#f0fff4;margin:16px 0;padding:12px 16px">
+            <h3 style="font-size:14px;margin:0 0 8px">🧷 {{ _('Parts attached to this mule') }}</h3>
+            <div id="quickParts"><small style="color:#999">{{ _('Select a mule above to see its standard parts') }}</small></div>
         </div>
 
         <!-- PARTS -->

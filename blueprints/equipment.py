@@ -11,7 +11,7 @@ import os, io, json
 
 from models import (db, EquipmentMaintenance, EquipmentPart, EquipmentComponent,
                     EquipmentPartOrder, EquipmentMROPhoto, Machine, VoorraadItem,
-                    VoorraadMutatie)
+                    VoorraadMutatie, MuleDevice, MuleDevicePart)
 from utils import resolve_user_id
 from utils import ensure_fpdf, find_pdf_font, log_audit, log_system, role_required, safe_commit, safe_date, safe_float, safe_int, sanitize_like, save_uploaded_file
 
@@ -102,11 +102,57 @@ def split_mule_name(name):
 
 def gen_eq_number(record_type='maintenance'):
     from utils import next_number_suffix
-    day = datetime.utcnow().strftime('%Y%m%d')
-    # нумерация по подобию MULE onderhoud: EQ-дата-номер / REP-дата-номер
-    prefix = 'REP' if record_type == 'repair' else 'EQ'
+    from models import now_local
+    day = now_local().strftime('%Y%m%d')
+    # OH = onderhoud (ТО) — правило владельца 2026-11-22: OH-дата-порядковый.
+    # Ремонты — как раньше: REP-дата-номер.
+    prefix = 'REP' if record_type == 'repair' else 'OH'
     num = next_number_suffix(EquipmentMaintenance, 'number', f'{prefix}-{day}')
     return f'{prefix}-{day}-{num:04d}'
+
+
+def _norm_serial(s):
+    """Серийник без пробелов/знаков, верхний регистр — идентичность устройства."""
+    return _re.sub(r'[^A-Za-z0-9]', '', (s or '')).upper()
+
+
+def _find_device(serial, name=None):
+    """Найти муле в реестре: по нормализованному серийнику, иначе по имени."""
+    ns = _norm_serial(serial)
+    if ns:
+        for d in MuleDevice.query.all():
+            if d.normalized_serial() == ns:
+                return d
+    if name:
+        key = (name or '').strip().lower()
+        for d in MuleDevice.query.all():
+            if (d.name or '').strip().lower() == key:
+                return d
+    return None
+
+
+def _get_or_create_device(name, model, serial, machine_id=None):
+    """Муле заводится ОДИН раз: дальше только выбирается из реестра."""
+    serial = (serial or '').strip()
+    dev = _find_device(serial, name if not serial else None)
+    if dev is None:
+        if not serial:
+            return None
+        dev = MuleDevice(name=(name or serial).strip(), model_name=(model or '').strip(),
+                         serial_number=serial, machine_id=machine_id)
+        db.session.add(dev)
+        db.session.flush()
+    else:
+        # обновляем карточку, если что-то уточнили
+        if name and name.strip() and dev.name != name.strip():
+            dev.name = name.strip()
+        if model and model.strip() and (dev.model_name or '') != model.strip():
+            dev.model_name = model.strip()
+        if serial and not dev.serial_number:
+            dev.serial_number = serial
+    if machine_id:
+        dev.machine_id = machine_id
+    return dev
 
 
 def gen_eq_order_number():
@@ -114,6 +160,21 @@ def gen_eq_order_number():
     day = datetime.utcnow().strftime('%Y%m%d')
     num = next_number_suffix(EquipmentPartOrder, 'order_number', f'EPO-{day}')
     return f'EPO-{day}-{num:04d}'
+
+
+def mule_devices_json(devices):
+    """Реестр муле для автозаполнения формы ТО + закреплённые запчасти."""
+    out = []
+    for d in devices:
+        out.append({
+            'id': d.id, 'name': d.name or '', 'model': d.model_name or '',
+            'serial': d.serial_number or '', 'machine_id': d.machine_id,
+            'parts': [{'id': p.id, 'name': p.name, 'number': p.number or '',
+                       'unit': p.unit or 'st', 'qty': p.default_qty or 1,
+                       'warehouse_item_id': p.warehouse_item_id}
+                      for p in d.parts_catalog],
+        })
+    return out
 
 
 @bp.route('/equipment')
@@ -162,33 +223,56 @@ def equipment_report():
 def _mule_devices():
     """Устройства Mule — реестр оборудования: ОДНА строка на устройство.
 
-    Идентичность — серийный номер (без пробелов/знаков, регистр не важен):
-    'SSVF148232 L2M2.0' и 'SSVF148232L2M2.0' — одно устройство. Без серийника
-    — по нормализованному имени. Имя/модель — из самой свежей записи.
+    Источник истины — MuleDevice (реестр, заводится один раз). Записи ТО
+    привязаны через device_id; старые записи без привязки собираются по
+    нормализованному серийнику ('SSVF148232 L2M2.0' и 'SSVF148232L2M2.0' —
+    одно устройство). Без серийника — по нормализованному имени. Имя/модель —
+    из самой свежей записи. Записи журнала планов (OJ-*) реестр не пополняют.
     """
     recs = (EquipmentMaintenance.query
             .filter(EquipmentMaintenance.record_type.isnot('repair'),
-                    db.not_(EquipmentMaintenance.number.like('OH-%')))
+                    db.not_(EquipmentMaintenance.number.like('OJ-%')))
             .order_by(EquipmentMaintenance.date.asc(), EquipmentMaintenance.id.asc())
             .all())
     devices, order = {}, []
-    for r in recs:
-        serial_norm = _re.sub(r'[^A-Za-z0-9]', '', (r.serial or '')).upper()
+    dev_by_id = {d.id: d for d in MuleDevice.query.all()}
+    dev_by_sn = {}
+    for d in dev_by_id.values():
+        ns = d.normalized_serial()
+        if ns:
+            dev_by_sn.setdefault(ns, d)
+
+    def _key_for(r):
+        if r.device_id and r.device_id in dev_by_id:
+            return 'd:%s' % r.device_id
+        serial_norm = _norm_serial(r.serial)
+        if serial_norm and serial_norm in dev_by_sn:
+            return 'd:%s' % dev_by_sn[serial_norm].id
+        if serial_norm:
+            return 's:' + serial_norm
         name_norm = _re.sub(r'\s+', ' ', (r.name or '').strip().lower())
-        key = ('s:' + serial_norm) if serial_norm else ('n:' + name_norm)
-        if not key or key in ('s:', 'n:'):
+        return ('n:' + name_norm) if name_norm else ''
+
+    for r in recs:
+        key = _key_for(r)
+        if not key:
             continue
         if key not in devices:
-            devices[key] = {'name': (r.name or r.number).strip(), 'serial': (r.serial or '').strip(),
-                            'model': '', 'components': [], 'machine': '—', 'history': []}
+            reg = dev_by_id.get(int(key[2:])) if key.startswith('d:') else None
+            devices[key] = {
+                'device_id': reg.id if reg else None,
+                'name': (reg.name if reg else (r.name or r.number).strip()),
+                'serial': (reg.serial_number if reg and reg.serial_number else (r.serial or '').strip()),
+                'model': (reg.model_name if reg and reg.model_name else ''),
+                'components': [], 'machine': '—', 'history': []}
             order.append(key)
         d = devices[key]
         # самая свежая запись задаёт актуальные имя/модель/серийник
-        if r.name and r.name.strip():
+        if not d.get('device_id') and r.name and r.name.strip():
             d['name'] = r.name.strip()
         if r.model_name:
             d['model'] = r.model_name
-        if r.serial and r.serial.strip():
+        if not d.get('device_id') and r.serial and r.serial.strip():
             d['serial'] = r.serial.strip()
         if r.machine_id:
             try:
@@ -216,6 +300,16 @@ def _mule_devices():
         h = (r.date, d['machine'])
         if not d['history'] or d['history'][-1] != h:
             d['history'].append(h)
+    # зарегистрированные муле без записей ТО тоже показываем
+    for did, reg in dev_by_id.items():
+        key = 'd:%s' % did
+        if key not in devices:
+            devices[key] = {
+                'device_id': reg.id, 'name': reg.name,
+                'serial': reg.serial_number or '', 'model': reg.model_name or '',
+                'components': [], 'machine': (reg.machine.name if reg.machine else '—'),
+                'history': []}
+            order.append(key)
     out = []
     for i, key in enumerate(order, 1):
         d = devices[key]
@@ -230,6 +324,130 @@ def _mule_devices():
 def equipment_mule_list():
     """Список Mule: №, название, модель, серийник, состав, история перемещений."""
     return render_template('equipment_mule_list.html', devices=_mule_devices())
+
+
+@bp.route('/equipment/mule/<int:device_id>')
+@login_required
+@role_required('admin', 'director', 'technician')
+def equipment_mule_card(device_id):
+    """Карточка муле: паспорт + история ТО + миграции + дата следующего ТО."""
+    dev = MuleDevice.query.get_or_404(device_id)
+    recs = (EquipmentMaintenance.query
+            .filter(EquipmentMaintenance.record_type.isnot('repair'),
+                    db.not_(EquipmentMaintenance.number.like('OJ-%')))
+            .order_by(EquipmentMaintenance.date.desc(), EquipmentMaintenance.id.desc())
+            .all())
+    # записи этого устройства: device_id или совпадение серийника
+    ns = dev.normalized_serial()
+    mine, timeline = [], []
+    for r in recs:
+        if r.device_id == dev.id or (not r.device_id and ns and _norm_serial(r.serial) == ns):
+            mine.append(r)
+    for r in reversed(mine):
+        mname = r.machine.name if r.machine else '—'
+        if not timeline or timeline[-1][1] != mname:
+            timeline.append((r.date, mname))
+    last_to = mine[0].date if mine else None
+    next_to = None
+    for r in mine:
+        if r.next_date:
+            nxt = r.next_date.date() if isinstance(r.next_date, datetime) else r.next_date
+            next_to = nxt
+            break
+    parts_catalog = (MuleDevicePart.query
+                     .filter_by(device_id=dev.id)
+                     .order_by(MuleDevicePart.name).all())
+    warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    return render_template('equipment_mule_card.html', dev=dev, records=mine,
+                           timeline=timeline, last_to=last_to, next_to=next_to,
+                           parts_catalog=parts_catalog, warehouse_items=warehouse_items)
+
+
+@bp.route('/equipment/mule-checklist')
+@login_required
+@role_required('admin', 'director', 'technician')
+def equipment_mule_checklist():
+    """Чек-лист месяца «ТО за <месяц>»: все муле — сделано/не сделано."""
+    from datetime import date as _date
+    ym = (request.args.get('month') or '').strip()
+    try:
+        y, m = int(ym[:4]), int(ym[5:7])
+        if not (1 <= m <= 12):
+            raise ValueError
+    except Exception:
+        from models import now_local
+        t = now_local().date()
+        y, m = t.year, t.month
+    month_start = _date(y, m, 1)
+    month_end = _date(y + (m == 12), (m % 12) + 1, 1)
+    devices = _mule_devices()
+    recs = (EquipmentMaintenance.query
+            .filter(EquipmentMaintenance.record_type.isnot('repair'),
+                    db.not_(EquipmentMaintenance.number.like('OJ-%')),
+                    EquipmentMaintenance.date >= month_start,
+                    EquipmentMaintenance.date < month_end)
+            .order_by(EquipmentMaintenance.date.asc()).all())
+    done_map = {}
+    for r in recs:
+        key = ('d:%s' % r.device_id) if r.device_id else ('s:%s' % _norm_serial(r.serial))
+        done_map.setdefault(key, []).append(r)
+    rows = []
+    for d in devices:
+        key = ('d:%s' % d['device_id']) if d.get('device_id') else ('s:%s' % _norm_serial(d.get('serial')))
+        rows.append({'device': d, 'records': done_map.get(key, []),
+                     'done': bool(done_map.get(key))})
+    month_label = f'{y}-{m:02d}'
+    prev_month = f'{y - 1}-12' if m == 1 else f'{y}-{m - 1:02d}'
+    next_month = f'{y + 1}-01' if m == 12 else f'{y}-{m + 1:02d}'
+    return render_template('equipment_mule_checklist.html', rows=rows,
+                           month=month_label, month_start=month_start,
+                           prev_month=prev_month, next_month=next_month,
+                           done_count=sum(1 for r in rows if r['done']),
+                           total=len(rows))
+
+
+@bp.route('/equipment/mule/<int:device_id>/parts', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def equipment_mule_part_add(device_id):
+    """Закрепить запчасть/расходник за мулой (типовой набор для формы ТО)."""
+    dev = MuleDevice.query.get_or_404(device_id)
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash(_('Part name required'), 'error')
+        return redirect(url_for('equipment.equipment_mule_card', device_id=dev.id))
+    p = MuleDevicePart(
+        device_id=dev.id,
+        warehouse_item_id=safe_int(request.form.get('warehouse_item_id')) or None,
+        name=name,
+        number=(request.form.get('number') or '').strip(),
+        unit=(request.form.get('unit') or 'st').strip(),
+        default_qty=safe_float(request.form.get('default_qty'), 1) or 1,
+        notes=(request.form.get('notes') or '').strip(),
+    )
+    db.session.add(p)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('equipment.equipment_mule_card', device_id=dev.id))
+    log_audit('create', 'mule_device_part', p.id, f'{dev.name}: {p.name}')
+    flash(_('Part attached to mule'), 'success')
+    return redirect(url_for('equipment.equipment_mule_card', device_id=dev.id))
+
+
+@bp.route('/equipment/mule/part/<int:part_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def equipment_mule_part_delete(part_id):
+    """Открепить запчасть от муле (только POST)."""
+    p = MuleDevicePart.query.get_or_404(part_id)
+    dev_id = p.device_id
+    db.session.delete(p)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+        return redirect(url_for('equipment.equipment_mule_card', device_id=dev_id))
+    log_audit('delete', 'mule_device_part', part_id, p.name)
+    flash(_('Part detached'), 'success')
+    return redirect(url_for('equipment.equipment_mule_card', device_id=dev_id))
 
 
 @bp.route('/equipment/mule-list/pdf')
@@ -749,6 +967,10 @@ def equipment_new():
             notes=request.form.get('notes', ''),
             created_by=resolve_user_id()
         )
+        # реестр муле: данные вводятся один раз, дальше только выбираются
+        _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
+        if _dev is not None:
+            eq.device_id = _dev.id
         db.session.add(eq)
         db.session.flush()
         # Add parts + deduct from warehouse
@@ -807,7 +1029,16 @@ def equipment_new():
         return redirect(url_for('equipment.equipment_list'))
     machines = mule_machines()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
-    return render_template('equipment_form.html', eq=None, machines=machines, machines_json=mule_machines_json(machines), warehouse_items=warehouse_items, record_type=request.args.get('type') or request.form.get('record_type') or 'maintenance')
+    mule_devices = MuleDevice.query.order_by(MuleDevice.name).all()
+    # prefill из реестра: /equipment/new?device_id=N (ТО за месяц из чек-листа)
+    prefill = None
+    _did = safe_int(request.args.get('device_id'))
+    if _did:
+        for d in mule_devices:
+            if d.id == _did:
+                prefill = d
+                break
+    return render_template('equipment_form.html', eq=None, machines=machines, machines_json=mule_machines_json(machines), warehouse_items=warehouse_items, mule_devices=mule_devices, mule_devices_json=mule_devices_json(mule_devices), prefill_device=prefill, record_type=request.args.get('type') or request.form.get('record_type') or 'maintenance')
 
 
 @bp.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
@@ -831,6 +1062,8 @@ def equipment_edit(eq_id):
         eq.serial = request.form.get('serial', '')
         eq.model_name = _md
         eq.machine_id = safe_int(request.form.get('machine_id')) or None
+        _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
+        eq.device_id = _dev.id if _dev is not None else None
         eq.reason = request.form['reason']
         eq.next_date = (d := safe_date(request.form.get('next_date'))) and d.date() or None
         eq.periodicity = request.form.get('periodicity', '')
@@ -887,7 +1120,8 @@ def equipment_edit(eq_id):
         return redirect(url_for('equipment.equipment_list'))
     machines = mule_machines()
     warehouse_items = VoorraadItem.query.order_by(VoorraadItem.naam).all()
-    return render_template('equipment_form.html', eq=eq, machines=machines, machines_json=mule_machines_json(machines), warehouse_items=warehouse_items, record_type=eq.record_type or 'maintenance')
+    mule_devices = MuleDevice.query.order_by(MuleDevice.name).all()
+    return render_template('equipment_form.html', eq=eq, machines=machines, machines_json=mule_machines_json(machines), warehouse_items=warehouse_items, mule_devices=mule_devices, mule_devices_json=mule_devices_json(mule_devices), prefill_device=eq.device, record_type=eq.record_type or 'maintenance')
 
 
 @bp.route('/equipment/<int:eq_id>/delete', methods=['POST'])

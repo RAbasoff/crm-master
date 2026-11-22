@@ -24,6 +24,7 @@
     <h1>📋 {{ _('Mule list') }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a href="/equipment" class="btn btn-sm" style="background:#eee">← {{ _('Back') }}</a>
+        <a href="/equipment/mule-checklist" class="btn btn-sm" style="background:#f39c12;color:white">🗓 {{ _('TO checklist') }}</a>
         <button class="btn btn-sm" style="background:#2c3e50;color:white" onclick="window.print()">🖨 {{ _('Print') }}</button>
         <a class="btn btn-sm" style="background:#e74c3c;color:white" id="pdfBtn" href="/equipment/mule-list/pdf?composition=1&history=0">📕 PDF</a>
     </div>
@@ -56,7 +57,13 @@
                 {% for d in devices %}
                 <tr>
                     <td style="text-align:center;font-weight:700">{{ d.no }}</td>
-                    <td><strong>{{ d.name }}</strong></td>
+                    <td>
+                        {% if d.device_id %}
+                        <a href="/equipment/mule/{{ d.device_id }}"><strong>{{ d.name }}</strong></a>
+                        {% else %}
+                        <strong>{{ d.name }}</strong>
+                        {% endif %}
+                    </td>
                     <td>{{ d.model or '—' }}</td>
                     <td style="font-family:monospace">{{ d.serial or '—' }}</td>
                     <td class="comp-col mule-comp">

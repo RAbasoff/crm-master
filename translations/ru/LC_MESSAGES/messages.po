@@ -7410,3 +7410,99 @@ msgstr "Сортировка по номеру"
 
 msgid "Photos from fault"
 msgstr "Фото из заявки"
+
+#: templates/equipment_mule_card.html:0
+msgid "Mule (select — data filled automatically)"
+msgstr "Муле (выбор — данные подставляются автоматически)"
+
+#: templates/equipment_mule_card.html:0
+msgid "Select Mule"
+msgstr "Выберите муле"
+
+#: templates/equipment_mule_card.html:0
+msgid "Mule data is entered once — then just pick it from the list."
+msgstr "Данные муле вводятся один раз — дальше выбираете из списка."
+
+#: templates/equipment_mule_card.html:0
+msgid "No parts attached to this mule"
+msgstr "За этой мулой не закреплены запчасти"
+
+#: templates/equipment_mule_card.html:0
+msgid "attach them in the mule card"
+msgstr "закрепите их в карточке муле"
+
+#: templates/equipment_mule_card.html:0
+msgid "Parts attached to this mule"
+msgstr "Запчасти этой муле"
+
+#: templates/equipment_mule_card.html:0
+msgid "Select a mule above to see its standard parts"
+msgstr "Выберите муле выше, чтобы увидеть её запчасти"
+
+#: templates/equipment_mule_card.html:0
+msgid "Mule card"
+msgstr "Карточка муле"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO checklist"
+msgstr "Чек-лист ТО"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO for this month"
+msgstr "ТО за этот месяц"
+
+#: templates/equipment_mule_card.html:0
+msgid "Passport"
+msgstr "Паспорт"
+
+#: templates/equipment_mule_card.html:0
+msgid "Last TO"
+msgstr "Последнее ТО"
+
+#: templates/equipment_mule_card.html:0
+msgid "Next TO"
+msgstr "Следующее ТО"
+
+#: templates/equipment_mule_card.html:0
+msgid "Standard parts of this mule — one click adds them to the TO form."
+msgstr "Типовые запчасти этой муле — одним кликом добавляются в форму ТО."
+
+#: templates/equipment_mule_card.html:0
+msgid "Detach this part?"
+msgstr "Открепить запчасть?"
+
+#: templates/equipment_mule_card.html:0
+msgid "Attach"
+msgstr "Закрепить"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO history"
+msgstr "История ТО"
+
+#: templates/equipment_mule_card.html:0
+msgid "Previous"
+msgstr "Назад"
+
+#: templates/equipment_mule_card.html:0
+msgid "mules done this month"
+msgstr "муле сделано в этом месяце"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO records this month"
+msgstr "Записи ТО в этом месяце"
+
+#: templates/equipment_mule_card.html:0
+msgid "A mule counts as done if it has at least one TO record dated this month."
+msgstr "Муле считается сделанной, если есть хотя бы одна запись ТО за этот месяц."
+
+#: templates/equipment_mule_card.html:0
+msgid "Part name required"
+msgstr "Название запчасти обязательно"
+
+#: templates/equipment_mule_card.html:0
+msgid "Part attached to mule"
+msgstr "Запчасть закреплена за мулой"
+
+#: templates/equipment_mule_card.html:0
+msgid "Part detached"
+msgstr "Запчасть откреплена"

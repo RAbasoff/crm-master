@@ -254,9 +254,9 @@ def maintenance_calendar():
         plan_machine_ids = [m.id for m in current_user.assigned_machines]
         plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(plan_machine_ids)).all()
     # Отметки «выполнено» в журнале оборудования (планы без станка):
-    # _log_equipment_oh пишет запись OH-{plan_id}-{YYYYMMDD}
+    # _log_equipment_oh пишет запись OJ-{plan_id}-{YYYYMMDD} (журнал-отметка)
     oh_nums = {e.number for e in EquipmentMaintenance.query.filter(
-        EquipmentMaintenance.number.like('OH-%')).all()}
+        EquipmentMaintenance.number.like('OJ-%')).all()}
     for pl in plans:
         if not pl.planned_start:
             continue
@@ -269,7 +269,7 @@ def maintenance_calendar():
                     if mr.date_performed and mr.date_performed.date() == pl.planned_start:
                         done = True
                         break
-            if not done and f'OH-{pl.id}-{pl.planned_start:%Y%m%d}' in oh_nums:
+            if not done and f'OJ-{pl.id}-{pl.planned_start:%Y%m%d}' in oh_nums:
                 done = True
             events.append({
                 'date': pl.planned_start,
@@ -307,7 +307,7 @@ def maintenance_calendar():
                         if mr.next_maintenance and mr.next_maintenance.date() == d and mr.date_performed:
                             occ_done = True
                             break
-                    if not occ_done and f'OH-{pl.id}-{d:%Y%m%d}' in oh_nums:
+                    if not occ_done and f'OJ-{pl.id}-{d:%Y%m%d}' in oh_nums:
                         occ_done = True
                     events.append({
                         'date': d,
@@ -403,12 +403,12 @@ def maintenance_calendar():
 
     # Add EquipmentMaintenance (Mule TO) — по графику: периодичность даёт
     # повторные даты в месяце. Ремонты (record_type='repair') — не план.
-    # Записи журнала OH-* (отметки «выполнено» по планам без станка) — не
+    # Записи журнала OJ-* (отметки «выполнено» по планам без станка) — не
     # график: у них next_date нет у новых, а у старых он есть — отфильтровываем.
     mro_q = EquipmentMaintenance.query.filter(
         EquipmentMaintenance.next_date.isnot(None),
         EquipmentMaintenance.record_type.isnot('repair'),
-        db.not_(EquipmentMaintenance.number.like('OH-%')))
+        db.not_(EquipmentMaintenance.number.like('OJ-%')))
     m_last = month_end - timedelta(days=1)
     for mro in mro_q.all():
         if not mro.next_date:
@@ -537,7 +537,7 @@ def _log_equipment_oh(plan, ev_d, user):
     from models import EquipmentMaintenance
     d = ev_d.date() if hasattr(ev_d, 'date') else ev_d
     # Номер уникален: повторная отметка того же ТО в тот же день не должна падать
-    num = f'OH-{plan.id}-{d:%Y%m%d}'
+    num = f'OJ-{plan.id}-{d:%Y%m%d}'
     if EquipmentMaintenance.query.filter_by(number=num).first():
         return
     db.session.add(EquipmentMaintenance(

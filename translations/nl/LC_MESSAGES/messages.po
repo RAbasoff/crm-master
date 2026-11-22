@@ -7236,3 +7236,99 @@ msgstr "Wachtend (rechts)"
 
 msgid "Photos from fault"
 msgstr "Foto's van de melding"
+
+#: templates/equipment_mule_card.html:0
+msgid "Mule (select — data filled automatically)"
+msgstr "Mule (kiezen — gegevens worden automatisch ingevuld)"
+
+#: templates/equipment_mule_card.html:0
+msgid "Select Mule"
+msgstr "Kies mule"
+
+#: templates/equipment_mule_card.html:0
+msgid "Mule data is entered once — then just pick it from the list."
+msgstr "Mule-gegevens eenmaal invoeren — daarna kies je uit de lijst."
+
+#: templates/equipment_mule_card.html:0
+msgid "No parts attached to this mule"
+msgstr "Geen onderdelen gekoppeld aan deze mule"
+
+#: templates/equipment_mule_card.html:0
+msgid "attach them in the mule card"
+msgstr "koppel ze in de mule-kaart"
+
+#: templates/equipment_mule_card.html:0
+msgid "Parts attached to this mule"
+msgstr "Onderdelen van deze mule"
+
+#: templates/equipment_mule_card.html:0
+msgid "Select a mule above to see its standard parts"
+msgstr "Kies hierboven een mule om de vaste onderdelen te zien"
+
+#: templates/equipment_mule_card.html:0
+msgid "Mule card"
+msgstr "Mule-kaart"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO checklist"
+msgstr "TO-checklist"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO for this month"
+msgstr "TO van deze maand"
+
+#: templates/equipment_mule_card.html:0
+msgid "Passport"
+msgstr "Paspoort"
+
+#: templates/equipment_mule_card.html:0
+msgid "Last TO"
+msgstr "Laatste TO"
+
+#: templates/equipment_mule_card.html:0
+msgid "Next TO"
+msgstr "Volgende TO"
+
+#: templates/equipment_mule_card.html:0
+msgid "Standard parts of this mule — one click adds them to the TO form."
+msgstr "Vaste onderdelen van deze mule — één klik zet ze in het TO-formulier."
+
+#: templates/equipment_mule_card.html:0
+msgid "Detach this part?"
+msgstr "Onderdeel loskoppelen?"
+
+#: templates/equipment_mule_card.html:0
+msgid "Attach"
+msgstr "Koppelen"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO history"
+msgstr "TO-geschiedenis"
+
+#: templates/equipment_mule_card.html:0
+msgid "Previous"
+msgstr "Vorige"
+
+#: templates/equipment_mule_card.html:0
+msgid "mules done this month"
+msgstr "mules deze maand gedaan"
+
+#: templates/equipment_mule_card.html:0
+msgid "TO records this month"
+msgstr "TO-registraties deze maand"
+
+#: templates/equipment_mule_card.html:0
+msgid "A mule counts as done if it has at least one TO record dated this month."
+msgstr "Een mule telt als gedaan als er minstens één TO-registratie deze maand is."
+
+#: templates/equipment_mule_card.html:0
+msgid "Part name required"
+msgstr "Onderdeelnaam verplicht"
+
+#: templates/equipment_mule_card.html:0
+msgid "Part attached to mule"
+msgstr "Onderdeel gekoppeld aan mule"
+
+#: templates/equipment_mule_card.html:0
+msgid "Part detached"
+msgstr "Onderdeel losgekoppeld"

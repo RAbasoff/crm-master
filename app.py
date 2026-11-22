@@ -556,6 +556,11 @@ with app.app_context():
                 print("FAULT SERIALS: backfilled", _cnt)
         except Exception as _e:
             print("FAULT SERIALS: skip", _e)
+        try:
+            from schema import ensure_mule_numbering
+            ensure_mule_numbering()
+        except Exception as _e:
+            print("MULE NUMBERING: skip", _e)
         ensure_plan_windows()
         ensure_head_of_ts()
     except Exception as _fu_err:

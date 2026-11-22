@@ -1921,17 +1921,60 @@ class SavedDocument(db.Model):
 # EQUIPMENT MAINTENANCE MODELS
 # ============================================================
 
+class MuleDevice(db.Model):
+    """Реестр муле (ТО-оборудование): заводится ОДИН раз (решение 2026-11-22).
+
+    Данные (название/модель/серийник) вводятся один раз — дальше форма ТО
+    подставляет их выбором из реестра. serial_number — идентичность устройства.
+    """
+    __tablename__ = 'mule_device'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    model_name = db.Column(db.String(200))
+    serial_number = db.Column(db.String(100), unique=True)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    machine = db.relationship('Machine')
+
+    def normalized_serial(self):
+        import re as _re
+        return _re.sub(r'[^A-Za-z0-9]', '', (self.serial_number or '')).upper()
+
+
+class MuleDevicePart(db.Model):
+    """Закреплённые за мулой запчасти/детали/расходники (2026-11-22).
+
+    Типовой набор выбирается в форме ТО в один клик — чтобы не искать
+    каждый раз в складском списке. Привязка к складу опциональна.
+    """
+    __tablename__ = 'mule_device_part'
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('mule_device.id'), nullable=False)
+    warehouse_item_id = db.Column(db.Integer, db.ForeignKey('warehouse_item.id'))
+    name = db.Column(db.String(200), nullable=False)
+    number = db.Column(db.String(100))
+    unit = db.Column(db.String(20), default='st')
+    default_qty = db.Column(db.Float, default=1)
+    notes = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=now_local)
+    device = db.relationship('MuleDevice', backref=db.backref('parts_catalog', cascade='all, delete-orphan'))
+    warehouse_item = db.relationship('VoorraadItem')
+
+
 class EquipmentMaintenance(db.Model):
     __tablename__ = 'equipment_maintenance'
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(30), unique=True, nullable=False)
-    # 'maintenance' (MULE onderhoud, EQ-) | 'repair' (ремонты, REP-)
+    # 'maintenance' (MULE onderhoud, OH-) | 'repair' (ремонты, REP-)
     record_type = db.Column(db.String(20), default='maintenance')
     name = db.Column(db.String(200), nullable=False)
     serial = db.Column(db.String(100))
     # Модель устройства (напр. C2941 M5821) — для «Списка Mule»
     model_name = db.Column(db.String(200))
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
+    # Привязка к реестру муле (данные вводятся один раз)
+    device_id = db.Column(db.Integer, db.ForeignKey('mule_device.id'))
+    device = db.relationship('MuleDevice', backref='records')
     date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text, nullable=False)
     next_date = db.Column(db.Date)

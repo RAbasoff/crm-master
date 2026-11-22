@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ _('TO checklist') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🗓 {{ _('TO checklist') }} — {{ month }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/equipment/mule-checklist?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">← {{ _('Previous') }}</a>
+        <a href="/equipment/mule-checklist" class="btn btn-sm" style="background:#eee">{{ _('Month') }}</a>
+        <a href="/equipment/mule-checklist?month={{ next_month }}" class="btn btn-sm" style="background:#eee">{{ _('Next') }} →</a>
+        <a href="/equipment/mule-list" class="btn btn-sm" style="background:#eee">📋 {{ _('Mule list') }}</a>
+    </div>
+</div>
+
+<div class="card" style="padding:12px 16px;margin-bottom:12px">
+    <strong>{{ done_count }} / {{ total }}</strong> {{ _('mules done this month') }}
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table class="mule-table" style="width:100%">
+            <thead>
+                <tr style="background:#2c3e50;color:#fff">
+                    <th style="width:36px">№</th>
+                    <th>{{ _('Name') }}</th>
+                    <th>{{ _('Serial Number') }}</th>
+                    <th>{{ _('Installed on') }}</th>
+                    <th style="width:110px">{{ _('Status') }}</th>
+                    <th>{{ _('TO records this month') }}</th>
+                    <th class="no-print" style="width:150px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td style="text-align:center;font-weight:700">{{ row.device.no }}</td>
+                    <td>
+                        {% if row.device.device_id %}
+                        <a href="/equipment/mule/{{ row.device.device_id }}"><strong>{{ row.device.name }}</strong></a>
+                        {% else %}
+                        <strong>{{ row.device.name }}</strong>
+                        {% endif %}
+                        {% if row.device.model %} <span style="color:#888">{{ row.device.model }}</span>{% endif %}
+                    </td>
+                    <td style="font-family:monospace">{{ row.device.serial or '—' }}</td>
+                    <td>{{ row.device.machine }}</td>
+                    <td style="text-align:center">
+                        {% if row.done %}<span style="color:#27ae60;font-size:18px">✅</span>
+                        {% else %}<span style="color:#e74c3c;font-size:18px">❌</span>{% endif %}
+                    </td>
+                    <td>
+                        {% for r in row.records %}
+                        <a href="/equipment/{{ r.id }}" style="font-family:monospace">{{ r.number }}</a> ({{ r.date.strftime('%d.%m') }}){% if not loop.last %}, {% endif %}
+                        {% else %}—{% endfor %}
+                    </td>
+                    <td class="no-print">
+                        {% if not row.done %}
+                        <a href="/equipment/new?device_id={{ row.device.device_id or '' }}" class="btn btn-sm btn-primary">+ {{ _('TO for this month') }}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:10px" class="no-print">
+    {{ _('A mule counts as done if it has at least one TO record dated this month.') }}
+</p>
+{% endblock %}

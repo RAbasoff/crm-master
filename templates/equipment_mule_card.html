@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ dev.name }} — {{ _('Mule card') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🧰 {{ dev.name }} <small style="font-size:13px;color:#888">{{ dev.model_name or '' }}</small></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/equipment/mule-list" class="btn btn-sm" style="background:#eee">← {{ _('Mule list') }}</a>
+        <a href="/equipment/mule-checklist" class="btn btn-sm" style="background:#eee">🗓 {{ _('TO checklist') }}</a>
+        <a href="/equipment/new?device_id={{ dev.id }}" class="btn btn-primary btn-sm">+ {{ _('TO for this month') }}</a>
+    </div>
+</div>
+
+<!-- ПАСПОРТ -->
+<div class="card" style="padding:16px">
+    <h3 style="margin:0 0 12px">📋 {{ _('Passport') }}</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+        <div><small style="color:#888">{{ _('Serial Number') }}</small><div style="font-family:monospace;font-weight:700">{{ dev.serial_number or '—' }}</div></div>
+        <div><small style="color:#888">{{ _('Model') }}</small><div>{{ dev.model_name or '—' }}</div></div>
+        <div><small style="color:#888">{{ _('Installed on') }}</small><div>{{ dev.machine.name if dev.machine else '—' }}</div></div>
+        <div><small style="color:#888">{{ _('Last TO') }}</small><div>{{ last_to.strftime('%d.%m.%Y') if last_to else '—' }}</div></div>
+        <div><small style="color:#888">{{ _('Next TO') }}</small>
+            <div style="font-weight:700;{% if next_to and next_to < next_to.today() %}color:#e74c3c{% else %}color:#27ae60{% endif %}">
+                {{ next_to.strftime('%d.%m.%Y') if next_to else '—' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- МИГРАЦИИ -->
+<div class="card" style="padding:16px;margin-top:12px">
+    <h3 style="margin:0 0 12px">🚚 {{ _('Movement history') }}</h3>
+    {% if timeline %}
+    <div style="display:flex;flex-direction:column;gap:6px">
+        {% for dt, mm in timeline %}
+        <div style="display:flex;gap:12px;align-items:center">
+            <span style="font-family:monospace;min-width:90px">{{ dt.strftime('%d.%m.%Y') }}</span>
+            <span style="color:#bbb">→</span>
+            <strong>{{ mm }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}<span style="color:#888">—</span>{% endif %}
+</div>
+
+<!-- ЗАКРЕПЛЁННЫЕ ЗАПЧАСТИ -->
+<div class="card" style="padding:16px;margin-top:12px">
+    <h3 style="margin:0 0 12px">🧷 {{ _('Parts attached to this mule') }}</h3>
+    <p style="color:#888;font-size:12px;margin:0 0 10px">{{ _('Standard parts of this mule — one click adds them to the TO form.') }}</p>
+    {% if parts_catalog %}
+    <div class="table-wrap">
+        <table class="mule-table" style="width:100%">
+            <thead><tr style="background:#2c3e50;color:#fff">
+                <th>{{ _('Name') }}</th><th>SPN</th><th>{{ _('Qty') }}</th><th>{{ _('Unit') }}</th><th></th>
+            </tr></thead>
+            <tbody>
+                {% for p in parts_catalog %}
+                <tr>
+                    <td><strong>{{ p.name }}</strong>{% if p.notes %} <span style="color:#999">({{ p.notes }})</span>{% endif %}</td>
+                    <td style="font-family:monospace">{{ p.number or '—' }}</td>
+                    <td>{{ p.default_qty }}</td>
+                    <td>{{ p.unit }}</td>
+                    <td class="no-print">
+                        <form method="POST" action="/equipment/mule/part/{{ p.id }}/delete" style="display:inline"
+                              onsubmit="return confirm('{{ _('Detach this part?') }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<span style="color:#888">{{ _('No parts attached to this mule') }}</span>{% endif %}
+
+    <form method="POST" action="/equipment/mule/{{ dev.id }}/parts" class="no-print" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Name') }} *</label>
+            <input type="text" name="name" required style="padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">SPN</label>
+            <input type="text" name="number" style="padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Qty') }}</label>
+            <input type="number" name="default_qty" value="1" min="0.1" step="0.1" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Unit') }}</label>
+            <input type="text" name="unit" value="st" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Warehouse') }}</label>
+            <select name="warehouse_item_id" style="padding:6px;border:1px solid #ddd;border-radius:6px">
+                <option value="">—</option>
+                {% for w in warehouse_items or [] %}
+                <option value="{{ w.id }}">{{ w.naam }}</option>
+                {% endfor %}
+            </select></div>
+        <button type="submit" class="btn btn-primary btn-sm">+ {{ _('Attach') }}</button>
+    </form>
+</div>
+
+<!-- ИСТОРИЯ ТО -->
+<div class="card" style="padding:16px;margin-top:12px">
+    <h3 style="margin:0 0 12px">🔧 {{ _('TO history') }} ({{ records|length }})</h3>
+    {% if records %}
+    <div class="table-wrap">
+        <table class="mule-table" style="width:100%">
+            <thead><tr style="background:#2c3e50;color:#fff">
+                <th>{{ _('Date') }}</th><th>{{ _('Number') }}</th><th>{{ _('Reason') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Next Date') }}</th><th></th>
+            </tr></thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>{{ r.date.strftime('%d.%m.%Y') }}</td>
+                    <td style="font-family:monospace">{{ r.number }}</td>
+                    <td>{{ (r.reason or '')[:80] }}</td>
+                    <td>{{ r.machine.name if r.machine else '—' }}</td>
+                    <td>{{ r.next_date.strftime('%d.%m.%Y') if r.next_date else '—' }}</td>
+                    <td><a href="/equipment/{{ r.id }}" class="btn btn-sm" style="background:#eee">{{ _('Details') }}</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<span style="color:#888">{{ _('No records found') }}</span>{% endif %}
+</div>
+{% endblock %}

@@ -8,23 +8,27 @@ import time as _time
 
 
 def safe_commit(retries=3, delay=0.5):
-    """Commit with retry on SQLite lock. Returns True on success."""
+    """Commit. Returns True on success, False after rollback.
+
+    НЕ делаем «ретрай с rollback»: откат отменяет изменения ORM, повторный
+    commit фиксирует пустую транзакцию и возвращал True — данные молча
+    терялись. Единственная честная стратегия: rollback + False, вызывающий
+    код показывает «Save failed».
+    """
     from models import db
-    for attempt in range(retries):
+    try:
+        db.session.commit()
+        return True
+    except Exception as e:
         try:
-            db.session.commit()
-            return True
-        except Exception as e:
-            if 'database is locked' in str(e) and attempt < retries - 1:
-                db.session.rollback()
-                _time.sleep(delay * (attempt + 1))
-            else:
-                db.session.rollback()
-                try:
-                    import logging as _lg; _lg.getLogger(__name__).warning('SAFE_COMMIT FAILED: %s', e)
-                except Exception: pass
-                return False
-    return False
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            import logging as _lg; _lg.getLogger(__name__).warning('SAFE_COMMIT FAILED: %s', e)
+        except Exception:
+            pass
+        return False
 
 SCHEMA_VERSION = 20261020
 
@@ -139,12 +143,17 @@ def ensure_perf():
     import time as _time
     try:
         from models import db
+        # Windows: TRUNCATE держит постоянный -journal → AV/индексатор его
+        # блокирует и SQLite отдаёт disk I/O error; DELETE журнала надёжнее.
+        # Linux (PA): TRUNCATE быстрее и работает без проблем.
+        import os as _os
+        _jm = 'DELETE' if _os.name == 'nt' else 'TRUNCATE'
         for _attempt in range(5):
             try:
                 conn = db.engine.raw_connection()
                 try:
                     cur = conn.cursor()
-                    mode = cur.execute("PRAGMA journal_mode=TRUNCATE").fetchone()
+                    mode = cur.execute(f"PRAGMA journal_mode={_jm}").fetchone()
                     cur.execute("PRAGMA synchronous=NORMAL")
                     cur.execute("PRAGMA temp_store=MEMORY")
                     indexes = [
@@ -638,6 +647,26 @@ def ensure_schema():
             updated_at DATETIME
         )"""),
         ("equipment_part.warehouse_item_id", "ALTER TABLE equipment_part ADD COLUMN warehouse_item_id INTEGER REFERENCES warehouse_item(id)"),
+        ("mule_device", """CREATE TABLE IF NOT EXISTS mule_device (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            model_name VARCHAR(200),
+            serial_number VARCHAR(100) UNIQUE,
+            machine_id INTEGER REFERENCES machine(id),
+            created_at DATETIME
+        )"""),
+        ("equipment_maintenance.device_id", "ALTER TABLE equipment_maintenance ADD COLUMN device_id INTEGER REFERENCES mule_device(id)"),
+        ("mule_device_part", """CREATE TABLE IF NOT EXISTS mule_device_part (
+            id INTEGER PRIMARY KEY,
+            device_id INTEGER NOT NULL REFERENCES mule_device(id),
+            warehouse_item_id INTEGER REFERENCES warehouse_item(id),
+            name VARCHAR(200) NOT NULL,
+            number VARCHAR(100),
+            unit VARCHAR(20) DEFAULT 'st',
+            default_qty FLOAT DEFAULT 1,
+            notes VARCHAR(300),
+            created_at DATETIME
+        )"""),
         ("maintenance_plan.responsible_user_id", "ALTER TABLE maintenance_plan ADD COLUMN responsible_user_id INTEGER REFERENCES user(id)"),
         ("maintenance_plan.recurrence", "ALTER TABLE maintenance_plan ADD COLUMN recurrence VARCHAR(20)"),
         ("machine_consumable", """CREATE TABLE IF NOT EXISTS machine_consumable (
@@ -1887,3 +1916,40 @@ def ensure_plan_windows():
         print(f"ensure_plan_windows error: {e}")
 
 
+
+
+def ensure_mule_numbering():
+    """MRO-нумерация (правило владельца 2026-11-22), идемпотентно:
+    1) отметки-журнал планов OH-{plan_id}-{YYYYMMDD} -> OJ-... (префикс OH-
+       теперь принадлежит настоящим записям ТО);
+    2) исторические номера EQ-... -> OH-... («EQ заменить на OH»).
+    Возвращает число переименованных записей.
+    """
+    import re as _re
+    try:
+        from models import db, EquipmentMaintenance
+        pat_journal = _re.compile(r'^OH-\d+-\d{8}$')
+        changed = 0
+        for eq in EquipmentMaintenance.query.all():
+            num = eq.number or ''
+            new = None
+            if pat_journal.match(num):
+                new = 'OJ-' + num[3:]
+            elif num.startswith('EQ-'):
+                cand = 'OH-' + num[3:]
+                if not EquipmentMaintenance.query.filter_by(number=cand).first():
+                    new = cand
+            if new:
+                eq.number = new
+                changed += 1
+        if changed:
+            db.session.commit()
+            print(f"MULE NUMBERING: renumbered {changed} records")
+        return changed
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f"MULE NUMBERING: skip {e}")
+        return 0
