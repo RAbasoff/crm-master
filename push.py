@@ -12,10 +12,19 @@ from datetime import datetime
 # pywebpush/aiohttp ставятся в ~/.local (user site) — веб-воркеры uWSGI их не видят.
 # Все версии python: после обновления интерпретатора (3.12 → 3.13) хардкод
 # версии оставлял aiohttp «не найденным».
+# Плюс: системные site-packages ТЕКУЩЕГО интерпретатора (веб-процесс на PA
+# иногда не видит /usr/local/.../site-packages — отсюда «No module named attr»).
 import glob as _glob
+import sysconfig as _sysconfig
 for _sp in _glob.glob(os.path.expanduser('~/.local/lib/python*/site-packages')):
     if os.path.isdir(_sp) and _sp not in sys.path:
         sys.path.append(_sp)
+try:
+    _pl = _sysconfig.get_paths().get('purelib')
+    if _pl and os.path.isdir(_pl) and _pl not in sys.path:
+        sys.path.append(_pl)
+except Exception:
+    pass
 
 _VAPID_CACHE = None
 
