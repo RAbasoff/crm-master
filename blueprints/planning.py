@@ -395,22 +395,42 @@ DAY_CAPACITY_HOURS = 16  # 2 смены × 8 ч
 
 
 def _week_conflicts(week_start, week_end):
-    """Конфликты «машина × день»: поломка (заявка) и ТО (план)."""
-    out = {}
+    """Конфликты «машина × день»: поломка (заявка) и ТО (план).
+
+    Возвращает (day_tags, alerts):
+      day_tags: {machine_id: {date: ['fault'|'to', ...]}} — дни действия;
+      alerts:   {machine_id: {'faults': [...], 'to': [...]}} — плашки строки.
+    Заявки со статусом 'rejected' игнорируются; закрытые действуют только до
+    resolved_at; открытые — до закрытия (но красным помечается лишь день с планом).
+    """
+    day_tags, alerts = {}, {}
 
     def _add(mid, d, tag):
         if mid and week_start <= d <= week_end:
-            out.setdefault(mid, {}).setdefault(d, []).append(tag)
+            day_tags.setdefault(mid, {}).setdefault(d, []).append(tag)
+
+    def _alert(mid, kind, text):
+        alerts.setdefault(mid, {'faults': [], 'to': []})[kind].append(text)
 
     for f in FaultReport.query.filter(FaultReport.machine_id.isnot(None)).all():
+        st = (f.status or '').lower()
+        if st == 'rejected':
+            continue
         start = f.created_at.date() if f.created_at else None
         if start is None:
             continue
-        end = f.resolved_at.date() if f.resolved_at else week_end
+        resolved = f.resolved_at.date() if f.resolved_at else None
+        if st in ('closed', 'resolved', 'done', 'cancelled'):
+            end = resolved or start
+        else:
+            end = resolved or week_end
         d = max(start, week_start)
         while d <= min(end, week_end):
             _add(f.machine_id, d, 'fault')
             d += timedelta(days=1)
+        if week_start <= end and start <= week_end:
+            _alert(f.machine_id, 'faults',
+                   f'#{f.id} {f.title or ""} ({st}, {start.strftime("%d.%m")})')
     for pl in MaintenancePlan.query.filter(
             MaintenancePlan.machine_id.isnot(None),
             MaintenancePlan.status != 'cancelled').all():
@@ -427,7 +447,10 @@ def _week_conflicts(week_start, week_end):
         while d <= min(end, week_end):
             _add(pl.machine_id, d, 'to')
             d += timedelta(days=1)
-    return out
+        if week_start <= end and start <= week_end:
+            _alert(pl.machine_id, 'to',
+                   f'#{pl.id} {pl.title or ""} ({start.strftime("%d.%m")})')
+    return day_tags, alerts
 
 
 @bp.route('/planning/load')
@@ -439,13 +462,13 @@ def planning_load():
     anchor = _anchor_date()
     week_start, week_end = _week_bounds(anchor)
     days = [week_start + timedelta(days=i) for i in range(7)]
-    conflicts = _week_conflicts(week_start, week_end)
+    day_tags, alerts = _week_conflicts(week_start, week_end)
 
     plans = PlanProduction.query.filter(
         PlanProduction.prod_date.between(week_start, week_end),
         PlanProduction.status != 'cancelled').all()
     machine_ids = {p.machine_id for p in plans if p.machine_id}
-    machine_ids |= set(conflicts.keys())
+    machine_ids |= set(alerts.keys())
     machines = (Machine.query.filter(Machine.id.in_(list(machine_ids) or [-1]))
                 .order_by(Machine.name).all())
 
@@ -463,9 +486,11 @@ def planning_load():
             free_names.setdefault(nm, (p.machine_name or '').strip())
         cells.setdefault(key, {}).setdefault(p.prod_date, []).append(p)
     for m in machines:
-        rows.append({'label': m.name, 'key': ('m', m.id)})
+        rows.append({'label': m.name, 'key': ('m', m.id),
+                     'alerts': alerts.get(m.id, {'faults': [], 'to': []})})
     for nm in sorted(free_names):
-        rows.append({'label': free_names[nm], 'key': ('n', nm)})
+        rows.append({'label': free_names[nm], 'key': ('n', nm),
+                     'alerts': {'faults': [], 'to': []}})
 
     grid = []
     for row in rows:
@@ -475,7 +500,7 @@ def planning_load():
             items = cells.get(row['key'], {}).get(d, [])
             total = sum((i.hours or 0) for i in items)
             week_hours += total
-            tags = (list(conflicts.get(row['key'][1], {}).get(d, []))
+            tags = (list(day_tags.get(row['key'][1], {}).get(d, []))
                     if row['key'][0] == 'm' else [])
             if total > DAY_CAPACITY_HOURS:
                 tags.append('overload')
@@ -485,8 +510,12 @@ def planning_load():
                     wo_counts[i.work_order] = wo_counts.get(i.work_order, 0) + 1
             if any(v > 1 for v in wo_counts.values()):
                 tags.append('duplicate')
-            week_cells.append({'date': d, 'plans': items, 'total': total, 'tags': tags})
-        grid.append({'label': row['label'], 'cells': week_cells, 'week_hours': week_hours})
+            # красный только там, где есть ПЛАН и конфликт с ним
+            hot = bool(items) and bool(tags)
+            week_cells.append({'date': d, 'plans': items, 'total': total,
+                               'tags': tags if items else [], 'hot': hot})
+        grid.append({'label': row['label'], 'cells': week_cells,
+                     'week_hours': week_hours, 'alerts': row['alerts']})
     return render_template('planning_load.html', grid=grid, days=days,
                            week_start=week_start, week_end=week_end,
                            prev_d=(week_start - timedelta(days=1)).isoformat(),

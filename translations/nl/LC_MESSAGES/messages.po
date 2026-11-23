@@ -7448,3 +7448,7 @@ msgstr "Magazijnartikel"
 #: templates/planning.html:0
 msgid "suggested by min stock level"
 msgstr "aanbevolen op basis van voorraadniveau"
+
+#: templates/planning_load.html:0
+msgid "Red cell = plan on a day with a conflict."
+msgstr "Rode cel = planning op een dag met een conflict."

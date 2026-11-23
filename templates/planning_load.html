@@ -13,7 +13,7 @@
 </div>
 
 <div class="card no-print" style="padding:8px 12px;margin-bottom:10px;font-size:12px">
-    🔧 {{ _('Breakdown') }} · 🔩 {{ _('Maintenance (TO)') }} · 🔴 {{ _('Overload') }} (&gt;{{ capacity }}h) · ⚠️ {{ _('Duplicate plan') }}
+    {{ _('Red cell = plan on a day with a conflict.') }} 🔧 {{ _('Breakdown') }} · 🔩 {{ _('Maintenance (TO)') }} · 🔴 {{ _('Overload') }} (&gt;{{ capacity }}h) · ⚠️ {{ _('Duplicate plan') }}
 </div>
 
 <div class="card" style="padding:0;overflow-x:auto">
@@ -30,16 +30,24 @@
         <tbody>
             {% for row in grid %}
             <tr>
-                <td><strong>🔧 {{ row.label }}</strong></td>
+                <td>
+                    <strong>🔧 {{ row.label }}</strong>
+                    {% if row.alerts.faults %}
+                    <span title="{{ row.alerts.faults | join('; ') }}" style="color:#e74c3c;font-size:11px">🔧×{{ row.alerts.faults|length }}</span>
+                    {% endif %}
+                    {% if row.alerts.to %}
+                    <span title="{{ row.alerts.to | join('; ') }}" style="color:#8e44ad;font-size:11px">🔩×{{ row.alerts.to|length }}</span>
+                    {% endif %}
+                </td>
                 {% for cell in row.cells %}
-                <td style="vertical-align:top;{% if cell.tags %}background:#fdecea{% endif %}">
-                    {% for t in cell.tags %}
+                <td style="vertical-align:top;{% if cell.hot %}background:#fdecea{% endif %}">
+                    {% if cell.hot %}{% for t in cell.tags %}
                         {% if t == 'fault' %}<span title="{{ _('Breakdown') }}">🔧</span>
                         {% elif t == 'to' %}<span title="{{ _('Maintenance (TO)') }}">🔩</span>
                         {% elif t == 'overload' %}<span title="{{ _('Overload') }}">🔴</span>
                         {% elif t == 'duplicate' %}<span title="{{ _('Duplicate plan') }}">⚠️</span>
                         {% endif %}
-                    {% endfor %}
+                    {% endfor %}{% endif %}
                     {% for p in cell.plans %}
                     <div style="font-size:10.5px;padding:1px 3px;border-left:2px solid #3498db;margin:1px 0;background:#f4f9ff">
                         {{ p.article_name }} <b>{{ p.qty }}{{ p.unit }}</b>

@@ -7622,3 +7622,7 @@ msgstr "Складская позиция"
 #: templates/planning.html:0
 msgid "suggested by min stock level"
 msgstr "предложение по минимальному остатку"
+
+#: templates/planning_load.html:0
+msgid "Red cell = plan on a day with a conflict."
+msgstr "Красная ячейка = план в день с конфликтом."

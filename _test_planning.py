@@ -128,6 +128,7 @@ h = b.data.decode('utf-8', 'replace')
 check('load page 200', b.status_code == 200, b.status_code)
 check('load shows machine', mid2 is not None and 'SMOKE-load0' in h)
 check('load overload+dup cell', 'background:#fdecea' in h)
+check('load row alert badge', '🔧×' in h)
 with app.app_context():
     f = FaultReport.query.filter_by(title='SMOKE-fault').first()
     if f:
