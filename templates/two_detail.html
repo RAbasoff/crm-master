@@ -161,8 +161,26 @@
         </div>
         <div style="margin-bottom:12px">
             <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">📷 {{ _('Photos') }}</label>
-            <input type="file" name="photos" accept="image/*" capture="environment" multiple style="width:100%;padding:8px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <label style="flex:1;min-width:150px;text-align:center;background:#27ae60;color:#fff;padding:12px 8px;border-radius:8px;font-weight:700;cursor:pointer">
+                    📷 {{ _('Camera') }}
+                    <input type="file" name="photos" accept="image/*" capture="environment" multiple style="display:none" onchange="twoPhotoPicked(this,'twoCntCam')">
+                </label>
+                <label style="flex:1;min-width:150px;text-align:center;background:#3498db;color:#fff;padding:12px 8px;border-radius:8px;font-weight:700;cursor:pointer">
+                    🖼️ {{ _('Gallery') }}
+                    <input type="file" name="photos" accept="image/*" multiple style="display:none" onchange="twoPhotoPicked(this,'twoCntGal')">
+                </label>
+            </div>
+            <small id="twoCntCam" style="display:block;color:#27ae60;font-size:11px;min-height:14px"></small>
+            <small id="twoCntGal" style="display:block;color:#3498db;font-size:11px;min-height:14px"></small>
         </div>
+        <script>
+        function twoPhotoPicked(inp, elId) {
+            var el = document.getElementById(elId);
+            if (!el) return;
+            el.textContent = (inp.files && inp.files.length) ? ('✓ ' + inp.files.length) : '';
+        }
+        </script>
         <button type="submit" class="btn" style="background:#27ae60;color:#fff;padding:12px 22px;font-weight:700">
             ✅ {{ _('Complete TWO') }}
         </button>

@@ -7506,3 +7506,7 @@ msgstr "Запчасть закреплена за мулой"
 #: templates/equipment_mule_card.html:0
 msgid "Part detached"
 msgstr "Запчасть откреплена"
+
+#: templates/two_detail.html:0
+msgid "Gallery"
+msgstr "Галерея"
