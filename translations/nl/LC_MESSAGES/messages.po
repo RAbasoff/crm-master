@@ -7336,3 +7336,55 @@ msgstr "Onderdeel losgekoppeld"
 #: templates/two_detail.html:0
 msgid "Gallery"
 msgstr "Galerij"
+
+#: templates/planning.html:0
+msgid "Purchases"
+msgstr "Inkoop"
+
+#: templates/planning.html:0
+msgid "Shipments"
+msgstr "Verzending"
+
+#: templates/planning.html:0
+msgid "Week"
+msgstr "Week"
+
+#: templates/planning.html:0
+msgid "Code"
+msgstr "Code"
+
+#: templates/planning.html:0
+msgid "Transport"
+msgstr "Transport"
+
+#: templates/planning.html:0
+msgid "Work order"
+msgstr "Werkorder"
+
+#: templates/planning.html:0
+msgid "purchase"
+msgstr "inkoop"
+
+#: templates/planning.html:0
+msgid "production"
+msgstr "productie"
+
+#: templates/planning.html:0
+msgid "shipment"
+msgstr "verzending"
+
+#: templates/planning.html:0
+msgid "raw material"
+msgstr "grondstof"
+
+#: templates/planning.html:0
+msgid "distribution to machines"
+msgstr "verdeling naar machines"
+
+#: templates/planning.html:0
+msgid "free"
+msgstr "vrij"
+
+#: templates/planning.html:0
+msgid "Green = purchases, blue = production per machine, orange = shipments (LaadKaai)."
+msgstr "Groen = inkoop, blauw = productie per machine, oranje = verzending (LaadKaai)."

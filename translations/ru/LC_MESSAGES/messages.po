@@ -7510,3 +7510,55 @@ msgstr "Запчасть откреплена"
 #: templates/two_detail.html:0
 msgid "Gallery"
 msgstr "Галерея"
+
+#: templates/planning.html:0
+msgid "Purchases"
+msgstr "Закупки"
+
+#: templates/planning.html:0
+msgid "Shipments"
+msgstr "Отгрузки"
+
+#: templates/planning.html:0
+msgid "Week"
+msgstr "Неделя"
+
+#: templates/planning.html:0
+msgid "Code"
+msgstr "Код"
+
+#: templates/planning.html:0
+msgid "Transport"
+msgstr "Транспорт"
+
+#: templates/planning.html:0
+msgid "Work order"
+msgstr "Наряд"
+
+#: templates/planning.html:0
+msgid "purchase"
+msgstr "закупка"
+
+#: templates/planning.html:0
+msgid "production"
+msgstr "производство"
+
+#: templates/planning.html:0
+msgid "shipment"
+msgstr "отгрузка"
+
+#: templates/planning.html:0
+msgid "raw material"
+msgstr "сырьё"
+
+#: templates/planning.html:0
+msgid "distribution to machines"
+msgstr "распределение на станки"
+
+#: templates/planning.html:0
+msgid "free"
+msgstr "вручную"
+
+#: templates/planning.html:0
+msgid "Green = purchases, blue = production per machine, orange = shipments (LaadKaai)."
+msgstr "Зелёный — закупки, синий — производство по станкам, оранжевый — отгрузки (LaadKaai)."

@@ -186,6 +186,8 @@ from blueprints.workers import bp as workers_bp
 app.register_blueprint(workers_bp)
 from blueprints.equipment import bp as equipment_bp
 app.register_blueprint(equipment_bp)
+from blueprints.planning import bp as planning_bp
+app.register_blueprint(planning_bp)
 from blueprints.users import bp as users_bp
 app.register_blueprint(users_bp)
 from blueprints.offline import bp as offline_bp, remember_mutation, find_mutation

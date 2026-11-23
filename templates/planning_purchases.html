@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Purchases') }} — {{ _('Planning') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🛒 {{ _('Purchases') }} <small style="font-size:13px;color:#888">{{ _('raw material') }}</small></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Planning') }}</a>
+        <a href="/planning/production" class="btn btn-sm" style="background:#3498db;color:white">⚙️ {{ _('Production') }}</a>
+        <a href="/planning/shipments" class="btn btn-sm" style="background:#e67e22;color:white">🚚 {{ _('Shipments') }}</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <h3 style="margin:0 0 10px;font-size:14px">{{ _('Edit') if edit else _('New') }} — {{ _('purchase') }}</h3>
+    <form method="POST" action="/planning/purchases/save" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="id" value="{{ edit.id if edit else '' }}">
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Code') }}</label>
+            <input type="text" name="article_code" value="{{ edit.article_code if edit else '' }}" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Name') }} *</label>
+            <input type="text" name="article_name" required value="{{ edit.article_name if edit else '' }}" style="width:200px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Qty') }}</label>
+            <input type="number" name="qty" step="0.01" min="0" value="{{ edit.qty if edit else '' }}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Unit') }}</label>
+            <input type="text" name="unit" value="{{ (edit.unit if edit else '') or 'kg' }}" style="width:55px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Supplier') }}</label>
+            <select name="contractor_id" style="padding:6px;border:1px solid #ddd;border-radius:6px">
+                <option value="">—</option>
+                {% for c in contractors %}
+                <option value="{{ c.id }}" {% if edit and edit.contractor_id == c.id %}selected{% endif %}>{{ c.company_name }}</option>
+                {% endfor %}
+            </select></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Date') }} *</label>
+            <input type="date" name="planned_date" required value="{{ edit.planned_date.isoformat() if edit and edit.planned_date else today }}" style="padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Notes') }}</label>
+            <input type="text" name="notes" value="{{ edit.notes if edit and edit.notes else '' }}" style="width:150px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
+        {% if edit %}<a href="/planning/purchases" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</a>{% endif %}
+    </form>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table class="mule-table" style="width:100%">
+            <thead><tr style="background:#2c3e50;color:#fff">
+                <th>{{ _('Date') }}</th><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th>
+                <th>{{ _('Qty') }}</th><th>{{ _('Supplier') }}</th><th>{{ _('Status') }}</th>
+                <th class="no-print" style="width:170px"></th>
+            </tr></thead>
+            <tbody>
+                {% for p in items %}
+                <tr {% if p.status == 'done' %}style="opacity:.55"{% endif %}>
+                    <td>{{ p.planned_date.strftime('%d.%m.%Y') if p.planned_date else '—' }}</td>
+                    <td style="font-family:monospace">{{ p.article_code or '—' }}</td>
+                    <td><strong>{{ p.article_name }}</strong>{% if p.notes %} <span style="color:#999">({{ p.notes }})</span>{% endif %}</td>
+                    <td>{{ p.qty }} {{ p.unit }}</td>
+                    <td>{{ p.contractor.company_name if p.contractor else '—' }}</td>
+                    <td>{{ statuses.get(p.status, p.status) }}</td>
+                    <td class="no-print">
+                        {% if p.status == 'planned' %}
+                        <form method="POST" action="/planning/purchases/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="done">
+                            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">✓</button>
+                        </form>
+                        {% endif %}
+                        <a href="/planning/purchases?edit={{ p.id }}" class="btn btn-sm" style="background:#eee">✎</a>
+                        <form method="POST" action="/planning/purchases/{{ p.id }}/delete" style="display:inline"
+                              onsubmit="return confirm('{{ _('Delete?') }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Shipments') }} — {{ _('Planning') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🚚 {{ _('Shipments') }} <small style="font-size:13px;color:#888">LaadKaai</small></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Planning') }}</a>
+        <a href="/planning/purchases" class="btn btn-sm" style="background:#2ecc71;color:white">🛒 {{ _('Purchases') }}</a>
+        <a href="/planning/production" class="btn btn-sm" style="background:#3498db;color:white">⚙️ {{ _('Production') }}</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <h3 style="margin:0 0 10px;font-size:14px">{{ _('Edit') if edit else _('New') }} — {{ _('shipment') }}</h3>
+    <form method="POST" action="/planning/shipments/save" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="id" value="{{ edit.id if edit else '' }}">
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Code') }}</label>
+            <input type="text" name="article_code" value="{{ edit.article_code if edit else '' }}" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Name') }} *</label>
+            <input type="text" name="article_name" required value="{{ edit.article_name if edit else '' }}" style="width:200px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Qty') }}</label>
+            <input type="number" name="qty" step="0.01" min="0" value="{{ edit.qty if edit else '' }}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Unit') }}</label>
+            <input type="text" name="unit" value="{{ (edit.unit if edit else '') or 'st' }}" style="width:55px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Client') }}</label>
+            <input type="text" name="client_name" value="{{ edit.client_name if edit and edit.client_name else '' }}" style="width:150px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Transport') }}</label>
+            <input type="text" name="transport" value="{{ edit.transport if edit and edit.transport else '' }}" style="width:130px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Date') }} *</label>
+            <input type="date" name="ship_date" required value="{{ edit.ship_date.isoformat() if edit and edit.ship_date else today }}" style="padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Notes') }}</label>
+            <input type="text" name="notes" value="{{ edit.notes if edit and edit.notes else '' }}" style="width:130px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
+        {% if edit %}<a href="/planning/shipments" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</a>{% endif %}
+    </form>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table class="mule-table" style="width:100%">
+            <thead><tr style="background:#2c3e50;color:#fff">
+                <th>{{ _('Date') }}</th><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th>
+                <th>{{ _('Qty') }}</th><th>{{ _('Client') }}</th><th>{{ _('Transport') }}</th>
+                <th>{{ _('Status') }}</th><th class="no-print" style="width:170px"></th>
+            </tr></thead>
+            <tbody>
+                {% for p in items %}
+                <tr {% if p.status == 'done' %}style="opacity:.55"{% endif %}>
+                    <td>{{ p.ship_date.strftime('%d.%m.%Y') if p.ship_date else '—' }}</td>
+                    <td style="font-family:monospace">{{ p.article_code or '—' }}</td>
+                    <td><strong>{{ p.article_name }}</strong>{% if p.notes %} <span style="color:#999">({{ p.notes }})</span>{% endif %}</td>
+                    <td>{{ p.qty }} {{ p.unit }}</td>
+                    <td>{{ p.client_name or '—' }}</td>
+                    <td>{{ p.transport or '—' }}</td>
+                    <td>{{ statuses.get(p.status, p.status) }}</td>
+                    <td class="no-print">
+                        {% if p.status == 'planned' %}
+                        <form method="POST" action="/planning/shipments/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="done">
+                            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">✓</button>
+                        </form>
+                        {% endif %}
+                        <a href="/planning/shipments?edit={{ p.id }}" class="btn btn-sm" style="background:#eee">✎</a>
+                        <form method="POST" action="/planning/shipments/{{ p.id }}/delete" style="display:inline"
+                              onsubmit="return confirm('{{ _('Delete?') }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

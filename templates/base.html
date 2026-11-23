@@ -115,6 +115,10 @@
             <a href="/moeskroen/plan" class="sb-item {% if request.endpoint == 'moeskroen.plan' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">📐</span>{{ _('Plan') }}</a>
             <a href="/moeskroen/map" class="sb-item {% if request.endpoint == 'moeskroen.factory_map' %}active{% endif %}" style="padding-left:48px;font-size:12px"><span class="sb-icon" style="font-size:14px">🗺️</span>{{ _('Factory Map') }}</a>
             {% endif %}
+            {# ПЛАНИРОВАНИЕ: закупки / переработка / отгрузки #}
+            {% if current_user.has_role('admin', 'director', 'technician') %}
+            <a href="/planning" class="sb-item {% if request.endpoint and request.endpoint.startswith('planning') %}active{% endif %}"><span class="sb-icon">📊</span>{{ _('Planning') }}</a>
+            {% endif %}
             {# КАЛЕНДАРЬ ТО — свёрнутый модуль #}
             {% if has_access('maintenance') %}
             <div class="sb-section" data-module="maint" onclick="toggleSbGroup(this)">📅 {{ _('Maint. Calendar') }} <span class="sb-arrow">▼</span></div>

@@ -1961,6 +1961,67 @@ class MuleDevicePart(db.Model):
     warehouse_item = db.relationship('VoorraadItem')
 
 
+# ============================================================
+# PLANNING (модуль планирования: закупки → переработка → отгрузки)
+# Ответы владельца 2026-11-23: «распределение» = СТАНОК; готовая
+# продукция ждёт погрузки в холодильниках LaadKaai.
+# ============================================================
+
+class PlanPurchase(db.Model):
+    """Закупка сырья: позиция/объём/поставщик/дата прихода."""
+    __tablename__ = 'plan_purchase'
+    id = db.Column(db.Integer, primary_key=True)
+    article_code = db.Column(db.String(50))
+    article_name = db.Column(db.String(300), nullable=False)
+    qty = db.Column(db.Float, default=0)
+    unit = db.Column(db.String(20), default='kg')
+    contractor_id = db.Column(db.Integer, db.ForeignKey('contractor.id'))
+    planned_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default='planned')  # planned|done|cancelled
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    contractor = db.relationship('Contractor')
+
+
+class PlanProduction(db.Model):
+    """Распределение на переработку: партия → СТАНОК → день/смена."""
+    __tablename__ = 'plan_production'
+    id = db.Column(db.Integer, primary_key=True)
+    article_code = db.Column(db.String(50))
+    article_name = db.Column(db.String(300), nullable=False)
+    qty = db.Column(db.Float, default=0)
+    unit = db.Column(db.String(20), default='kg')
+    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
+    machine_name = db.Column(db.String(200))  # запасное поле, если станка нет в справочнике
+    work_order = db.Column(db.String(50))     # номер werkorder из LISA
+    lot = db.Column(db.String(50))
+    priority = db.Column(db.Integer, default=0)
+    prod_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default='planned')  # planned|done|cancelled
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+    machine = db.relationship('Machine')
+
+
+class PlanShipment(db.Model):
+    """Отгрузка готовой продукции (со склада LaadKaai) клиенту."""
+    __tablename__ = 'plan_shipment'
+    id = db.Column(db.Integer, primary_key=True)
+    article_code = db.Column(db.String(50))
+    article_name = db.Column(db.String(300), nullable=False)
+    qty = db.Column(db.Float, default=0)
+    unit = db.Column(db.String(20), default='st')
+    client_name = db.Column(db.String(200))
+    transport = db.Column(db.String(200))
+    ship_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default='planned')  # planned|done|cancelled
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=now_local)
+
+
 class EquipmentMaintenance(db.Model):
     __tablename__ = 'equipment_maintenance'
     id = db.Column(db.Integer, primary_key=True)
