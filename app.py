@@ -561,6 +561,11 @@ with app.app_context():
             ensure_mule_numbering()
         except Exception as _e:
             print("MULE NUMBERING: skip", _e)
+        try:
+            from schema import ensure_mule_registry
+            ensure_mule_registry()
+        except Exception as _e:
+            print("MULE REGISTRY: skip", _e)
         ensure_plan_windows()
         ensure_head_of_ts()
     except Exception as _fu_err:

@@ -1953,3 +1953,78 @@ def ensure_mule_numbering():
             pass
         print(f"MULE NUMBERING: skip {e}")
         return 0
+
+
+def ensure_mule_registry():
+    """Backfill реестра муле из существующих записей ТО (идемпотентно).
+
+    Данные муле вводятся ОДИН раз: исторические записи ТО (не ремонты и не
+    отметки планов OJ-) группируются по нормализованному серийнику (без
+    серийника — по имени) и привязываются к MuleDevice, чтобы форма ТО
+    показывала их в выпадающем списке. Возвращает число созданных устройств.
+    """
+    import re as _re
+    try:
+        from models import db, EquipmentMaintenance, MuleDevice
+
+        def _norm_sn(s):
+            return _re.sub(r'[^A-Za-z0-9]', '', (s or '')).upper()
+
+        def _norm_name(s):
+            return _re.sub(r'\s+', ' ', (s or '').strip().lower())
+
+        recs = (EquipmentMaintenance.query
+                .filter(EquipmentMaintenance.record_type.isnot('repair'),
+                        db.not_(EquipmentMaintenance.number.like('OJ-%')))
+                .order_by(EquipmentMaintenance.date.asc(), EquipmentMaintenance.id.asc())
+                .all())
+        by_sn, by_name = {}, {}
+        for d in MuleDevice.query.all():
+            ns = d.normalized_serial()
+            if ns:
+                by_sn.setdefault(ns, d)
+            by_name.setdefault(_norm_name(d.name), d)
+        created = 0
+        for r in recs:
+            ns = _norm_sn(r.serial)
+            if r.device_id:
+                dev = MuleDevice.query.get(r.device_id)
+                if dev is not None and ns:
+                    by_sn.setdefault(ns, dev)
+            else:
+                dev = by_sn.get(ns) if ns else None
+                if dev is None:
+                    dev = by_name.get(_norm_name(r.name))
+                if dev is None:
+                    if not ns and not (r.name or '').strip():
+                        continue
+                    dev = MuleDevice(
+                        name=(r.name or r.serial or '').strip(),
+                        model_name=(r.model_name or '').strip() or None,
+                        serial_number=(r.serial or '').strip() or None,
+                        machine_id=r.machine_id)
+                    db.session.add(dev)
+                    db.session.flush()
+                    created += 1
+                r.device_id = dev.id
+            # хронологически последние записи уточняют карточку
+            if r.name and r.name.strip():
+                dev.name = r.name.strip()
+            if r.model_name and r.model_name.strip():
+                dev.model_name = r.model_name.strip()
+            if r.machine_id:
+                dev.machine_id = r.machine_id
+            if ns:
+                by_sn.setdefault(ns, dev)
+            by_name.setdefault(_norm_name(dev.name), dev)
+        if created:
+            db.session.commit()
+            print(f"MULE REGISTRY: created {created} devices from history")
+        return created
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f"MULE REGISTRY: skip {e}")
+        return 0

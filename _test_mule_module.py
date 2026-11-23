@@ -41,6 +41,9 @@ b = client.get('/equipment/mule-checklist')
 check('checklist 200', b.status_code == 200, b.status_code)
 b = client.get('/equipment/new')
 check('new form 200 + mule select', b.status_code == 200 and b'muleSelect' in b.data)
+with app.app_context():
+    _n_hist = MuleDevice.query.count()
+check('registry backfilled from history', _n_hist >= 1, _n_hist)
 
 SN = 'TEST-SN-998877'
 with app.app_context():
@@ -60,6 +63,11 @@ r = client.post('/equipment/new', data={
     'next_date': '2026-12-22', 'periodicity': 'monthly', 'notes': '',
 }, follow_redirects=False)
 check('create TO redirects', r.status_code in (302, 303), r.status_code)
+
+# данные вводятся один раз: новая муле должна появиться в списке формы
+b = client.get('/equipment/new')
+check('new mule appears in dropdown',
+      b'TestMule X1' in b.data and b'TEST-SN-998877' in b.data)
 
 with app.app_context():
     rec = EquipmentMaintenance.query.filter_by(serial=SN).first()
