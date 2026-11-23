@@ -7562,3 +7562,27 @@ msgstr "вручную"
 #: templates/planning.html:0
 msgid "Green = purchases, blue = production per machine, orange = shipments (LaadKaai)."
 msgstr "Зелёный — закупки, синий — производство по станкам, оранжевый — отгрузки (LaadKaai)."
+
+#: templates/planning_load.html:0
+msgid "Machine load"
+msgstr "Загрузка станков"
+
+#: templates/planning_load.html:0
+msgid "Breakdown"
+msgstr "Поломка"
+
+#: templates/planning_load.html:0
+msgid "Maintenance (TO)"
+msgstr "ТО"
+
+#: templates/planning_load.html:0
+msgid "Overload"
+msgstr "Перегрузка"
+
+#: templates/planning_load.html:0
+msgid "Duplicate plan"
+msgstr "Дубль плана"
+
+#: templates/planning_load.html:0
+msgid "Hours are entered in the production plan; a day turns red on conflicts (breakdown / TO / overload / duplicate plan)."
+msgstr "Часы вводятся в плане производства; день краснеет при конфликтах (поломка / ТО / перегрузка / дубль плана)."

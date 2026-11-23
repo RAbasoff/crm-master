@@ -680,12 +680,16 @@ def ensure_schema():
             work_order VARCHAR(50),
             lot VARCHAR(50),
             priority INTEGER DEFAULT 0,
+            hours FLOAT,
+            shift VARCHAR(10),
             prod_date DATE NOT NULL,
             status VARCHAR(20) DEFAULT 'planned',
             notes TEXT,
             created_by INTEGER REFERENCES user(id),
             created_at DATETIME
         )"""),
+        ("plan_production.hours", "ALTER TABLE plan_production ADD COLUMN hours FLOAT"),
+        ("plan_production.shift", "ALTER TABLE plan_production ADD COLUMN shift VARCHAR(10)"),
         ("plan_shipment", """CREATE TABLE IF NOT EXISTS plan_shipment (
             id INTEGER PRIMARY KEY,
             article_code VARCHAR(50),

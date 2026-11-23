@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Machine load') }} — {{ _('Planning') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔥 {{ _('Machine load') }} <small style="font-size:13px;color:#888">{{ week_start.strftime('%d.%m') }} — {{ week_end.strftime('%d.%m.%Y') }}</small></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/planning/load?d={{ prev_d }}" class="btn btn-sm" style="background:#eee">← {{ _('Previous') }}</a>
+        <a href="/planning/load" class="btn btn-sm" style="background:#eee">{{ _('Week') }}</a>
+        <a href="/planning/load?d={{ next_d }}" class="btn btn-sm" style="background:#eee">{{ _('Next') }} →</a>
+        <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Planning') }}</a>
+        <a href="/planning/production" class="btn btn-sm" style="background:#3498db;color:white">⚙️ {{ _('Production') }}</a>
+    </div>
+</div>
+
+<div class="card no-print" style="padding:8px 12px;margin-bottom:10px;font-size:12px">
+    🔧 {{ _('Breakdown') }} · 🔩 {{ _('Maintenance (TO)') }} · 🔴 {{ _('Overload') }} (&gt;{{ capacity }}h) · ⚠️ {{ _('Duplicate plan') }}
+</div>
+
+<div class="card" style="padding:0;overflow-x:auto">
+    <table class="mule-table" style="width:100%;min-width:900px">
+        <thead>
+            <tr style="background:#2c3e50;color:#fff">
+                <th style="min-width:120px">{{ _('Machine') }}</th>
+                {% for d in days %}
+                <th style="min-width:110px;text-align:center">{{ d.strftime('%a %d.%m') }}</th>
+                {% endfor %}
+                <th style="min-width:70px">{{ _('Hours') }}/{{ _('Week') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr>
+                <td><strong>🔧 {{ row.label }}</strong></td>
+                {% for cell in row.cells %}
+                <td style="vertical-align:top;{% if cell.tags %}background:#fdecea{% endif %}">
+                    {% for t in cell.tags %}
+                        {% if t == 'fault' %}<span title="{{ _('Breakdown') }}">🔧</span>
+                        {% elif t == 'to' %}<span title="{{ _('Maintenance (TO)') }}">🔩</span>
+                        {% elif t == 'overload' %}<span title="{{ _('Overload') }}">🔴</span>
+                        {% elif t == 'duplicate' %}<span title="{{ _('Duplicate plan') }}">⚠️</span>
+                        {% endif %}
+                    {% endfor %}
+                    {% for p in cell.plans %}
+                    <div style="font-size:10.5px;padding:1px 3px;border-left:2px solid #3498db;margin:1px 0;background:#f4f9ff">
+                        {{ p.article_name }} <b>{{ p.qty }}{{ p.unit }}</b>
+                        {% if p.hours %}<span style="color:#888">{{ p.hours }}h{% if p.shift %}/{{ _('Shift') }} {{ p.shift }}{% endif %}</span>{% endif %}
+                        {% if p.status == 'done' %}✅{% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if cell.total %}<div style="font-size:10px;color:#555;text-align:right">Σ {{ cell.total }}h</div>{% endif %}
+                </td>
+                {% endfor %}
+                <td style="text-align:center;font-weight:700">{{ row.week_hours or '' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:10px">
+    {{ _('Hours are entered in the production plan; a day turns red on conflicts (breakdown / TO / overload / duplicate plan).') }}
+</p>
+{% endblock %}

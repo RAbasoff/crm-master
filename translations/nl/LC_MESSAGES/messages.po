@@ -7388,3 +7388,27 @@ msgstr "vrij"
 #: templates/planning.html:0
 msgid "Green = purchases, blue = production per machine, orange = shipments (LaadKaai)."
 msgstr "Groen = inkoop, blauw = productie per machine, oranje = verzending (LaadKaai)."
+
+#: templates/planning_load.html:0
+msgid "Machine load"
+msgstr "Machinebelasting"
+
+#: templates/planning_load.html:0
+msgid "Breakdown"
+msgstr "Storing"
+
+#: templates/planning_load.html:0
+msgid "Maintenance (TO)"
+msgstr "Onderhoud (TO)"
+
+#: templates/planning_load.html:0
+msgid "Overload"
+msgstr "Overbelast"
+
+#: templates/planning_load.html:0
+msgid "Duplicate plan"
+msgstr "Dubbel plan"
+
+#: templates/planning_load.html:0
+msgid "Hours are entered in the production plan; a day turns red on conflicts (breakdown / TO / overload / duplicate plan)."
+msgstr "Uren vul je in bij het productieplan; een dag wordt rood bij conflicten (storing / TO / overbelast / dubbel plan)."

@@ -13,7 +13,7 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import (db, PlanPurchase, PlanProduction, PlanShipment,
-                    Machine, Contractor)
+                    Machine, Contractor, FaultReport, MaintenancePlan)
 from utils import (resolve_user_id, log_audit, role_required, safe_commit,
                    safe_date, safe_float, safe_int)
 import io
@@ -177,6 +177,9 @@ def planning_production_save():
     item.work_order = (request.form.get('work_order') or '').strip()
     item.lot = (request.form.get('lot') or '').strip()
     item.priority = safe_int(request.form.get('priority')) or 0
+    _h = request.form.get('hours')
+    item.hours = safe_float(_h, None) if _h not in (None, '') else None
+    item.shift = (request.form.get('shift') or '').strip() or None
     d = safe_date(request.form.get('prod_date'))
     item.prod_date = d.date() if hasattr(d, 'date') else (d or item.prod_date)
     if item.prod_date is None:
@@ -291,6 +294,111 @@ def planning_shipment_delete(item_id):
     return redirect(url_for('planning.planning_shipments'))
 
 
+# ──────────────────── карта загрузки станков (Ф2) ────────────────────
+
+DAY_CAPACITY_HOURS = 16  # 2 смены × 8 ч
+
+
+def _week_conflicts(week_start, week_end):
+    """Конфликты «машина × день»: поломка (заявка) и ТО (план)."""
+    out = {}
+
+    def _add(mid, d, tag):
+        if mid and week_start <= d <= week_end:
+            out.setdefault(mid, {}).setdefault(d, []).append(tag)
+
+    for f in FaultReport.query.filter(FaultReport.machine_id.isnot(None)).all():
+        start = f.created_at.date() if f.created_at else None
+        if start is None:
+            continue
+        end = f.resolved_at.date() if f.resolved_at else week_end
+        d = max(start, week_start)
+        while d <= min(end, week_end):
+            _add(f.machine_id, d, 'fault')
+            d += timedelta(days=1)
+    for pl in MaintenancePlan.query.filter(
+            MaintenancePlan.machine_id.isnot(None),
+            MaintenancePlan.status != 'cancelled').all():
+        if not pl.planned_start:
+            continue
+        start = pl.planned_start.date() if hasattr(pl.planned_start, 'date') else pl.planned_start
+        if pl.planned_end:
+            end = pl.planned_end.date() if hasattr(pl.planned_end, 'date') else pl.planned_end
+        elif pl.window_days:
+            end = start + timedelta(days=max(int(pl.window_days or 0) - 1, 0))
+        else:
+            end = start
+        d = max(start, week_start)
+        while d <= min(end, week_end):
+            _add(pl.machine_id, d, 'to')
+            d += timedelta(days=1)
+    return out
+
+
+@bp.route('/planning/load')
+@login_required
+@role_required('admin', 'director', 'technician')
+def planning_load():
+    """Карта загрузки «машина × день»: план, часы, конфликты (поломка/ТО/
+    перегрузка >16ч/дубль плана)."""
+    anchor = _anchor_date()
+    week_start, week_end = _week_bounds(anchor)
+    days = [week_start + timedelta(days=i) for i in range(7)]
+    conflicts = _week_conflicts(week_start, week_end)
+
+    plans = PlanProduction.query.filter(
+        PlanProduction.prod_date.between(week_start, week_end),
+        PlanProduction.status != 'cancelled').all()
+    machine_ids = {p.machine_id for p in plans if p.machine_id}
+    machine_ids |= set(conflicts.keys())
+    machines = (Machine.query.filter(Machine.id.in_(list(machine_ids) or [-1]))
+                .order_by(Machine.name).all())
+
+    rows = []
+    cells = {}
+    free_names = {}
+    for p in plans:
+        if p.machine_id:
+            key = ('m', p.machine_id)
+        else:
+            nm = (p.machine_name or '').strip().lower()
+            if not nm:
+                continue
+            key = ('n', nm)
+            free_names.setdefault(nm, (p.machine_name or '').strip())
+        cells.setdefault(key, {}).setdefault(p.prod_date, []).append(p)
+    for m in machines:
+        rows.append({'label': m.name, 'key': ('m', m.id)})
+    for nm in sorted(free_names):
+        rows.append({'label': free_names[nm], 'key': ('n', nm)})
+
+    grid = []
+    for row in rows:
+        week_hours = 0.0
+        week_cells = []
+        for d in days:
+            items = cells.get(row['key'], {}).get(d, [])
+            total = sum((i.hours or 0) for i in items)
+            week_hours += total
+            tags = (list(conflicts.get(row['key'][1], {}).get(d, []))
+                    if row['key'][0] == 'm' else [])
+            if total > DAY_CAPACITY_HOURS:
+                tags.append('overload')
+            wo_counts = {}
+            for i in items:
+                if i.work_order:
+                    wo_counts[i.work_order] = wo_counts.get(i.work_order, 0) + 1
+            if any(v > 1 for v in wo_counts.values()):
+                tags.append('duplicate')
+            week_cells.append({'date': d, 'plans': items, 'total': total, 'tags': tags})
+        grid.append({'label': row['label'], 'cells': week_cells, 'week_hours': week_hours})
+    return render_template('planning_load.html', grid=grid, days=days,
+                           week_start=week_start, week_end=week_end,
+                           prev_d=(week_start - timedelta(days=1)).isoformat(),
+                           next_d=(week_end + timedelta(days=1)).isoformat(),
+                           capacity=DAY_CAPACITY_HOURS)
+
+
 # ────────────────────────── экспорт Excel ──────────────────────────
 
 @bp.route('/planning/export.xlsx')
@@ -313,12 +421,13 @@ def planning_export_xlsx():
     ws = wb.create_sheet('Productie')
     ws.append([_('Date'), _('Code'), _('Name'), _('Qty'), _('Unit'),
                _('Machine'), _('Work order'), _('Lot'), _('Priority'),
-               _('Status'), _('Notes')])
+               _('Hours'), _('Shift'), _('Status'), _('Notes')])
     for p in PlanProduction.query.order_by(PlanProduction.prod_date.asc()).all():
         ws.append([p.prod_date.isoformat(), p.article_code, p.article_name,
                    p.qty, p.unit,
                    (p.machine.name if p.machine else p.machine_name) or '',
                    p.work_order or '', p.lot or '', p.priority,
+                   p.hours if p.hours is not None else '', p.shift or '',
                    STATUS_LABELS.get(p.status, p.status), p.notes or ''])
 
     ws = wb.create_sheet('Verzending')

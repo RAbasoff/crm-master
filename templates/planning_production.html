@@ -5,6 +5,7 @@
     <h1>⚙️ {{ _('Production') }} <small style="font-size:13px;color:#888">{{ _('distribution to machines') }}</small></h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Planning') }}</a>
+        <a href="/planning/load" class="btn btn-sm" style="background:#e74c3c;color:white">🔥 {{ _('Machine load') }}</a>
         <a href="/planning/purchases" class="btn btn-sm" style="background:#2ecc71;color:white">🛒 {{ _('Purchases') }}</a>
         <a href="/planning/shipments" class="btn btn-sm" style="background:#e67e22;color:white">🚚 {{ _('Shipments') }}</a>
     </div>
@@ -40,6 +41,14 @@
             <input type="text" name="lot" value="{{ edit.lot if edit and edit.lot else '' }}" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
         <div class="form-group" style="margin:0"><label style="font-size:11px">Prio</label>
             <input type="number" name="priority" value="{{ edit.priority if edit else 0 }}" style="width:55px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Hours') }}</label>
+            <input type="number" name="hours" step="0.25" min="0" value="{{ edit.hours if edit and edit.hours is not none else '' }}" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Shift') }}</label>
+            <select name="shift" style="padding:6px;border:1px solid #ddd;border-radius:6px">
+                <option value="">{{ _('free') }}</option>
+                <option value="1" {% if edit and edit.shift == '1' %}selected{% endif %}>1</option>
+                <option value="2" {% if edit and edit.shift == '2' %}selected{% endif %}>2</option>
+            </select></div>
         <button type="submit" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
         {% if edit %}<a href="/planning/production" class="btn btn-sm" style="background:#eee">{{ _('Cancel') }}</a>{% endif %}
     </form>
@@ -51,6 +60,7 @@
             <thead><tr style="background:#2c3e50;color:#fff">
                 <th>{{ _('Date') }}</th><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th>
                 <th>{{ _('Qty') }}</th><th>{{ _('Machine') }}</th><th>WO</th><th>Lot</th><th>Prio</th>
+                <th>{{ _('Hours') }}</th><th>{{ _('Shift') }}</th>
                 <th>{{ _('Status') }}</th><th class="no-print" style="width:170px"></th>
             </tr></thead>
             <tbody>
@@ -64,6 +74,8 @@
                     <td style="font-family:monospace">{{ p.work_order or '—' }}</td>
                     <td style="font-family:monospace">{{ p.lot or '—' }}</td>
                     <td>{{ p.priority or '' }}</td>
+                    <td>{{ p.hours if p.hours is not none else '—' }}</td>
+                    <td>{{ p.shift or '—' }}</td>
                     <td>{{ statuses.get(p.status, p.status) }}</td>
                     <td class="no-print">
                         {% if p.status == 'planned' %}
@@ -82,7 +94,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="10" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+                <tr><td colspan="12" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
                 {% endfor %}
             </tbody>
         </table>

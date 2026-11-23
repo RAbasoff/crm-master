@@ -1997,6 +1997,8 @@ class PlanProduction(db.Model):
     work_order = db.Column(db.String(50))     # номер werkorder из LISA
     lot = db.Column(db.String(50))
     priority = db.Column(db.Integer, default=0)
+    hours = db.Column(db.Float)               # плановые машин-часы (карта загрузки)
+    shift = db.Column(db.String(10))          # смена: 1/2 (двойной план на смену)
     prod_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default='planned')  # planned|done|cancelled
     notes = db.Column(db.Text)
