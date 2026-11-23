@@ -13,7 +13,8 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import (db, PlanPurchase, PlanProduction, PlanShipment,
-                    Machine, Contractor, FaultReport, MaintenancePlan)
+                    Machine, Contractor, FaultReport, MaintenancePlan,
+                    VoorraadItem, VoorraadMutatie, now_local)
 from utils import (resolve_user_id, log_audit, role_required, safe_commit,
                    safe_date, safe_float, safe_int)
 import io
@@ -61,11 +62,25 @@ def planning_calendar():
         by_day[p.prod_date]['production'].append(p)
     for p in PlanShipment.query.filter(PlanShipment.ship_date.between(week_start, week_end)).all():
         by_day[p.ship_date]['shipments'].append(p)
+    # Ф3: умные подсказки
+    low_stock = _low_stock_items()
+    open_shipments = (PlanShipment.query.filter(PlanShipment.status == 'planned')
+                      .order_by(PlanShipment.ship_date.asc()).limit(15).all())
+    ship_checks = []
+    for s in open_shipments:
+        item = _fg_item_for(s.article_code, s.article_name)
+        avail = (item.hoeveelheid or 0) if item else None
+        ship_checks.append({'s': s, 'item': item, 'avail': avail,
+                            'ok': avail is not None and avail >= (s.qty or 0)})
+    open_plans = (PlanProduction.query.filter(PlanProduction.status == 'planned')
+                  .order_by(PlanProduction.prod_date.asc()).limit(15).all())
     return render_template('planning.html', days=days,
                            week_start=week_start, week_end=week_end,
                            prev_d=(week_start - timedelta(days=1)).isoformat(),
                            next_d=(week_end + timedelta(days=1)).isoformat(),
-                           today=anchor)
+                           today=anchor,
+                           low_stock=low_stock, ship_checks=ship_checks,
+                           open_plans=open_plans)
 
 
 # ────────────────────────── 1. закупки сырья ──────────────────────────
@@ -232,8 +247,14 @@ def planning_shipments():
     anchor = _anchor_date()
     edit = PlanShipment.query.get(safe_int(request.args.get('edit'))) if request.args.get('edit') else None
     items = PlanShipment.query.order_by(PlanShipment.ship_date.asc(), PlanShipment.id.asc()).all()
+    avail_map = {}
+    for s in items:
+        item = _fg_item_for(s.article_code, s.article_name)
+        avail_map[s.id] = {'avail': (item.hoeveelheid or 0) if item else None,
+                           'ok': item is not None and (item.hoeveelheid or 0) >= (s.qty or 0)}
     return render_template('planning_shipments.html', items=items,
-                           edit=edit, today=anchor.isoformat(), statuses=STATUS_LABELS)
+                           edit=edit, today=anchor.isoformat(), statuses=STATUS_LABELS,
+                           avail_map=avail_map)
 
 
 @bp.route('/planning/shipments/save', methods=['POST'])
@@ -293,6 +314,80 @@ def planning_shipment_delete(item_id):
         flash(_('Deleted'), 'success')
     return redirect(url_for('planning.planning_shipments'))
 
+
+# ──────────────────── умные подсказки (Ф3) ────────────────────
+
+def _low_stock_items():
+    """Мин. остатки: складские позиции на/ниже минимума → предложение закупки."""
+    return (VoorraadItem.query
+            .filter(VoorraadItem.minimum > 0,
+                    VoorraadItem.hoeveelheid <= VoorraadItem.minimum)
+            .order_by(VoorraadItem.naam).all())
+
+
+def _fg_item_for(article_code, article_name):
+    """Готовая продукция на складе: по коду (SPN) или точному названию."""
+    item = None
+    if article_code:
+        item = VoorraadItem.query.filter(
+            VoorraadItem.supplier_part_number == article_code.strip()).first()
+    if item is None and article_name:
+        item = VoorraadItem.query.filter(
+            VoorraadItem.naam == article_name.strip()).first()
+    return item
+
+
+@bp.route('/planning/purchases/from_stock/<int:item_id>', methods=['POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def planning_purchase_from_stock(item_id):
+    """Подсказка: мин. остаток → черновик закупки в один клик."""
+    item = VoorraadItem.query.get_or_404(item_id)
+    need = (item.minimum or 0) - (item.hoeveelheid or 0)
+    if need <= 0:
+        need = item.minimum or 1
+    p = PlanPurchase(
+        article_code=(item.supplier_part_number or '').strip(),
+        article_name=item.naam,
+        qty=need, unit=item.eenheid or 'st',
+        planned_date=now_local().date(),
+        status='planned',
+        notes=_('suggested by min stock level'),
+        created_by=resolve_user_id())
+    db.session.add(p)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        log_audit('create', 'plan_purchase', p.id, f'auto: {p.article_name}')
+        flash(_('Saved'), 'success')
+    return redirect(url_for('planning.planning_purchases'))
+
+
+@bp.route('/planning/production/<int:item_id>/consume', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'director', 'technician')
+def planning_production_consume(item_id):
+    """План → списание сырья: вычесть складскую позицию под план производства."""
+    plan = PlanProduction.query.get_or_404(item_id)
+    if request.method == 'POST':
+        wi = VoorraadItem.query.get(safe_int(request.form.get('warehouse_item_id')) or 0)
+        qty = safe_float(request.form.get('qty'), 0) or 0
+        if wi is None or qty <= 0:
+            flash(_('Save failed'), 'error')
+            return redirect(url_for('planning.planning_production_consume', item_id=item_id))
+        wi.hoeveelheid = (wi.hoeveelheid or 0) - qty
+        db.session.add(VoorraadMutatie(
+            item_id=wi.id, type='uitgaand', hoeveelheid=qty,
+            opmerking=f'Planning {plan.id}: {plan.article_name}',
+            user_id=resolve_user_id()))
+        if not safe_commit():
+            flash(_('Save failed'), 'error')
+        else:
+            log_audit('create', 'warehouse_movement', wi.id, f'plan {plan.id}: {wi.naam} -{qty}')
+            flash(_('Saved'), 'success')
+        return redirect(url_for('planning.planning_production'))
+    warehouse = VoorraadItem.query.order_by(VoorraadItem.naam).all()
+    return render_template('planning_consume.html', plan=plan, warehouse=warehouse)
 
 # ──────────────────── карта загрузки станков (Ф2) ────────────────────
 

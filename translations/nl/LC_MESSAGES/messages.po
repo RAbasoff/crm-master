@@ -7412,3 +7412,39 @@ msgstr "Dubbel plan"
 #: templates/planning_load.html:0
 msgid "Hours are entered in the production plan; a day turns red on conflicts (breakdown / TO / overload / duplicate plan)."
 msgstr "Uren vul je in bij het productieplan; een dag wordt rood bij conflicten (storing / TO / overbelast / dubbel plan)."
+
+#: templates/planning.html:0
+msgid "Smart hints"
+msgstr "Slimme tips"
+
+#: templates/planning.html:0
+msgid "Purchase suggestions"
+msgstr "Inkoopsuggesties"
+
+#: templates/planning.html:0
+msgid "Plan purchase"
+msgstr "Inkoop plannen"
+
+#: templates/planning.html:0
+msgid "Write off raw material"
+msgstr "Grondstof afboeken"
+
+#: templates/planning.html:0
+msgid "Availability"
+msgstr "Beschikbaarheid"
+
+#: templates/planning.html:0
+msgid "Shortage"
+msgstr "Tekort"
+
+#: templates/planning.html:0
+msgid "not in stock"
+msgstr "niet op voorraad"
+
+#: templates/planning.html:0
+msgid "Warehouse item"
+msgstr "Magazijnartikel"
+
+#: templates/planning.html:0
+msgid "suggested by min stock level"
+msgstr "aanbevolen op basis van voorraadniveau"

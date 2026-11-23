@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Write off raw material') }} — {{ _('Planning') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📦 {{ _('Write off raw material') }}</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/planning/production" class="btn btn-sm" style="background:#eee">← {{ _('Production') }}</a>
+        <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Planning') }}</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <h3 style="margin:0 0 8px;font-size:14px">{{ _('Production') }}</h3>
+    <div style="font-size:13px">
+        <strong>{{ plan.article_name }}</strong>
+        {% if plan.article_code %} <span style="font-family:monospace;color:#888">{{ plan.article_code }}</span>{% endif %}
+        — {{ plan.qty }} {{ plan.unit }} · {{ plan.prod_date.strftime('%d.%m.%Y') if plan.prod_date else '—' }}
+        · 🔧 {{ plan.machine.name if plan.machine else (plan.machine_name or '—') }}
+        {% if plan.work_order %} · WO {{ plan.work_order }}{% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin:0 0 10px;font-size:14px">📦 {{ _('Write off raw material') }} → {{ _('Warehouse') }}</h3>
+    <form method="POST" action="/planning/production/{{ plan.id }}/consume" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Warehouse item') }}</label>
+            <select name="warehouse_item_id" required style="min-width:260px;padding:6px;border:1px solid #ddd;border-radius:6px">
+                <option value="">—</option>
+                {% for w in warehouse %}
+                <option value="{{ w.id }}">{{ w.naam }} [{{ w.hoeveelheid }} {{ w.eenheid }}]</option>
+                {% endfor %}
+            </select></div>
+        <div class="form-group" style="margin:0"><label style="font-size:11px">{{ _('Qty') }}</label>
+            <input type="number" name="qty" step="0.01" min="0.01" required style="width:90px;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
+    </form>
+</div>
+{% endblock %}

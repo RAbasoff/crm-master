@@ -142,6 +142,54 @@ with app.app_context():
 b = client.get('/planning/export.xlsx')
 check('export xlsx (hours col)', b.status_code == 200 and b.data[:2] == b'PK', b.status_code)
 
+# 8.7 Ф3: подсказки — мин. остаток → закупка; план → списание; наличие для отгрузки
+from models import VoorraadItem, VoorraadMutatie
+with app.app_context():
+    w_low = VoorraadItem(naam='SMOKE-low', eenheid='kg', hoeveelheid=2, minimum=10)
+    w_fg = VoorraadItem(naam='SMOKE-shipment', eenheid='st', hoeveelheid=50, minimum=0)
+    db.session.add(w_low)
+    db.session.add(w_fg)
+    db.session.commit()
+    low_id, fg_id = w_low.id, w_fg.id
+b = client.get('/planning')
+h = b.data.decode('utf-8', 'replace')
+check('hints: low stock shown', 'SMOKE-low' in h and 'from_stock/' in h)
+check('hints: shipment shortage', 'SMOKE-shipment' in h and '⚠' in h)
+
+r = client.post(f'/planning/purchases/from_stock/{low_id}', follow_redirects=True)
+check('hint creates purchase', b'SMOKE-low' in r.data)
+with app.app_context():
+    p = PlanPurchase.query.filter_by(article_name='SMOKE-low').first()
+    check('purchase from stock qty', p is not None and p.qty == 8, p.qty if p else None)
+
+with app.app_context():
+    plan = PlanProduction(article_code='CC', article_name='SMOKE-consume', qty=1,
+                          unit='kg', prod_date=__import__('datetime').date(2026, 12, 3),
+                          created_by=1)
+    db.session.add(plan)
+    db.session.commit()
+    plan_id = plan.id
+if plan_id:
+    b = client.get(f'/planning/production/{plan_id}/consume')
+    check('consume page 200', b.status_code == 200, b.status_code)
+    r = client.post(f'/planning/production/{plan_id}/consume',
+                    data={'warehouse_item_id': str(fg_id), 'qty': '5'}, follow_redirects=True)
+    check('consume saved', r.status_code == 200)
+    with app.app_context():
+        w = VoorraadItem.query.get(fg_id)
+        mv = VoorraadMutatie.query.filter_by(item_id=fg_id, type='uitgaand').all()
+        check('stock decreased', w is not None and w.hoeveelheid == 45, w.hoeveelheid if w else None)
+        check('mutation created', len(mv) >= 1, len(mv))
+
+with app.app_context():
+    VoorraadMutatie.query.filter_by(item_id=fg_id).delete(synchronize_session=False)
+    for wid in (low_id, fg_id):
+        w = VoorraadItem.query.get(wid)
+        if w:
+            db.session.delete(w)
+    PlanPurchase.query.filter(PlanPurchase.article_name.like('SMOKE-%')).delete(synchronize_session=False)
+    db.session.commit()
+
 # 8. delete + cleanup
 with app.app_context():
     ids = {}

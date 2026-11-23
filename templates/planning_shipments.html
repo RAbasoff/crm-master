@@ -42,6 +42,7 @@
             <thead><tr style="background:#2c3e50;color:#fff">
                 <th>{{ _('Date') }}</th><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th>
                 <th>{{ _('Qty') }}</th><th>{{ _('Client') }}</th><th>{{ _('Transport') }}</th>
+                <th>{{ _('Availability') }}</th>
                 <th>{{ _('Status') }}</th><th class="no-print" style="width:170px"></th>
             </tr></thead>
             <tbody>
@@ -53,6 +54,12 @@
                     <td>{{ p.qty }} {{ p.unit }}</td>
                     <td>{{ p.client_name or '—' }}</td>
                     <td>{{ p.transport or '—' }}</td>
+                    <td>
+                        {% set av = avail_map.get(p.id) %}
+                        {% if av and av.ok %}✅ <span style="color:#27ae60">{{ av.avail }}</span>
+                        {% elif av and av.avail is not none %}⚠️ <span style="color:#e74c3c">{{ av.avail }}</span>
+                        {% else %}<span style="color:#bbb">—</span>{% endif %}
+                    </td>
                     <td>{{ statuses.get(p.status, p.status) }}</td>
                     <td class="no-print">
                         {% if p.status == 'planned' %}
@@ -71,7 +78,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="8" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+                <tr><td colspan="9" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
                 {% endfor %}
             </tbody>
         </table>

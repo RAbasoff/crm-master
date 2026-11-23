@@ -7586,3 +7586,39 @@ msgstr "Дубль плана"
 #: templates/planning_load.html:0
 msgid "Hours are entered in the production plan; a day turns red on conflicts (breakdown / TO / overload / duplicate plan)."
 msgstr "Часы вводятся в плане производства; день краснеет при конфликтах (поломка / ТО / перегрузка / дубль плана)."
+
+#: templates/planning.html:0
+msgid "Smart hints"
+msgstr "Умные подсказки"
+
+#: templates/planning.html:0
+msgid "Purchase suggestions"
+msgstr "Предложения закупки"
+
+#: templates/planning.html:0
+msgid "Plan purchase"
+msgstr "Запланировать закупку"
+
+#: templates/planning.html:0
+msgid "Write off raw material"
+msgstr "Списать сырьё"
+
+#: templates/planning.html:0
+msgid "Availability"
+msgstr "Наличие"
+
+#: templates/planning.html:0
+msgid "Shortage"
+msgstr "Дефицит"
+
+#: templates/planning.html:0
+msgid "not in stock"
+msgstr "нет на складе"
+
+#: templates/planning.html:0
+msgid "Warehouse item"
+msgstr "Складская позиция"
+
+#: templates/planning.html:0
+msgid "suggested by min stock level"
+msgstr "предложение по минимальному остатку"
