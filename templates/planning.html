@@ -16,6 +16,45 @@
     <a href="/planning/production" class="btn btn-sm" style="background:#3498db;color:white">⚙️ {{ _('Production') }}</a>
     <a href="/planning/shipments" class="btn btn-sm" style="background:#e67e22;color:white">🚚 {{ _('Shipments') }}</a>
     <a href="/planning/load" class="btn btn-sm" style="background:#e74c3c;color:white">🔥 {{ _('Machine load') }}</a>
+    <a href="/planning/load/forecast" class="btn btn-sm" style="background:#9b59b6;color:white">📈 {{ _('Forecast') }}</a>
+    <a href="/planning/kpi" class="btn btn-sm" style="background:#2c3e50;color:white">📊 KPI</a>
+    <a href="/planning/month" class="btn btn-sm" style="background:#16a085;color:white">🗓 {{ _('Month') }}</a>
+</div>
+
+{# ─── KPI-дашборд ─── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px">
+    <div class="card" style="padding:10px;text-align:center;border-left:4px solid #2ecc71">
+        <div style="font-size:20px;font-weight:700;color:#2ecc71">{{ stats.week_purchases }}</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase">{{ _('Purchases') }} / {{ _('Week') }}</div>
+    </div>
+    <div class="card" style="padding:10px;text-align:center;border-left:4px solid #3498db">
+        <div style="font-size:20px;font-weight:700;color:#3498db">{{ stats.week_production }}</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase">{{ _('Production') }} / {{ _('Week') }}</div>
+    </div>
+    <div class="card" style="padding:10px;text-align:center;border-left:4px solid #e67e22">
+        <div style="font-size:20px;font-weight:700;color:#e67e22">{{ stats.week_shipments }}</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase">{{ _('Shipments') }} / {{ _('Week') }}</div>
+    </div>
+    <div class="card" style="padding:10px;text-align:center;border-left:4px solid #27ae60">
+        <div style="font-size:20px;font-weight:700;color:#27ae60">{{ stats.done_this_week }}</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase">{{ _('Done') }} / {{ _('Week') }}</div>
+    </div>
+    {% set total_overdue = stats.overdue_purchases + stats.overdue_production + stats.overdue_shipments %}
+    <div class="card" style="padding:10px;text-align:center;border-left:4px solid {% if total_overdue > 0 %}#e74c3c{% else %}#bdc3c7{% endif %}">
+        <div style="font-size:20px;font-weight:700;color:{% if total_overdue > 0 %}#e74c3c{% else %}#bdc3c7{% endif %}">{{ total_overdue }}</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase">{{ _('Overdue') }}</div>
+        {% if total_overdue > 0 %}
+        <div style="font-size:9px;color:#e74c3c">
+            {% if stats.overdue_purchases %}🛒{{ stats.overdue_purchases }} {% endif %}
+            {% if stats.overdue_production %}⚙️{{ stats.overdue_production }} {% endif %}
+            {% if stats.overdue_shipments %}🚚{{ stats.overdue_shipments }}{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="card" style="padding:10px;text-align:center;border-left:4px solid {% if stats.upcoming_shipments > 0 %}#f39c12{% else %}#bdc3c7{% endif %}">
+        <div style="font-size:20px;font-weight:700;color:{% if stats.upcoming_shipments > 0 %}#f39c12{% else %}#bdc3c7{% endif %}">{{ stats.upcoming_shipments }}</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase">{{ _('Shipments') }} ≤3{{ _('days') }}</div>
+    </div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">

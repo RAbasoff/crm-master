@@ -11,6 +11,34 @@
     </div>
 </div>
 
+{# ─── фильтры ─── #}
+<div class="card no-print" style="padding:8px 12px;margin-bottom:10px">
+    <form method="GET" action="/planning/production" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Search') }}</label>
+            <input type="text" name="q" value="{{ f_search or '' }}" placeholder="{{ _('Name') }} / {{ _('Code') }} / WO" style="width:160px;padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px"></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Machine') }}</label>
+            <select name="machine_id" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px">
+                <option value="">{{ _('All') }}</option>
+                {% for m in machines %}
+                <option value="{{ m.id }}" {% if f_machine == m.id %}selected{% endif %}>{{ m.name }}</option>
+                {% endfor %}
+            </select></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Status') }}</label>
+            <select name="status" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px">
+                <option value="">{{ _('All') }}</option>
+                {% for k, v in statuses.items() %}
+                <option value="{{ k }}" {% if f_status == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Date') }} ≥</label>
+            <input type="date" name="date_from" value="{{ f_from if f_from else '' }}" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px"></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Date') }} ≤</label>
+            <input type="date" name="date_to" value="{{ f_to if f_to else '' }}" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px"></div>
+        <button type="submit" class="btn btn-sm" style="background:#3498db;color:white">🔍</button>
+        <a href="/planning/production" class="btn btn-sm" style="background:#eee">✕</a>
+    </form>
+</div>
+
 <div class="card" style="margin-bottom:12px">
     <h3 style="margin:0 0 10px;font-size:14px">{{ _('Edit') if edit else _('New') }} — {{ _('production') }}</h3>
     <form method="POST" action="/planning/production/save" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -55,17 +83,36 @@
 </div>
 
 <div class="card" style="padding:0">
+    {# ─── bulk-операции ─── #}
+    <div class="no-print" style="padding:8px 12px;background:#f8f9fa;border-bottom:1px solid #eee;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="checkbox" id="bulk-all" onclick="document.querySelectorAll('.bulk-cb').forEach(c=>c.checked=this.checked)" style="cursor:pointer">
+        <label for="bulk-all" style="font-size:11px;color:#888;cursor:pointer">{{ _('Select all') }}</label>
+        <form method="POST" action="/planning/bulk-status" style="display:flex;gap:6px;align-items:center;margin-left:12px"
+              onsubmit="var ids=[...document.querySelectorAll('.bulk-cb:checked')].map(c=>c.value).join(',');if(!ids){alert('{{ _('Select items') }}');return false}document.getElementById('bulk-ids').value=ids">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="ids" id="bulk-ids" value="">
+            <input type="hidden" name="target" value="production">
+            <select name="status" style="padding:4px;border:1px solid #ddd;border-radius:4px;font-size:11px">
+                <option value="done">✓ {{ _('Done') }}</option>
+                <option value="planned">↩ {{ _('Reopen') }}</option>
+                <option value="cancelled">✕ {{ _('Cancel') }}</option>
+            </select>
+            <button type="submit" class="btn btn-sm" style="background:#8e44ad;color:white">{{ _('Apply') }}</button>
+        </form>
+    </div>
     <div class="table-wrap">
         <table class="mule-table" style="width:100%">
             <thead><tr style="background:#2c3e50;color:#fff">
+                <th class="no-print" style="width:28px"></th>
                 <th>{{ _('Date') }}</th><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th>
                 <th>{{ _('Qty') }}</th><th>{{ _('Machine') }}</th><th>WO</th><th>Lot</th><th>Prio</th>
                 <th>{{ _('Hours') }}</th><th>{{ _('Shift') }}</th>
-                <th>{{ _('Status') }}</th><th class="no-print" style="width:170px"></th>
+                <th>{{ _('Status') }}</th><th class="no-print" style="width:230px"></th>
             </tr></thead>
             <tbody>
                 {% for p in items %}
-                <tr {% if p.status == 'done' %}style="opacity:.55"{% endif %}>
+                <tr {% if p.status == 'done' %}style="opacity:.55"{% elif p.status == 'cancelled' %}style="opacity:.4;text-decoration:line-through"{% endif %}>
+                    <td class="no-print"><input type="checkbox" class="bulk-cb" value="{{ p.id }}" style="cursor:pointer"></td>
                     <td>{{ p.prod_date.strftime('%d.%m.%Y') if p.prod_date else '—' }}</td>
                     <td style="font-family:monospace">{{ p.article_code or '—' }}</td>
                     <td><strong>{{ p.article_name }}</strong></td>
@@ -76,20 +123,48 @@
                     <td>{{ p.priority or '' }}</td>
                     <td>{{ p.hours if p.hours is not none else '—' }}</td>
                     <td>{{ p.shift or '—' }}</td>
-                    <td>{{ statuses.get(p.status, p.status) }}</td>
+                    <td>
+                        {% if p.status == 'planned' %}<span style="color:#3498db">● {{ statuses.get(p.status, p.status) }}</span>
+                        {% elif p.status == 'done' %}<span style="color:#27ae60">✓ {{ statuses.get(p.status, p.status) }}</span>
+                        {% else %}<span style="color:#999">✕ {{ statuses.get(p.status, p.status) }}</span>{% endif %}
+                    </td>
                     <td class="no-print">
                         {% if p.status == 'planned' %}
                         <form method="POST" action="/planning/production/{{ p.id }}/status" style="display:inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="status" value="done">
-                            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">✓</button>
+                            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" title="{{ _('Done') }}">✓</button>
+                        </form>
+                        <form method="POST" action="/planning/production/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="cancelled">
+                            <button type="submit" class="btn btn-sm" style="background:#95a5a6;color:white" title="{{ _('Cancel') }}">✕</button>
+                        </form>
+                        <a href="/planning/production/{{ p.id }}/consume" class="btn btn-sm" style="background:#3498db;color:white" title="{{ _('Write off raw material') }}">📦</a>
+                        {% elif p.status == 'done' %}
+                        <form method="POST" action="/planning/production/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="planned">
+                            <button type="submit" class="btn btn-sm" style="background:#f39c12;color:white" title="{{ _('Reopen') }}">↩</button>
+                        </form>
+                        {% elif p.status == 'cancelled' %}
+                        <form method="POST" action="/planning/production/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="planned">
+                            <button type="submit" class="btn btn-sm" style="background:#f39c12;color:white" title="{{ _('Reopen') }}">↩</button>
                         </form>
                         {% endif %}
                         <a href="/planning/production?edit={{ p.id }}" class="btn btn-sm" style="background:#eee">✎</a>
+                        <form method="POST" action="/planning/production/{{ p.id }}/copy" style="display:inline"
+                              title="{{ _('Copy to next week') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="days" value="7">
+                            <button type="submit" class="btn btn-sm" style="background:#9b59b6;color:white">📋</button>
+                        </form>
                         <form method="POST" action="/planning/production/{{ p.id }}/delete" style="display:inline"
                               onsubmit="return confirm('{{ _('Delete?') }}')">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">✕</button>
+                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">🗑</button>
                         </form>
                     </td>
                 </tr>

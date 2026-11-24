@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Load forecast') }} — {{ _('Planning') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📈 {{ _('Load forecast') }} <small style="font-size:13px;color:#888">{{ forecast_start.strftime('%d.%m') }} — {{ forecast_end.strftime('%d.%m.%Y') }} ({{ horizon_weeks }} {{ _('weeks') }})</small></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/planning/load?d={{ prev_d }}" class="btn btn-sm" style="background:#eee">← {{ _('Previous') }}</a>
+        <a href="/planning/load" class="btn btn-sm" style="background:#e74c3c;color:white">🔥 {{ _('Machine load') }}</a>
+        <a href="/planning/load/forecast?weeks=2" class="btn btn-sm" style="background:{% if horizon_weeks == 2 %}#3498db;color:white{% else %}#eee{% endif %}">2w</a>
+        <a href="/planning/load/forecast?weeks=4" class="btn btn-sm" style="background:{% if horizon_weeks == 4 %}#3498db;color:white{% else %}#eee{% endif %}">4w</a>
+        <a href="/planning/load/forecast?weeks=8" class="btn btn-sm" style="background:{% if horizon_weeks == 8 %}#3498db;color:white{% else %}#eee{% endif %}">8w</a>
+        <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Planning') }}</a>
+    </div>
+</div>
+
+{# ─── легенда ─── #}
+<div class="card no-print" style="padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+    <span><strong>{{ _('Legend') }}:</strong></span>
+    <span><span style="display:inline-block;width:14px;height:14px;background:#ecf0f1;border:1px solid #ddd;border-radius:3px"></span> {{ _('Empty') }}</span>
+    <span><span style="display:inline-block;width:14px;height:14px;background:#2ecc71;border-radius:3px"></span> &lt;50%</span>
+    <span><span style="display:inline-block;width:14px;height:14px;background:#f1c40f;border-radius:3px"></span> 50–80%</span>
+    <span><span style="display:inline-block;width:14px;height:14px;background:#e67e22;border-radius:3px"></span> 80–100%</span>
+    <span><span style="display:inline-block;width:14px;height:14px;background:#e74c3c;border-radius:3px"></span> &gt;100% {{ _('overload') }}</span>
+    <span>🔧 {{ _('Breakdown') }} · 🔩 {{ _('Maintenance') }} · 🔴 {{ _('Overload') }}</span>
+</div>
+
+{# ─── сводка по станкам ─── #}
+<h2 style="font-size:15px;margin:14px 0 8px">📊 {{ _('Summary') }} ({{ horizon_weeks }} {{ _('weeks') }})</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px">
+    {% for s in summary %}
+    <div class="card" style="padding:12px;border-left:4px solid {% if s.overload_days > 0 %}#e74c3c{% elif s.utilization > 80 %}#e67e22{% elif s.utilization > 50 %}#f1c40f{% else %}#2ecc71{% endif %}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="font-size:13px">🔧 {{ s.label }}</strong>
+            <span style="font-size:18px;font-weight:700;color:{% if s.overload_days > 0 %}#e74c3c{% elif s.utilization > 80 %}#e67e22{% else %}#2ecc71{% endif %}">{{ s.utilization }}%</span>
+        </div>
+        {# полоса загрузки #}
+        <div style="background:#ecf0f1;border-radius:6px;height:10px;overflow:hidden;margin-bottom:8px">
+            <div style="background:{% if s.overload_days > 0 %}#e74c3c{% elif s.utilization > 80 %}#e67e22{% elif s.utilization > 50 %}#f1c40f{% else %}#2ecc71{% endif %};height:100%;width:{{ [s.utilization, 100] | min }}%"></div>
+        </div>
+        <div style="display:flex;gap:12px;font-size:11px;color:#555;flex-wrap:wrap">
+            <span>⏱ {{ s.total_planned }}h {{ _('planned') }}</span>
+            {% if s.overload_days > 0 %}<span style="color:#e74c3c">🔴 {{ s.overload_days }} {{ _('overload days') }} ({{ s.total_overload }}h)</span>{% endif %}
+            {% if s.free_days > 0 %}<span style="color:#27ae60">✅ {{ s.free_days }} {{ _('free days') }}</span>{% endif %}
+        </div>
+        {# свободные окна #}
+        {% if s.windows %}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #eee">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;margin-bottom:4px">🪟 {{ _('Best free windows') }}</div>
+            {% for w in s.windows[:3] %}
+            <div style="font-size:11px;padding:2px 6px;background:#eafaf1;border-left:3px solid #27ae60;margin:2px 0;border-radius:0 4px 4px 0">
+                {{ w['from'].strftime('%d.%m') }} — {{ w['to'].strftime('%d.%m') }}
+                <span style="color:#888">({{ w['days'] }} {{ _('days') }} × ≥4h)</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div style="color:#888;font-size:12px">{{ _('No records found') }}</div>
+    {% endfor %}
+</div>
+
+{# ─── heatmap сетка ─── #}
+<h2 style="font-size:15px;margin:14px 0 8px">🗓 {{ _('Daily heatmap') }}</h2>
+<div class="card" style="padding:0;overflow-x:auto">
+    <table class="mule-table" style="width:100%;min-width:1200px;border-collapse:collapse">
+        <thead>
+            <tr style="background:#2c3e50;color:#fff">
+                <th style="min-width:110px;position:sticky;left:0;background:#2c3e50;z-index:2">{{ _('Machine') }}</th>
+                {% for d in grid_days %}
+                <th style="min-width:32px;text-align:center;font-size:9px;{% if d == today %}background:#3498db{% endif %}">
+                    {{ d.strftime('%d') }}<br><span style="opacity:.7">{{ d.strftime('%a')[:2] }}</span>
+                </th>
+                {% endfor %}
+                <th style="min-width:50px;text-align:center">Σ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td style="position:sticky;left:0;background:#fff;z-index:1;font-size:11px;font-weight:600;white-space:nowrap;padding:4px 6px">
+                    🔧 {{ row.label }}
+                    {% if row.alerts.faults %}<span title="{{ row.alerts.faults | join('; ') }}" style="color:#e74c3c;font-size:10px">🔧</span>{% endif %}
+                    {% if row.alerts.to %}<span title="{{ row.alerts.to | join('; ') }}" style="color:#8e44ad;font-size:10px">🔩</span>{% endif %}
+                </td>
+                {% for d in grid_days %}
+                {% set c = row.cells.get(d) %}
+                <td style="text-align:center;padding:2px;{% if c and c.is_today %}outline:2px solid #3498db;outline-offset:-2px{% endif %}"
+                    title="{{ d.strftime('%d.%m.%Y') }}{% if c %}: {{ c.total }}h / {{ capacity }}h{% if c.free > 0 %} ({{ _('free') }} {{ c.free }}h){% endif %}{% if c.overload > 0 %} ({{ _('overload') }} +{{ c.overload }}h){% endif %}{% endif %}">
+                    {% if c %}
+                    <div style="background:{{ c.color }};border-radius:3px;height:22px;line-height:22px;font-size:9px;color:{% if c.ratio > 0.5 %}#fff{% else %}#555{% endif %};font-weight:600">
+                        {% if c.total > 0 %}{{ c.total }}{% endif %}
+                    </div>
+                    {% if c.tags %}
+                    <div style="font-size:8px;line-height:1">
+                        {% for t in c.tags %}
+                        {% if t == 'fault' %}🔧{% elif t == 'to' %}🔩{% elif t == 'overload' %}🔴{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div style="background:#ecf0f1;border-radius:3px;height:22px"></div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+                {% set row_total = row.cells.values() | map(attribute='total') | sum %}
+                <td style="text-align:center;font-weight:700;font-size:11px">{{ row_total }}h</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="{{ grid_days | length + 2 }}" style="text-align:center;color:#888;padding:16px">{{ _('No records found') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p style="color:#888;font-size:11px;margin-top:8px">
+    💡 {{ _('Hover over a cell for details. Green = free capacity, red = overload. Free windows show when a machine has ≥4h/day available for 2+ consecutive days.') }}
+</p>
+{% endblock %}

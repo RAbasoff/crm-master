@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Month') }} — {{ _('Planning') }} — CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🗓 {{ _('Month') }} <small style="font-size:13px;color:#888">{{ month_start.strftime('%B %Y') }}</small></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <a href="/planning/month?m={{ prev_m }}" class="btn btn-sm" style="background:#eee">← {{ _('Previous') }}</a>
+        <a href="/planning/month" class="btn btn-sm" style="background:#eee">{{ _('Today') }}</a>
+        <a href="/planning/month?m={{ next_m }}" class="btn btn-sm" style="background:#eee">{{ _('Next') }} →</a>
+        <a href="/planning" class="btn btn-sm" style="background:#eee">📅 {{ _('Week') }}</a>
+        <a href="/planning/kpi?m={{ cur_m }}" class="btn btn-sm" style="background:#2c3e50;color:white">📊 KPI</a>
+    </div>
+</div>
+
+{% for week in weeks %}
+<div class="card" style="margin-bottom:12px;padding:0">
+    <div style="padding:8px 12px;background:#f8f9fa;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-size:12px">
+            {{ _('Week') }} {{ week.start.isocalendar()[1] }}:
+            {{ week.start.strftime('%d.%m') }} — {{ (week.days.keys() | max).strftime('%d.%m.%Y') }}
+        </strong>
+        <div style="display:flex;gap:10px;font-size:11px">
+            <span style="color:#2ecc71">🛒 {{ week.purchases | length }}</span>
+            <span style="color:#3498db">⚙️ {{ week.production | length }}</span>
+            <span style="color:#e67e22">🚚 {{ week.shipments | length }}</span>
+        </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#eee">
+        {% for d, items in week.days.items() | sort %}
+        <div style="background:{% if d == today %}#eaf2ff{% else %}#fff{% endif %};padding:6px;min-height:70px;{% if d == today %}border:2px solid #3498db{% endif %}">
+            <div style="font-size:10px;font-weight:700;color:{% if d == today %}#3498db{% elif d.weekday() >= 5 %}#bbb{% else %}#555{% endif %};margin-bottom:4px">
+                {{ d.strftime('%a %d') }}
+            </div>
+            {% for p in items.purchases %}
+            <div style="font-size:9px;padding:1px 3px;border-left:2px solid #2ecc71;margin:1px 0;background:#f6fef9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                 title="{{ p.article_name }} {{ p.qty }}{{ p.unit }}">
+                🛒 {{ p.article_name[:12] }} {{ p.qty }}{{ p.unit }}
+            </div>
+            {% endfor %}
+            {% for p in items.production %}
+            <div style="font-size:9px;padding:1px 3px;border-left:2px solid #3498db;margin:1px 0;background:#f4f9ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                 title="{{ p.article_name }} {{ p.qty }}{{ p.unit }} — {{ p.machine.name if p.machine else (p.machine_name or '') }}">
+                ⚙️ {{ p.article_name[:12] }} {{ p.qty }}{{ p.unit }}
+            </div>
+            {% endfor %}
+            {% for p in items.shipments %}
+            <div style="font-size:9px;padding:1px 3px;border-left:2px solid #e67e22;margin:1px 0;background:#fff8f2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                 title="{{ p.article_name }} {{ p.qty }}{{ p.unit }} → {{ p.client_name or '' }}">
+                🚚 {{ p.article_name[:12] }} {{ p.qty }}{{ p.unit }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div style="text-align:center;color:#888;padding:30px">{{ _('No records found') }}</div>
+{% endfor %}
+
+<div style="display:flex;gap:16px;font-size:11px;color:#888;margin-top:8px">
+    <span><span style="display:inline-block;width:10px;height:10px;background:#2ecc71;border-radius:2px"></span> {{ _('Purchases') }}</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#3498db;border-radius:2px"></span> {{ _('Production') }}</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#e67e22;border-radius:2px"></span> {{ _('Shipments') }}</span>
+</div>
+{% endblock %}

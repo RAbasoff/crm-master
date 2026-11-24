@@ -10,6 +10,27 @@
     </div>
 </div>
 
+{# ─── фильтры ─── #}
+<div class="card no-print" style="padding:8px 12px;margin-bottom:10px">
+    <form method="GET" action="/planning/shipments" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Search') }}</label>
+            <input type="text" name="q" value="{{ f_search or '' }}" placeholder="{{ _('Name') }} / {{ _('Code') }} / {{ _('Client') }}" style="width:180px;padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px"></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Status') }}</label>
+            <select name="status" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px">
+                <option value="">{{ _('All') }}</option>
+                {% for k, v in statuses.items() %}
+                <option value="{{ k }}" {% if f_status == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Date') }} ≥</label>
+            <input type="date" name="date_from" value="{{ f_from if f_from else '' }}" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px"></div>
+        <div style="display:flex;flex-direction:column"><label style="font-size:10px;color:#888">{{ _('Date') }} ≤</label>
+            <input type="date" name="date_to" value="{{ f_to if f_to else '' }}" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px"></div>
+        <button type="submit" class="btn btn-sm" style="background:#3498db;color:white">🔍</button>
+        <a href="/planning/shipments" class="btn btn-sm" style="background:#eee">✕</a>
+    </form>
+</div>
+
 <div class="card" style="margin-bottom:12px">
     <h3 style="margin:0 0 10px;font-size:14px">{{ _('Edit') if edit else _('New') }} — {{ _('shipment') }}</h3>
     <form method="POST" action="/planning/shipments/save" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -43,11 +64,11 @@
                 <th>{{ _('Date') }}</th><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th>
                 <th>{{ _('Qty') }}</th><th>{{ _('Client') }}</th><th>{{ _('Transport') }}</th>
                 <th>{{ _('Availability') }}</th>
-                <th>{{ _('Status') }}</th><th class="no-print" style="width:170px"></th>
+                <th>{{ _('Status') }}</th><th class="no-print" style="width:200px"></th>
             </tr></thead>
             <tbody>
                 {% for p in items %}
-                <tr {% if p.status == 'done' %}style="opacity:.55"{% endif %}>
+                <tr {% if p.status == 'done' %}style="opacity:.55"{% elif p.status == 'cancelled' %}style="opacity:.4;text-decoration:line-through"{% endif %}>
                     <td>{{ p.ship_date.strftime('%d.%m.%Y') if p.ship_date else '—' }}</td>
                     <td style="font-family:monospace">{{ p.article_code or '—' }}</td>
                     <td><strong>{{ p.article_name }}</strong>{% if p.notes %} <span style="color:#999">({{ p.notes }})</span>{% endif %}</td>
@@ -60,20 +81,41 @@
                         {% elif av and av.avail is not none %}⚠️ <span style="color:#e74c3c">{{ av.avail }}</span>
                         {% else %}<span style="color:#bbb">—</span>{% endif %}
                     </td>
-                    <td>{{ statuses.get(p.status, p.status) }}</td>
+                    <td>
+                        {% if p.status == 'planned' %}<span style="color:#3498db">● {{ statuses.get(p.status, p.status) }}</span>
+                        {% elif p.status == 'done' %}<span style="color:#27ae60">✓ {{ statuses.get(p.status, p.status) }}</span>
+                        {% else %}<span style="color:#999">✕ {{ statuses.get(p.status, p.status) }}</span>{% endif %}
+                    </td>
                     <td class="no-print">
                         {% if p.status == 'planned' %}
                         <form method="POST" action="/planning/shipments/{{ p.id }}/status" style="display:inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="status" value="done">
-                            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white">✓</button>
+                            <button type="submit" class="btn btn-sm" style="background:#27ae60;color:white" title="{{ _('Done') }}">✓</button>
+                        </form>
+                        <form method="POST" action="/planning/shipments/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="cancelled">
+                            <button type="submit" class="btn btn-sm" style="background:#95a5a6;color:white" title="{{ _('Cancel') }}">✕</button>
+                        </form>
+                        {% elif p.status == 'done' %}
+                        <form method="POST" action="/planning/shipments/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="planned">
+                            <button type="submit" class="btn btn-sm" style="background:#f39c12;color:white" title="{{ _('Reopen') }}">↩</button>
+                        </form>
+                        {% elif p.status == 'cancelled' %}
+                        <form method="POST" action="/planning/shipments/{{ p.id }}/status" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="status" value="planned">
+                            <button type="submit" class="btn btn-sm" style="background:#f39c12;color:white" title="{{ _('Reopen') }}">↩</button>
                         </form>
                         {% endif %}
                         <a href="/planning/shipments?edit={{ p.id }}" class="btn btn-sm" style="background:#eee">✎</a>
                         <form method="POST" action="/planning/shipments/{{ p.id }}/delete" style="display:inline"
                               onsubmit="return confirm('{{ _('Delete?') }}')">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">✕</button>
+                            <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">🗑</button>
                         </form>
                     </td>
                 </tr>
