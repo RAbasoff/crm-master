@@ -389,3 +389,18 @@ fd756bb — 2026-11-23 — Карта загрузки: красный толь�
 
 a015993 — 2026-11-23 — Push: No module named 'attr' — attrs поставлен в user-site, push.py инжектит purelib
   Корень: aiohttp из user-site тянет attr, веб-питон не видел системный attrs. Проверка: ok subs=8 test-ok=3
+
+3871566 — 2026-11-24 — Рефакторинг: разбить крупные блюпринты на пакеты (equipment, faults, gas, machines, maintenance)
+  Пакетный паттерн blueprints/<name>/__init__.py exposes bp — импорты app.py без изменений.
+  machines/consumables.py: пароли — просмотр tech/director/нач.ТС, edit/delete только админ.
+  Временные скрипты перенесены в _archive/. Smoke: импорты + 27 ключевых маршрутов 200.
+
+0a04a07 — 2026-11-24 — Планирование Ф4-Ф6: KPI-панель, месячный вид, PDF-отчёт, прогноз загрузки станков
+  /planning/kpi (план/факт, утилизация, топ станков), /planning/month, /planning/report.pdf (fpdf2),
+  /planning/load/forecast: тепловая карта 1-12 недель, свободные окна >=4ч x >=2 дня, перегрузка.
+  Фильтры/статусы done/cancel/reopen, копирование +7д, bulk, фикс N+1.
+
+8cc6876 — 2026-11-24 — Passwords: редактирование (только админ) + ТО→OH в интерфейсе
+  Модалка редактирования (пароль не сбрасывается при пустом поле); edit/delete — только админ,
+  просмотр — техники/директор/начальник ТС. ТО van deze maand → OH van deze maand и все
+  связанные строки (nl/ru) под номера OH-YYYYMMDD-NNNN. Smoke: passwords 24/24, OH 10/10.
