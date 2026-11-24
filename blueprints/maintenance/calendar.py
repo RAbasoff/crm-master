@@ -1,6 +1,4 @@
-"""
-Maintenance blueprint — calendar, plans, schedule generator
-"""
+"""Maintenance calendar, yearly plan and works-calendar routes."""
 from datetime import datetime, timedelta
 
 from flask import (Blueprint, request, redirect, url_for, flash, render_template,
@@ -21,39 +19,15 @@ from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    create_notification, log_audit, log_system, save_uploaded_file,
                    find_pdf_font, ensure_fpdf)
 
-bp = Blueprint('maintenance', __name__)
+from models import Equipment as _Eq, WeekendShift
+from sqlalchemy.orm import joinedload
+from flask_babel import format_date
+import traceback
+import calendar
 
-
-def _target_name(obj):
-    """Безопасное имя цели ТО: станок, Mule-устройство, оборудование, «—»."""
-    m = getattr(obj, 'machine', None)
-    if m is not None and getattr(m, 'name', None):
-        return m.name
-    mule_id = getattr(obj, 'mule_id', None)
-    if mule_id:
-        try:
-            from models import EquipmentMaintenance
-            mro = db.session.get(EquipmentMaintenance, mule_id)
-        except Exception:
-            mro = None
-        if mro:
-            nm = mro.name or mro.number
-            if mro.serial:
-                nm = f'{nm} ({mro.serial})'
-            if mro.machine_id:
-                try:
-                    mm = db.session.get(__import__('models').Machine, mro.machine_id)
-                    if mm and mm.name:
-                        nm = f'{nm} · {mm.name}'
-                except Exception:
-                    pass
-            return nm
-    eq_id = getattr(obj, 'equipment_id', None)
-    if eq_id:
-        eq = Equipment.query.get(eq_id)
-        if eq and eq.name:
-            return eq.name
-    return '—'
+from . import bp
+from . import _target_name
+from .plans import skip_weekend
 
 
 @bp.route('/maintenance-calendar')
@@ -69,7 +43,6 @@ def maintenance_calendar():
         month_end = datetime(year, mon + 1, 1).date()
     
     # Get all parts with upcoming maintenance/replacement (eagerly load machine)
-    from sqlalchemy.orm import joinedload
     if current_user.has_role('admin', 'director', 'technician'):
         parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
     else:
@@ -493,14 +466,12 @@ def maintenance_calendar():
     next_month = month_end.strftime('%Y-%m')
     
     # Прочее оборудование без даты ТО — чтобы не «терялось» из списка
-    from models import Equipment as _Eq
     eq_all = _Eq.query.all()
     equipment_unscheduled = [e for e in eq_all if not e.next_service_date]
 
     # Дни выходные, где у кого-то из механиков отмечена работа (WeekendShift)
     weekend_work_days = set()
     try:
-        from models import WeekendShift
         _ws_from = month_start - timedelta(days=7)
         _ws_to = month_end + timedelta(days=7)
         for ws in WeekendShift.query.filter(
@@ -513,7 +484,6 @@ def maintenance_calendar():
 
     # Локализованное имя месяца («ноябрь 2026» / «november 2026») — для печати
     try:
-        from flask_babel import format_date
         month_name = format_date(month_start, 'LLLL y', rebase=False)
     except Exception:
         month_name = month_start.strftime('%B %Y')
@@ -534,7 +504,6 @@ def _log_equipment_oh(plan, ev_d, user):
     В maintenance_record.machine_id NOT NULL — поэтому такие планы
     отмечаются записью в журнале оборудования (EquipmentMaintenance).
     """
-    from models import EquipmentMaintenance
     d = ev_d.date() if hasattr(ev_d, 'date') else ev_d
     # Номер уникален: повторная отметка того же ТО в тот же день не должна падать
     num = f'OJ-{plan.id}-{d:%Y%m%d}'
@@ -716,7 +685,6 @@ def maintenance_calendar_complete():
                 flash(_('Event not found'), 'error')
 
         elif ev_type == 'equipment':
-            from models import Equipment
             equip_id = request.form.get('equipment_id')
             if equip_id:
                 eq = Equipment.query.get(int(equip_id))
@@ -736,7 +704,6 @@ def maintenance_calendar_complete():
                     flash(_('Equipment not found'), 'error')
 
         elif ev_type == 'equipment_mro':
-            from models import EquipmentMaintenance
             mro_id = request.form.get('mro_id')
             event_date = request.form.get('date')
             if mro_id:
@@ -771,7 +738,6 @@ def maintenance_calendar_complete():
 
     except Exception as e:
         db.session.rollback()
-        import traceback
         traceback.print_exc()
         flash(_('Error: %(err)s', err=str(e)[:100]), 'error')
 
@@ -796,7 +762,6 @@ def _add_months(d, k):
     """d + k месяцев (календарно, без сдвига на 30-дневные месяцы)."""
     y = d.year + (d.month - 1 + k) // 12
     m = (d.month - 1 + k) % 12 + 1
-    import calendar
     day = min(d.day, calendar.monthrange(y, m)[1])
     return d.replace(year=y, month=m, day=day)
 
@@ -912,7 +877,6 @@ def _yearly_to_chart(year):
 
     # ── Порядок цехов — по расположению на плане фабрики (сверху вниз,
     # слева направо); строки без цеха уходят в самый низ таблицы.
-    from models import FactorySection
     _sections = FactorySection.query.all()
     _sec_rank = {s.id: ((s.floor_y if s.floor_y is not None else 1e9),
                         (s.floor_x if s.floor_x is not None else 1e9),
@@ -1162,7 +1126,6 @@ def maintenance_calendar_delete():
                 flash(_('Event not found'), 'error')
 
         elif ev_type == 'equipment' and equipment_id:
-            from models import Equipment
             eq = Equipment.query.get(int(equipment_id))
             if eq:
                 eq.next_service_date = None
@@ -1172,7 +1135,6 @@ def maintenance_calendar_delete():
                 flash(_('Equipment not found'), 'error')
 
         elif ev_type == 'equipment_mro' and mro_id:
-            from models import EquipmentMaintenance
             mro = EquipmentMaintenance.query.get(int(mro_id))
             if mro:
                 db.session.delete(mro)
@@ -1186,7 +1148,6 @@ def maintenance_calendar_delete():
 
     except Exception as e:
         db.session.rollback()
-        import traceback
         traceback.print_exc()
         flash(_('Error: %(err)s', err=str(e)[:100]), 'error')
 
@@ -1275,7 +1236,6 @@ def maintenance_calendar_move():
                 return jsonify({'ok': True, 'new_date': new_date_str})
 
         elif ev_type == 'equipment':
-            from models import Equipment
             equipment_id = request.form.get('equipment_id')
             if equipment_id:
                 eq = Equipment.query.get(int(equipment_id))
@@ -1286,7 +1246,6 @@ def maintenance_calendar_move():
                     return jsonify({'ok': True, 'new_date': new_date_str})
 
         elif ev_type == 'equipment_mro':
-            from models import EquipmentMaintenance
             mro_id = request.form.get('mro_id')
             if mro_id:
                 mro = EquipmentMaintenance.query.get(int(mro_id))
@@ -1482,7 +1441,6 @@ def works_calendar_delete(event_id):
 @bp.route('/maintenance-calendar/export')
 @login_required
 def maintenance_calendar_export():
-    import io
     today = datetime.utcnow().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
@@ -1493,7 +1451,6 @@ def maintenance_calendar_export():
         month_end = datetime(year, mon + 1, 1).date()
 
     # Collect events (same logic as calendar view)
-    from sqlalchemy.orm import joinedload
     if current_user.has_role('admin', 'director', 'technician'):
         parts = MachinePart.query.options(joinedload(MachinePart.machine)).all()
     else:
@@ -1655,773 +1612,4 @@ def maintenance_calendar_export():
     buf.seek(0)
     return send_file(buf, mimetype='application/pdf',
                      download_name=f'calendar_{month}.pdf', as_attachment=True)
-
-@bp.route('/maintenance-plans')
-@login_required
-def maintenance_plans_list():
-    if current_user.has_role('admin', 'director', 'technician'):
-        plans = MaintenancePlan.query.order_by(MaintenancePlan.planned_start.desc()).all()
-    else:
-        machine_ids = [m.id for m in current_user.assigned_machines]
-        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).order_by(MaintenancePlan.planned_start.desc()).all()
-    machines = Machine.query.order_by(Machine.name).all()
-    return render_template('maintenance_plans.html', plans=plans, machines=machines)
-
-def skip_weekend(d):
-    """Move date to next Monday if it falls on Saturday or Sunday."""
-    if d.weekday() == 5:  # Saturday
-        return d + timedelta(days=2)
-    elif d.weekday() == 6:  # Sunday
-        return d + timedelta(days=1)
-    return d
-
-
-def _parse_target_id(tid):
-    """Parse 'm12' / 'e3' / 'u7' → ('machine'|'equipment'|'mule', id)."""
-    tid = (tid or '').strip()
-    if tid.startswith('m') and tid[1:].isdigit():
-        return 'machine', int(tid[1:])
-    if tid.startswith('e') and tid[1:].isdigit():
-        return 'equipment', int(tid[1:])
-    if tid.startswith('u') and tid[1:].isdigit():
-        return 'mule', int(tid[1:])
-    return None, None
-
-@bp.route('/maintenance-plans/new', methods=['GET', 'POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def maintenance_plan_new():
-    if request.method == 'POST':
-        targets = request.form.getlist('target_ids')
-        title = (request.form.get('title') or '').strip() or _('Maintenance')
-        try:
-            planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
-        except (ValueError, KeyError):
-            flash(_('Invalid date'), 'error')
-            return redirect(url_for('maintenance.maintenance_plan_new'))
-        if not targets:
-            flash(_('Select machine / equipment'), 'error')
-            return redirect(url_for('maintenance.maintenance_plan_new'))
-        original = planned_start
-        planned_start = skip_weekend(planned_start)
-        if planned_start != original:
-            flash(_('Date moved from weekend to Monday: {}').format(planned_start.strftime('%d-%m-%Y')), 'info')
-        planned_end = safe_date(request.form.get('planned_end'))
-        if planned_end:
-            planned_end = planned_end.date()
-        else:
-            planned_end = planned_start + timedelta(days=3)
-        create_two = request.form.get('create_two') == 'yes'
-        worker_id = safe_int(request.form.get('worker_id')) or None
-        worker_ids = [safe_int(x) for x in request.form.getlist('worker_ids') if safe_int(x)]
-        if worker_ids and not worker_id:
-            worker_id = worker_ids[0]
-        created = 0
-        last_p = None
-        created_plans = []
-        for tid in targets:
-            kind, target_id = _parse_target_id(tid)
-            if kind == 'machine':
-                machine_id, equipment_id, mule_id = target_id, None, None
-            elif kind == 'equipment':
-                machine_id, equipment_id, mule_id = None, target_id, None
-            elif kind == 'mule':
-                machine_id, equipment_id, mule_id = None, None, target_id
-            else:
-                continue
-            p = MaintenancePlan(
-                machine_id=machine_id,
-                equipment_id=equipment_id,
-                mule_id=mule_id,
-                title=title,
-                description=request.form.get('description', ''),
-                maintenance_type=request.form.get('maintenance_type', 'preventive'),
-                status=request.form.get('status', 'planned'),
-                planned_start=planned_start,
-                planned_end=planned_end,
-                window_days=(planned_end - planned_start).days + 1,
-                is_external='is_external' in request.form,
-                company_name=request.form.get('company_name', ''),
-                company_contact=request.form.get('company_contact', ''),
-                company_person=request.form.get('company_person', ''),
-                worker_id=worker_id,
-                parts_used=request.form.get('parts_used', '[]'),
-                cost=safe_float(request.form.get('cost'), 0),
-                report=request.form.get('report', ''),
-                next_maintenance=(d := safe_date(request.form.get('next_maintenance'))) and d.date() or None,
-                recurrence=request.form.get('recurrence', '') or None,
-                notes=request.form.get('notes', ''),
-                created_by=resolve_user_id()
-            )
-            for wid in worker_ids:
-                w = Monteur.query.get(wid)
-                if w:
-                    p.workers.append(w)
-            if 'offer_file' in request.files and request.files['offer_file'].filename:
-                fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
-                if fn:
-                    p.offer_file = fn
-            if 'work_act_file' in request.files and request.files['work_act_file'].filename:
-                fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
-                if fn:
-                    p.work_act_file = fn
-            db.session.add(p)
-            created += 1
-            last_p = p
-            created_plans.append(p)
-        if not safe_commit():
-            flash(_('Save failed'), 'error')
-            return redirect(url_for('maintenance.maintenance_plan_new'))
-        if last_p is None:
-            flash(_('No valid targets'), 'error')
-            return redirect(url_for('maintenance.maintenance_plan_new'))
-        # TWO — на КАЖДЫЙ созданный план со станком
-        if create_two and (worker_ids or worker_id):
-            created_twos = 0
-            try:
-                from blueprints.two import gen_two_number
-                from models import MachineTOChecklist, TWOChecklistItem
-                from blueprints.machines import ensure_machine_to_checklists
-            except Exception:
-                gen_two_number = None
-            if gen_two_number:
-                for p in created_plans:
-                    if not p.machine_id:
-                        continue
-                    two = TechnicalWorkOrder(
-                        number=gen_two_number(),
-                        machine_id=p.machine_id,
-                        description=f'{p.title}\n{p.description or ""}',
-                        planned_date=p.planned_start,
-                        status='assigned',
-                        created_by=resolve_user_id()
-                    )
-                    db.session.add(two)
-                    db.session.flush()
-                    for wid in (worker_ids or ([worker_id] if worker_id else [])):
-                        w = Monteur.query.get(wid)
-                        if w:
-                            two.workers.append(w)
-                    try:
-                        ensure_machine_to_checklists(p.machine_id)
-                        period = (p.recurrence or 'monthly') or 'monthly'
-                        items = MachineTOChecklist.query.filter_by(
-                            machine_id=p.machine_id, period=period, is_active=True
-                        ).order_by(MachineTOChecklist.sort_order, MachineTOChecklist.id).all()
-                        if not items:
-                            items = MachineTOChecklist.query.filter_by(
-                                machine_id=p.machine_id, period='monthly', is_active=True
-                            ).order_by(MachineTOChecklist.sort_order).all()
-                        for i, it in enumerate(items, 1):
-                            db.session.add(TWOChecklistItem(two_id=two.id, text=it.text, sort_order=i))
-                    except Exception as _ce:
-                        print('TWO checklist insert skip', _ce)
-                    created_twos += 1
-                safe_commit()
-                if created_twos:
-                    flash(_('Created TWO for machines: %(n)d', n=created_twos), 'success')
-        flash(_('Created %(n)d plans', n=created) if created != 1 else _('Plan created'), 'success')
-        return redirect(url_for('maintenance.maintenance_plans_list'))
-    machines = Machine.query.order_by(Machine.name).all()
-    workers = Monteur.query.filter_by(actief=True).all()
-    from models import Equipment
-    return render_template('maintenance_plan_form.html', plan=None, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all(),
-                           mules=EquipmentMaintenance.query.filter(EquipmentMaintenance.record_type.isnot('repair')).order_by(EquipmentMaintenance.name).all())
-
-@bp.route('/maintenance-plans/<int:plan_id>')
-@login_required
-def maintenance_plan_detail(plan_id):
-    p = MaintenancePlan.query.get_or_404(plan_id)
-    return render_template('maintenance_plan_detail.html', plan=p)
-
-@bp.route('/maintenance-plans/<int:plan_id>/edit', methods=['GET', 'POST'])
-@login_required
-@role_required('admin', 'director', 'technician')
-def maintenance_plan_edit(plan_id):
-    p = MaintenancePlan.query.get_or_404(plan_id)
-    if request.method == 'POST':
-        try:
-            targets = request.form.getlist('target_ids')
-            if not targets and request.form.get('machine_id'):
-                targets = [f"m{request.form.get('machine_id')}"]
-            kind, target_id = _parse_target_id(targets[0]) if targets else (None, None)
-            if kind is None:
-                raise ValueError('no target')
-            p.mule_id = None
-            if kind == 'machine':
-                p.machine_id, p.equipment_id = target_id, None
-            elif kind == 'mule':
-                p.machine_id, p.equipment_id, p.mule_id = None, None, target_id
-            else:
-                p.machine_id, p.equipment_id = None, target_id
-            p.planned_start = datetime.strptime(request.form['planned_start'], '%Y-%m-%d').date()
-        except (ValueError, KeyError, IndexError):
-            flash(_('Invalid machine or date'), 'error')
-            return redirect(url_for('maintenance.maintenance_plan_edit', plan_id=p.id))
-        p.title = request.form['title']
-        p.description = request.form.get('description', '')
-        p.maintenance_type = request.form.get('maintenance_type', p.maintenance_type)
-        old_status = p.status
-        p.status = request.form.get('status', p.status)
-        p.planned_end = (d := safe_date(request.form.get('planned_end'))) and d.date() or None
-        if p.planned_end and p.planned_start:
-            p.window_days = (p.planned_end - p.planned_start).days + 1
-        p.actual_start = (d := safe_date(request.form.get('actual_start'))) and d.date() or None
-        p.actual_end = (d := safe_date(request.form.get('actual_end'))) and d.date() or None
-        p.is_external = 'is_external' in request.form
-        p.company_name = request.form.get('company_name', '')
-        p.company_contact = request.form.get('company_contact', '')
-        p.company_person = request.form.get('company_person', '')
-        p.worker_id = safe_int(request.form.get('worker_id')) or None
-        worker_ids = [safe_int(x) for x in request.form.getlist('worker_ids') if safe_int(x)]
-        if worker_ids and not p.worker_id:
-            p.worker_id = worker_ids[0]
-        p.workers = []
-        for wid in worker_ids:
-            w = Monteur.query.get(wid)
-            if w:
-                p.workers.append(w)
-        p.parts_used = request.form.get('parts_used', '[]')
-        p.cost = safe_float(request.form.get('cost'), 0)
-        p.report = request.form.get('report', '')
-        p.next_maintenance = (d := safe_date(request.form.get('next_maintenance'))) and d.date() or None
-        p.recurrence = request.form.get('recurrence', '') or None
-        p.notes = request.form.get('notes', '')
-        if 'offer_file' in request.files and request.files['offer_file'].filename:
-            fn = save_uploaded_file(request.files['offer_file'], prefix='offer_')
-            if fn:
-                p.offer_file = fn
-        if 'work_act_file' in request.files and request.files['work_act_file'].filename:
-            fn = save_uploaded_file(request.files['work_act_file'], prefix='act_')
-            if fn:
-                p.work_act_file = fn
-        if not safe_commit():
-            flash(_('Save failed'), 'error')
-            return redirect(url_for('maintenance.maintenance_plan_edit', plan_id=p.id))
-
-        # Auto-create next recurring plan on completion
-        if p.status == 'completed' and old_status != 'completed' and p.recurrence and p.recurrence != 'none':
-            base = p.actual_end or p.planned_start
-            rec = p.recurrence
-            if rec == 'daily':
-                new_date = base + timedelta(days=1)
-            elif rec == 'weekly':
-                new_date = base + timedelta(weeks=1)
-            elif rec == 'biweekly':
-                new_date = base + timedelta(weeks=2)
-            elif rec == 'monthly':
-                try:
-                    new_date = base.replace(year=base.year + (1 if base.month == 12 else 0), month=(base.month % 12) + 1)
-                except ValueError:
-                    new_date = base.replace(year=base.year + (1 if base.month == 12 else 0), month=(base.month % 12) + 1, day=28)
-            elif rec == 'quarterly':
-                m = base.month + 3
-                y = base.year + (1 if m > 12 else 0)
-                m = ((m - 1) % 12) + 1
-                try:
-                    new_date = base.replace(year=y, month=m)
-                except ValueError:
-                    new_date = base.replace(year=y, month=m, day=28)
-            elif rec == 'yearly':
-                try:
-                    new_date = base.replace(year=base.year + 1)
-                except ValueError:
-                    new_date = base.replace(year=base.year + 1, day=28)
-            else:
-                new_date = None
-
-            if new_date:
-                new_plan = MaintenancePlan(
-                    machine_id=p.machine_id,
-                    equipment_id=p.equipment_id,
-                    mule_id=p.mule_id,
-                    title=p.title,
-                    description=p.description,
-                    maintenance_type=p.maintenance_type,
-                    status='planned',
-                    planned_start=new_date,
-                    recurrence=p.recurrence,
-                    created_by=resolve_user_id()
-                )
-                db.session.add(new_plan)
-                if not safe_commit():
-                    flash(_('Save failed'), 'error')
-                    return redirect(url_for('maintenance.maintenance_plan_edit', plan_id=p.id))
-                flash(_('Maintenance plan updated') + f'. {_("Next")}: {new_date.strftime("%d-%m-%Y")}', 'success')
-            else:
-                flash(_('Maintenance plan updated'), 'success')
-        else:
-            flash(_('Maintenance plan updated'), 'success')
-
-        return redirect(url_for('maintenance.maintenance_plan_detail', plan_id=p.id))
-    machines = Machine.query.order_by(Machine.name).all()
-    workers = Monteur.query.filter_by(actief=True).all()
-    return render_template('maintenance_plan_form.html', plan=p, machines=machines, workers=workers, equipment_list=Equipment.query.order_by(Equipment.name).all(),
-                           mules=EquipmentMaintenance.query.filter(EquipmentMaintenance.record_type.isnot('repair')).order_by(EquipmentMaintenance.name).all())
-
-@bp.route('/maintenance-plans/<int:plan_id>/delete', methods=['POST'])
-@login_required
-@role_required('admin')
-def maintenance_plan_delete(plan_id):
-    p = MaintenancePlan.query.get_or_404(plan_id)
-    db.session.delete(p)
-    if not safe_commit():
-        flash(_('Save failed'), 'error')
-        return redirect(url_for('maintenance.maintenance_plans_list'))
-    flash(_('Maintenance plan deleted'), 'success')
-    return redirect(url_for('maintenance.maintenance_plans_list'))
-
-@bp.route('/api/maintenance/plans')
-@login_required
-def api_maintenance_plans():
-    today = datetime.utcnow().date()
-    month = request.args.get('month', today.strftime('%Y-%m'))
-    year, mon = map(int, month.split('-'))
-    month_start = datetime(year, mon, 1).date()
-    if mon == 12:
-        month_end = datetime(year + 1, 1, 1).date()
-    else:
-        month_end = datetime(year, mon + 1, 1).date()
-
-    if current_user.has_role('admin', 'director', 'technician'):
-        plans = MaintenancePlan.query.all()
-    else:
-        machine_ids = [m.id for m in current_user.assigned_machines]
-        plans = MaintenancePlan.query.filter(MaintenancePlan.machine_id.in_(machine_ids)).all()
-
-    result = []
-    for p in plans:
-        if p.planned_start and month_start <= p.planned_start < month_end:
-            result.append({
-                'id': p.id, 'title': p.title, 'machine': p.machine.name if p.machine else _target_name(p),
-                'machine_id': p.machine_id, 'type': p.maintenance_type,
-                'status': p.status, 'start': p.planned_start.isoformat(),
-                'end': p.planned_end.isoformat() if p.planned_end else None,
-                'is_external': p.is_external,
-                'company': p.company_name if p.is_external else None,
-                'worker': p.worker.naam if p.worker else None,
-            })
-    return jsonify(result)
-
-@bp.route('/api/maintenance/today')
-@login_required
-@role_required('admin', 'director', 'technician')
-def api_maintenance_today():
-    """ТО на сегодня — для напоминания при входе (как смена ножей)."""
-    today = now_local().date()
-    items = []
-
-    # Планы ТО, окно которых включает сегодня
-    plans = MaintenancePlan.query.all()
-    for pl in plans:
-        if pl.status == 'completed' or not pl.planned_start:
-            continue
-        we = pl.window_end_date()
-        if pl.planned_start <= today <= we:
-            items.append({
-                'kind': 'plan',
-                'machine': _target_name(pl) if pl.machine else '—',
-                'machine_id': pl.machine_id,
-                'title': pl.title,
-                'window': f"{pl.planned_start.strftime('%d-%m')} – {we.strftime('%d-%m')}",
-                'type': pl.maintenance_type or 'preventive',
-            })
-
-    # Детали: замена / ТО сегодня
-    for p in MachinePart.query.all():
-        if p.machine is None:
-            continue
-        if p.next_replacement == today:
-            items.append({'kind': 'replacement', 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id,
-                          'title': p.name, 'window': today.strftime('%d-%m'), 'type': 'replacement'})
-        if p.next_maintenance == today:
-            items.append({'kind': 'maintenance', 'machine': p.machine.name if p.machine else _target_name(p), 'machine_id': p.machine_id,
-                          'title': p.name, 'window': today.strftime('%d-%m'), 'type': 'maintenance'})
-
-    # Оборудование
-    try:
-        from models import Equipment
-        for eq in Equipment.query.filter(Equipment.next_service_date == today).all():
-            items.append({'kind': 'equipment', 'machine': eq.name, 'machine_id': None,
-                          'title': eq.equipment_type or eq.name, 'window': today.strftime('%d-%m'), 'type': 'service'})
-    except Exception:
-        pass
-
-    return jsonify(items)
-
-
-@bp.route('/api/mule/reminders')
-@login_required
-def api_mule_reminders():
-    """Ближайшее и просроченное ТО Mule (для всплывающих напоминаний)."""
-    today = datetime.utcnow().date()
-    soon = today + timedelta(days=14)
-    q = EquipmentMaintenance.query.filter(
-        EquipmentMaintenance.next_date.isnot(None),
-        EquipmentMaintenance.record_type.isnot('repair'),
-        EquipmentMaintenance.status != 'completed')
-    items = []
-    for mro in q.all():
-        d = mro.next_date.date() if isinstance(mro.next_date, datetime) else mro.next_date
-        if not d or d > soon:
-            continue
-        items.append({
-            'name': mro.name or mro.number,
-            'number': mro.number,
-            'machine': (mro.machine.name if mro.machine else (mro.serial or '')),
-            'date': d.isoformat(),
-            'days_left': (d - today).days,
-            'overdue': bool(d < today),
-        })
-    items.sort(key=lambda x: (not x['overdue'], x['date']))
-    return jsonify(items[:20])
-
-
-@bp.route('/api/maintenance/reminders')
-@login_required
-def api_maintenance_reminders():
-    today = datetime.utcnow().date()
-    soon = today + timedelta(days=14)
-
-    # Filter at DB level: only parts with upcoming dates
-    part_q = MachinePart.query.filter(
-        db.or_(
-            MachinePart.next_replacement <= soon,
-            MachinePart.next_maintenance <= soon
-        )
-    )
-    if not current_user.has_role('admin', 'director', 'technician'):
-        machine_ids = [m.id for m in current_user.assigned_machines]
-        part_q = part_q.filter(MachinePart.machine_id.in_(machine_ids))
-
-    reminders = []
-    for p in part_q.all():
-        if p.next_replacement and p.next_replacement <= soon:
-            days_left = (p.next_replacement - today).days
-            reminders.append({
-                'type': 'replacement', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p),
-                'machine_id': p.machine_id, 'part_id': p.id,
-                'date': p.next_replacement.isoformat(),
-                'days_left': days_left, 'overdue': days_left < 0
-            })
-        if p.next_maintenance and p.next_maintenance <= soon:
-            days_left = (p.next_maintenance - today).days
-            reminders.append({
-                'type': 'maintenance', 'part': p.name, 'machine': p.machine.name if p.machine else _target_name(p),
-                'machine_id': p.machine_id, 'part_id': p.id,
-                'date': p.next_maintenance.isoformat(),
-                'days_left': days_left, 'overdue': days_left < 0
-            })
-
-    consumables = VoorraadItem.query.filter(
-        VoorraadItem.consumable_type.isnot(None),
-        VoorraadItem.consumable_type != '',
-        VoorraadItem.next_replacement.isnot(None),
-        VoorraadItem.next_replacement <= soon
-    ).all()
-    for c in consumables:
-        days_left = (c.next_replacement - today).days
-        reminders.append({
-            'type': 'consumable', 'part': c.naam, 'machine': c.compatible_machines or '—',
-            'machine_id': None, 'part_id': c.id,
-            'date': c.next_replacement.isoformat(),
-            'days_left': days_left, 'overdue': days_left < 0,
-            'consumable_type': c.consumable_type, 'volume': c.volume or ''
-        })
-
-    reminders.sort(key=lambda r: r['date'])
-    return jsonify(reminders)
-
-@bp.route('/maintenance-schedule')
-@login_required
-@role_required('admin', 'director', 'technician')
-def maintenance_schedule():
-    from models import Equipment
-    machines = Machine.query.order_by(Machine.name).all()
-    equipment_list = Equipment.query.order_by(Equipment.name).all()
-    schedules = MaintenanceSchedule.query.order_by(MaintenanceSchedule.id).all()
-    # Group by target (machine or equipment)
-    sched_by_target = {}
-    for s in schedules:
-        if s.target_type == 'equipment':
-            key = f'e_{s.equipment_id}'
-        elif s.target_type == 'custom':
-            key = f'c_{s.target_name}'
-        else:
-            key = f'm_{s.machine_id}'
-        sched_by_target.setdefault(key, []).append(s)
-    return render_template('maintenance_schedule.html',
-                           machines=machines, equipment_list=equipment_list,
-                           schedules=schedules, sched_by_target=sched_by_target)
-
-@bp.route('/maintenance-schedule/new', methods=['POST'])
-@login_required
-@role_required('admin', 'technician')
-def maintenance_schedule_new():
-    target = request.form.get('target', '')
-    title = request.form.get('title', '').strip()
-    recurrence = request.form.get('recurrence', 'monthly')
-    preferred_dow = safe_int(request.form.get('preferred_dow'))
-    preferred_day = safe_int(request.form.get('preferred_day'))
-    mtype = request.form.get('maintenance_type', 'preventive')
-    description = request.form.get('description', '')
-
-    if not target or not title:
-        flash(_('Target and title are required'), 'error')
-        return redirect(url_for('maintenance.maintenance_schedule'))
-
-    # Parse target: m_5 = machine 5, e_3 = equipment 3
-    machine_id = None
-    equipment_id = None
-    target_type = 'machine'
-    target_name = ''
-
-    if target.startswith('m_'):
-        machine_id = safe_int(target[2:])
-        target_type = 'machine'
-    elif target.startswith('e_'):
-        equipment_id = safe_int(target[2:])
-        target_type = 'equipment'
-    elif target == 'custom':
-        # Use free-text input
-        target_type = 'custom'
-        target_name = request.form.get('custom_target', '').strip() or 'Other'
-    else:
-        target_type = 'custom'
-        target_name = target
-
-    s = MaintenanceSchedule(
-        machine_id=machine_id, equipment_id=equipment_id,
-        target_type=target_type, target_name=target_name,
-        title=title, description=description,
-        maintenance_type=mtype, recurrence=recurrence,
-        preferred_dow=preferred_dow if preferred_dow is not None else None,
-        preferred_day=preferred_day if preferred_day is not None else None,
-        months_ahead=3, is_active=True
-    )
-    db.session.add(s)
-    try:
-        db.session.commit()
-        flash(_('Schedule added'), 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(_('Save failed: {}').format(str(e)[:200]), 'error')
-    return redirect(url_for('maintenance.maintenance_schedule'))
-
-@bp.route('/maintenance-schedule/<int:sched_id>/delete', methods=['POST'])
-@login_required
-@role_required('admin')
-def maintenance_schedule_delete(sched_id):
-    s = MaintenanceSchedule.query.get_or_404(sched_id)
-    db.session.delete(s)
-    if not safe_commit():
-        flash(_('Delete failed'), 'error')
-    else:
-        flash(_('Schedule deleted'), 'success')
-    return redirect(url_for('maintenance.maintenance_schedule'))
-
-@bp.route('/maintenance-schedule/<int:sched_id>/toggle', methods=['POST'])
-@login_required
-@role_required('admin', 'technician')
-def maintenance_schedule_toggle(sched_id):
-    s = MaintenanceSchedule.query.get_or_404(sched_id)
-    s.is_active = not s.is_active
-    if not safe_commit():
-        flash(_('Save failed'), 'error')
-    return redirect(url_for('maintenance.maintenance_schedule'))
-
-@bp.route('/maintenance-schedule/generate', methods=['POST'])
-@login_required
-@role_required('admin', 'technician')
-def maintenance_schedule_generate():
-    """Generate MaintenancePlan entries from active schedules."""
-    months = safe_int(request.form.get('months'), 3)
-    schedules = MaintenanceSchedule.query.filter_by(is_active=True).all()
-    if not schedules:
-        flash(_('No active schedules'), 'error')
-        return redirect(url_for('maintenance.maintenance_schedule'))
-
-    today = datetime.utcnow().date()
-    end_date = today + timedelta(days=months * 31)
-    created = 0
-    skipped = 0
-    debug_info = []
-
-    try:
-        # Pre-fetch all existing plans in the date range for dedup
-        existing_plans = MaintenancePlan.query.filter(
-            MaintenancePlan.planned_start >= today,
-            MaintenancePlan.planned_start <= end_date
-        ).all()
-        existing_set = set()
-        for p in existing_plans:
-            existing_set.add((p.machine_id, str(p.planned_start)))
-
-        for sched in schedules:
-            dates = _generate_schedule_dates(sched, today, end_date)
-            debug_info.append(f'Sched {sched.id}: machine={sched.machine_id} title={sched.title} dates={len(dates)}')
-            for d in dates:
-                d = skip_weekend(d)
-                if d.weekday() >= 5:
-                    continue
-                key = (sched.machine_id, str(d))
-                if key in existing_set:
-                    skipped += 1
-                    continue
-                existing_set.add(key)
-                p = MaintenancePlan(
-                    machine_id=sched.machine_id,
-                    title=sched.title,
-                    description=sched.description or sched.title,
-                    maintenance_type=sched.maintenance_type,
-                    status='planned',
-                    planned_start=d,
-                    recurrence=sched.recurrence,
-                    created_by=resolve_user_id()
-                )
-                db.session.add(p)
-                created += 1
-
-        db.session.flush()
-        if not safe_commit():
-            flash(_('Generation failed — database error'), 'error')
-            log_system('ERROR', 'maintenance', f'Schedule generation commit failed: created={created}')
-        else:
-            msg = _('{} events created, {} skipped').format(created, skipped)
-            flash(msg, 'success')
-            log_system('INFO', 'maintenance', f'Schedule generation: {created} created, {skipped} skipped. {"; ".join(debug_info[:3])}')
-    except Exception as e:
-        db.session.rollback()
-        flash(_('Generation error: {}').format(str(e)[:100]), 'error')
-        log_system('ERROR', 'maintenance', f'Schedule generation exception: {e}')
-
-    return redirect(url_for('maintenance.maintenance_schedule'))
-
-def _generate_schedule_dates(sched, start, end):
-    """Generate dates for a schedule entry between start and end.
-    Spreads events across different weekdays to avoid bunching."""
-    dates = []
-    dow = sched.preferred_dow  # 0=Mon..6=Sun
-    day = sched.preferred_day  # 1-28
-    mid = sched.machine_id or 0
-
-    # Stagger: different machines get different days
-    # Base = preferred_dow (e.g. Tuesday), offset by machine_id
-    # Machine 1→Tue, 2→Wed, 3→Thu, 4→Fri, 5→Mon, 6→Tue...
-    stagger_offset = mid % 5  # 0..4
-    stagger_monthly = (mid % 25) + 1  # 1..25
-
-    if sched.recurrence == 'weekly':
-        # preferred_dow as base + offset by machine_id
-        base_dow = dow if dow is not None else 0  # default Monday
-        target_dow = (base_dow + stagger_offset) % 5  # stay Mon-Fri
-        d = start
-        days_ahead = target_dow - d.weekday()
-        if days_ahead < 0: days_ahead += 7
-        d = d + timedelta(days=days_ahead)
-        while d < end:
-            if d.weekday() < 5:
-                dates.append(d)
-            d += timedelta(weeks=1)
-
-    elif sched.recurrence == 'biweekly':
-        base_dow = dow if dow is not None else 0
-        target_dow = (base_dow + stagger_offset) % 5  # Mon-Fri only
-        d = start
-        days_ahead = target_dow - d.weekday()
-        if days_ahead < 0: days_ahead += 7
-        d = d + timedelta(days=days_ahead)
-        while d < end:
-            if d.weekday() < 5:
-                dates.append(d)
-            d += timedelta(weeks=2)
-
-    elif sched.recurrence == 'monthly':
-        # Use preferred_day if set, otherwise stagger by machine_id
-        target_day = day if day is not None else stagger_monthly
-        target_day = min(target_day, 28)
-        d = start.replace(day=target_day)
-        if d < start:
-            month = d.month + 1
-            year = d.year
-            if month > 12: month = 1; year += 1
-            try:
-                d = d.replace(year=year, month=month, day=target_day)
-            except ValueError:
-                d = d.replace(year=year, month=month, day=28)
-        while d < end:
-            dd = skip_weekend(d)
-            if dd < end and dd.weekday() < 5:
-                dates.append(dd)
-            month = d.month + 1
-            year = d.year
-            if month > 12: month = 1; year += 1
-            try:
-                d = d.replace(year=year, month=month, day=min(target_day, 28))
-            except ValueError:
-                d = d.replace(year=year, month=month, day=28)
-
-    elif sched.recurrence == 'quarterly':
-        td = day if day is not None else stagger_monthly
-        td = min(td, 28)
-        try:
-            d = start.replace(day=td)
-        except ValueError:
-            d = start.replace(day=28)
-        if d < start:
-            d = d + timedelta(days=1)
-        while d < end:
-            dd = skip_weekend(d)
-            if dd < end and dd.weekday() < 5:
-                dates.append(dd)
-            month = d.month + 3
-            year = d.year
-            while month > 12:
-                month -= 12
-                year += 1
-            try:
-                d = d.replace(year=year, month=month, day=td)
-            except ValueError:
-                d = d.replace(year=year, month=month, day=28)
-
-    elif sched.recurrence == 'semiannual':
-        td = day if day is not None else stagger_monthly
-        td = min(td, 28)
-        try:
-            d = start.replace(day=td)
-        except ValueError:
-            d = start.replace(day=28)
-        if d < start:
-            d = d + timedelta(days=1)
-        while d < end:
-            dd = skip_weekend(d)
-            if dd < end and dd.weekday() < 5:
-                dates.append(dd)
-            month = d.month + 6
-            year = d.year
-            while month > 12:
-                month -= 12
-                year += 1
-            try:
-                d = d.replace(year=year, month=month, day=td)
-            except ValueError:
-                d = d.replace(year=year, month=month, day=28)
-
-    elif sched.recurrence == 'yearly':
-        td = day if day is not None else stagger_monthly
-        td = min(td, 28)
-        target_month = (start.month % 12) + 1
-        try:
-            d = start.replace(year=start.year, month=target_month, day=td)
-        except ValueError:
-            d = start.replace(year=start.year, month=target_month, day=28)
-        if d < start:
-            d = d.replace(year=d.year + 1)
-        while d < end:
-            dd = skip_weekend(d)
-            if dd < end and dd.weekday() < 5:
-                dates.append(dd)
-            d = d.replace(year=d.year + 1)
-
-    return dates
 
