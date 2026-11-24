@@ -873,6 +873,12 @@ def before_request():
         maybe_auto_cleanup()
     except Exception as _ce:
         print(f'AUTO CLEANUP SKIP: {_ce}')
+    # Напоминания планирования (отгрузки завтра, просрочки) — раз в сутки в 7:00
+    try:
+        from maintenance_jobs import maybe_planning_reminders
+        maybe_planning_reminders()
+    except Exception as _pe:
+        print(f'PLANNING REMINDERS SKIP: {_pe}')
     # Лицензия: без ключа — только /license, /static (проверка кешируется —
     # раньше файл читался и парсился на КАЖДОМ запросе)
     if request.endpoint not in ('license_page', 'static') and not (request.path or '').startswith('/static'):

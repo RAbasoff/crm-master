@@ -213,3 +213,43 @@ def maybe_auto_cleanup():
         print('AUTO CLEANUP:', stats)
     except Exception as e:
         print('AUTO CLEANUP ERROR:', e)
+
+
+def maybe_planning_reminders():
+    """Раз в сутки в 7:00 — уведомления планирования (отгрузки завтра, просрочки).
+
+    Шлёт один раз в день (штамп backups/.planning_reminders_stamp).
+    """
+    now = datetime.now()
+    if now.hour != 7:
+        return
+    stamp = os.path.join(_STAMP_DIR, '.planning_reminders_stamp')
+    today = now.strftime('%Y%m%d')
+    try:
+        if os.path.exists(stamp) and open(stamp, 'r', encoding='utf-8').read().strip() == today:
+            return
+    except Exception:
+        pass
+    try:
+        from flask import has_app_context
+        if has_app_context():
+            sent = _send_planning_reminders()
+        else:
+            from app import app as _app
+            with _app.app_context():
+                sent = _send_planning_reminders()
+        print('PLANNING REMINDERS: sent', sent)
+    except Exception as e:
+        print('PLANNING REMINDERS ERROR:', e)
+        return
+    try:
+        os.makedirs(_STAMP_DIR, exist_ok=True)
+        with open(stamp, 'w', encoding='utf-8') as f:
+            f.write(today)
+    except Exception:
+        pass
+
+
+def _send_planning_reminders():
+    from blueprints.planning import check_planning_reminders
+    return check_planning_reminders()
