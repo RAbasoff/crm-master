@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{{ _('TO checklist') }} — CRM{% endblock %}
+{% block title %}{{ _('OH checklist') }} — CRM{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>🗓 {{ _('TO checklist') }} — {{ month }}</h1>
+    <h1>🗓 {{ _('OH checklist') }} — {{ month }}</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a href="/equipment/mule-checklist?month={{ prev_month }}" class="btn btn-sm" style="background:#eee">← {{ _('Previous') }}</a>
         <a href="/equipment/mule-checklist" class="btn btn-sm" style="background:#eee">{{ _('Month') }}</a>
@@ -25,7 +25,7 @@
                     <th>{{ _('Serial Number') }}</th>
                     <th>{{ _('Installed on') }}</th>
                     <th style="width:110px">{{ _('Status') }}</th>
-                    <th>{{ _('TO records this month') }}</th>
+                    <th>{{ _('OH records this month') }}</th>
                     <th class="no-print" style="width:150px"></th>
                 </tr>
             </thead>
@@ -54,7 +54,7 @@
                     </td>
                     <td class="no-print">
                         {% if not row.done %}
-                        <a href="/equipment/new?device_id={{ row.device.device_id or '' }}" class="btn btn-sm btn-primary">+ {{ _('TO for this month') }}</a>
+                        <a href="/equipment/new?device_id={{ row.device.device_id or '' }}" class="btn btn-sm btn-primary">+ {{ _('OH for this month') }}</a>
                         {% endif %}
                     </td>
                 </tr>
@@ -67,6 +67,6 @@
 </div>
 
 <p style="color:#888;font-size:12px;margin-top:10px" class="no-print">
-    {{ _('A mule counts as done if it has at least one TO record dated this month.') }}
+    {{ _('A mule counts as done if it has at least one OH record dated this month.') }}
 </p>
 {% endblock %}

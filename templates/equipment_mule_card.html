@@ -5,8 +5,8 @@
     <h1>🧰 {{ dev.name }} <small style="font-size:13px;color:#888">{{ dev.model_name or '' }}</small></h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
         <a href="/equipment/mule-list" class="btn btn-sm" style="background:#eee">← {{ _('Mule list') }}</a>
-        <a href="/equipment/mule-checklist" class="btn btn-sm" style="background:#eee">🗓 {{ _('TO checklist') }}</a>
-        <a href="/equipment/new?device_id={{ dev.id }}" class="btn btn-primary btn-sm">+ {{ _('TO for this month') }}</a>
+        <a href="/equipment/mule-checklist" class="btn btn-sm" style="background:#eee">🗓 {{ _('OH checklist') }}</a>
+        <a href="/equipment/new?device_id={{ dev.id }}" class="btn btn-primary btn-sm">+ {{ _('OH for this month') }}</a>
     </div>
 </div>
 
@@ -17,8 +17,8 @@
         <div><small style="color:#888">{{ _('Serial Number') }}</small><div style="font-family:monospace;font-weight:700">{{ dev.serial_number or '—' }}</div></div>
         <div><small style="color:#888">{{ _('Model') }}</small><div>{{ dev.model_name or '—' }}</div></div>
         <div><small style="color:#888">{{ _('Installed on') }}</small><div>{{ dev.machine.name if dev.machine else '—' }}</div></div>
-        <div><small style="color:#888">{{ _('Last TO') }}</small><div>{{ last_to.strftime('%d.%m.%Y') if last_to else '—' }}</div></div>
-        <div><small style="color:#888">{{ _('Next TO') }}</small>
+        <div><small style="color:#888">{{ _('Last OH') }}</small><div>{{ last_to.strftime('%d.%m.%Y') if last_to else '—' }}</div></div>
+        <div><small style="color:#888">{{ _('Next OH') }}</small>
             <div style="font-weight:700;{% if next_to and next_to < next_to.today() %}color:#e74c3c{% else %}color:#27ae60{% endif %}">
                 {{ next_to.strftime('%d.%m.%Y') if next_to else '—' }}
             </div>
@@ -45,7 +45,7 @@
 <!-- ЗАКРЕПЛЁННЫЕ ЗАПЧАСТИ -->
 <div class="card" style="padding:16px;margin-top:12px">
     <h3 style="margin:0 0 12px">🧷 {{ _('Parts attached to this mule') }}</h3>
-    <p style="color:#888;font-size:12px;margin:0 0 10px">{{ _('Standard parts of this mule — one click adds them to the TO form.') }}</p>
+    <p style="color:#888;font-size:12px;margin:0 0 10px">{{ _('Standard parts of this mule — one click adds them to the OH form.') }}</p>
     {% if parts_catalog %}
     <div class="table-wrap">
         <table class="mule-table" style="width:100%">
@@ -96,7 +96,7 @@
 
 <!-- ИСТОРИЯ ТО -->
 <div class="card" style="padding:16px;margin-top:12px">
-    <h3 style="margin:0 0 12px">🔧 {{ _('TO history') }} ({{ records|length }})</h3>
+    <h3 style="margin:0 0 12px">🔧 {{ _('OH history') }} ({{ records|length }})</h3>
     {% if records %}
     <div class="table-wrap">
         <table class="mule-table" style="width:100%">

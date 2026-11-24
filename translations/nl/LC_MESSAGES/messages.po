@@ -6437,7 +6437,7 @@ msgstr "Vervang verbruiksartikelen volgens schema"
 msgid "Check hydraulics / pneumatics"
 msgstr "Controleer hydrauliek / pneumatiek"
 
-msgid "TO act + photos"
+msgid "OH act + photos"
 msgstr "Onderhoudsact + foto’s"
 
 msgid "Replace oils / greases per schedule"
@@ -6449,7 +6449,7 @@ msgstr "Controleer geometrie / uitlijning"
 msgid "Diagnose electric motors"
 msgstr "Diagnoseer elektromotoren"
 
-msgid "Full TO per manufacturer manual"
+msgid "Full OH per manufacturer manual"
 msgstr "Volledig onderhoud volgens handleiding"
 
 msgid "Replace worn assemblies"
@@ -7270,28 +7270,28 @@ msgid "Mule card"
 msgstr "Mule-kaart"
 
 #: templates/equipment_mule_card.html:0
-msgid "TO checklist"
-msgstr "TO-checklist"
+msgid "OH checklist"
+msgstr "OH-checklist"
 
 #: templates/equipment_mule_card.html:0
-msgid "TO for this month"
-msgstr "TO van deze maand"
+msgid "OH for this month"
+msgstr "OH van deze maand"
 
 #: templates/equipment_mule_card.html:0
 msgid "Passport"
 msgstr "Paspoort"
 
 #: templates/equipment_mule_card.html:0
-msgid "Last TO"
-msgstr "Laatste TO"
+msgid "Last OH"
+msgstr "Laatste OH"
 
 #: templates/equipment_mule_card.html:0
-msgid "Next TO"
-msgstr "Volgende TO"
+msgid "Next OH"
+msgstr "Volgende OH"
 
 #: templates/equipment_mule_card.html:0
-msgid "Standard parts of this mule — one click adds them to the TO form."
-msgstr "Vaste onderdelen van deze mule — één klik zet ze in het TO-formulier."
+msgid "Standard parts of this mule — one click adds them to the OH form."
+msgstr "Vaste onderdelen van deze mule — één klik zet ze in het OH-formulier."
 
 #: templates/equipment_mule_card.html:0
 msgid "Detach this part?"
@@ -7302,8 +7302,8 @@ msgid "Attach"
 msgstr "Koppelen"
 
 #: templates/equipment_mule_card.html:0
-msgid "TO history"
-msgstr "TO-geschiedenis"
+msgid "OH history"
+msgstr "OH-geschiedenis"
 
 #: templates/equipment_mule_card.html:0
 msgid "Previous"
@@ -7314,12 +7314,12 @@ msgid "mules done this month"
 msgstr "mules deze maand gedaan"
 
 #: templates/equipment_mule_card.html:0
-msgid "TO records this month"
-msgstr "TO-registraties deze maand"
+msgid "OH records this month"
+msgstr "OH-registraties deze maand"
 
 #: templates/equipment_mule_card.html:0
-msgid "A mule counts as done if it has at least one TO record dated this month."
-msgstr "Een mule telt als gedaan als er minstens één TO-registratie deze maand is."
+msgid "A mule counts as done if it has at least one OH record dated this month."
+msgstr "Een mule telt als gedaan als er minstens één OH-registratie deze maand is."
 
 #: templates/equipment_mule_card.html:0
 msgid "Part name required"
@@ -7452,3 +7452,6 @@ msgstr "aanbevolen op basis van voorraadniveau"
 #: templates/planning_load.html:0
 msgid "Red cell = plan on a day with a conflict."
 msgstr "Rode cel = planning op een dag met een conflict."
+
+msgid "Visible only to administrators, mechanics, director and head of technical service. Do not share outside."
+msgstr "Alleen zichtbaar voor beheerders, monteurs, directeur en hoofd technische dienst. Niet buiten delen."
