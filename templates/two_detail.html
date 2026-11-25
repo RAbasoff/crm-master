@@ -68,8 +68,9 @@
         {% if two.fault %}
         <p><strong>{{ _('Fault') }}:</strong> <a href="/faults/{{ two.fault_id }}">#{{ two.fault_id }} {{ two.fault.title }}</a></p>
         {% endif %}
-        {% if two.machine %}
-        <p><strong>{{ _('Machine') }}:</strong> <a href="/machines/{{ two.machine_id }}">{{ two.machine.name }}</a></p>
+        {% set _two_machine = two.machine or (two.fault.machine if two.fault else None) %}
+        {% if _two_machine %}
+        <p><strong>{{ _('Machine') }}:</strong> <a href="/machines/{{ _two_machine.id }}">{{ _two_machine.name }}</a></p>
         {% else %}
         <p><strong>{{ _('Machine') }}:</strong> <span style="color:#888">{{ _('Without machine') }}</span></p>
         {% endif %}

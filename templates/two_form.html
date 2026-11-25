@@ -19,6 +19,19 @@
             </div>
         </div>
 
+        <!-- MAIN MACHINE -->
+        <div class="card" style="background:#f0fff0;margin-bottom:16px;padding:16px">
+            <h3 style="font-size:14px;margin-bottom:12px">⚙️ {{ _('Machine') }}</h3>
+            <div class="form-group">
+                <select name="machine_id" id="machineSelect">
+                    <option value="">{{ _('Without machine') }}</option>
+                    {% for m in machines %}
+                    <option value="{{ m.id }}" {% if two and two.machine_id == m.id %}selected{% endif %}>{{ m.name }} ({{ m.machine_type or '?' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
         <!-- SECTIONS (DEPARTMENTS) -->
         <div class="card" style="background:#f0f7ff;margin-bottom:16px;padding:16px" id="sectionsBlock">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -323,6 +336,9 @@ function onFaultChange() {
         .then(d => {
             const desc = document.getElementById('descField');
             if (!desc.value) desc.value = `[${d.priority.toUpperCase()}] ${d.title}\n${d.description}`;
+            // Main machine field (TWO.machine_id)
+            const mainSel = document.getElementById('machineSelect');
+            if (mainSel && d.machine_id) mainSel.value = d.machine_id;
             // Auto-add machine if not already added
             if (d.machine_id) {
                 const existing = document.querySelectorAll('#machinesList select[name="machine_ids"]');

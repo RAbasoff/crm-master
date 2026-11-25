@@ -64,7 +64,8 @@
     <div class="section">
         <h2>{{ _('Work details') }}</h2>
         <div class="row">
-            <div class="col"><span class="label">{{ _('Machine') }}</span><div class="value">{{ two.machine.name if two.machine else '—' }}</div></div>
+            {% set _two_machine = two.machine or (two.fault.machine if two.fault else None) %}
+            <div class="col"><span class="label">{{ _('Machine') }}</span><div class="value">{{ _two_machine.name if _two_machine else '—' }}</div></div>
             <div class="col"><span class="label">{{ _('Section') }}</span><div class="value">{{ two.section.name if two.section else '—' }}</div></div>
             {% if two.fault %}<div class="col"><span class="label">{{ _('Fault') }}</span><div class="value">#{{ two.fault_id }} {{ two.fault.title }}</div></div>{% endif %}
         </div>

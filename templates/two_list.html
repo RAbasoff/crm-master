@@ -53,7 +53,7 @@
                         {% if a.section %}<span style="display:inline-block;padding:2px 6px;background:#e3f2fd;border-radius:4px;margin:1px;font-size:11px">🏗️ {{ a.section.name }}</span>{% endif %}
                         {% if a.machine %}<span style="display:inline-block;padding:2px 6px;background:#e8f5e9;border-radius:4px;margin:1px;font-size:11px">⚙️ {{ a.machine.name }}</span>{% endif %}
                     {% endfor %}
-                {% elif o.machine %}<a href="/machines/{{ o.machine_id }}">{{ o.machine.name }}</a>
+                {% elif o.machine or (o.fault and o.fault.machine) %}<a href="/machines/{{ (o.machine or o.fault.machine).id }}">{{ (o.machine or o.fault.machine).name }}</a>
                 {% elif o.section %}{{ o.section.name }}
                 {% else %}—{% endif %}
             </td>
@@ -130,7 +130,7 @@
                         {% if a.section %}<span style="display:inline-block;padding:2px 6px;background:#e3f2fd;border-radius:4px;margin:1px;font-size:11px">🏗️ {{ a.section.name }}</span>{% endif %}
                         {% if a.machine %}<span style="display:inline-block;padding:2px 6px;background:#e8f5e9;border-radius:4px;margin:1px;font-size:11px">⚙️ {{ a.machine.name }}</span>{% endif %}
                     {% endfor %}
-                {% elif o.machine %}<a href="/machines/{{ o.machine_id }}">{{ o.machine.name }}</a>
+                {% elif o.machine or (o.fault and o.fault.machine) %}<a href="/machines/{{ (o.machine or o.fault.machine).id }}">{{ (o.machine or o.fault.machine).name }}</a>
                 {% elif o.section %}{{ o.section.name }}
                 {% else %}—{% endif %}
             </td>

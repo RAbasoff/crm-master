@@ -169,10 +169,14 @@ def two_list():
 def two_new():
     if request.method == 'POST':
         fault_id = safe_int(request.form.get('fault_id')) or None
+        machine_id = safe_int(request.form.get('machine_id')) or None
+        if not machine_id and fault_id:
+            _fr = FaultReport.query.get(fault_id)
+            machine_id = (_fr.machine_id if _fr else None)
         two = TechnicalWorkOrder(
             number=gen_two_number(),
             fault_id=fault_id,
-            machine_id=safe_int(request.form.get('machine_id')) or None,
+            machine_id=machine_id,
             section_id=safe_int(request.form.get('section_id')) or None,
             description=request.form['description'],
             additional_work=request.form.get('additional_work', ''),
@@ -698,8 +702,15 @@ def two_edit(two_id):
             flash(_('Record is being edited by %(user)s. Try again later.', user=lock_info.get('user_name', '?')), 'error')
             return redirect(url_for('two.two_detail', two_id=two_id))
         two.fault_id = safe_int(request.form.get('fault_id')) or None
-        two.machine_id = safe_int(request.form.get('machine_id')) or None
-        two.section_id = safe_int(request.form.get('section_id')) or None
+        # Машину НЕ стираем при сохранении: пустое поле = оставить как есть,
+        # а если её нет — подтянуть из заявки (иначе форма без select убивала machine_id).
+        _mid = safe_int(request.form.get('machine_id'))
+        if _mid:
+            two.machine_id = _mid
+        elif not two.machine_id and two.fault:
+            two.machine_id = two.fault.machine_id
+        two.section_id = safe_int(request.form.get('section_id')) or two.section_id or (
+            two.fault.machine.section_id if two.fault and two.fault.machine else None)
         two.description = request.form['description']
         two.additional_work = request.form.get('additional_work', '')
         two.planned_date = (d := safe_date(request.form.get('planned_date'))) and d.date() or None
