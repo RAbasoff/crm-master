@@ -116,6 +116,7 @@
 <script src="/static/js/three.min.js"></script>
 <script src="/static/js/OrbitControls.js"></script>
 <script src="/static/js/machine_models.js"></script>
+<script src="/static/js/air_network.js"></script>
 <script>
 (function () {
     // Фабрика: реальные метры (Moeskroen — из чертежа DWG)
@@ -172,10 +173,29 @@
     const LSK = (MAP_MODE === 'moeskroen') ? 'map3d_design_moeskroen' : 'map3d_design';
     const design = { walls: [], gates: [], pipes: [], valves: [], machines: [], hidden: {} };
     const airGroup = new THREE.Group();   // воздуховоды
+    const airNetGroup = new THREE.Group(); // разводка сжатого воздуха (магистраль + спуски)
     const wallsGroup = new THREE.Group(); // стены + проходы
     const ceilGroup = new THREE.Group();  // потолок
     const labelGroup = new THREE.Group();
-    scene.add(root); scene.add(machinesGroup); scene.add(airGroup); scene.add(wallsGroup); scene.add(ceilGroup); scene.add(labelGroup);
+    scene.add(root); scene.add(machinesGroup); scene.add(airGroup); scene.add(airNetGroup); scene.add(wallsGroup); scene.add(ceilGroup); scene.add(labelGroup);
+
+    // разводка сжатого воздуха: кольцо + ветки из расчёта, спуски — автоматически
+    let AIR_NET = null;
+    if (MAP_MODE === 'moeskroen') {
+        fetch('/static/moeskroen_air_network.json').then(function (r) {
+            return r.json();
+        }).then(function (n) {
+            AIR_NET = n;
+            if (window.AirNetwork) window.AirNetwork.setNetwork(n);
+            rebuildAirNet();
+        }).catch(function () {});
+    }
+    function rebuildAirNet() {
+        if (!window.AirNetwork || !window.AirNetwork.getNetwork()) return;
+        while (airNetGroup.children.length) airNetGroup.remove(airNetGroup.children[0]);
+        const ag = window.AirNetwork.rebuild(THREE, design.machines);
+        while (ag.children.length) airNetGroup.add(ag.children[0]);
+    }
 
     // ── Потолок: полупрозрачная плита + лёгкая сетка ──
     const ceilPlane = new THREE.Mesh(new THREE.PlaneGeometry(W, D),
@@ -1422,6 +1442,7 @@
                 wallsLayer.add(m);
             });
         });
+        rebuildAirNet();
         rebuildMachineList();
         try { localStorage.setItem(LSK, JSON.stringify(design)); } catch (e) {}
         saveDesignToServer();

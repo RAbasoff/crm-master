@@ -572,7 +572,30 @@
         cyl(g, 0.07, 0.05, 0.62, 0.96, 0.46, MAT.red, 'z');
     }, { w: 1.2, d: 0.9, h: 2.3 });
 
-    // ---- style resolution -------------------------------------------------
+    // ---- style resolution + air demand ------------------------------------
+    // Researched per-model figures (docs/СПРАВОЧНИК_ПОТРЕБЛЕНИЯ_СТАНКОВ.md).
+    // Only the consumers are listed; everything else is 0.
+    // NOTE: `norm()` collapses punctuation to single spaces, so patterns must
+    // match normalised text ("CAVECO - 2" -> "caveco 2").
+    var AIR = [
+        [/(caveco [2345]|caveco skin|skin machine|^ypsilon|ypsilon$)/, 45],
+        [/(magic|caveco 1)/, 30],
+        [/(penta)/, 18],
+        [/(meat slicer|nock|mbc)/, 6],
+        [/(ishida|weger)/, 6],
+        [/(verbufa|spie)/, 4],
+        [/(oktopus|octopus)/, 3.6],
+        [/(pro ?seal)/, 3],
+        [/(vulbus|hp30|vemag hp)/, 2.4],
+        [/(klips)/, 2.4],
+        [/(loma|metaaldetector|md304|q4w45|iq4)/, 2.5],
+        [/(guilloit|guillot)/, 2],
+        [/(bandall|bander)/, 0.9],
+        [/(snelport|dynaco)/, 0.6],
+        [/(vs227|worstmachine)/, 0.5],
+        [/(fm250|hamburger vorm)/, 0.5]
+    ];
+
     function norm(s) {
         return (s || '').toString().toLowerCase()
             .replace(/u0308/g, '')
@@ -583,6 +606,15 @@
             .replace(/[ïî]/g, 'i')
             .replace(/[^a-z0-9]+/g, ' ')
             .trim();
+    }
+
+    function airDemand(m) {
+        m = m || {};
+        var hay = norm([m.name, m.manufacturer, m.machine_type || m.type, m.model].join(' '));
+        for (var i = 0; i < AIR.length; i++) {
+            if (AIR[i][0].test(hay)) return AIR[i][1];
+        }
+        return 0;
     }
 
     // order matters: most specific patterns first
@@ -684,6 +716,7 @@
     global.MachineModels = {
         build: build,
         styleFor: styleFor,
+        airDemand: airDemand,
         footprint: footprint,
         styles: function () { return Object.keys(BUILDERS); },
         materials: MAT

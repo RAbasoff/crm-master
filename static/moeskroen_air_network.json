@@ -1,0 +1,652 @@
+{
+ "design": {
+  "p_set_bar": 8.0,
+  "p_min_bar": 7.0,
+  "p_work_bar": 7.5,
+  "total_fad_m3h": 323.7,
+  "total_q_l_s_compressed": 10.7,
+  "ring_dn": "DN65",
+  "ring_d_mm": 68.9,
+  "ring_length_m": 251.4,
+  "ring_dp_bar": 0.0315,
+  "dp_pipes_worst_bar": 0.0577,
+  "dp_budget_bar": 1.0
+ },
+ "compressor": {
+  "x": 32.0,
+  "z": -25.0,
+  "room_w": 9.0,
+  "room_d": 8.0
+ },
+ "ring": [
+  [
+   -35.55,
+   -27.3
+  ],
+  [
+   35.55,
+   -27.3
+  ],
+  [
+   35.55,
+   27.3
+  ],
+  [
+   -35.55,
+   27.3
+  ],
+  [
+   -35.55,
+   -27.3
+  ]
+ ],
+ "branches": [
+  {
+   "zone": "Koude Bereiding",
+   "anchor": [
+    -13.0,
+    27.3
+   ],
+   "end": [
+    -13.0,
+    24.3
+   ],
+   "length_m": 3.0,
+   "fad_m3h": 134.2,
+   "q_m3s": 0.00444,
+   "dn": "DN25",
+   "d_mm": 27.3,
+   "v_m_s": 7.58,
+   "dp_bar": 0.0076,
+   "machines": [
+    "Vulbus 1 (FILLER)",
+    "Vulbus 2 (FILLER)",
+    "Worst snij machine CUTTING MACHINE",
+    "Worstmachine",
+    "Gehaaktmachine",
+    "Hamburger vormmachine",
+    "Hamburgermachine",
+    "Kleine hamburger machine",
+    "Guilloitinemachine",
+    "Klipsmachine",
+    "SPIE-machine Verbufa",
+    "Magic",
+    "CAVECO - 2",
+    "CAVECO - 3"
+   ]
+  },
+  {
+   "zone": "Warm inpak",
+   "anchor": [
+    6.0,
+    -27.3
+   ],
+   "end": [
+    6.0,
+    -24.3
+   ],
+   "length_m": 3.0,
+   "fad_m3h": 99.0,
+   "q_m3s": 0.00327,
+   "dn": "DN25",
+   "d_mm": 27.3,
+   "v_m_s": 5.59,
+   "dp_bar": 0.0043,
+   "machines": [
+    "ProSeal",
+    "ISHIDA",
+    "CAVECO - 4",
+    "CAVECO - 5",
+    "TREIF Argon",
+    "TREIF Argon+",
+    "MHS Slicer Portion Cutter"
+   ]
+  },
+  {
+   "zone": "Warme Bereiding",
+   "anchor": [
+    -35.55,
+    -12.0
+   ],
+   "end": [
+    -32.55,
+    -12.0
+   ],
+   "length_m": 3.0,
+   "fad_m3h": 6.0,
+   "q_m3s": 0.0002,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "v_m_s": 0.97,
+   "dp_bar": 0.0003,
+   "machines": [
+    "BOLDT",
+    "Ghunter Trommel 1",
+    "Ghunter trommel 2",
+    "Rhule menger",
+    "Lift Gunter",
+    "Lift Seydelman",
+    "Meat slicer",
+    "STEEN"
+   ]
+  },
+  {
+   "zone": "Logistiek",
+   "anchor": [
+    35.55,
+    6.0
+   ],
+   "end": [
+    32.55,
+    6.0
+   ],
+   "length_m": 3.0,
+   "fad_m3h": 15.3,
+   "q_m3s": 0.00051,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "v_m_s": 2.48,
+   "dp_bar": 0.0018,
+   "machines": [
+    "Oktopus MAX [1]",
+    "Oktopus MAX [2]",
+    "Oktopus MAX [3]",
+    "Oktopus MAX [4]",
+    "BAND ALL"
+   ]
+  },
+  {
+   "zone": "IQF",
+   "anchor": [
+    -32.0,
+    27.3
+   ],
+   "end": [
+    -29.0,
+    27.3
+   ],
+   "length_m": 3.0,
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN20",
+   "d_mm": 21.7,
+   "v_m_s": 0.0,
+   "dp_bar": 0.0,
+   "machines": [
+    "Vriestoennel "
+   ]
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "anchor": [
+    20.0,
+    27.3
+   ],
+   "end": [
+    20.0,
+    24.3
+   ],
+   "length_m": 3.0,
+   "fad_m3h": 68.0,
+   "q_m3s": 0.00225,
+   "dn": "DN20",
+   "d_mm": 21.7,
+   "v_m_s": 6.08,
+   "dp_bar": 0.0067,
+   "machines": [
+    "CAVECO Skin",
+    "PentaVac",
+    "Vacuumü¼m machine CRETEL",
+    "Vacuumü¼m machine WB Henkelman Polar 80",
+    "Metaaldetector IQ4",
+    "LOMA metaaldetector"
+   ]
+  }
+ ],
+ "drops": [
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Vulbus 1 (FILLER)",
+   "fad_m3h": 2.4,
+   "q_m3s": 8e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Vulbus 2 (FILLER)",
+   "fad_m3h": 2.4,
+   "q_m3s": 8e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Worst snij machine CUTTING MACHINE",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Worstmachine",
+   "fad_m3h": 0.5,
+   "q_m3s": 2e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Gehaaktmachine",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Hamburger vormmachine",
+   "fad_m3h": 0.5,
+   "q_m3s": 2e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Hamburgermachine",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Kleine hamburger machine",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Guilloitinemachine",
+   "fad_m3h": 2.0,
+   "q_m3s": 7e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Klipsmachine",
+   "fad_m3h": 2.4,
+   "q_m3s": 8e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "SPIE-machine Verbufa",
+   "fad_m3h": 4.0,
+   "q_m3s": 0.00013,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0002
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "Magic",
+   "fad_m3h": 30.0,
+   "q_m3s": 0.00099,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0085
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "CAVECO - 2",
+   "fad_m3h": 45.0,
+   "q_m3s": 0.00149,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0186
+  },
+  {
+   "zone": "Koude Bereiding",
+   "machine": "CAVECO - 3",
+   "fad_m3h": 45.0,
+   "q_m3s": 0.00149,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0186
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "ProSeal",
+   "fad_m3h": 3.0,
+   "q_m3s": 0.0001,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "ISHIDA",
+   "fad_m3h": 6.0,
+   "q_m3s": 0.0002,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0004
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "CAVECO - 4",
+   "fad_m3h": 45.0,
+   "q_m3s": 0.00149,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0186
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "CAVECO - 5",
+   "fad_m3h": 45.0,
+   "q_m3s": 0.00149,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0186
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "TREIF Argon",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "TREIF Argon+",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warm inpak",
+   "machine": "MHS Slicer Portion Cutter",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "BOLDT",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "Ghunter Trommel 1",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "Ghunter trommel 2",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "Rhule menger",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "Lift Gunter",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "Lift Seydelman",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "Meat slicer",
+   "fad_m3h": 6.0,
+   "q_m3s": 0.0002,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0004
+  },
+  {
+   "zone": "Warme Bereiding",
+   "machine": "STEEN",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Logistiek",
+   "machine": "Oktopus MAX [1]",
+   "fad_m3h": 3.6,
+   "q_m3s": 0.00012,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0002
+  },
+  {
+   "zone": "Logistiek",
+   "machine": "Oktopus MAX [2]",
+   "fad_m3h": 3.6,
+   "q_m3s": 0.00012,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0002
+  },
+  {
+   "zone": "Logistiek",
+   "machine": "Oktopus MAX [3]",
+   "fad_m3h": 3.6,
+   "q_m3s": 0.00012,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0002
+  },
+  {
+   "zone": "Logistiek",
+   "machine": "Oktopus MAX [4]",
+   "fad_m3h": 3.6,
+   "q_m3s": 0.00012,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0002
+  },
+  {
+   "zone": "Logistiek",
+   "machine": "BAND ALL",
+   "fad_m3h": 0.9,
+   "q_m3s": 3e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "IQF",
+   "machine": "Vriestoennel ",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "machine": "CAVECO Skin",
+   "fad_m3h": 45.0,
+   "q_m3s": 0.00149,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0186
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "machine": "PentaVac",
+   "fad_m3h": 18.0,
+   "q_m3s": 0.0006,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0032
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "machine": "Vacuumü¼m machine CRETEL",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "machine": "Vacuumü¼m machine WB Henkelman Polar 80",
+   "fad_m3h": 0.0,
+   "q_m3s": 0.0,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "machine": "Metaaldetector IQ4",
+   "fad_m3h": 2.5,
+   "q_m3s": 8e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  },
+  {
+   "zone": "Koude opslag / verpakking",
+   "machine": "LOMA metaaldetector",
+   "fad_m3h": 2.5,
+   "q_m3s": 8e-05,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 4.0,
+   "dp_bar": 0.0001
+  }
+ ],
+ "aux": [
+  {
+   "machine": "Snelport koude bereiding 1",
+   "anchor": [
+    -35.55,
+    0.0
+   ],
+   "fad_m3h": 0.6,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 3.0,
+   "dp_bar": 0.0
+  },
+  {
+   "machine": "Snelport Warm Inpak",
+   "anchor": [
+    0.0,
+    -27.3
+   ],
+   "fad_m3h": 0.6,
+   "dn": "DN15",
+   "d_mm": 16.1,
+   "length_m": 3.0,
+   "dp_bar": 0.0
+  }
+ ],
+ "budget": {
+  "aftercooler + wet receiver": 0.05,
+  "desiccant dryer (heated blower)": 0.15,
+  "filter train (prefilter + coalescer + carbon)": 0.12,
+  "ring main + branches + drops": 0.45,
+  "POU regulator + sterile filter": 0.15,
+  "margin": 0.08
+ }
+}
