@@ -404,3 +404,17 @@ a015993 — 2026-11-23 — Push: No module named 'attr' — attrs поставл
   Модалка редактирования (пароль не сбрасывается при пустом поле); edit/delete — только админ,
   просмотр — техники/директор/начальник ТС. ТО van deze maand → OH van deze maand и все
   связанные строки (nl/ru) под номера OH-YYYYMMDD-NNNN. Smoke: passwords 24/24, OH 10/10.
+b489326 — 2026-11-25 — Уведомления планирования: check_planning_reminders в ежедневной задаче (7:00)
+
+57918c8 — 2026-11-25 — Fix: кнопка редактирования в Passwords не открывала модалку
+
+2c26b00 — 2026-11-25 — TWO: машина в наряде пропадала — two_form без machine_id затирал её при сохранении
+  two_form: select Machine (из заявки); two_edit: пустое поле не стирает машину; two_new наследует от заявки.
+  two_detail/two_print/two_list: без машины — из заявки. Smoke 5/5.
+
+27cad73 — 2026-11-26 — Push: телефон молчит — venv на PA не видел idna/requests; заявителю не шлась ПАУЗА с причиной
+  Корень на PA: web-процесс (uWSGI/venv) не видит системные site-packages, pip --user ставил мимо
+  (aiohttp 14.11 → attr 23.11 → idna 24.11). push.py: + системные site-packages текущей версии python.
+  app.py push.health: sys.executable=uwsgi — авто-установка брала не python и игнорировала ошибки pip.
+  faults: заявителю ПАУЗА (причина человекочитаемая + комментарий), раньше только директору.
+  logs.py: сбой push-диспетчеризации в лог. Smoke 11/11 локально.
