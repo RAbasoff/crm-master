@@ -1,0 +1,92 @@
+Сессия 018 — 02.10.2026
+Проект: CRM Мастерская (ProMaster Version 2.11)
+Ветка: master (25d4bdc, 6f65696 — задеплоены)
+Статус: пользователь подтвердил работу TWO после деплоя.
+
+============================================================
+ЗАДАЧИ СЕССИИ
+============================================================
+
+1. P0-фиксы из аудита (сессия 017)
+   - delete-orphan (склад/наряды): MachineConsumable, Opdracht.mutaties
+     — убран delete-orphan, история движений склада сохраняется.
+   - Whitelist загрузок: уже было готово (save_uploaded_file).
+   - _verify_p0.py — ALL PASS.
+
+2. Регулятор давления в Водоснабжении и Сжатом воздухе
+   - models.py: POINT_TYPES (connection|regulator|valve|filter|meter),
+     колонка point_type в AirConnectionPoint / WaterConnectionPoint.
+   - schema.py: CREATE TABLE + ALTER-миграции (cols+2).
+   - Формы и списки air/water: select типа, колонка «Тип» с иконками.
+   - i18n: RU/NL/PL/EN ключи (Connection, Pressure regulator, Valve, Meter…).
+
+3. TWO — работы терялись / не печатались (TWO-20261002-0001 на PA)
+   ПРИЧИНЫ:
+   a) two_form.html: loop.parent.index0 — в Jinja2 LoopContext нет атрибута
+      parent → 500 при открытии редактирования наряда с работами
+      (пользователь видел «страница не найдена»).
+      FIX: {% set aidx = loop.index0 %}.
+   b) section_work_N / machine_work_N: индексы формы не совпадали с
+      enumerate() в Python; работы из блоков без выбранного отдела/станка
+      молча выбрасывались (if not sid: continue).
+      FIX: работы без отдела/станка идут в общий чек-лист.
+   c) two_print.html: блоки Departments/Machines/Checklist отсутствовали
+      вообще — при печати работы не показывались.
+      FIX: добавлены блоки с таблицами и галочками ☑/☐.
+   d) two_detail.html: selectattr('section_id') терял назначения без
+      section_id. FIX: rejectattr('machine_id').
+   e) two_edit / checklist / complete: роль director давала 404.
+      FIX: admin, director, technician везде.
+   f) Фото: отклонённый файл молча пропадал.
+      FIX: flash «File type not allowed».
+
+4. Список TWO — группировка по месяцам/годам
+   - Месяцы (Август, Сентябрь…) сворачиваются; при смене года — заголовок
+     года, под ним месяцы. Пустые месяцы не отображаются.
+
+5. Доступ механиков по рабочему графику
+   - utils.py: is_user_at_work(user) — WorkSchedule (work_days, shift),
+     WeekendShift (off/sick), утверждённый отпуск; без графика Пн-Пт 08-17.
+   - user_schedule_restricted: technician + профиль Monteur; admin/director
+     не ограничиваются.
+   - app.py before_request: вне часов → /work-hours-block с сообщением
+     «ПРОГРАММА ДОСТУПНА ТОЛЬКО В РАБОЧИЕ ЧАСЫ СОГЛАСНО ВАШЕГО ГРАФИКА».
+
+6. Уведомление механику о назначенном наряде
+   - При входе: если есть открытый TWO (two_workers), показ страницы
+     me_order_notice.html с кнопкой ОК → переход на /two/<id>.
+
+7. Авто-выход при бездействии
+   - Механики: сессия > 10 минут без запросов → logout,
+     flash «Сессия завершена из-за бездействия. Войдите снова.»
+
+============================================================
+КОММИТЫ (задеплоены на PA)
+============================================================
+25d4bdc  fix: TWO — checklist works on edit, print, month grouping, director
+6f65696  feat: work-hours access, order notice, idle logout,
+         pressure regulator air/water, P0 fixes
+
+PA: git pull origin master + Web → Reload. Пользователь подтвердил:
+«TWO редактируется и печатается нормально».
+
+============================================================
+ПРОВЕРКИ
+============================================================
+- _verify_p0.py: ALL PASS (12/12).
+- TWO e2e: create → edit → print, все работы сохраняются.
+- Регулятор: air/water формы и списки, миграция cols+2.
+- Пользователь: TWO на PA работает.
+
+============================================================
+ОСТАЛОСЬ / ЗАМЕЧАНИЯ
+============================================================
+- Мусор в корне не трогали: _gen_water*.py, _run_local.py, _scan_i18n.py,
+  _tmp_pa_smoke.py, server_err/out.txt (см. C10 из аудита 017).
+- Сменить admin/admin123 на проде (B8 из аудита 017) — проверить на PA.
+- Alembic / убрать мутации из import (B2, B3) — планово.
+- В локальной БД тестовые TWO удалялись; на PA ничего не чистилось.
+- Доступ по графику и idle-logout задеплоены, но на PA не проверялись
+  вживую — попросить механика проверить вход/выход.
+
+Сессия 018 — 02.10.2026 — КОНЕЦ

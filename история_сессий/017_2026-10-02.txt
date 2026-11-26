@@ -1,0 +1,260 @@
+Сессия 017 — 02.10.2026
+Проект: CRM Мастерская (ProMaster Version 2.11)
+Ветка: master (после 44ae973)
+ЗАДАЧА: Ревью / аудит кода (без изменений в коде)
+
+Метод: 3 параллельных агента — безопасность, архитектура/качество, баги/прод-риски.
+Осмотрены: app.py, models.py, schema.py, utils.py, security.py, config.py,
+logs.py, pdf_utils.py, ~20 blueprints, ключевые шаблоны, offline JS, тесты.
+
+============================================================
+СВОДКА: ТОП-7 ЧИНИТЬ СРАЗУ
+============================================================
+1. delete-orphan удаляет данные склада и нарядов (models.py)
+2. utils.py:280 — NameError _() → 500 на /tool-wear при износе >=80%
+3. Загрузка файлов без whitelist → stored XSS в /static/uploads
+4. section_access_required НЕ используется — обход прав групп
+5. ChangeMe!123 — хардкод паролей bootstrap
+6. Гонка номеров документов (TWO-/заказы) — дубликаты
+7. Оффлайн-очередь: дубли и потеря записей
+
+============================================================
+A. БЕЗОПАСНОСТЬ
+============================================================
+
+A1 [HIGH] Загрузка файлов → stored XSS
+  machines.py:411-413, electricity.py:314-316,362-364, maintenance.py:858-865,
+  faults.py:95-103, two.py:124, equipment.py:503, moeskroen.py:167-180
+  — только secure_filename, БЕЗ whitelist расширений.
+  utils.py:55-60: ALLOWED_UPLOAD_EXT допускает .svg
+  Файлы в static/uploads/ (config.py:54) — публично, без auth, same-origin.
+  Любой с правами загрузки кладёт x.html/x.svg с JS → кража CSRF/сессии.
+  FIX: все загрузки через save_uploaded_file; убрать .svg/.html;
+       отдавать через auth-роут send_from_directory + nosniff.
+
+A2 [HIGH] Права групп не проверяются на роутах
+  security.py:73 section_access_required — НИГДЕ не применён.
+  Inline-проверки только: air.py:40, water.py:40, gas.py:98,
+  electricity.py:22, tool_wear.py:125.
+  Остальное (warehouse, machines, faults, users, invoices, reports,
+  settings) — только @role_required. Скрытие в UI — не защита.
+  FIX: @section_access_required на все роуты или before_request-маппинг.
+
+A3 [HIGH] Хардкод bootstrap-паролей
+  app.py:313,335,337,344, schema.py:1060 → 'ChangeMe!123'
+  если не заданы BOOTSTRAP_ADMIN_PW / BOOTSTRAP_DIRECTOR_PW / DEFAULT_USER_PW.
+  FIX: падать при старте без env, или secrets.token_urlsafe(12) +
+       принудительная смена при первом входе.
+
+A4 [MEDIUM] Open redirect после логина
+  app.py:700-705, 734-739 — проверка netloc обходится:
+  next=https:/evil.com, next=/\evil.com
+  FIX: только относительные пути: startswith('/') and not startswith('//').
+
+A5 [MEDIUM] XSS в scanner-шаблонах (innerHTML без esc())
+  warehouse_scan.html:99,140,154,160; machine_scan.html:98,161;
+  universal_scanner.html:80,87-89; gas/dashboard.html:432,448,470;
+  gas/cylinder_scan.html:147
+  FIX: везде esc()-хелпер как в qr_scan.html:35.
+
+A6 [MEDIUM] Группа может создать админа
+  models.py:441-446 (ResponsibleAuth): роль берётся из
+  ResponsibleGroup.access_level, который может быть 'admin' (models.py:362).
+  FIX: клэмп ролей до ('director','technician','user').
+
+A7 [MEDIUM] Нет hardening cookie сессии
+  Нет SESSION_COOKIE_SECURE / SAMESITE / REMEMBER_COOKIE_* (config.py).
+  login_user(remember=True) всегда (app.py:676,720).
+  FIX: SECURE=True, SAMESITE='Lax', REMEMBER_COOKIE_SECURE/HTTPONLY,
+       PERMANENT_SESSION_LIFETIME.
+
+A8 [MEDIUM] Слабая защита от брутфорса
+  app.py:634-653 — in-memory счётчик 10/5 мин: теряется при рестарте,
+  per-process (gunicorn workers обходят), нет lockout аккаунта.
+  FIX: счётчики в БД/Redis, блокировка аккаунта.
+
+A9 [LOW] Политика паролей только для self-service
+  users.py:186,231-233,89-95 — админ ставит любой пароль;
+  app.py:789,808 — только >=8 при смене самим.
+  FIX: общий validate_password().
+
+A10 [LOW] app.py:752 — flash сырого исключения клиенту.
+A11 [LOW] logout GET (app.py:756) + нет session.clear() (app.py:762).
+A12 [LOW] app.py:1494 debug=True, host='0.0.0.0' (только __main__).
+A13 [LOW] WTF_CSRF_TIME_LIMIT=7 дней (app.py:47), SSL_STRICT=False (app.py:48).
+
+A14 [INFO] SQL injection — НЕ найден. Raw SQL статичный/параметризованный.
+A15 [INFO] Секретов в репо нет (EMAIL_CONFIG.txt и ПАРОЛИ — доки, gitignored).
+       password_plain стирается. pickle/eval/CORS/command-injection — нет.
+       IDOR spot-check (messages, chat, schedule, offline) — корректно.
+       CSRFProtect на всех роутах, csrf.exempt нет.
+
+============================================================
+B. АРХИТЕКТУРА / КАЧЕСТВО
+============================================================
+
+B1 [CRITICAL] delete-orphan съедает склад
+  models.py:557 WarehouseGroup.items cascade='all, delete-orphan'
+  warehouse.py:68-74: item.group_id=None → delete group
+  → delete-orphan УДАЛЯЕТ все items + историю движений.
+  То же models.py:335-336 MachineConsumable (оба backref).
+  FIX: убрать delete-orphan, явный SET NULL.
+
+B2 [CRITICAL] Миграции только SQLite + бегут на import
+  schema.py:139,41-52, app.py:234-266 — хардкод instance/werkplaats.db
+  через raw sqlite3. При DATABASE_URL MySQL — тихий no-op,
+  data-миграции гоняются на КАЖДОМ boot воркера.
+  schema.py (1461 строк) — дубль DDL из models.py. Alembic не используется
+  (migrations/versions пуст).
+  FIX: Alembic-ревизии, убрать hand-rolled DDL, не мутить схему в import.
+
+B3 [CRITICAL] Startup мутит auth-состояние
+  app.py:279-357,371-379: роли, пароли ChangeMe!123, удаление тестовых
+  юзеров — на import и в before_request. Гонка gunicorn-воркеров.
+  app.py:137-149: комментарий про WAL, а journal_mode=DELETE;
+  app.py:237-244 удаляет -wal/-shm на старте → порча живой БД.
+  FIX: flask init CLI-команда.
+
+B4 [CRITICAL] Гонка номеров документов
+  utils.py:39-48 genereer_nummer(), two.py:21-28, equipment.py:19-32
+  SELECT max + format, UNIQUE на number нет → дубли.
+  FIX: UNIQUE + retry или sequence-таблица.
+
+B5 [HIGH] utils.py:280-284 NameError — _() без импорта
+  check_tool_wear_notifications() падает при износе >=80% → 500 /tool-wear.
+  FIX: from flask_babel import gettext as _
+
+B6 [HIGH] Бэкап живого SQLite через shutil.copy2 (app.py:197)
+  — рваная копия под записью. FIX: sqlite3.Connection.backup().
+
+B7 [HIGH] Частичные коммиты / нет транзакционной дисциплины
+  maintenance.py:340,356,380,422,438,450 — голый commit;
+  maintenance.py:458-462 flash(str(e)[:100]) — утечка внутренностей;
+  schema.py:1060-1072 — коммит на юзера/группу, не атомарно.
+
+B8 [HIGH] Тесты — smoke по проду
+  test_all_modules.py:4-8, test_e2e_roles.py:5 →
+  https://rabasoff.pythonanywhere.com с admin/admin123 В РЕПО.
+  FIX: срочно сменить пароль! Переписать на app.test_client().
+
+B9 [HIGH] Deploy split-brain
+  DEPLOY.md (PythonAnywhere) vs Procfile/railway.json (Railway) vs
+  wsgi.py:9 хардкод /home/rabasoff/crm-master.
+  requirements.txt: смешанные пины, gunicorn==21.2.0 старый.
+
+B10 [MEDIUM] God-files: models.py 1734 стр / 89 классов, schema.py 1461,
+  app.py 1494 (index() 993-1110: ~10 запросов + цикл COUNT по месяцам),
+  maintenance.py 63KB. Регистрация блюпринтов — 30 copy-paste (app.py:53-128).
+
+B11 [MEDIUM] air.py vs water.py — клоны 352 строки.
+  Магические строки статусов ('open','accepted','in_progress'...)
+  role_required(...) повторён 274 раза.
+
+B12 [MEDIUM] N+1: context_processor — 2 COUNT + chat на КАЖДЫЙ запрос
+  (app.py:412-434); User.has_section_access до 4 запросов (models.py:81-120);
+  check_tool_wear_notifications — commit на уведомление.
+
+B13 [MEDIUM] request.form['...'] ~90 мест (machines.py:55, two.py:54...) → 400.
+  Нет индексов: MaintenancePlan.machine_id, MachineDocument.machine_id,
+  TechnicalWorkOrder.created_by.
+
+B14 [MEDIUM] Логирования нет — только print() (app.py:201,242,255, schema.py).
+  logs.py:21,45,63 глотают все исключения.
+
+B15 [LOW] User.password_plain (models.py:33) — выпилить.
+  ResponsibleAuth (models.py:427) дублирует логику паролей.
+  translate_text/send_email молча глотают ошибки (utils.py:83, app.py:224).
+  SimpleCache per-process (app.py:166).
+
+============================================================
+C. БАГИ / ПРОД-РИСКИ
+============================================================
+
+C1 [CRITICAL] Cascade delete трудовой истории
+  models.py:505 Monteur.opdrachten cascade='all, delete-orphan'
+  models.py:415 Verantwoordelijke.opdrachten — то же
+  workers.py:91 db.session.delete(w) → тихо удаляет ВСЕ Opdrachten
+  и движения склада (models.py:1088 cascade).
+  responsible.py:318-325: «orphaned»-комментарий неверен — cascade их ест.
+  FIX: nullify/passive_deletes или reassign перед удалением.
+
+C2 [HIGH] Оффлайн: гонка и потеря
+  offline.py:46-61 find_mutation→create без UNIQUE по client_id →
+  параллельный replay = два документа. remember_mutation глотает
+  исключения (60-61) → дубль при следующем replay.
+  offline-queue.js:528-536: после 5 попыток status='error', но
+  getAllPending (55-57) берёт только 'pending' → error-элементы
+  никогда не ретраятся и не показываются (renderQueuePanel:135).
+  replayOne CSRF-retry (471-478) рекурсия без лимита.
+  FIX: INSERT ON CONFLICT(client_id); показывать error с retry.
+
+C3 [HIGH] orders.py:50-52 — при safe_commit()==False redirect
+  на order_detail с o.id=None → BuildError 500.
+  FIX: retry-on-IntegrityError; redirect в список при o.id is None.
+
+C4 [MEDIUM] ResponsibleAuth.id — строка "r_5" в Integer-колонки
+  models.py:431, logs.py:15,28-30 (AuditLog.user_id, UserActivityLog.user_id),
+  app.py:1032 (FaultReport.reporter_id).
+  SQLite коэрцит, MySQL strict → 500 на audit-log.
+  FIX: person_id/None если isinstance(id, str).
+
+C5 [MEDIUM] Невалидный ввод → 500
+  reports.py:478 strptime(df) из query; invoices.py:34,89 strptime;
+  orders.py:40 request.form['klant_id'] KeyError;
+  export.py:66 int(item_id); settings.py:225,240 int(pid).
+  FIX: safe_date / safe_int / .get().
+
+C6 [MEDIUM] reports.py:160 — месячная статистика теряет февраль
+  (utcnow().replace(day=1) - timedelta(days=i*30)).replace(day=1)
+  FIX: dateutil.relativedelta(months=i).
+
+C7 [MEDIUM] Email: app.py:204-231 порт 587 хардкод (доки говорят 465
+  для Яндекс/Mail.ru — тихий фейл), нет SMTP_PORT, исключения съедены,
+  subject/body RU-хардкод (faults.py:137-142), хост
+  rabasoff.pythonanywhere.com зашит.
+
+C8 [MEDIUM] Import-time side effects: app.py:234-278 бэкапы, create_all,
+  миграции, ensure_fpdf() (pdf_utils.py:48-50 может pip install с таймаутами)
+  при WSGI-import — медленный первый boot, гонки.
+
+C9 [LOW] i18n: 157 кириллических строк в блюпринтах (stats.py 100,
+  reports.py 19, faults.py 14) + 22 в шаблонах (base.html:615-621
+  offline UI, machine_form, tool_wear). offline-queue.js — весь RU.
+  NL messages.po ~28 непереведённых. ПЛАН ФИКСА из сессии 016 не выполнен.
+
+C10 [LOW] Мусор в корне: _gen_water*.py, _run_local.py, _scan_i18n.py,
+  _tmp_pa_smoke.py (хардкод D:\ИИ\...), __pycache__-осиротевшие pyc,
+  server_err/out.txt.
+
+C11 [LOW] pdf_utils.py:11-17 — Windows-пути шрифтов + хардкод
+  /home/rabasoff/...; latin-1 fallback (machines.py:637) коверкает RU/NL.
+
+============================================================
+ПРИОРИТЕТЫ ЧИНИТЬ (рекомендуемый порядок)
+============================================================
+P0 (данные/безопасность, сегодня):
+  1. B1 + C1 — убрать delete-orphan (склад, наряды, workers)
+  2. B5 — импорт _ в utils.py (одна строка)
+  3. A1 — whitelist загрузок
+  4. B8 — СМЕНИТЬ admin/admin123 на проде!
+  5. A3 — убрать ChangeMe!123
+
+P1 (неделя):
+  6. A2 — section_access_required на роуты
+  7. B4 + C3 — номера документов + orders redirect
+  8. C2 — оффлайн-идемпотентность
+  9. A4, A5, A6, A7
+
+P2 (планово):
+  10. B2 + B3 — Alembic / убрать мутации из import
+  11. C5, C6, C7 — валидация, статистика, email
+  12. C9 — доделать переводы (план сессии 016)
+  13. B9 — единый деплой, B14 — logging
+
+============================================================
+ПРОЧЕЕ
+============================================================
+- Код НЕ менялся — только аудит.
+- SQL injection не найден, CSRF закрыт, секретов в git нет.
+- Следующая сессия: начать с P0-фиксов.
+- Сессия 017 — 02.10.2026 — КОНЕЦ
