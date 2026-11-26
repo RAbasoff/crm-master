@@ -380,7 +380,7 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=6').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
+                navigator.serviceWorker.register('/static/sw.js?v=7').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
                     .then(reg => {
                         console.log('SW registered:', reg.scope);
                         initWebPush(reg);
@@ -536,10 +536,33 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                         try { localStorage.setItem('push_autoheal', String(Date.now())); } catch (e) {}
                     }, function () { refreshPushBtn(false); });
             } else {
-                navigator.serviceWorker.ready
-                    .then(function (reg) { return reg.pushManager.getSubscription(); })
-                    .then(function (sub) { refreshPushBtn(!sub); })
-                    .catch(function () { refreshPushBtn(false); });
+                // Автоподписка для всех, кому приходят уведомления (правило
+                // владельца 2026-11-26): где браузер разрешает запрос разрешения
+                // БЕЗ жеста (Android/desktop) — спрашиваем сразу при входе и
+                // подписываем. iOS требует жест, а авто-запрос даёт молчаливый
+                // отказ и прятал кнопку навсегда — там оставляем кнопку.
+                var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                var _asked = null;
+                try { _asked = localStorage.getItem('push_autoask'); } catch (e) {}
+                if (!_isIOS && Notification.permission === 'default' && !_asked) {
+                    try { localStorage.setItem('push_autoask', String(Date.now())); } catch (e) {}
+                    Notification.requestPermission().then(function (perm) {
+                        if (perm === 'granted') {
+                            subscribeNow().then(function () {
+                                refreshPushBtn(true);
+                                showToast('✓ ' + __T('Notifications enabled'));
+                            }, function () { refreshPushBtn(false); });
+                        } else {
+                            refreshPushBtn(false);
+                        }
+                    }, function () { refreshPushBtn(false); });
+                } else {
+                    navigator.serviceWorker.ready
+                        .then(function (reg) { return reg.pushManager.getSubscription(); })
+                        .then(function (sub) { refreshPushBtn(!sub); })
+                        .catch(function () { refreshPushBtn(false); });
+                }
             }
         }
     
