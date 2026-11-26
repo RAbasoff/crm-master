@@ -380,7 +380,7 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=7').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
+                navigator.serviceWorker.register('/static/sw.js?v=8').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
                     .then(reg => {
                         console.log('SW registered:', reg.scope);
                         initWebPush(reg);
@@ -537,26 +537,42 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
                     }, function () { refreshPushBtn(false); });
             } else {
                 // Автоподписка для всех, кому приходят уведомления (правило
-                // владельца 2026-11-26): где браузер разрешает запрос разрешения
-                // БЕЗ жеста (Android/desktop) — спрашиваем сразу при входе и
-                // подписываем. iOS требует жест, а авто-запрос даёт молчаливый
-                // отказ и прятал кнопку навсегда — там оставляем кнопку.
+                // владельца 2026-11-26). Apple разрешает показ системного диалога
+                // ТОЛЬКО из-под касания («Notification prompting can only be done
+                // from a user gesture») — поэтому на iOS: запрос по ПЕРВОМУ
+                // касанию в любом месте экрана (кнопку искать не нужно).
+                // Android/desktop — запрос сразу при входе. Один раз на устройство.
                 var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
                 var _asked = null;
                 try { _asked = localStorage.getItem('push_autoask'); } catch (e) {}
-                if (!_isIOS && Notification.permission === 'default' && !_asked) {
+                if (Notification.permission === 'default' && !_asked) {
                     try { localStorage.setItem('push_autoask', String(Date.now())); } catch (e) {}
-                    Notification.requestPermission().then(function (perm) {
-                        if (perm === 'granted') {
-                            subscribeNow().then(function () {
-                                refreshPushBtn(true);
-                                showToast('✓ ' + __T('Notifications enabled'));
+                    var _doAsk = function () {
+                        try {
+                            Notification.requestPermission().then(function (perm) {
+                                if (perm === 'granted') {
+                                    subscribeNow().then(function () {
+                                        refreshPushBtn(true);
+                                        showToast('✓ ' + __T('Notifications enabled'));
+                                    }, function () { refreshPushBtn(false); });
+                                } else {
+                                    refreshPushBtn(false);
+                                }
                             }, function () { refreshPushBtn(false); });
-                        } else {
-                            refreshPushBtn(false);
-                        }
-                    }, function () { refreshPushBtn(false); });
+                        } catch (e) { refreshPushBtn(false); }
+                    };
+                    if (!_isIOS) {
+                        _doAsk();
+                    } else {
+                        var _askOnce = function () {
+                            document.removeEventListener('click', _askOnce, true);
+                            document.removeEventListener('touchend', _askOnce, true);
+                            _doAsk();
+                        };
+                        document.addEventListener('click', _askOnce, true);
+                        document.addEventListener('touchend', _askOnce, true);
+                    }
                 } else {
                     navigator.serviceWorker.ready
                         .then(function (reg) { return reg.pushManager.getSubscription(); })
