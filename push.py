@@ -10,33 +10,36 @@ import sys
 from datetime import datetime
 
 # pywebpush/aiohttp ставятся в ~/.local (user site) — веб-воркеры uWSGI их не видят.
-# Все версии python: после обновления интерпретатора (3.12 → 3.13) хардкод
-# версии оставлял aiohttp «не найденным».
-# Плюс: системные site-packages ТЕКУЩЕГО интерпретатора (веб-процесс на PA
-# иногда не видит /usr/local/.../site-packages — отсюда «No module named attr»).
+# Порядок путей ВАЖЕН: сначала пакеты ТЕКУЩЕЙ версии python (user-site + системные
+# site/dist-packages), и только потом user-site других версий как резерв.
+# История боли: web-процесс PA (venv, python3.10) не видит /usr/local/lib/python3.10/
+# dist-packages (Debian), а user-site python3.13 подсовывал кросс-версионные пакеты
+# (aiohttp→attr, yarl→idna, requests→typing.Self) — push молча падал.
 import glob as _glob
 import sysconfig as _sysconfig
-for _sp in _glob.glob(os.path.expanduser('~/.local/lib/python*/site-packages')):
-    if os.path.isdir(_sp) and _sp not in sys.path:
+
+
+def _push_add_path(_sp):
+    if _sp and os.path.isdir(_sp) and _sp not in sys.path:
         sys.path.append(_sp)
-# Системные site-packages ТЕКУЩЕЙ версии python: venv на PA их не видит,
-# а именно там лежат idna/requests/aiohttp/yarl (user-site заполняется
-# неполно: pip видит системные пакеты и не ставит их в user-site).
+
+
+_pyver = 'python%d.%d' % sys.version_info[:2]
+# 1) текущая версия python: свой user-site + системные каталоги
+_push_add_path(os.path.expanduser('~/.local/lib/%s/site-packages' % _pyver))
+for _sp in ('/usr/local/lib/%s/site-packages' % _pyver,
+            '/usr/local/lib/%s/dist-packages' % _pyver,
+            '/usr/lib/%s/site-packages' % _pyver,
+            '/usr/lib/%s/dist-packages' % _pyver,
+            '/usr/lib/python3/dist-packages'):
+    _push_add_path(_sp)
 try:
-    _pyver = 'python%d.%d' % sys.version_info[:2]
-    for _sp in ('/usr/local/lib/%s/site-packages' % _pyver,
-                '/usr/lib/%s/site-packages' % _pyver,
-                '/usr/lib/python3/dist-packages'):
-        if os.path.isdir(_sp) and _sp not in sys.path:
-            sys.path.append(_sp)
+    _push_add_path(_sysconfig.get_paths().get('purelib'))
 except Exception:
     pass
-try:
-    _pl = _sysconfig.get_paths().get('purelib')
-    if _pl and os.path.isdir(_pl) and _pl not in sys.path:
-        sys.path.append(_pl)
-except Exception:
-    pass
+# 2) user-site ДРУГИХ версий — только резерв (пакеты могут быть новее текущего python)
+for _sp in _glob.glob(os.path.expanduser('~/.local/lib/python*/site-packages')):
+    _push_add_path(_sp)
 
 _VAPID_CACHE = None
 
