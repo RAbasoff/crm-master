@@ -423,3 +423,10 @@ d2248ec — 2026-11-26 — Push: web-процесс PA (python3.10) не вид�
   Порядок sys.path в push.py: сначала пакеты текущей версии python (user-site + системные
   site/dist-packages), user-site других версий — резерв. Цепочка aiohttp→attr→idna→typing.Self устранена.
   На проде доустановлен pywebpush в user-site 3.10. Проверка: notify_daily_check = ok subs=8 test-ok=3.
+
+0b23c46 — 2026-11-26 — Fix: обычный пользователь не мог создать заявку (UnboundLocalError is_head_of_ts)
+  Локальный 'from security import is_head_of_ts' внутри fault_new делал имя локальным →
+  проверка роли падала у role=user (красное 'Fout bij aanmaken storingsmelding'); админов
+  спасал short-circuit or. Баг рефакторинга 3871566. Исключения fault_new теперь в лог;
+  machine_id/equipment_id через safe_int; в форме починен блок Photos.
+  Проверено на проде от имени Pablo: заявка создаётся, smoke 6/6 локально.
