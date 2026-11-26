@@ -92,6 +92,31 @@ def api_machines_search():
     } for m in machines])
 
 
+@bp.route('/api/machines/catalog')
+@login_required
+def api_machines_catalog():
+    """Полный список станков для расстановки на 3D-карте.
+
+    Имена берутся как в модуле «Станки» — из той же таблицы `machine`.
+    """
+    rows = (Machine.query
+            .order_by(Machine.section_id.is_(None), Machine.section_id, Machine.name)
+            .all())
+    return jsonify([{
+        'id': m.id,
+        'name': m.name,
+        'manufacturer': m.manufacturer or '',
+        'type': m.machine_type or '',
+        'serial': m.serial_number or '',
+        'description': m.description or '',
+        'status': m.status or 'active',
+        'section_id': m.section_id,
+        'length': m.dim_length_mm,
+        'width': m.dim_width_mm,
+        'height': m.dim_height_mm,
+    } for m in rows])
+
+
 @bp.route('/api/machine/<int:machine_id>/faults')
 @login_required
 def api_machine_faults(machine_id):

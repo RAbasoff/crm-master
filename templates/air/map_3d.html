@@ -48,6 +48,10 @@
             <option value="air">🌀</option>
             <option value="water">💧</option>
         </select>
+        <select id="machCatalog" class="tool-btn" style="padding:4px 6px;max-width:270px" title="{{ _('Machine from the Machines module') }}">
+            <option value="">{{ _('Machine from module') }}…</option>
+        </select>
+        <button class="btn btn-sm" onclick="placeFromCatalog()" style="background:#27ae60;color:#fff">➕ {{ _('Place') }}</button>
         <select id="newMachStyle" class="tool-btn" style="padding:4px 6px" title="{{ _('Style') }}">
             <option value="cabinet">🗄</option>
             <option value="wrapper">📦</option>
@@ -64,7 +68,7 @@
         <button class="btn btn-sm" id="tool-valve" onclick="setTool('valve')" style="background:#e74c3c;color:#fff">&#128704; {{ _('Valve') }}</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px">
-        <label>{{ _('Height') }} <input type="number" id="panH" oninput="liveApply()" value="4.5" step="0.1" min="0.2" style="width:64px"> m</label>
+        <label>{{ _('Height') }} <input type="number" id="panH" oninput="liveApply()" value="{{ map_h or 4.5 }}" step="0.1" min="0.2" style="width:64px"> m</label>
         <label>{{ _('Thickness') }} <input type="number" id="panT" oninput="liveApply()" value="0.28" step="0.02" min="0.05" style="width:64px"> m</label>
         <label>{{ _('Width') }} <input type="number" id="panW" oninput="liveApply()" value="5" step="0.1" min="0.3" style="width:64px"> m</label>
         <label>{{ _('Diameter') }} <input type="number" id="panD" oninput="liveApply()" value="110" step="5" min="6" style="width:64px"> mm</label>
@@ -111,6 +115,7 @@
 
 <script src="/static/js/three.min.js"></script>
 <script src="/static/js/OrbitControls.js"></script>
+<script src="/static/js/machine_models.js"></script>
 <script>
 (function () {
     // Фабрика: реальные метры (Moeskroen — из чертежа DWG)
@@ -270,6 +275,18 @@
     // ── Модели станков (стилизованные) ──
     const MACH_SCALE = 0.5; // глобальный масштаб моделей станков
     function machineModel(d) {
+        // подробные модели из статической библиотеки (machine_models.js);
+        // стили filler/wrapper/compressor/ishida/conveyor/ypsilon/incline
+        // остаются ниже как встроенный резерв
+        if (window.MachineModels && window.MachineModels.build) {
+            const lib = window.MachineModels.build(d);
+            if (lib) {
+                lib.scale.setScalar((d.s || 1) * MACH_SCALE);
+                lib.position.set(d.x || 0, 0, d.z || 0);
+                lib.rotation.y = d.rot || 0;
+                return lib;
+            }
+        }
         const g = new THREE.Group();
         const steel = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.55, roughness: 0.4 });
         const dark = new THREE.MeshStandardMaterial({ color: 0x455a64, metalness: 0.4, roughness: 0.5 });
@@ -813,7 +830,7 @@
     const pipesLayer = new THREE.Group(); // трубы — скрываются кнопкой «Линии воздуха»
     const hoverLabelGroup = new THREE.Group(); // подписи-подсказки при наведении
     scene.add(editGroup); scene.add(wallsLayer); scene.add(pipesLayer); scene.add(hoverLabelGroup);
-    const params = { wallH: 4.5, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
+    const params = { wallH: H, wallT: 0.28, gateW: 5, gateH: 3.6, doorW: 1.4, pipeD: 110, hoseD: 25, pipeH: 4, gateRot: 0 };
     let curTool = 'select', wallStart = null, pipeBuf = [], selected = null, downXY = null, drag = null;
     // Временно отключено (пользователю мешают): всплывающие подписи и подписи станков.
     // Чтобы вернуть — поставить true и перезагрузить страницу.
@@ -841,7 +858,57 @@
         });
         rebuildDesign();
     };
-    // Копировать / вставить станок
+    // ── Станки из модуля «Станки»: имя, тип, s/n и 3D-модель ──
+    let MACH_CATALOG = [];
+    function loadMachineCatalog() {
+        const sel = document.getElementById('machCatalog');
+        if (!sel) return;
+        fetch('/api/machines/catalog').then(function (r) { return r.json(); }).then(function (list) {
+            MACH_CATALOG = list || [];
+            // группируем по цеху, чтобы быстрее искать глазами
+            const groups = {};
+            MACH_CATALOG.forEach(function (m) {
+                const k = m.section_id ? ('#' + m.section_id) : '{{ _("Without section") }}';
+                (groups[k] = groups[k] || []).push(m);
+            });
+            Object.keys(groups).forEach(function (k) {
+                const og = document.createElement('optgroup');
+                og.label = k;
+                groups[k].forEach(function (m) {
+                    const o = document.createElement('option');
+                    o.value = String(m.id);
+                    const style = (window.MachineModels && window.MachineModels.styleFor)
+                        ? window.MachineModels.styleFor(m) : 'cabinet';
+                    o.textContent = m.name + (m.type ? ' — ' + m.type : '')
+                        + (m.serial ? ' (' + m.serial + ')' : '');
+                    o.dataset.style = style;
+                    og.appendChild(o);
+                });
+                sel.appendChild(og);
+            });
+        }).catch(function () {});
+    }
+    loadMachineCatalog();
+
+    window.placeFromCatalog = function () {
+        const sel = document.getElementById('machCatalog');
+        if (!sel || !sel.value) { alert('{{ _("Select a machine first") }}'); return; }
+        const src = MACH_CATALOG.filter(function (m) { return String(m.id) === sel.value; })[0];
+        if (!src) return;
+        let minId = -1;
+        design.machines.forEach(function (m) { if (m.id < minId) minId = m.id; });
+        const opt = sel.options[sel.selectedIndex];
+        design.machines.push({
+            // отрицательный id = ручная расстановка; ссылка на карточку — в db_id
+            id: minId - 1, db_id: src.id,
+            name: src.name,
+            mfr: src.manufacturer, type: src.type, sn: src.serial,
+            x: controls.target.x, z: controls.target.z,
+            rot: 0, s: 1, off: false,
+            style: (opt && opt.dataset.style) || 'cabinet'
+        });
+        rebuildDesign();
+    };
     let _clipMachine = null;
     window.copyMachine = function () {
         if (!selected || selected.kind !== 'machine') { alert('{{ _("Select a machine first") }}'); return; }
@@ -934,6 +1001,16 @@
         }[t] || '';
     }
     window.setTool = setTool;
+    // служебный доступ для отладки/тестов (не мешает редактору)
+    window.__map3d = {
+        design: design, rebuild: function () { rebuildDesign(); },
+        controls: controls, camera: camera, applyStyles: function (styles) {
+            design.machines.forEach(function (m, i) {
+                if (styles[i]) m.style = styles[i];
+            });
+            rebuildDesign();
+        }
+    };
 
     const edRay = new THREE.Raycaster();
     const edNdc = new THREE.Vector2();
