@@ -648,40 +648,42 @@ with app.app_context():
     def _announce_job():
         import time as _t
         _t.sleep(20)
-        try:
-            from models import AppSetting, User
-            from logs import create_notifications, _user_language
-            import json as _json
-            _ver = __import__('config').APP_VERSION
-            _ann = db.session.get(AppSetting, 'announced_version')
-            if _ann is None or _ann.value != _ver:
-                _wn = {}
-                try:
-                    _wn = _json.load(open(os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)), 'static', 'whats_new.json'),
-                        encoding='utf-8'))
-                except Exception:
-                    pass
-                _notes = _wn.get(_ver, {})
-                rows = []
-                for _u in User.query.filter(User.is_active_user == True).all():
-                    _lang = _user_language(_u.id)
-                    _nn = _notes.get('ru' if _lang == 'ru' else 'nl') or _notes.get('ru') or []
-                    _title = ('Обновление программы ' if _lang == 'ru' else 'Programma-update ') + _ver
-                    _msg = (': ' if _lang == 'ru' else ': ') + ' '.join(_nn)
-                    rows.append({'user_id': _u.id, 'title': _title, 'message': _msg,
-                                 'type': 'update', 'link': '/settings'})
-                if rows:
-                    create_notifications(rows)
-                if _ann is None:
-                    _ann = AppSetting(key='announced_version')
-                    db.session.add(_ann)
-                _ann.value = _ver
-                from schema import safe_commit as _sc
-                _sc()
-                print("UPDATE ANNOUNCE:", _ver, "->", len(rows), "users")
-        except Exception as _ae:
-            print("UPDATE ANNOUNCE: skip", _ae)
+        from app import app as _a
+        with _a.app_context():
+            try:
+                from models import AppSetting, User
+                from logs import create_notifications, _user_language
+                import json as _json
+                _ver = __import__('config').APP_VERSION
+                _ann = db.session.get(AppSetting, 'announced_version')
+                if _ann is None or _ann.value != _ver:
+                    _wn = {}
+                    try:
+                        _wn = _json.load(open(os.path.join(
+                            os.path.dirname(os.path.abspath(__file__)), 'static', 'whats_new.json'),
+                            encoding='utf-8'))
+                    except Exception:
+                        pass
+                    _notes = _wn.get(_ver, {})
+                    rows = []
+                    for _u in User.query.filter(User.is_active_user == True).all():
+                        _lang = _user_language(_u.id)
+                        _nn = _notes.get('ru' if _lang == 'ru' else 'nl') or _notes.get('ru') or []
+                        _title = ('Обновление программы ' if _lang == 'ru' else 'Programma-update ') + _ver
+                        _msg = (': ' if _lang == 'ru' else ': ') + ' '.join(_nn)
+                        rows.append({'user_id': _u.id, 'title': _title, 'message': _msg,
+                                     'type': 'update', 'link': '/settings'})
+                    if rows:
+                        create_notifications(rows)
+                    if _ann is None:
+                        _ann = AppSetting(key='announced_version')
+                        db.session.add(_ann)
+                    _ann.value = _ver
+                    from schema import safe_commit as _sc
+                    _sc()
+                    print("UPDATE ANNOUNCE:", _ver, "->", len(rows), "users")
+            except Exception as _ae:
+                print("UPDATE ANNOUNCE: skip", _ae)
     try:
         import threading as _th
         _th.Thread(target=_announce_job, daemon=True).start()
