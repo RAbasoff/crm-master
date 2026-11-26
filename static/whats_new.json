@@ -236,5 +236,21 @@
       "Automatisch abonneren op meldingen: Android en PC - automatisch bij login; iPhone - bij eerste aanraking van het scherm",
       "Formulier storingsmelding: blok \"Foto's\" gerepareerd, fouten worden gelogd"
     ]
+  },
+  "2.20.0.03": {
+    "ru": [
+      "3D Moeskroen: модель здания 76.5 x 60 x 10 м построена по чертежу — 103 стены, 19 проёмов, план цеха на полу",
+      "3D: 22 новых типа моделей станков (филлеры VEMAG, весовые Ishida, дайсеры TREIF, тумблеры, упаковщики, пароконвектоматы, туннели заморозки, скоростные двери)",
+      "3D: станки расставляются из модуля «Станки» — имя, тип и серийный номер берутся как в карточке, тип 3D-модели подбирается сам",
+      "Сжатый воздух: кольцевая магистраль DN65 и ветки по зонам, спуски к станкам считаются автоматически при расстановке",
+      "Подбор компрессора: отчёт с 9 моделями, ценами и стоимостью владения + таблица в Excel"
+    ],
+    "nl": [
+      "3D Moeskroen: fabrieksgebouw 76.5 x 60 x 10 m opgebouwd uit de tekening — 103 wanden, 19 openingen, vloerplan eronder",
+      "3D: 22 nieuwe machinemodellen (VEMAG fillers, Ishida wegers, TREIF snijders, tumblers, verpakkingsmachines, ovens, vriestunnels, snelloopdeuren)",
+      "3D: machines komen uit de module «Machines» — naam, type en serienummer zoals in de kaart, 3D-type wordt automatisch gekozen",
+      "Perslucht: ringleiding DN65 en takken per zone, aftakkingen naar machines worden automatisch berekend bij plaatsen",
+      "Compressorkeuze: rapport met 9 modellen, prijzen en kosten per jaar + Excel-tabel"
+    ]
   }
 }
