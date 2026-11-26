@@ -218,5 +218,23 @@
       "Database back-ups: automatisch tweemaal per dag (12:30 en 23:30)",
       "Meldingen: knop \"Meldingen inschakelen\" verschijnt nu op alle apparaten"
     ]
+  },
+  "2.20.0.02": {
+    "ru": [
+      "Оповещения на телефон восстановлены: push-уведомления снова приходят (починена работа библиотек на сервере)",
+      "Заявитель получает уведомления: создана / принята / назначен механик / на паузе с причиной / решена / закрыта",
+      "Причина паузы в уведомлениях — текстом (например «Машину нельзя остановить»), а не кодом",
+      "Исправлена ошибка создания заявки обычным пользователем (красное сообщение, заявка не создавалась)",
+      "Автоподписка на уведомления: Android и ПК — автоматически при входе; iPhone — по первому касанию экрана",
+      "Форма создания заявки: починен блок «Фото», ошибки сохраняются в журнал"
+    ],
+    "nl": [
+      "Meldingen op de telefoon hersteld: push-berichten komen weer binnen (bibliotheken op de server gerepareerd)",
+      "Melder krijgt berichten: aangemaakt / aangenomen / monteur toegewezen / gepauzeerd met reden / opgelost / gesloten",
+      "Reden van pauze in berichten als tekst (bv. \"Machine kan niet stoppen\") in plaats van een code",
+      "Fout bij aanmaken storingsmelding voor gewone gebruikers gerepareerd (melding werd niet aangemaakt)",
+      "Automatisch abonneren op meldingen: Android en PC - automatisch bij login; iPhone - bij eerste aanraking van het scherm",
+      "Formulier storingsmelding: blok \"Foto's\" gerepareerd, fouten worden gelogd"
+    ]
   }
 }

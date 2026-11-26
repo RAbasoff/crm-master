@@ -663,7 +663,7 @@ with app.app_context():
                 _lang = _user_language(_u.id)
                 _nn = _notes.get('ru' if _lang == 'ru' else 'nl') or _notes.get('ru') or []
                 _title = ('Обновление программы ' if _lang == 'ru' else 'Programma-update ') + _ver
-                _msg = (': ' if _lang == 'ru' else ': ') + ' '.join(_nn[:3])
+                _msg = (': ' if _lang == 'ru' else ': ') + ' '.join(_nn)
                 rows.append({'user_id': _u.id, 'title': _title, 'message': _msg,
                              'type': 'update', 'link': '/settings'})
             if rows:

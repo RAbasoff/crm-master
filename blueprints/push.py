@@ -1,7 +1,7 @@
 """Web Push subscription API — /api/push/*
 """
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from flask_login import login_required, current_user
 
 from models import db, PushSubscription, now_local
@@ -41,17 +41,23 @@ def push_subscribe():
     if not endpoint or not p256dh or not auth:
         return jsonify({'error': 'Bad subscription'}), 400
 
-    owner_id = _push_owner_id()
+    imp = session.get('impersonate_admin_id')
     existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
     if existing:
-        existing.user_id = owner_id
+        # Телефон админа (он «смотрит под пользователем») остаётся за админом —
+        # иначе его push уходили чужому аккаунту. ВСЁ остальное — текущему
+        # пользователю: настройка телефона сотрудника через «войти под
+        # пользователем» должна привязать подписку к СОТРУДНИКУ (2026-11-26:
+        # у Tim/Peter iPhone не получали push именно из-за этого).
+        if not (imp and existing.user_id == imp):
+            existing.user_id = current_user.id
         existing.p256dh = p256dh
         existing.auth = auth
         existing.user_agent = str(request.user_agent)[:300]
         existing.last_used_at = now_local()
     else:
         db.session.add(PushSubscription(
-            user_id=owner_id, endpoint=endpoint,
+            user_id=current_user.id, endpoint=endpoint,
             p256dh=p256dh, auth=auth,
             user_agent=str(request.user_agent)[:300],
         ))
