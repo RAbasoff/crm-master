@@ -166,8 +166,12 @@ def create_notifications(rows):
             for sub in subs:
                 _push_pool.submit(_send_push_job, sub, r['title'], r.get('message') or '',
                                   r.get('type'), r.get('link'), lang)
-    except Exception:
-        pass
+    except Exception as _pe:
+        # не молчим: иначе сбой push-диспетчеризации невидим (было «телефон молчит»)
+        try:
+            _log.warning('create_notifications push dispatch: %s', _pe)
+        except Exception:
+            pass
 
 
 def create_notification(user_id, title, message, ntype='info', link=None):

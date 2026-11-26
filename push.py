@@ -19,6 +19,18 @@ import sysconfig as _sysconfig
 for _sp in _glob.glob(os.path.expanduser('~/.local/lib/python*/site-packages')):
     if os.path.isdir(_sp) and _sp not in sys.path:
         sys.path.append(_sp)
+# Системные site-packages ТЕКУЩЕЙ версии python: venv на PA их не видит,
+# а именно там лежат idna/requests/aiohttp/yarl (user-site заполняется
+# неполно: pip видит системные пакеты и не ставит их в user-site).
+try:
+    _pyver = 'python%d.%d' % sys.version_info[:2]
+    for _sp in ('/usr/local/lib/%s/site-packages' % _pyver,
+                '/usr/lib/%s/site-packages' % _pyver,
+                '/usr/lib/python3/dist-packages'):
+        if os.path.isdir(_sp) and _sp not in sys.path:
+            sys.path.append(_sp)
+except Exception:
+    pass
 try:
     _pl = _sysconfig.get_paths().get('purelib')
     if _pl and os.path.isdir(_pl) and _pl not in sys.path:

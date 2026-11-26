@@ -273,12 +273,22 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
     )
     db.session.add(history)
 
-    # Уведомляем создателя заявки: создана / прочитана / решена / закрыта —
+    # Уведомляем создателя заявки: создана / принята / решена / на паузе / закрыта —
     # на языке заявителя, с временем и результатом
     try:
-        if new_status != old_status and new_status in ('accepted', 'resolved', 'closed'):
-            detail = reason if (new_status == 'closed' and reason and reason != 'closed by head') else None
-            _notify_reporter_status(f, new_status, detail=detail)
+        _detail = None
+        if new_status == 'paused':
+            # Причина паузы — человекочитаемая (не код), комментарий в скобках
+            with force_locale('nl'):
+                _reason = (translate_pause_reason(pause_reason)
+                           if pause_reason in PAUSE_REASONS else (reason or ''))
+            if pause_comment:
+                _reason = f'{_reason} ({pause_comment})' if _reason else pause_comment
+            _detail = _reason or None
+        elif new_status == 'closed' and reason and reason != 'closed by head':
+            _detail = reason
+        if new_status != old_status and new_status in ('accepted', 'resolved', 'closed', 'paused'):
+            _notify_reporter_status(f, new_status, detail=_detail)
         # Заявителю: НАЗНАЧЕН МЕХАНИК (когда механик только что назначен)
         if _new_tech:
             _tu = db.session.get(User, _new_tech)
@@ -289,15 +299,7 @@ def _set_fault_status(f, new_status, user, reason='', pause_reason='', pause_com
                     create_notifications([_an])
         # Директор: только создание / пауза (с причиной) / решение / закрытие
         if new_status != old_status and new_status in ('paused', 'resolved', 'closed'):
-            detail = None
-            if new_status == 'paused':
-                r = reason or pause_reason or ''
-                if pause_comment:
-                    r = (r + f' ({pause_comment})').strip()
-                detail = r or None
-            elif new_status == 'closed' and reason and reason != 'closed by head':
-                detail = reason
-            _notify_director_status(f, new_status, detail=detail)
+            _notify_director_status(f, new_status, detail=_detail)
     except Exception:
         pass
 
@@ -346,7 +348,7 @@ def _notify_reporter_status(f, kind, detail=None):
 
 def _reporter_row(f, kind, detail=None):
     """Строка уведомления заявителю (или None)."""
-    if not getattr(f, 'reporter_id', None) or kind not in ('created', 'accepted', 'assigned', 'resolved', 'closed'):
+    if not getattr(f, 'reporter_id', None) or kind not in ('created', 'accepted', 'assigned', 'paused', 'resolved', 'closed'):
         return None
     title, msg = _lifecycle_msg(f, kind, detail=detail, lang=_lang_for(f))
     return {'user_id': f.reporter_id, 'title': title, 'message': msg,

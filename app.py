@@ -584,18 +584,43 @@ with app.app_context():
         _plog.error("PUSH LIB: MISSING — push-уведомления не работают! Пробую доустановить (--user)...")
         try:
             # В фоне: установка НЕ должна блокировать старт — иначе воркеры висят (504)
-            import subprocess as _sp, sys as _s, threading as _th
+            import subprocess as _sp, sys as _s, threading as _th, os as _os
+
+            def _pip_python():
+                # под uWSGI sys.executable = /usr/local/bin/uwsgi — нужен настоящий python
+                for _c in (_s.executable,
+                           _os.path.join(_s.prefix, 'bin', 'python3'),
+                           _os.path.join(_s.prefix, 'bin', 'python'),
+                           _os.path.join(_s.prefix, 'Scripts', 'python.exe'),
+                           'python3'):
+                    if not _c:
+                        continue
+                    _base = _os.path.basename(_c).lower()
+                    if not _base.startswith('python'):
+                        continue
+                    if _c == 'python3' or _os.path.isfile(_c):
+                        return _c
+                return 'python3'
+
             def _bg_install():
                 try:
-                    _sp.run([_s.executable, '-m', 'pip', 'install', '--user', 'pywebpush'],
-                            capture_output=True, text=True, timeout=300)
-                    _plog.warning("PUSH LIB: background install finished, reload to activate")
+                    _py = _pip_python()
+                    # без --user: в venv (--user там запрещён) ставим прямо в venv
+                    _r = _sp.run([_py, '-m', 'pip', 'install', 'pywebpush'],
+                                 capture_output=True, text=True, timeout=300)
+                    if _r.returncode != 0:
+                        _r = _sp.run([_py, '-m', 'pip', 'install', '--user', 'pywebpush'],
+                                     capture_output=True, text=True, timeout=300)
+                    if _r.returncode == 0:
+                        _plog.warning("PUSH LIB: background install finished (%s), reload to activate", _py)
+                    else:
+                        _plog.error("PUSH LIB: background install FAILED rc=%s: %s",
+                                    _r.returncode, (_r.stderr or _r.stdout or '')[-300:])
                 except Exception as _e2:
                     _plog.error("PUSH LIB: background install failed: %s", _e2)
             _th.Thread(target=_bg_install, daemon=True).start()
         except Exception as _pe:
-            _plog.error("PUSH LIB: AUTO-INSTALL FAILED — установите: %s -m pip install --user pywebpush | %s",
-                        __import__('sys').executable, _pe)
+            _plog.error("PUSH LIB: AUTO-INSTALL FAILED — установите вручную: pip install pywebpush | %s", _pe)
     # ── Контроль конфигурации уведомлений («бетон»: сбои видны сразу) ──
     try:
         from models import User, PushSubscription
