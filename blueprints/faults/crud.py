@@ -166,8 +166,8 @@ def fault_new():
                 title=request.form['title'],
                 description=request.form['description'],
                 priority=request.form.get('priority', 'normal'),
-                machine_id=int(machine_id) if machine_id else None,
-                equipment_id=int(equipment_id) if equipment_id else None,
+                machine_id=safe_int(machine_id) or None,
+                equipment_id=safe_int(equipment_id) or None,
                 reporter_id=resolve_user_id()
             )
             # ResponsibleAuth (id «r_N») → связанный User
@@ -294,8 +294,9 @@ def fault_new():
                 # Email — в фоне; если SMTP не настроен — не трогаем БД из другого потока
                 if not email_configured():
                     raise RuntimeError('skip-notify')
-                from notify import notify_fault_created
-                from security import is_head_of_ts
+                # ВАЖНО: без локального import здесь (from security import is_head_of_ts
+                # делал имя локальным для всей функции → UnboundLocalError на проверке
+                # роли для обычных пользователей, «Fout bij aanmaken storingsmelding»)
                 _tech_ids = [getattr(u, 'id', None) for u in (f.assigned_technicians or []) if getattr(u, 'id', None)]
                 _head_ids = [u.id for u in User.query.filter(User.role.in_(('admin','director')), User.is_active_user==True).all()]
                 _fid = f.id
@@ -346,6 +347,13 @@ def fault_new():
             return redirect(url_for('faults.faults_list'))
         except Exception as e:
             db.session.rollback()
+            # раньше исключение только показывалось красным flash и терялось —
+            # в логах пусто, причина неизвестна (2026-11-26: UnboundLocalError)
+            try:
+                from logs import log_exception
+                log_exception(e, category='faults', source='fault_new')
+            except Exception:
+                pass
             flash(_('Error creating fault report: {}').format(str(e)), 'error')
             return redirect(url_for('faults.fault_new'))
 
