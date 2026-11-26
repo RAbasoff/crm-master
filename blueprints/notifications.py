@@ -24,9 +24,10 @@ def notifications_list():
 @bp.route('/notifications/unread')
 @login_required
 def notifications_unread():
-    # is_read IS NULL — старые строки (не только is_read=0)
+    # resolve_user_id: цеховой (ResponsibleAuth 'r_N') видит уведомления
+    # связанного User — иначе колокольчик всегда пустой («нет ничего»)
     q = Notification.query.filter(
-        Notification.user_id == current_user.id,
+        Notification.user_id == resolve_user_id(),
         db.or_(Notification.is_read == False, Notification.is_read.is_(None)))  # noqa: E712
     count = q.count()
     latest = q.order_by(Notification.id.desc()).first()
@@ -45,7 +46,7 @@ def notifications_unread():
 @login_required
 def notification_read(notif_id):
     n = Notification.query.get_or_404(notif_id)
-    if n.user_id == current_user.id:
+    if n.user_id == resolve_user_id():
         n.is_read = True
         if not safe_commit():
             return jsonify({'error': 'Save failed'}), 500
@@ -55,7 +56,7 @@ def notification_read(notif_id):
 @login_required
 def notifications_read_all():
     Notification.query.filter(
-        Notification.user_id == current_user.id,
+        Notification.user_id == resolve_user_id(),
         db.or_(Notification.is_read == False, Notification.is_read.is_(None))  # noqa: E712
     ).update({'is_read': True}, synchronize_session=False)
     if not safe_commit():
