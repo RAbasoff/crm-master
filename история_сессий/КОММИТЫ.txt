@@ -418,3 +418,8 @@ b489326 — 2026-11-25 — Уведомления планирования: chec
   app.py push.health: sys.executable=uwsgi — авто-установка брала не python и игнорировала ошибки pip.
   faults: заявителю ПАУЗА (причина человекочитаемая + комментарий), раньше только директору.
   logs.py: сбой push-диспетчеризации в лог. Smoke 11/11 локально.
+
+d2248ec — 2026-11-26 — Push: web-процесс PA (python3.10) не видел /usr/local/lib/python3.10/dist-packages
+  Порядок sys.path в push.py: сначала пакеты текущей версии python (user-site + системные
+  site/dist-packages), user-site других версий — резерв. Цепочка aiohttp→attr→idna→typing.Self устранена.
+  На проде доустановлен pywebpush в user-site 3.10. Проверка: notify_daily_check = ok subs=8 test-ok=3.
