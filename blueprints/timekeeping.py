@@ -48,7 +48,7 @@ def _clock_redirect():
 @login_required
 def clock_in():
     today = now_local().date()
-    existing = TimeEntry.query.filter_by(user_id=resolve_user_id(), date=today).first()
+    existing = TimeEntry.query.filter_by(user_id=resolve_user_id(), date=today).order_by(TimeEntry.id.desc()).first()
     if existing and existing.clock_in:
         flash(_('Already clocked in today'), 'error')
         return _clock_redirect()
@@ -75,7 +75,7 @@ def clock_in():
 @login_required
 def clock_out():
     today = now_local().date()
-    entry = TimeEntry.query.filter_by(user_id=resolve_user_id(), date=today).first()
+    entry = TimeEntry.query.filter_by(user_id=resolve_user_id(), date=today).order_by(TimeEntry.id.desc()).first()
     if not entry or not entry.clock_in:
         flash(_('Not clocked in today'), 'error')
         return _clock_redirect()
@@ -111,7 +111,7 @@ def time_tracking_manual():
         return redirect(url_for('timekeeping.time_tracking'))
     status = request.form.get('status', 'present')
     
-    entry = TimeEntry.query.filter_by(user_id=user_id, date=date).first()
+    entry = TimeEntry.query.filter_by(user_id=user_id, date=date).order_by(TimeEntry.id.desc()).first()
     if not entry:
         entry = TimeEntry(user_id=user_id, date=date, status=status)
         db.session.add(entry)

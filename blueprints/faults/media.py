@@ -6,7 +6,7 @@ from flask_babel import gettext as _
 from models import (db, FaultReport, FaultPhoto,
                     WorkReport, WorkReportPhoto, VoorraadItem, VoorraadMutatie)
 from utils import resolve_user_id
-from utils import role_required, log_audit, add_work_report, safe_commit, safe_float, save_uploaded_file
+from utils import role_required, log_audit, add_work_report, safe_commit, safe_float, save_uploaded_file, adjust_stock
 from security import director_only, is_head_of_ts
 
 from . import bp
@@ -102,15 +102,8 @@ def work_report_new(fault_id):
         try:
             parts = json.loads(wr.parts_used)
             for part in parts:
-                item = VoorraadItem.query.get(part['part_id'])
-                if item:
-                    item.hoeveelheid -= part['quantity']
-                    mutatie = VoorraadMutatie(
-                        item_id=item.id, type='uitgaand',
-                        hoeveelheid=part['quantity'],
-                        opmerking=f"Work report #{wr.id} for fault #{f.id}"
-                    )
-                    db.session.add(mutatie)
+                adjust_stock(part['part_id'], -part['quantity'], mt='uitgaand',
+                             opmerking=f"Work report #{wr.id} for fault #{f.id}")
             if not safe_commit():
                 db.session.rollback()
         except (ValueError, KeyError, TypeError):
@@ -138,15 +131,8 @@ def work_report_edit(fault_id, report_id):
         try:
             old_parts = json.loads(wr.parts_used) if wr.parts_used else []
             for part in old_parts:
-                item = VoorraadItem.query.get(part['part_id'])
-                if item:
-                    item.hoeveelheid += part['quantity']
-                    mutatie = VoorraadMutatie(
-                        item_id=item.id, type='inkomend',
-                        hoeveelheid=part['quantity'],
-                        opmerking=f"Reversed: work report #{wr.id} edit"
-                    )
-                    db.session.add(mutatie)
+                adjust_stock(part['part_id'], part['quantity'], mt='inkomend',
+                             opmerking=f"Reversed: work report #{wr.id} edit")
             if not safe_commit():
                 db.session.rollback()
         except (ValueError, KeyError, TypeError):
@@ -167,15 +153,8 @@ def work_report_edit(fault_id, report_id):
         try:
             new_parts = json.loads(wr.parts_used)
             for part in new_parts:
-                item = VoorraadItem.query.get(part['part_id'])
-                if item:
-                    item.hoeveelheid -= part['quantity']
-                    mutatie = VoorraadMutatie(
-                        item_id=item.id, type='uitgaand',
-                        hoeveelheid=part['quantity'],
-                        opmerking=f"Work report #{wr.id} (edited) for fault #{f.id}"
-                    )
-                    db.session.add(mutatie)
+                adjust_stock(part['part_id'], -part['quantity'], mt='uitgaand',
+                             opmerking=f"Work report #{wr.id} (edited) for fault #{f.id}")
             if not safe_commit():
                 db.session.rollback()
         except (ValueError, KeyError, TypeError):

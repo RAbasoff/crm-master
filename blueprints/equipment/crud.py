@@ -12,7 +12,7 @@ from flask_babel import gettext as _
 from models import (db, EquipmentMaintenance, EquipmentPart, EquipmentComponent,
                     EquipmentPartOrder, EquipmentMROPhoto, VoorraadItem,
                     VoorraadMutatie, MuleDevice)
-from utils import (resolve_user_id, log_audit, role_required, safe_commit,
+from utils import (resolve_user_id, log_audit, role_required, safe_commit, adjust_stock,
                    safe_date, safe_float, safe_int, sanitize_like,
                    save_uploaded_file)
 
@@ -79,20 +79,27 @@ def equipment_new():
             _sn, _sm = split_mule_name(_nm)
             if _sm:
                 _nm, _md = _sn, _sm
-        eq = EquipmentMaintenance(
-            number=gen_eq_number(rec_type, date),
-            record_type=rec_type,
-            name=_nm,
-            serial=request.form.get('serial', ''),
-            model_name=_md,
-            machine_id=safe_int(request.form.get('machine_id')) or None,
-            date=date,
-            reason=request.form['reason'],
-            next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,
-            periodicity=request.form.get('periodicity', ''),
-            notes=request.form.get('notes', ''),
-            created_by=resolve_user_id()
-        )
+        # Номер генерируем через retry_unique_number: при одновременном
+        # сохранении двух записей раньше падал IntegrityError и форма терялась.
+        from utils import retry_unique_number
+
+        def _make_eq():
+            return EquipmentMaintenance(
+                number=gen_eq_number(rec_type, date),
+                record_type=rec_type,
+                name=_nm,
+                serial=request.form.get('serial', ''),
+                model_name=_md,
+                machine_id=safe_int(request.form.get('machine_id')) or None,
+                date=date,
+                reason=request.form['reason'],
+                next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,
+                periodicity=request.form.get('periodicity', ''),
+                notes=request.form.get('notes', ''),
+                created_by=resolve_user_id()
+            )
+
+        eq = retry_unique_number(_make_eq, number_attr='number')
         # реестр муле: данные вводятся один раз, дальше только выбираются.
         # Ремонты реестр НЕ пополняют (иначе в чек-листе ТО появляются мусорные
         # устройства с вечным «не сделано»).
@@ -122,12 +129,9 @@ def equipment_new():
                         if (wi.hoeveelheid or 0) < qty:
                             flash(_('Not enough stock. Available: %(qty)s %(unit)s', qty=wi.hoeveelheid, unit=wi.eenheid), 'error')
                             return redirect(url_for('equipment.equipment_detail', eq_id=eq.id))
-                        wi.hoeveelheid -= qty
-                        db.session.add(VoorraadMutatie(
-                            item_id=wh_id, type='uitgaand', hoeveelheid=qty,
-                            opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
-                            user_id=resolve_user_id()
-                        ))
+                        adjust_stock(wh_id, -qty, mt='uitgaand',
+                                     opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
+                                     user_id=resolve_user_id())
         # Add components
         comp_types = request.form.getlist('comp_type')
         comp_models = request.form.getlist('comp_model')
@@ -214,12 +218,9 @@ def equipment_edit(eq_id):
                 if wh_id:
                     wi = VoorraadItem.query.get(wh_id)
                     if wi:
-                        wi.hoeveelheid -= qty
-                        db.session.add(VoorraadMutatie(
-                            item_id=wh_id, type='uitgaand', hoeveelheid=qty,
-                            opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
-                            user_id=resolve_user_id()
-                        ))
+                        adjust_stock(wh_id, -qty, mt='uitgaand',
+                                     opmerking=f'Mule Maintenance {eq.number}: {pname.strip()}',
+                                     user_id=resolve_user_id())
         # Update components
         EquipmentComponent.query.filter_by(equipment_id=eq.id).delete()
         comp_types = request.form.getlist('comp_type')

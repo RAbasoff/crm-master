@@ -15,7 +15,7 @@ from flask_babel import gettext as _
 from models import (db, PlanPurchase, PlanProduction, PlanShipment,
                     Machine, Contractor, FaultReport, MaintenancePlan,
                     VoorraadItem, VoorraadMutatie, now_local)
-from utils import (resolve_user_id, log_audit, role_required, safe_commit,
+from utils import (resolve_user_id, log_audit, role_required, safe_commit, adjust_stock,
                    safe_date, safe_float, safe_int)
 import io
 
@@ -524,11 +524,9 @@ def planning_production_consume(item_id):
         if wi is None or qty <= 0:
             flash(_('Save failed'), 'error')
             return redirect(url_for('planning.planning_production_consume', item_id=item_id))
-        wi.hoeveelheid = (wi.hoeveelheid or 0) - qty
-        db.session.add(VoorraadMutatie(
-            item_id=wi.id, type='uitgaand', hoeveelheid=qty,
-            opmerking=f'Planning {plan.id}: {plan.article_name}',
-            user_id=resolve_user_id()))
+        adjust_stock(wi.id, -qty, mt='uitgaand',
+                     opmerking=f'Planning {plan.id}: {plan.article_name}',
+                     user_id=resolve_user_id())
         if not safe_commit():
             flash(_('Save failed'), 'error')
         else:

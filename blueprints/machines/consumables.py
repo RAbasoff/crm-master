@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from models import (Machine, MachineConsumable, MachinePassword,
                     VoorraadItem, VoorraadMutatie, db, now_local)
 from security import director_only
-from utils import (log_audit, resolve_user_id, role_required, safe_commit,
+from utils import (log_audit, resolve_user_id, role_required, safe_commit, adjust_stock,
                    safe_date, safe_float, safe_int)
 
 from . import bp
@@ -64,18 +64,10 @@ def machine_consumables_consume(machine_id, mc_id):
     if wi.hoeveelheid < qty:
         flash(_('Not enough stock. Available: %(qty)s %(unit)s', qty=wi.hoeveelheid, unit=wi.eenheid), 'error')
         return redirect(url_for('machines.machine_detail', machine_id=machine_id))
-    # Deduct from warehouse
-    old_qty = wi.hoeveelheid
-    wi.hoeveelheid = old_qty - qty
-    # Record warehouse movement
-    mut = VoorraadMutatie(
-        item_id=wi.id,
-        type='uitgaand',
-        hoeveelheid=qty,
-        user_id=resolve_user_id() if current_user.is_authenticated else None,
-        opmerking=f'Consumable used on machine #{machine_id}'
-    )
-    db.session.add(mut)
+    # Атомарное списание остатка + движение
+    adjust_stock(wi.id, -qty, mt='uitgaand',
+                 user_id=resolve_user_id() if current_user.is_authenticated else None,
+                 opmerking=f'Consumable used on machine #{machine_id}')
     mc.last_issued_at = now_local()
     if not safe_commit():
         flash(_('Save failed'), 'error')

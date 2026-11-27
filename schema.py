@@ -931,6 +931,7 @@ def ensure_schema():
         ("machine_consumable.last_issued_at", "ALTER TABLE machine_consumable ADD COLUMN last_issued_at DATETIME"),
         ("fault_report.equipment_id", "ALTER TABLE fault_report ADD COLUMN equipment_id INTEGER REFERENCES equipment(id)"),
         ("user.password_plain", "ALTER TABLE user ADD COLUMN password_plain VARCHAR(200)"),
+    ("time_entry.user_date_unique", "CREATE UNIQUE INDEX IF NOT EXISTS time_entry_user_date_unique ON time_entry (user_id, date)"),
         ("user.login_count", "ALTER TABLE user ADD COLUMN login_count INTEGER DEFAULT 0"),
         ("user.force_change_password", "ALTER TABLE user ADD COLUMN force_change_password BOOLEAN DEFAULT 0"),
         ("circuit_breaker.schematic_label", "ALTER TABLE circuit_breaker ADD COLUMN schematic_label VARCHAR(20)"),

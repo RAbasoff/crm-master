@@ -10,7 +10,7 @@ from flask_babel import gettext as _
 from models import (db, VoorraadItem, VoorraadMutatie, WarehouseGroup, WarehouseReservation,
                     SupplierPrice, Machine, Contractor)
 from utils import resolve_user_id
-from utils import role_required, log_audit, sanitize_like, safe_commit, safe_int, safe_float, safe_date
+from utils import role_required, log_audit, sanitize_like, safe_commit, safe_int, safe_float, safe_date, adjust_stock, set_stock
 from security import director_only
 
 bp = Blueprint('warehouse', __name__, url_prefix='/warehouse')
@@ -376,13 +376,12 @@ def warehouse_move(item_id):
     if mt == 'uitgaand' and qty > item_available_qty(item):
         flash(_('Insufficient stock!') + f' ({_("Available")}: {item_available_qty(item)})', 'error')
         return redirect(url_for('warehouse.warehouse_list'))
-    m = VoorraadMutatie(item_id=item_id, type=mt, hoeveelheid=qty,
-                        opdracht_id=request.form.get('opdracht_id') or None,
-                        opmerking=request.form.get('opmerking',''),
-                        user_id=resolve_user_id())
-    if mt == 'inkomend': item.hoeveelheid += qty
-    else: item.hoeveelheid -= qty
-    db.session.add(m)
+    # Атомарно: раньше `item.hoeveelheid += qty` теряло изменение при
+    # двух параллельных операциях
+    adjust_stock(item_id, qty if mt == 'inkomend' else -qty, mt=mt,
+                 opdracht_id=request.form.get('opdracht_id') or None,
+                 opmerking=request.form.get('opmerking', ''),
+                 user_id=resolve_user_id())
     if not safe_commit():
         flash(_('Movement failed. Please try again.'), 'error')
         return redirect(url_for('warehouse.warehouse_list'))
@@ -764,13 +763,10 @@ def warehouse_transfer(item_id):
             flash(_('Person not found'), 'error')
             return redirect(url_for('warehouse.warehouse_transfer', item_id=item_id))
 
-        # Create outgoing movement
-        m = VoorraadMutatie(
-            item_id=item_id, type='uitgaand', hoeveelheid=qty,
-            opmerking=f'Transfer to: {person.naam}' + (f' — {notes}' if notes else ''),
-            user_id=resolve_user_id()
-        )
-        item.hoeveelheid -= qty
+        # Create outgoing movement (атомарное списание остатка)
+        adjust_stock(item_id, -qty, mt='uitgaand',
+                     opmerking=f'Transfer to: {person.naam}' + (f' — {notes}' if notes else ''),
+                     user_id=resolve_user_id())
 
         # Create reservation (tracks who has it)
         r = WarehouseReservation(
@@ -779,7 +775,6 @@ def warehouse_transfer(item_id):
             reserved_by=current_user.id,
             notes=notes or f'Transferred to {person.naam}'
         )
-        db.session.add(m)
         db.session.add(r)
         if not safe_commit():
             flash(_('Transfer failed. Please try again.'), 'error')

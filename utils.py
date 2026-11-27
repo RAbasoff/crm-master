@@ -578,3 +578,53 @@ def get_belgian_holidays(year):
     holidays[easter + timedelta(days=39)] = "Hemelvaart / Ascension"
     holidays[easter + timedelta(days=50)] = "Pinkstermaandag / Lundi de Pentecôte"
     return holidays
+
+
+# ───────────── Склад: атомарные изменения остатка ─────────────
+# Раньше везде было вида `item.hoeveelheid += qty` — чтение-модификация-запись
+# без блокировки: два параллельных списания читали одно число, и одно из
+# изменений терялось (склад расходился с реальностью). Теперь остаток
+# меняется одним UPDATE.
+
+def adjust_stock(item_id, delta, mt=None, opdracht_id=None, opmerking=None,
+                 user_id=None):
+    """Атомарно изменить остаток на delta (со знаком) + записать движение.
+
+    Возвращает VoorraadMutatie (ещё не закоммиченный).
+    """
+    from models import VoorraadItem, VoorraadMutatie, db
+    from sqlalchemy import update as _upd
+    d = float(delta or 0)
+    if d == 0:
+        return None
+    if mt is None:
+        mt = 'inkomend' if d > 0 else 'uitgaand'
+    db.session.execute(
+        _upd(VoorraadItem)
+        .where(VoorraadItem.id == item_id)
+        .values(hoeveelheid=VoorraadItem.hoeveelheid + d))
+    mut = VoorraadMutatie(item_id=item_id, type=mt, hoeveelheid=abs(d),
+                          opdracht_id=opdracht_id, opmerking=opmerking,
+                          user_id=user_id)
+    db.session.add(mut)
+    return mut
+
+
+def set_stock(item_id, value, opmerking=None, user_id=None):
+    """Атомарно выставить остаток (инвентаризация) + движение-разницу."""
+    from models import VoorraadItem, VoorraadMutatie, db
+    from sqlalchemy import update as _upd
+    item = VoorraadItem.query.get(item_id)
+    if item is None:
+        return None
+    old = float(item.hoeveelheid or 0)
+    new = float(value or 0)
+    db.session.execute(
+        _upd(VoorraadItem).where(VoorraadItem.id == item_id).values(hoeveelheid=new))
+    diff = new - old
+    if diff:
+        db.session.add(VoorraadMutatie(
+            item_id=item_id, type='inkomend' if diff > 0 else 'uitgaand',
+            hoeveelheid=abs(diff), opmerking=opmerking, user_id=user_id))
+    item.hoeveelheid = new
+    return item

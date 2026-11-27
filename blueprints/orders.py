@@ -159,17 +159,17 @@ def order_edit(order_id):
             if ns == 'in behandeling' and not order.gestart: order.gestart = now_local()
             elif ns == 'gereed' and not order.gereed: order.gereed = now_local()
             elif ns == 'afgeleverd' and not order.afgeleverd: order.afgeleverd = now_local()
-            # Отмена заказа — возврат списанных запчастей на склад
+            # Отмена заказа — возврат списанных запчастей на склад.
+            # Идемпотентно: движение помечается [REVERSED], повторная отмена
+            # (geannuleerd → X → geannuleerd) не возвращает одно и то же дважды.
             if ns == 'geannuleerd' and old_status != 'geannuleerd':
+                from utils import adjust_stock
                 for m in VoorraadMutatie.query.filter_by(opdracht_id=order.id, type='uitgaand').all():
-                    item = VoorraadItem.query.get(m.item_id) if m.item_id else None
-                    if item:
-                        item.hoeveelheid = (item.hoeveelheid or 0) + (m.hoeveelheid or 0)
-                    db.session.add(VoorraadMutatie(
-                        item_id=m.item_id, type='inkomend', hoeveelheid=m.hoeveelheid,
-                        opmerking=f'Возврат: отмена заказа {order.nummer}',
-                        user_id=resolve_user_id()
-                    ))
+                    if m.item_id and not (m.opmerking or '').endswith('[REVERSED]'):
+                        adjust_stock(m.item_id, m.hoeveelheid, mt='inkomend',
+                                     opmerking=f'Возврат: отмена заказа {order.nummer}',
+                                     user_id=resolve_user_id())
+                        m.opmerking = ((m.opmerking or '') + ' [REVERSED]').strip()
             order.status = ns
         if not safe_commit():
             flash(_('Save failed'), 'error')
