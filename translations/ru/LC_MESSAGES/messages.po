@@ -7629,3 +7629,9 @@ msgstr "Красная ячейка = план в день с конфликто
 
 msgid "Visible only to administrators, mechanics, director and head of technical service. Do not share outside."
 msgstr "Видно только администраторам, механикам, директору и начальнику техслужбы. Не передавайте наружу."
+
+msgid "has a day off in lieu"
+msgstr "в отгуле"
+
+msgid "is on vacation"
+msgstr "в отпуске"

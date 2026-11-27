@@ -393,6 +393,8 @@ function checkAvailability() {
                     let reason = '';
                     if (d.reason === 'off') reason = '{{ _("has day off") }}';
                     else if (d.reason === 'sick') reason = '{{ _("is sick") }}';
+                    else if (d.reason === 'dayoff') reason = '{{ _("has a day off in lieu") }}';
+                    else if (d.reason === 'vacation') reason = '{{ _("is on vacation") }}';
                     else if (d.reason === 'holiday') reason = `{{ _("holiday") }}: ${d.holiday}`;
                     else if (d.reason === 'not_work_day') reason = `{{ _("not a working day") }}`;
                     warnings.push(`⚠️ <b>${name}</b> — ${reason}`);

@@ -30,6 +30,10 @@
 <!-- LEGEND -->
 <div style="display:flex;gap:12px;margin-bottom:6px;font-size:10px;flex-wrap:wrap" id="noPrint">
     <span>✓ {{ _('Work') }}</span>
+    <span style="color:#e74c3c">✗ {{ _('Off') }}</span>
+    <span style="color:#f39c12">🤒 {{ _('Sick') }}</span>
+    <span style="color:#16a085">🕓 {{ _('Day off') }}</span>
+    <span style="color:#8e44ad">🏖 {{ _('Vacation') }}</span>
     <span style="color:#e74c3c">🎉 {{ _('Holiday') }}</span>
     <span style="color:#888">{{ _('Click to select') }} → {{ _('assign below') }}</span>
 </div>
@@ -42,6 +46,8 @@
     <button onclick="bulkSetShift('afternoon')" style="padding:6px 10px;border-radius:6px;border:none;background:#e67e22;color:white;font-size:11px;font-weight:600;cursor:pointer">🌆</button>
     <button onclick="bulkSetShift('off')" style="padding:6px 10px;border-radius:6px;border:none;background:#e74c3c;color:white;font-size:11px;font-weight:600;cursor:pointer">✗ {{ _('Off') }}</button>
     <button onclick="bulkSetShift('sick')" style="padding:6px 10px;border-radius:6px;border:none;background:#f39c12;color:white;font-size:11px;font-weight:600;cursor:pointer">🤒</button>
+    <button onclick="bulkSetShift('dayoff')" style="padding:6px 10px;border-radius:6px;border:none;background:#16a085;color:white;font-size:11px;font-weight:600;cursor:pointer" title="{{ _('Day off') }}">🕓 {{ _('Day off') }}</button>
+    <button onclick="bulkSetShift('vacation')" style="padding:6px 10px;border-radius:6px;border:none;background:#8e44ad;color:white;font-size:11px;font-weight:600;cursor:pointer" title="{{ _('Vacation') }}">🏖 {{ _('Vacation') }}</button>
     <button onclick="bulkRemove()" style="padding:6px 10px;border-radius:6px;border:none;background:#95a5a6;color:white;font-size:11px;font-weight:600;cursor:pointer">↺</button>
     <button onclick="clearSelection()" style="padding:6px 10px;border-radius:6px;border:none;background:#555;color:white;font-size:11px;cursor:pointer">✕</button>
 </div>
@@ -83,11 +89,15 @@
                     data-shift="{{ shift.shift_type if shift else '' }}">
                     {% if shift %}
                         {% if shift.shift_type == 'off' %}
-                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#e74c3c;color:white;font-size:8px;line-height:16px">✗</span>
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#e74c3c;color:white;font-size:8px;line-height:16px" title="{{ _('Off') }}">✗</span>
                         {% elif shift.shift_type == 'sick' %}
-                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#f39c12;color:white;font-size:8px;line-height:16px">🤒</span>
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#f39c12;color:white;font-size:8px;line-height:16px" title="{{ _('Sick') }}">🤒</span>
+                        {% elif shift.shift_type == 'dayoff' %}
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#16a085;color:white;font-size:8px;line-height:16px" title="{{ _('Day off') }}">🕓</span>
+                        {% elif shift.shift_type == 'vacation' %}
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#8e44ad;color:white;font-size:8px;line-height:16px" title="{{ _('Vacation') }}">🏖</span>
                         {% else %}
-                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#27ae60;color:white;font-size:8px;line-height:16px">✓</span>
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#27ae60;color:white;font-size:8px;line-height:16px" title="{{ _('Work') }}">✓</span>
                         {% endif %}
                     {% elif is_workday and not d.is_holiday %}
                     <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#27ae60;color:white;font-size:8px;line-height:16px">✓</span>

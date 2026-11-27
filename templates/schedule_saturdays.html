@@ -61,8 +61,10 @@
                 <td><strong>{{ r.date.strftime('%d-%m-%Y') }}</strong></td>
                 <td>{{ _('Saturday') }}</td>
                 <td>
-                    {% if r.shift and r.shift.shift_type in ('off', 'sick') %}
-                    <span class="badge badge-offline">{{ _('Off') if r.shift.shift_type == 'off' else _('Sick') }}</span>
+                    {% set off_labels = {'off': _('Off'), 'sick': _('Sick'),
+                                         'dayoff': _('Day off'), 'vacation': _('Vacation')} %}
+                    {% if r.shift and r.shift.shift_type in off_labels %}
+                    <span class="badge badge-offline">{{ off_labels[r.shift.shift_type] }}</span>
                     {% elif r.is_working %}
                     <span class="badge badge-active">{{ _('Working') }}</span>
                     {% else %}

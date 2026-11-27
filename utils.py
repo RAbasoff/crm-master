@@ -103,7 +103,9 @@ def date_plus_days(d, days):
 
 
 WORK_SHIFT_TYPES = ('full', 'morning', 'afternoon')
-OFF_SHIFT_TYPES = ('off', 'sick')
+# «Не работает» — всё, что снимает человека с графика на день.
+# dayoff = отгул, vacation = отпуск (оба заводятся из Maandplanning).
+OFF_SHIFT_TYPES = ('off', 'sick', 'dayoff', 'vacation')
 
 
 def _parse_hhmm(value, fallback):
@@ -114,9 +116,11 @@ def _parse_hhmm(value, fallback):
 
 
 def get_day_shift(user_id, date):
-    """WeekendShift на дату (или None)."""
+    """WeekendShift на дату (или None). Берём последнюю запись: в базе
+    исторически есть дубли по (user, date), и .first() попадал в старую."""
     from models import WeekendShift
-    return WeekendShift.query.filter_by(user_id=user_id, date=date).first()
+    return (WeekendShift.query.filter_by(user_id=user_id, date=date)
+            .order_by(WeekendShift.id.desc()).first())
 
 
 def get_active_schedule(user_id):

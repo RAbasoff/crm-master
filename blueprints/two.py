@@ -335,7 +335,8 @@ def check_worker_availability():
         next_dates = suggest_available_dates(worker_id, date)
         return jsonify({
             'available': False,
-            'reason': 'off' if shift.shift_type == 'off' else 'sick',
+            # сам тип смены: off / sick / dayoff / vacation — фронт подписывает
+            'reason': shift.shift_type,
             'worker': worker.display_name if worker else '',
             'date': date.strftime('%d-%m-%Y'),
             'alternatives': alternatives,

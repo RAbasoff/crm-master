@@ -7455,3 +7455,9 @@ msgstr "Rode cel = planning op een dag met een conflict."
 
 msgid "Visible only to administrators, mechanics, director and head of technical service. Do not share outside."
 msgstr "Alleen zichtbaar voor beheerders, monteurs, directeur en hoofd technische dienst. Niet buiten delen."
+
+msgid "has a day off in lieu"
+msgstr "heeft compensatieverlof"
+
+msgid "is on vacation"
+msgstr "is met vakantie"

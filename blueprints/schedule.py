@@ -245,7 +245,12 @@ def schedule_monthly_shift():
     shift_type = data.get('shift_type', 'full')
 
     date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    existing = WeekendShift.query.filter_by(user_id=user_id, date=date).first()
+    # одна строка на (пользователь, дата) — раньше появлялись дубли, из-за чего
+    # смена «не переключалась»: .first() попадал в старую запись
+    rows = WeekendShift.query.filter_by(user_id=user_id, date=date).all()
+    existing = rows[0] if rows else None
+    for extra in rows[1:]:
+        db.session.delete(extra)
 
     if action == 'add':
         if existing:
