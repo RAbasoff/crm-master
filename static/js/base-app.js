@@ -380,7 +380,7 @@ function __T(k) { return (window.__BOOT && window.__BOOT.T && window.__BOOT.T[k]
         // Register Service Worker for PWA + Web Push (вибрация/звук на телефоне)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=8').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
+                navigator.serviceWorker.register('/static/sw.js?v=11').then(function(reg){ try { reg.update(); } catch(e){} if (navigator.serviceWorker.controller) { navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'}); } return reg; })
                     .then(reg => {
                         console.log('SW registered:', reg.scope);
                         initWebPush(reg);
