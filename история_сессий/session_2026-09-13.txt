@@ -16,12 +16,12 @@ Online: https://rabasoff.pythonanywhere.com
      - история_сессий/*
 
 ПАРОЛИ:
-  admin / Aba103sov (проверено локально — работает)
+  admin / «ПАРОЛЬ УДАЛЁН — ПОДЛЕЖИТ РОТАЦИИ» (проверено локально — работает)
 
 СЛЕДУЮЩИЙ ШАГ НА PYTHONANYWHERE:
   cd ~/crm-master && git pull origin master
   pip install --user flask-caching flask-migrate flask-compress
   Web → Reload
-  Проверить вход: admin / Aba103sov
+  Проверить вход: admin / «ПАРОЛЬ УДАЛЁН — ПОДЛЕЖИТ РОТАЦИИ»
 
 ============================================================

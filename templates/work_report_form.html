@@ -20,16 +20,6 @@
         <div class="card" style="background:#f0f7ff;margin:16px 0;padding:16px">
             <h3 style="font-size:14px;margin-bottom:12px">📦 {{ _('Parts Used') }} ({{ _('from warehouse') }})</h3>
             <div id="parts-container">
-                {% if report and report.parts_used %}
-                    {% set parts = report.parts_used|tojson if report.parts_used is string else report.parts_used %}
-                    {% if parts is string %}
-                        {% set parts_list = parts|tojson %}
-                    {% else %}
-                        {% set parts_list = parts %}
-                    {% endif %}
-                {% else %}
-                    {% set parts_list = [] %}
-                {% endif %}
                 <div class="part-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
                     <select class="part-select" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px">
                         <option value="">{{ _('Select Part') }}</option>
@@ -142,10 +132,13 @@ document.getElementById('workReportForm').addEventListener('submit', function(e)
     hidden.value = JSON.stringify(parts);
 });
 
-// Pre-fill parts if editing
+// Pre-fill parts if editing.
+// ВАЖНО: parts_used — TEXT c JSON-строкой. Без JSON.parse |tojson даёт
+// JS-строку, Array.isArray всегда false и детали не подставлялись; при
+// сохранении они затирались «[]», а старая комплектация возвращалась на склад.
 {% if report and report.parts_used %}
 try {
-    const existingParts = {{ report.parts_used|tojson }};
+    const existingParts = JSON.parse({{ report.parts_used|tojson }});
     if (Array.isArray(existingParts) && existingParts.length > 0) {
         const container = document.getElementById('parts-container');
         const firstRow = container.querySelector('.part-row');

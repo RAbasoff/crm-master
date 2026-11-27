@@ -1136,9 +1136,14 @@ def check_planning_reminders():
             PlanShipment.ship_date == today + timedelta(days=1)).all():
         users = _admin_users()
         for u in users:
+            # ВАЖНО: у create_notification 3 позиционных аргумента (user_id,
+            # title, message) и параметр называется ntype, не type — раньше
+            # вызов падал с TypeError и напоминания не уходили вовсе.
             create_notification(
-                u.id, f'🚚 {_("Shipment tomorrow")}: {s.article_name} ×{s.qty} {s.unit} → {s.client_name or "?"}',
-                type='planning', link='/planning/shipments')
+                u.id,
+                f'🚚 {_("Shipment tomorrow")}: {s.article_name} ×{s.qty} {s.unit} → {s.client_name or "?"}',
+                f'{s.ship_date} · {s.client_name or "?"}',
+                'planning', '/planning/shipments')
             sent += 1
 
     # overdue items
@@ -1152,8 +1157,10 @@ def check_planning_reminders():
             users = _admin_users()
             for u in users:
                 create_notification(
-                    u.id, f'⚠️ {_("Overdue")} {label}: {len(overdue)}',
-                    type='planning', link='/planning')
+                    u.id,
+                    f'⚠️ {_("Overdue")} {label}: {len(overdue)}',
+                    str(today),
+                    'planning', '/planning')
                 sent += 1
     return sent
 

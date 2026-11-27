@@ -361,19 +361,41 @@ def weekly_offsite_backup(force=False):
         else:
             subprocess.run(['git', 'worktree', 'add', '-b', 'backups', tmp], cwd=base,
                            capture_output=True, text=True, timeout=120)
-        dst = os.path.join(tmp, 'werkplaats_latest.db')
-        shutil.copy2(path, dst)
-        msg = 'weekly backup %s' % now.strftime('%Y-%m-%d %H:%M')
-        add = subprocess.run(['git', 'add', '-f', 'werkplaats_latest.db'], cwd=tmp, capture_output=True, text=True)
-        com = subprocess.run(['git', 'commit', '-m', msg], cwd=tmp, capture_output=True, text=True)
-        tok = os.environ.get('GITHUB_TOKEN') or os.environ.get('PROMASTER_GITHUB_TOKEN') or ''
-        if tok:
-            push = subprocess.run(['git', '-c', 'http.extraheader=Authorization: Bearer %s' % tok,
-                                   'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
+        # ВАЖНО: БД содержит хэши паролей и ОТКРЫТЫЕ пароли оборудования
+        # (machine_password). Раньше файл копировался в git и уезжал в origin —
+        # то есть в GitHub. Теперь он кладётся ТОЛЬКО в зашифрованном виде;
+        # без ключа шифрования наружу ничего не уходит.
+        enc_pass = (os.environ.get('BACKUP_ENC_PASSPHRASE') or '').strip()
+        dst = os.path.join(tmp, 'werkplaats_latest.db.enc' if enc_pass else 'werkplaats_local_only.db')
+        if enc_pass:
+            try:
+                from cryptography.fernet import Fernet
+                import base64, hashlib
+                key = base64.urlsafe_b64encode(hashlib.sha256(enc_pass.encode('utf-8')).digest())
+                blob = open(path, 'rb').read()
+                open(dst, 'wb').write(Fernet(key).encrypt(blob))
+            except Exception as _ee:
+                result = 'encrypt-failed: %s' % str(_ee)[:80]
+                dst = None
         else:
-            push = subprocess.run(['git', 'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
-        if push.returncode != 0:
-            result = 'push-failed: ' + (push.stderr or push.stdout or '')[-120:]
+            shutil.copy2(path, dst)
+        msg = 'weekly backup %s' % now.strftime('%Y-%m-%d %H:%M')
+        if dst:
+            subprocess.run(['git', 'add', '-f', os.path.basename(dst)], cwd=tmp,
+                           capture_output=True, text=True)
+            subprocess.run(['git', 'commit', '-m', msg], cwd=tmp, capture_output=True, text=True)
+        # Открытую БД в origin не пушим НИКОГДА — только шифротекст.
+        if dst and dst.endswith('.enc'):
+            tok = os.environ.get('GITHUB_TOKEN') or os.environ.get('PROMASTER_GITHUB_TOKEN') or ''
+            if tok:
+                push = subprocess.run(['git', '-c', 'http.extraheader=Authorization: Bearer %s' % tok,
+                                       'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
+            else:
+                push = subprocess.run(['git', 'push', 'origin', 'backups'], cwd=tmp, capture_output=True, text=True, timeout=180)
+            if push.returncode != 0:
+                result = 'push-failed: ' + (push.stderr or push.stdout or '')[-120:]
+        else:
+            result = 'local-only (set BACKUP_ENC_PASSPHRASE to enable offsite)'
         try:
             with open(stamp, 'w', encoding='utf-8') as f:
                 f.write(today)
@@ -755,9 +777,9 @@ with app.app_context():
             _admin_user.role = 'admin'
             _needs_update = True
             print("STARTUP: admin role fixed to 'admin'")
-        if _admin_user.force_change_password:
-            _admin_user.force_change_password = False
-            _needs_update = True
+        # force_change_password НЕ сбрасываем при старте: раньше флаг
+        # «сменить пароль при следующем входе» обнулялся при каждом
+        # перезапуске (их на PA много), и временные пароли оставались навсегда.
         if _admin_user.login_count and _admin_user.login_count > 0:
             _admin_user.login_count = 0
             _needs_update = True
@@ -826,7 +848,16 @@ def _bootstrap_password(env_key):
 
 
 def get_current_locale():
-    """Язык: сессия > preferred_language > nl. Русский — только владелец."""
+    """Язык: сессия > preferred_language > nl. Русский — только владелец.
+
+    ВАЖНО: фоновые задачи (maintenance_jobs, рассылки, push) вызывают `_()`
+    БЕЗ запроса — `session` и `current_user` там недоступны и падают с
+    «Working outside of request context». Поэтому весь доступ к ним закрыт
+    проверкой has_request_context().
+    """
+    from flask import has_request_context
+    if not has_request_context():
+        return 'nl'
     lang = session.get('lang')
     if lang not in ('nl', 'ru'):
         lang = None
@@ -1701,9 +1732,14 @@ def me_order_notice():
 @login_required
 def profile():
     if request.method == 'POST':
-        # Change username
+        # Смена username только админом (через «Пользователи»): username —
+        # ключ привилегий (is_head_of_ts / is_owner_user сверяются с ним),
+        # и раньше любой мог переименоваться в «director» и получить права.
         new_username = request.form.get('username', '').strip()
         if new_username and new_username != current_user.username:
+            if not current_user.has_role('admin'):
+                flash(_('Username can only be changed by an administrator'), 'error')
+                return redirect(url_for('profile'))
             existing = User.query.filter_by(username=new_username).first()
             if existing:
                 flash(_('Username already taken'), 'error')

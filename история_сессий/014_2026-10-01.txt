@@ -56,7 +56,7 @@
 4) ЛОКАЛЬНЫЙ СЕРВЕР + ПАРОЛЬ
    - Flask на http://127.0.0.1:5000 (PID 40132, _run_local.py)
    - Проблема запуска: multiline -c в Start-Process ломался → скрипт _run_local.py
-   - Пароль admin СБРОШЕН на Aba103sov (проверено check_password True)
+   - Пароль admin СБРОШЕН на «ПАРОЛЬ УДАЛЁН — ПОДЛЕЖИТ РОТАЦИИ» (проверено check_password True)
    - Логи: server_out.txt / server_err.txt
    - Комп перезагружать НЕ нужно
 

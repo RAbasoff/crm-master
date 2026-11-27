@@ -286,7 +286,7 @@ eaf61c6 — 28.09.2026 — fix: gas arithmetic + user names
 - feat: модуль Сжатый воздух (точки+фото, линии, отдельная карта /air/map)
 - feat: Версия 2.11 (i18n Version) в sidebar/login/title
 - wip: модуль Водоснабжение (только модели)
-- fix: local server 127.0.0.1:5000, admin password Aba103sov
+- fix: local server 127.0.0.1:5000, admin password «ПАРОЛЬ УДАЛЁН — ПОДЛЕЖИТ РОТАЦИИ»
 См. история_сессий/014_2026-10-01.txt
 
 ============================================================

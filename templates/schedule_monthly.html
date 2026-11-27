@@ -41,15 +41,13 @@
 <!-- BULK ACTION BAR -->
 <div id="bulkBar" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#2c3e50;color:white;padding:8px 16px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:100;gap:8px;align-items:center;flex-wrap:wrap">
     <span id="selectedCount" style="font-weight:700;margin-right:6px;font-size:12px"></span>
-    <button onclick="bulkSetShift('full')" style="padding:6px 10px;border-radius:6px;border:none;background:#27ae60;color:white;font-size:11px;font-weight:600;cursor:pointer">✓ {{ _('Full') }}</button>
-    <button onclick="bulkSetShift('morning')" style="padding:6px 10px;border-radius:6px;border:none;background:#3498db;color:white;font-size:11px;font-weight:600;cursor:pointer">🌅</button>
-    <button onclick="bulkSetShift('afternoon')" style="padding:6px 10px;border-radius:6px;border:none;background:#e67e22;color:white;font-size:11px;font-weight:600;cursor:pointer">🌆</button>
+    <button onclick="bulkSetShift('full')" style="padding:6px 10px;border-radius:6px;border:none;background:#27ae60;color:white;font-size:11px;font-weight:600;cursor:pointer">✓ {{ _('Work') }}</button>
     <button onclick="bulkSetShift('off')" style="padding:6px 10px;border-radius:6px;border:none;background:#e74c3c;color:white;font-size:11px;font-weight:600;cursor:pointer">✗ {{ _('Off') }}</button>
-    <button onclick="bulkSetShift('sick')" style="padding:6px 10px;border-radius:6px;border:none;background:#f39c12;color:white;font-size:11px;font-weight:600;cursor:pointer">🤒</button>
+    <button onclick="bulkSetShift('sick')" style="padding:6px 10px;border-radius:6px;border:none;background:#f39c12;color:white;font-size:11px;font-weight:600;cursor:pointer">🤒 {{ _('Sick') }}</button>
     <button onclick="bulkSetShift('dayoff')" style="padding:6px 10px;border-radius:6px;border:none;background:#16a085;color:white;font-size:11px;font-weight:600;cursor:pointer" title="{{ _('Day off') }}">🕓 {{ _('Day off') }}</button>
     <button onclick="bulkSetShift('vacation')" style="padding:6px 10px;border-radius:6px;border:none;background:#8e44ad;color:white;font-size:11px;font-weight:600;cursor:pointer" title="{{ _('Vacation') }}">🏖 {{ _('Vacation') }}</button>
-    <button onclick="bulkRemove()" style="padding:6px 10px;border-radius:6px;border:none;background:#95a5a6;color:white;font-size:11px;font-weight:600;cursor:pointer">↺</button>
-    <button onclick="clearSelection()" style="padding:6px 10px;border-radius:6px;border:none;background:#555;color:white;font-size:11px;cursor:pointer">✕</button>
+    <button onclick="bulkRemove()" title="{{ _('Remove mark') }}" style="padding:6px 10px;border-radius:6px;border:none;background:#95a5a6;color:white;font-size:11px;font-weight:600;cursor:pointer">↺</button>
+    <button onclick="clearSelection()" title="{{ _('Deselect') }}" style="padding:6px 10px;border-radius:6px;border:none;background:#555;color:white;font-size:11px;cursor:pointer">✕</button>
 </div>
 
 <!-- SCHEDULE TABLE -->

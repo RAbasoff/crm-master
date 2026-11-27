@@ -162,6 +162,9 @@ def vacation_new():
         except (ValueError, KeyError):
             flash(_('Invalid date format'), 'error')
             return redirect(url_for('timekeeping.vacation_new'))
+        if d_to < d_from:
+            flash(_('Invalid date range'), 'error')
+            return redirect(url_for('timekeeping.vacation_new'))
         days = (d_to - d_from).days + 1
         v = Vacation(
             user_id=resolve_user_id(),

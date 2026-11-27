@@ -224,31 +224,32 @@ def is_owner_user(user=None):
     """Владелец системы (Ruslan Abasoff) — единственный, кому доступен русский.
 
     Его аккаунты: admin, director (начальник ТС), ruslan.abasoff (механик).
+
+    ВАЖНО: сравниваем ТОЛЬКО username. Раньше здесь было и display_name —
+    а его пользователь мог сам поменять в /profile и получить привилегии.
     """
     u = user or current_user
     if not u:
         return False
     uname = (getattr(u, 'username', '') or '').lower()
-    if uname in ('admin', 'director', 'ruslan.abasoff'):
-        return True
-    name = ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
-    return any(k in name for k in ('ruslan', 'abasoff', 'абасов', 'руслан'))
+    return uname in ('admin', 'director', 'ruslan.abasoff')
 
 
 def is_head_of_ts(user=None):
-    """Начальник технической службы — Ruslan Abasoff. Только он и админ закрывают/переоткрывают."""
+    """Начальник технической службы — Ruslan Abasoff. Только он и админ
+    закрывают/переоткрывают заявки.
+
+    Проверка идёт по username и роли, НЕ по display_name: имя пользователь
+    меняет сам в /profile, и раньше достаточно было назваться «Ruslan»,
+    чтобы получить права закрывать чужие заявки, править TWO и удалять фото.
+    """
     u = user or current_user
     if not (u and getattr(u, 'is_authenticated', False)):
         return False
     if u.has_role('admin'):
         return True
-    name = ((getattr(u, 'display_name', '') or '') + ' ' + (getattr(u, 'username', '') or '')).lower()
-    if 'ruslan' in name or 'abasoff' in name or 'абасов' in name or 'руслан' in name:
-        return True
-    # системный аккаунт director = начальник ТС
-    if (getattr(u, 'username', '') or '').lower() == 'director':
-        return True
-    return False
+    uname = (getattr(u, 'username', '') or '').lower()
+    return uname in ('director', 'ruslan.abasoff')
 
 
 def can_close_or_reopen(user=None):

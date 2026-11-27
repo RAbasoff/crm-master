@@ -702,7 +702,12 @@ def two_edit(two_id):
         if not ok:
             flash(_('Record is being edited by %(user)s. Try again later.', user=lock_info.get('user_name', '?')), 'error')
             return redirect(url_for('two.two_detail', two_id=two_id))
-        two.fault_id = safe_int(request.form.get('fault_id')) or None
+        # Заявку НЕ отвязываем при сохранении: селект заполняется только
+        # незакрытыми заявками, и когда связанная заявка решается/закрывается,
+        # её нет в <option> — форма шлёт «» и раньше связь молча терялась.
+        _fid = safe_int(request.form.get('fault_id'))
+        if _fid:
+            two.fault_id = _fid
         # Машину НЕ стираем при сохранении: пустое поле = оставить как есть,
         # а если её нет — подтянуть из заявки (иначе форма без select убивала machine_id).
         _mid = safe_int(request.form.get('machine_id'))

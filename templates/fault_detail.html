@@ -385,7 +385,9 @@
                 <div style="margin-top:8px" id="parts-display-{{ report.id }}"></div>
                 <script>
                 try {
-                    const parts{{ report.id }} = {{ report.parts_used|tojson }};
+                    // parts_used — JSON-строка в TEXT: без JSON.parse |tojson даёт
+                    // JS-строку и список деталей никогда не показывался
+                    const parts{{ report.id }} = JSON.parse({{ report.parts_used|tojson }});
                     if (Array.isArray(parts{{ report.id }}) && parts{{ report.id }}.length > 0) {
                         let html = '<div style="background:white;padding:8px 10px;border-radius:6px;border:1px solid #e8ecf1;font-size:12px"><strong>📦 {{ _("Parts") }}:</strong> ';
                         html += parts{{ report.id }}.map(p => (p.name || 'ID:' + p.part_id) + ' ×' + p.quantity).join(', ');
