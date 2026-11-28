@@ -265,8 +265,12 @@ def upload_ext_allowed(filename):
 def save_uploaded_file(file, prefix=''):
     """Save upload with a unique filename to avoid collisions and stale browser cache."""
     if file and file.filename:
-        original = secure_filename(file.filename)
-        ext = os.path.splitext(original)[1].lower()
+        # Расширение берём из ИСХОДНОГО имени: secure_filename вырезает
+        # не-ASCII, и «оффер.pdf» превращалось в «pdf» — splitext не находил
+        # точку, файл молча отбрасывался (загрузки с русскими именами не
+        # сохранялись вообще). Имя на диске всё равно UUID, так что
+        # path-traversal через filename невозможен.
+        ext = os.path.splitext(file.filename)[1].lower()
         if ext not in ALLOWED_UPLOAD_EXT:
             return None
         import uuid as _uuid

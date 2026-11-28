@@ -44,6 +44,9 @@
             <tr><td style="color:#888;padding:6px 0;width:40%">{{ _('Next Maintenance Date') }}</td><td>{{ eq.next_date.strftime('%d.%m.%Y') if eq.next_date else '—' }}</td></tr>
             <tr><td style="color:#888;padding:6px 0">{{ _('Periodicity') }}</td><td>{{ eq.periodicity or '—' }}</td></tr>
             <tr><td style="color:#888;padding:6px 0;vertical-align:top">{{ _('Reason') }}</td><td style="white-space:pre-wrap">{{ eq.reason }}</td></tr>
+            {% if eq.work_done %}
+            <tr><td style="color:#888;padding:6px 0;vertical-align:top">{{ _('Work performed') }}</td><td style="white-space:pre-wrap">{{ eq.work_done }}</td></tr>
+            {% endif %}
             {% if eq.notes %}
             <tr><td style="color:#888;padding:6px 0;vertical-align:top">{{ _('Notes') }}</td><td style="white-space:pre-wrap">{{ eq.notes }}</td></tr>
             {% endif %}
@@ -103,4 +106,63 @@
     </div>
 </div>
 {% endif %}
+
+<!-- DOCUMENTS: отчёты / офферы / документы по запчастям -->
+<div class="card" style="margin-top:16px">
+    <h2>📄 {{ _('Documents') }} ({{ eq.documents|length }})</h2>
+
+    {% if current_user.has_role('admin', 'technician') %}
+    <form method="POST" action="/equipment/{{ eq.id }}/document/upload"
+          enctype="multipart/form-data" style="background:#f7f9fc;padding:12px;border-radius:10px;margin-bottom:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select name="doc_type" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                {% for k, label in doc_types.items() %}
+                <option value="{{ k }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <input type="file" name="documents" multiple required
+                   style="padding:6px;font-size:12px;flex:1;min-width:220px">
+            <input type="text" name="description" placeholder="{{ _('Description') }}"
+                   style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;min-width:180px">
+            <button type="submit" class="btn btn-primary" style="font-size:12px">⬆️ {{ _('Upload') }}</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px">
+            {{ _('Can select several files at once') }} · PDF / Word / Excel / изображения
+        </div>
+    </form>
+    {% endif %}
+
+    {% if eq.documents %}
+    <div class="table-wrap"><table>
+        <tr><th>{{ _('Type') }}</th><th>{{ _('File') }}</th><th>{{ _('Description') }}</th>
+            <th>{{ _('Uploaded') }}</th><th></th></tr>
+        {% for d in eq.documents %}
+        <tr>
+            <td>
+                {% if d.doc_type == 'report' %}📋{% elif d.doc_type == 'offer' %}💰{% elif d.doc_type == 'document' %}📄{% else %}📎{% endif %}
+                {{ doc_types.get(d.doc_type, d.doc_type) if doc_types is defined else d.doc_type }}
+            </td>
+            <td style="font-weight:600">
+                <a href="/equipment/document/{{ d.id }}">{{ d.original_name or d.filename }}</a>
+            </td>
+            <td style="color:#666">{{ d.description or '' }}</td>
+            <td style="font-size:12px;color:#888">
+                {{ d.uploaded_at.strftime('%d.%m.%Y %H:%M') if d.uploaded_at else '—' }}
+                {% if d.uploader %}<br>{{ d.uploader.display_name or d.uploader.username }}{% endif %}
+            </td>
+            <td>
+                {% if current_user.has_role('admin', 'technician') %}
+                <form method="POST" action="/equipment/document/{{ d.id }}/delete"
+                      onsubmit="return confirm('{{ _('Delete document?') }}')" style="display:inline">
+                    <button type="submit" class="btn btn-sm" style="background:#e74c3c;color:white">🗑️</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:#aaa;font-size:13px">{{ _('No documents yet') }}</p>
+    {% endif %}
+</div>
 {% endblock %}

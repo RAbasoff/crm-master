@@ -8,7 +8,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from datetime import datetime, timedelta
 import os
 
@@ -836,6 +836,24 @@ with app.app_context():
                 print('WARNING: safe_commit failed in startup')
             print(f"STARTUP: removed fake test user '{_fake}'")
 
+def _safe_next(url):
+    """Безопасный redirect-после-входа: только внутренние пути.
+
+    Раньше проверка была `urlparse(url).netloc != request.host`, и её
+    обходило `?next=////evil.com` (netloc пуст) и `javascript:...`.
+    Теперь принимаем только путь, начинающийся с одного «/», не с «//».
+    """
+    if not url:
+        return None
+    u = str(url).strip()
+    if not u.startswith('/') or u.startswith('//') or u.startswith('/\\'):
+        return None
+    host = urlparse(urljoin(request.host_url, u)).netloc
+    if host and host != request.host:
+        return None
+    return u
+
+
 def _bootstrap_password(env_key):
     """Password for freshly seeded accounts. Never a fixed literal — env or random + force change."""
     import secrets
@@ -1483,12 +1501,7 @@ def login():
                     if plan:
                         session['me_order_id'] = plan[0].id
                         return redirect(url_for('me_day_plan'))
-                next_url = request.args.get('next')
-                if next_url:
-                    parsed = urlparse(next_url)
-                    if parsed.netloc and parsed.netloc != request.host:
-                        next_url = None
-                return redirect(next_url or url_for('index'))
+                return redirect(_safe_next(request.args.get('next')) or url_for('index'))
             # Try Verantwoordelijke by username, email or naam
             person = Verantwoordelijke.query.filter(
                 (Verantwoordelijke.username == username) | (Verantwoordelijke.email == username) | (Verantwoordelijke.naam == username)
@@ -1515,12 +1528,7 @@ def login():
                 if auth.force_change_password:
                     flash(_('You must change your password'), 'warning')
                     return redirect(url_for('change_password'))
-                next_url = request.args.get('next')
-                if next_url:
-                    parsed = urlparse(next_url)
-                    if parsed.netloc and parsed.netloc != request.host:
-                        next_url = None
-                return redirect(next_url or url_for('floor_plan'))
+                return redirect(_safe_next(request.args.get('next')) or url_for('floor_plan'))
             log_system('WARNING', 'auth', f'Failed login attempt for {username}', source='login')
             flash(_('Invalid credentials'), 'error')
         return render_template('login.html')

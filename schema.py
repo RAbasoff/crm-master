@@ -589,6 +589,17 @@ def ensure_schema():
             description VARCHAR(300),
             uploaded_at DATETIME
         )"""),
+        ("equipment_maintenance.work_done", "ALTER TABLE equipment_maintenance ADD COLUMN work_done TEXT"),
+        ("equipment_mro_document", """CREATE TABLE IF NOT EXISTS equipment_mro_document (
+            id INTEGER PRIMARY KEY,
+            equipment_id INTEGER NOT NULL REFERENCES equipment_maintenance(id),
+            filename VARCHAR(300) NOT NULL,
+            original_name VARCHAR(300),
+            doc_type VARCHAR(20) DEFAULT 'document',
+            description VARCHAR(300),
+            uploaded_by INTEGER REFERENCES "user"(id),
+            uploaded_at DATETIME
+        )"""),
         ("equipment_part", """CREATE TABLE IF NOT EXISTS equipment_part (
             id INTEGER PRIMARY KEY,
             equipment_id INTEGER NOT NULL REFERENCES equipment_maintenance(id),

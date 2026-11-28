@@ -2040,6 +2040,8 @@ class EquipmentMaintenance(db.Model):
     device = db.relationship('MuleDevice', backref='records')
     date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text, nullable=False)
+    # Отчёт о проведённом обслуживании: что сделано, результат, замечания
+    work_done = db.Column(db.Text)
     next_date = db.Column(db.Date)
     periodicity = db.Column(db.String(50))
     status = db.Column(db.String(20), default='completed')
@@ -2056,6 +2058,9 @@ class EquipmentMaintenance(db.Model):
     parts = db.relationship('EquipmentPart', backref='equipment', lazy=True, cascade='all, delete-orphan')
     components = db.relationship('EquipmentComponent', backref='equipment', lazy=True, cascade='all, delete-orphan')
     photos = db.relationship('EquipmentMROPhoto', backref='equipment', lazy=True, cascade='all, delete-orphan')
+    documents = db.relationship('EquipmentMRODocument', backref='equipment', lazy=True,
+                                order_by='EquipmentMRODocument.uploaded_at.desc()',
+                                cascade='all, delete-orphan')
 
     def completed_date_set(self):
         """Множество выполненных дат графика (ISO-строки)."""
@@ -2080,6 +2085,26 @@ class EquipmentMROPhoto(db.Model):
     filename = db.Column(db.String(300), nullable=False)
     description = db.Column(db.String(300))
     uploaded_at = db.Column(db.DateTime, default=now_local)
+
+
+class EquipmentMRODocument(db.Model):
+    """Файлы к записи обслуживания «Другое оборудование».
+
+    doc_type: report  — отчёт о проведённом обслуживании
+              offer   — оффер / КП от поставщика
+              document— документы по замене/покупке запчастей (накладная, счёт)
+              other   — прочее
+    """
+    __tablename__ = 'equipment_mro_document'
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment_maintenance.id'), nullable=False, index=True)
+    filename = db.Column(db.String(300), nullable=False)
+    original_name = db.Column(db.String(300))
+    doc_type = db.Column(db.String(20), default='document')
+    description = db.Column(db.String(300))
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    uploaded_at = db.Column(db.DateTime, default=now_local)
+    uploader = db.relationship('User', foreign_keys=[uploaded_by])
 
 class EquipmentPart(db.Model):
     __tablename__ = 'equipment_part'

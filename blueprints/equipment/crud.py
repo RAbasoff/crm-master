@@ -5,13 +5,13 @@ import os
 from datetime import datetime
 
 from flask import (render_template, request, redirect, url_for, flash,
-                   current_app)
+                   current_app, send_from_directory)
 from flask_login import login_required
 from flask_babel import gettext as _
 
 from models import (db, EquipmentMaintenance, EquipmentPart, EquipmentComponent,
-                    EquipmentPartOrder, EquipmentMROPhoto, VoorraadItem,
-                    VoorraadMutatie, MuleDevice)
+                    EquipmentPartOrder, EquipmentMROPhoto, EquipmentMRODocument,
+                    VoorraadItem, VoorraadMutatie, MuleDevice)
 from utils import (resolve_user_id, log_audit, role_required, safe_commit, adjust_stock,
                    safe_date, safe_float, safe_int, sanitize_like,
                    save_uploaded_file)
@@ -57,7 +57,7 @@ def equipment_list():
 @role_required('admin', 'director', 'technician')
 def equipment_detail(eq_id):
     eq = EquipmentMaintenance.query.get_or_404(eq_id)
-    return render_template('equipment_detail.html', eq=eq)
+    return render_template('equipment_detail.html', eq=eq, doc_types=MRO_DOC_TYPES)
 
 
 @bp.route('/equipment/new', methods=['GET', 'POST'])
@@ -93,6 +93,7 @@ def equipment_new():
                 machine_id=safe_int(request.form.get('machine_id')) or None,
                 date=date,
                 reason=request.form['reason'],
+                work_done=(request.form.get('work_done') or '').strip() or None,
                 next_date=(d := safe_date(request.form.get('next_date'))) and d.date() or None,
                 periodicity=request.form.get('periodicity', ''),
                 notes=request.form.get('notes', ''),
@@ -199,6 +200,7 @@ def equipment_edit(eq_id):
             _dev = _get_or_create_device(_nm, _md, eq.serial, eq.machine_id)
             eq.device_id = _dev.id if _dev is not None else None
         eq.reason = request.form['reason']
+        eq.work_done = (request.form.get('work_done') or '').strip() or None
         eq.next_date = (d := safe_date(request.form.get('next_date'))) and d.date() or None
         eq.periodicity = request.form.get('periodicity', '')
         eq.notes = request.form.get('notes', '')
@@ -284,6 +286,83 @@ def equipment_photo_delete(photo_id):
     else:
         flash(_('Photo deleted'), 'success')
     return redirect(url_for('equipment.equipment_edit', eq_id=eq_id))
+
+
+# ─────────── документы к записи обслуживания (отчёт / оффер / закупка) ───────────
+MRO_DOC_TYPES = {
+    'report': 'Отчёт о обслуживании',
+    'offer': 'Оффер / КП',
+    'document': 'Документ по запчастям',
+    'other': 'Прочее',
+}
+
+
+@bp.route('/equipment/<int:eq_id>/document/upload', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def equipment_document_upload(eq_id):
+    """Загрузка файлов к записи: отчёты, офферы, документы по запчастям."""
+    eq = EquipmentMaintenance.query.get_or_404(eq_id)
+    doc_type = request.form.get('doc_type') or 'document'
+    if doc_type not in MRO_DOC_TYPES:
+        doc_type = 'document'
+    desc = (request.form.get('description') or '').strip()
+    files = [f for f in request.files.getlist('documents') if f and f.filename]
+    if not files:
+        flash(_('No file selected'), 'error')
+        return redirect(url_for('equipment.equipment_detail', eq_id=eq.id))
+    saved = 0
+    for f in files:
+        filename = save_uploaded_file(f, prefix=f'eqdoc_{eq.id}_')
+        if not filename:
+            continue
+        db.session.add(EquipmentMRODocument(
+            equipment_id=eq.id,
+            filename=filename,
+            original_name=f.filename[:300],
+            doc_type=doc_type,
+            description=desc,
+            uploaded_by=resolve_user_id(),
+        ))
+        saved += 1
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    elif saved:
+        log_audit('create', 'equipment_document', eq.id,
+                  f'{MRO_DOC_TYPES[doc_type]} × {saved} → {eq.number}')
+        flash(_('%(n)s file(s) uploaded', n=saved), 'success')
+    else:
+        flash(_('File type not allowed'), 'error')
+    return redirect(url_for('equipment.equipment_detail', eq_id=eq.id))
+
+
+@bp.route('/equipment/document/<int:doc_id>')
+@login_required
+@role_required('admin', 'director', 'technician')
+def equipment_document_download(doc_id):
+    """Скачивание файла. Отдаётся из-под авторизации, а не из static."""
+    doc = EquipmentMRODocument.query.get_or_404(doc_id)
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'],
+                               doc.filename, as_attachment=True,
+                               download_name=doc.original_name or doc.filename)
+
+
+@bp.route('/equipment/document/<int:doc_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'technician')
+def equipment_document_delete(doc_id):
+    doc = EquipmentMRODocument.query.get_or_404(doc_id)
+    eq_id = doc.equipment_id
+    try:
+        os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], doc.filename))
+    except OSError:
+        pass
+    db.session.delete(doc)
+    if not safe_commit():
+        flash(_('Save failed'), 'error')
+    else:
+        flash(_('Document deleted'), 'success')
+    return redirect(url_for('equipment.equipment_detail', eq_id=eq_id))
 
 
 @bp.route('/equipment/order', methods=['POST'])
