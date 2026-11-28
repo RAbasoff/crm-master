@@ -33,7 +33,7 @@ from .plans import skip_weekend
 @bp.route('/maintenance-calendar')
 @login_required
 def maintenance_calendar():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
     month_start = datetime(year, mon, 1).date()
@@ -538,9 +538,9 @@ def maintenance_calendar_complete():
             if plan:
                 event_date = request.form.get('date')
                 try:
-                    event_dt = datetime.strptime(event_date, '%Y-%m-%d') if event_date else datetime.utcnow()
+                    event_dt = datetime.strptime(event_date, '%Y-%m-%d') if event_date else now_local()
                 except ValueError:
-                    event_dt = datetime.utcnow()
+                    event_dt = now_local()
                 ev_d = event_dt.date() if hasattr(event_dt, 'date') else event_dt
                 if plan.recurrence and plan.recurrence != 'none':
                     # Recurring plan — mark only THIS occurrence as done
@@ -606,9 +606,9 @@ def maintenance_calendar_complete():
                 action = 'replacement' if ev_type == 'replacement' else 'maintenance'
                 event_date = request.form.get('date')
                 try:
-                    ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else datetime.utcnow().date()
+                    ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else now_local().date()
                 except ValueError:
-                    ev_d = datetime.utcnow().date()
+                    ev_d = now_local().date()
                 log = PartMaintenanceLog(
                     part_id=part.id,
                     action=action,
@@ -663,9 +663,9 @@ def maintenance_calendar_complete():
                 # Лог ниже делает запись «выполнено» (зелёной).
                 event_date = request.form.get('date')
                 try:
-                    ev_d = datetime.strptime(event_date, '%Y-%m-%d') if event_date else datetime.utcnow()
+                    ev_d = datetime.strptime(event_date, '%Y-%m-%d') if event_date else now_local()
                 except ValueError:
-                    ev_d = datetime.utcnow()
+                    ev_d = now_local()
                 mr.date_performed = ev_d
                 mr.performed_by = current_user.id
                 # Create PartMaintenanceLog so calendar shows green (done=True)
@@ -691,9 +691,9 @@ def maintenance_calendar_complete():
                 if eq:
                     event_date = request.form.get('date')
                     try:
-                        ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else datetime.utcnow().date()
+                        ev_d = datetime.strptime(event_date, '%Y-%m-%d').date() if event_date else now_local().date()
                     except ValueError:
-                        ev_d = datetime.utcnow().date()
+                        ev_d = now_local().date()
                     eq.last_service_date = ev_d
                     if eq.service_interval_days:
                         eq.next_service_date = ev_d + timedelta(days=eq.service_interval_days)
@@ -717,7 +717,7 @@ def maintenance_calendar_complete():
                         nd = mro.next_date
                         ev_d = nd.date() if isinstance(nd, datetime) else nd
                     if ev_d is None:
-                        ev_d = datetime.utcnow().date()
+                        ev_d = now_local().date()
                     # 1) отметить именно ЭТУ дату графика выполненной
                     mro.mark_date_completed(ev_d)
                     # 2) план продолжается: next_date = следующее вхождение после неё
@@ -741,7 +741,7 @@ def maintenance_calendar_complete():
         traceback.print_exc()
         flash(_('Error: %(err)s', err=str(e)[:100]), 'error')
 
-    month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
+    month = request.form.get('month', now_local().strftime('%Y-%m'))
     return redirect(url_for('maintenance.maintenance_calendar', month=month))
 
 # ── Квартальный график ТО на год (по каждой машине) ──────────────
@@ -993,7 +993,7 @@ def _yearly_to_chart(year):
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
 def maintenance_yearly_plan():
     """Квартальный график ТО на следующий год (по каждой машине)."""
-    today = datetime.utcnow().date()
+    today = now_local().date()
     year = safe_int(request.args.get('year')) or (today.year + 1)
     rows = _yearly_to_chart(year)
     return render_template('maintenance_yearly_plan.html', rows=rows, year=year)
@@ -1151,7 +1151,7 @@ def maintenance_calendar_delete():
         traceback.print_exc()
         flash(_('Error: %(err)s', err=str(e)[:100]), 'error')
 
-    month = request.form.get('month', datetime.utcnow().strftime('%Y-%m'))
+    month = request.form.get('month', now_local().strftime('%Y-%m'))
     return redirect(url_for('maintenance.maintenance_calendar', month=month))
 
 @bp.route('/maintenance-calendar/move', methods=['POST'])
@@ -1317,7 +1317,7 @@ def maintenance_calendar_window():
 @login_required
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
 def works_calendar():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
     month_start = datetime(year, mon, 1).date()
@@ -1441,7 +1441,7 @@ def works_calendar_delete(event_id):
 @bp.route('/maintenance-calendar/export')
 @login_required
 def maintenance_calendar_export():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
     month_start = datetime(year, mon, 1).date()

@@ -5,7 +5,7 @@ from flask import request, redirect, url_for, flash, render_template, jsonify
 from flask_login import login_required
 from flask_babel import gettext as _
 
-from models import db, GasCylinder, CylinderLog
+from models import db, GasCylinder, CylinderLog, now_local
 from utils import (resolve_user_id, role_required, log_audit, safe_commit,
                    safe_int, safe_date)
 from security import director_only
@@ -148,7 +148,7 @@ def cylinder_status(cyl_id):
     else:
         c.status = new_status
         if new_status == 'in_use' and not c.installed_at:
-            c.installed_at = datetime.utcnow()
+            c.installed_at = now_local()
 
     # Only ONE in_use per gas type (N2 / CO2 / MIX — рабочая пара своя на тип).
     # When activating a new one, others go back to full (installed, waiting) — not empty.
@@ -161,7 +161,7 @@ def cylinder_status(cyl_id):
         for other in others:
             other.status = 'full'
             if not other.installed_at:
-                other.installed_at = datetime.utcnow()
+                other.installed_at = now_local()
             db.session.add(CylinderLog(
                 cylinder_id=other.id,
                 action='in_use_to_full',
@@ -303,7 +303,7 @@ def _parse_z_refill(code):
 @role_required('admin', 'director', 'technician')
 def cylinder_scan_list():
     """Scan list page. Shows recent scans from DB so the list is not lost."""
-    since = datetime.utcnow() - timedelta(hours=48)
+    since = now_local() - timedelta(hours=48)
     # cylinders touched by scan-list flow (created/received recently)
     logs = CylinderLog.query.filter(
         CylinderLog.date >= since,
@@ -353,7 +353,7 @@ def cylinder_scan_list_add():
         # scanned only — NOT in stock until «Добавить на склад» (если accept — сразу)
         c = GasCylinder(gas_type=gas_type, cylinder_number=number,
                         status='full' if accept else 'scanned',
-                        received_at=datetime.utcnow() if accept else None)
+                        received_at=now_local() if accept else None)
         db.session.add(c)
         db.session.flush()
         created = True
@@ -363,7 +363,7 @@ def cylinder_scan_list_add():
                                    notes='Scan list (added to stock)' if accept else 'Scan list (not in stock yet)'))
     elif accept and (not c.received_at or c.status in ('scanned', None, '')):
         if not c.received_at:
-            c.received_at = datetime.utcnow()
+            c.received_at = now_local()
         if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
@@ -396,7 +396,7 @@ def cylinder_scan_list_add_stock():
             continue
         # Только сейчас принимаем на склад
         if not c.received_at:
-            c.received_at = datetime.utcnow()
+            c.received_at = now_local()
         if c.status in ('scanned', None, '') or c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
@@ -469,7 +469,7 @@ def cylinder_assign_work():
 
     if not c:
         status0 = 'in_use'
-        received0 = datetime.utcnow()
+        received0 = now_local()
         if action == 'add_list':
             status0 = 'scanned'
             received0 = None
@@ -487,7 +487,7 @@ def cylinder_assign_work():
                                    notes=f'Scan install action={action or "install"}'))
     elif action == 'add_stock' and (not c.received_at or c.status == 'scanned'):
         if not c.received_at:
-            c.received_at = datetime.utcnow()
+            c.received_at = now_local()
         if c.status not in ('in_use', 'empty', 'maintenance', 'defect'):
             c.status = 'full'
         db.session.add(CylinderLog(
@@ -509,14 +509,14 @@ def cylinder_assign_work():
     c.status = 'in_use'
     c.side = side
     if not c.received_at:
-        c.received_at = datetime.utcnow()
+        c.received_at = now_local()
     if refill_date:
         try:
             c.refill_date = datetime.strptime(refill_date, '%Y-%m-%d').date()
         except Exception:
             pass
     c.gas_type = gas_type if gas_type in GAS_TYPES else c.gas_type
-    c.installed_at = datetime.utcnow()
+    c.installed_at = now_local()
     db.session.add(CylinderLog(cylinder_id=c.id, action='install',
                                performed_by=resolve_user_id(),
                                notes=f'Installed on {side}'))
@@ -530,7 +530,7 @@ def cylinder_assign_work():
                 .order_by(GasCylinder.id.asc()).first())
     if neighbor:
         neighbor.status = 'in_use'
-        neighbor.installed_at = datetime.utcnow()
+        neighbor.installed_at = now_local()
         db.session.add(CylinderLog(
             cylinder_id=neighbor.id, action='status_full_to_in_use',
             performed_by=resolve_user_id(),

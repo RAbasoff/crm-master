@@ -12,6 +12,7 @@ from security import director_only
 
 from . import bp
 from . import _set_fault_status, _reporter_row, _notify_i18n_row, translate_status
+from models import now_local
 
 
 def _find_open_work_session(user_id):

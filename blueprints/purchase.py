@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, FaultReport, Machine, PurchaseRequest, User)
+from models import (db, FaultReport, Machine, PurchaseRequest, User, now_local)
 from utils import resolve_user_id
 from utils import add_work_report, create_notification, log_audit, role_required, safe_commit, safe_float
 from security import director_only
@@ -98,7 +98,7 @@ def purchase_request_detail(request_id):
 def purchase_request_approve(request_id):
     pr = PurchaseRequest.query.get_or_404(request_id)
     pr.status = 'approved'
-    pr.reviewed_at = datetime.utcnow()
+    pr.reviewed_at = now_local()
     pr.reviewer_id = current_user.id
     if not safe_commit():
         flash(_('Save failed'), 'error')
@@ -124,7 +124,7 @@ def purchase_request_approve(request_id):
 def purchase_request_reject(request_id):
     pr = PurchaseRequest.query.get_or_404(request_id)
     pr.status = 'rejected'
-    pr.reviewed_at = datetime.utcnow()
+    pr.reviewed_at = now_local()
     pr.reviewer_id = current_user.id
     if not safe_commit():
         flash(_('Save failed'), 'error')

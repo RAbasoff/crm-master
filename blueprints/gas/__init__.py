@@ -11,7 +11,7 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import (db, GasCylinder, GasSystemComponent, CylinderLog,
-                    CylinderOrder, MonthlyArchive)
+                    CylinderOrder, MonthlyArchive, now_local)
 from utils import log_audit, safe_commit, user_has_section_access
 
 bp = Blueprint('gas', __name__, url_prefix='/gas')
@@ -70,7 +70,7 @@ def _inventory_balance():
             GasCylinder.gas_type == gt,
             db.or_(GasCylinder.status == 'scanned', GasCylinder.received_at.is_(None))
         ).count()
-        now = datetime.utcnow()
+        now = now_local()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         ordered_month = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
             CylinderOrder.gas_type == gt,
@@ -116,7 +116,7 @@ def _promote_full_to_in_use(gas_type, reason='', user_id=None):
     if not full:
         return None
     full.status = 'in_use'
-    full.installed_at = datetime.utcnow()
+    full.installed_at = now_local()
     db.session.add(CylinderLog(
         cylinder_id=full.id,
         action='status_full_to_in_use',
@@ -263,7 +263,7 @@ def _side_pair(cylinders):
 def gas_dashboard():
     """Main gas module view with interactive cylinder visualization"""
     # Auto-archive previous month (empty cylinders + monthly counters)
-    now = datetime.utcnow()
+    now = now_local()
     _auto_archive(now)
 
     cylinders = GasCylinder.query.order_by(GasCylinder.gas_type, GasCylinder.cylinder_number).all()
@@ -296,7 +296,7 @@ def gas_dashboard():
     # Monthly consumption: count cylinders that became empty this month.
     # Уникальные баллоны (в старых данных на каждое опустошение падало два
     # лога — по записям расход был бы вдвое больше факта).
-    now = datetime.utcnow()
+    now = now_local()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     consumed_logs = CylinderLog.query.filter(
         CylinderLog.action.like('%_to_empty%'),
@@ -374,3 +374,4 @@ def gas_dashboard():
 
 
 from . import cylinders, components, orders, quality, reports
+from models import now_local

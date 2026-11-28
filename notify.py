@@ -13,6 +13,7 @@
 import os
 import logging
 from datetime import datetime
+from models import now_local
 
 log = logging.getLogger('app.notify')
 
@@ -217,7 +218,7 @@ def daily_notify_check(force=False):
     from datetime import timedelta
     from models import AppSetting, PushSubscription, User, db
     from logs import create_notification
-    now = datetime.now()
+    now = now_local()
     try:
         rec = AppSetting.query.get('notify_daily_check_at')
         last = None
@@ -351,7 +352,7 @@ def maybe_email_logs():
         tail = read_log_tail('app.log', 80)
         err = read_log_tail('error.log', 40)
         html = '<pre>' + '\n'.join(tail[-40:]) + '</pre><hr><pre>' + '\n'.join(err) + '</pre>'
-        return send_email(to, f'ProMaster logs {datetime.now():%Y-%m-%d %H:%M}', html)
+        return send_email(to, f'ProMaster logs {now_local():%Y-%m-%d %H:%M}', html)
     except Exception as e:
         log.error(f'LOG EMAIL: {e}')
         return False

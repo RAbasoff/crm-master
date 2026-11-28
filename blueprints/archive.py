@@ -9,8 +9,9 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import (db, MonthlyArchive, FaultReport, Opdracht, WorkReport, TimeEntry,
-                    VoorraadMutatie, MaintenancePlan, EquipmentMaintenance, TechnicalWorkOrder)
+                    VoorraadMutatie, MaintenancePlan, EquipmentMaintenance, TechnicalWorkOrder, now_local)
 from utils import role_required, safe_commit
+from models import now_local
 
 bp = Blueprint('archive', __name__)
 
@@ -55,7 +56,7 @@ def archive_page():
 def archive_documents_month():
     """Документы прошлого месяца → архив (archive_month), хранение бессрочное."""
     from models import SavedDocument
-    now = datetime.utcnow()
+    now = now_local()
     prev_month = (now.replace(day=1) - timedelta(days=1))
     month_str = prev_month.strftime('%Y-%m')
     d_from = prev_month.replace(day=1)
@@ -79,7 +80,7 @@ def archive_documents_month():
 @role_required('admin')
 def archive_create():
     """Archive current month's data and reset for new month."""
-    now = datetime.utcnow()
+    now = now_local()
     prev_month = (now.replace(day=1) - timedelta(days=1))
     month_str = prev_month.strftime('%Y-%m')
 

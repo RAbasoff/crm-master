@@ -12,6 +12,7 @@ from flask_babel import gettext as _
 from models import (db, AppSetting, FaultReport, Machine, User,
                     TechnicalWorkOrder, FaultWorkSession, now_local)
 from utils import role_required, safe_commit, safe_float
+from models import now_local
 
 bp = Blueprint('damage', __name__, url_prefix='/damage')
 

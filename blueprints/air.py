@@ -7,10 +7,11 @@ from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
 from models import (db, AirConnectionPoint, AirConnectionPhoto,
-                    AirLine, AirLineVertex, FactorySection)
+                    AirLine, AirLineVertex, FactorySection, now_local)
 from utils import (role_required, safe_commit, safe_int, safe_float,
                    save_uploaded_file, log_audit)
 from security import director_only
+from models import now_local
 
 bp = Blueprint('air', __name__, url_prefix='/air')
 
@@ -379,7 +380,7 @@ def api_lines_create():
     verts = data.get('vertices') or []
     if len(verts) < 2:
         return jsonify(ok=False, error='need 2+ vertices'), 400
-    name = (data.get('name') or '').strip() or ('3D ' + datetime.now().strftime('%d-%m %H:%M'))
+    name = (data.get('name') or '').strip() or ('3D ' + now_local().strftime('%d-%m %H:%M'))
     ln = AirLine(
         name=name,
         length_m=_opt_float(data.get('length_m')),

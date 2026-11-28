@@ -5,7 +5,7 @@ from flask import request, redirect, url_for, flash, render_template
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, GasCylinder, CylinderLog, CylinderOrder
+from models import db, GasCylinder, CylinderLog, CylinderOrder, now_local
 from utils import resolve_user_id, role_required, log_audit, safe_commit, safe_int
 
 from . import bp, GAS_LABELS
@@ -56,7 +56,7 @@ def order_status(order_id):
     old_status = o.status
     o.status = new_status
     if new_status == 'delivered':
-        o.delivered_at = datetime.utcnow()
+        o.delivered_at = now_local()
     if not safe_commit():
         flash(_('Save failed. Please try again.'), 'error')
         return redirect(url_for('gas.orders_list'))
@@ -77,7 +77,7 @@ def order_status(order_id):
                 cylinder_number=number,
                 barcode=number,
                 status='full',
-                received_at=o.delivered_at or datetime.utcnow(),
+                received_at=o.delivered_at or now_local(),
                 notes=f'From order #{o.id} ({o.supplier or "-"})'
             )
             db.session.add(cyl)

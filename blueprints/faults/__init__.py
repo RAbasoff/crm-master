@@ -438,3 +438,4 @@ def _director_rows(f, kind, detail=None):
 
 # Register route sub-modules
 from . import crud, workflow, media
+from models import now_local

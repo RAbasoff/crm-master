@@ -8,7 +8,7 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, User, ChatRoom, ChatParticipant, ChatMessage
+from models import db, User, ChatRoom, ChatParticipant, ChatMessage, now_local
 from utils import resolve_user_id
 from utils import role_required, safe_commit, safe_int, create_notification
 from logs import create_notifications
@@ -115,7 +115,7 @@ def chat_room(room_id):
         return redirect(url_for('chat.chat_list'))
 
     # Mark as read
-    participant.last_read_at = datetime.utcnow()
+    participant.last_read_at = now_local()
     if not safe_commit():
         pass  # Non-critical: read status update failed, continue showing room
 
@@ -240,7 +240,7 @@ def api_messages(room_id):
     messages = query.order_by(ChatMessage.created_at.asc()).limit(50).all()
 
     # Mark as read
-    participant.last_read_at = datetime.utcnow()
+    participant.last_read_at = now_local()
     # Update status to 'read' for messages from others
     for m in messages:
         if m.sender_id != current_user.id:

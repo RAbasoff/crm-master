@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from models import (Machine, MachineDocument, MachinePart, MaintenancePhoto,
                     MaintenanceRecord, SavedDocument, User, Verantwoordelijke,
-                    db)
+                    db, now_local)
 from security import director_only
 from utils import (log_audit, next_document_number, resolve_user_id,
                    role_required, safe_commit, safe_date, safe_float,
@@ -20,6 +20,7 @@ from utils import (log_audit, next_document_number, resolve_user_id,
 from utils import next_document_number as _next_no
 
 from . import _build_act_pdf, bp
+from models import now_local
 
 @bp.route('/<int:machine_id>/parts')
 @login_required
@@ -173,7 +174,7 @@ def machine_add_maintenance(machine_id):
             safe_commit()
         flash(_('Maintenance record added'), 'success')
         return redirect(url_for('machines.machine_detail', machine_id=m.id))
-    return render_template('maintenance_form.html', machine=m, now=datetime.utcnow())
+    return render_template('maintenance_form.html', machine=m, now=now_local())
 
 
 @bp.route('/<int:machine_id>/transfer-act')
@@ -188,7 +189,7 @@ def machine_transfer_act(machine_id):
     act_no = next_document_number('ACT')
     return render_template('machine_transfer_act.html',
                            machine=m, users=users, persons=persons,
-                           items_total=items_total, now=datetime.utcnow(),
+                           items_total=items_total, now=now_local(),
                            act_no=act_no)
 
 
@@ -238,7 +239,7 @@ def machine_transfer_act_save(machine_id):
     title = title or f"Transfer Act {m.name}"
 
     # PDF — путь: static/uploads/docs/ГГГГ/НОМЕР.pdf
-    year = datetime.utcnow().strftime('%Y')
+    year = now_local().strftime('%Y')
     abs_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'static/uploads'), 'docs', year)
     os.makedirs(abs_dir, exist_ok=True)
     pdf_name = f'{number}.pdf'

@@ -341,7 +341,7 @@ def maintenance_plan_delete(plan_id):
 @bp.route('/api/maintenance/plans')
 @login_required
 def api_maintenance_plans():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     year, mon = map(int, month.split('-'))
     month_start = datetime(year, mon, 1).date()
@@ -420,7 +420,7 @@ def api_maintenance_today():
 @login_required
 def api_mule_reminders():
     """Ближайшее и просроченное ТО Mule (для всплывающих напоминаний)."""
-    today = datetime.utcnow().date()
+    today = now_local().date()
     soon = today + timedelta(days=14)
     q = EquipmentMaintenance.query.filter(
         EquipmentMaintenance.next_date.isnot(None),
@@ -446,7 +446,7 @@ def api_mule_reminders():
 @bp.route('/api/maintenance/reminders')
 @login_required
 def api_maintenance_reminders():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     soon = today + timedelta(days=14)
 
     # Filter at DB level: only parts with upcoming dates

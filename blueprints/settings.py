@@ -39,7 +39,6 @@ def audit_log_page():
 @role_required('admin')
 def settings_activity():
     """Подробный журнал: кто онлайн, что смотрит и делает."""
-    from models import now_local
     now = now_local()
     online_window = now - timedelta(minutes=5)
     users = User.query.filter(User.is_active_user == True).order_by(User.display_name, User.username).all()
@@ -135,7 +134,7 @@ def settings():
     if license_info['expire']:
         try:
             exp_d = datetime.strptime(license_info['expire'], '%Y-%m-%d').date()
-            license_info['days_left'] = (exp_d - datetime.now().date()).days
+            license_info['days_left'] = (exp_d - now_local().date()).days
         except ValueError:
             license_info['days_left'] = None
     else:

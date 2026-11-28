@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, AuditLog, CylinderLog, CylinderOrder, FactorySection, FaultReport, GasCylinder, Machine, Monteur, Opdracht, SystemLog, User, UserActivityLog, Verantwoordelijke, VoorraadMutatie)
+from models import (db, AuditLog, CylinderLog, CylinderOrder, FactorySection, FaultReport, GasCylinder, Machine, Monteur, Opdracht, SystemLog, User, UserActivityLog, Verantwoordelijke, VoorraadMutatie, now_local)
 from utils import role_required, safe_date, safe_int
 from security import director_only
 
@@ -28,13 +28,13 @@ def reports():
 @director_only()
 def reports_advanced():
     report_type = request.args.get('type', 'activity')
-    date_from = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    date_to = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
+    date_from = request.args.get('date_from', (now_local() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    date_to = request.args.get('date_to', now_local().strftime('%Y-%m-%d'))
     user_id = request.args.get('user_id', '')
     section_id = request.args.get('section_id', '')
     
-    d_from = safe_date(date_from) or (datetime.utcnow() - timedelta(days=30))
-    d_to = (safe_date(date_to) or datetime.utcnow()) + timedelta(days=1)
+    d_from = safe_date(date_from) or (now_local() - timedelta(days=30))
+    d_to = (safe_date(date_to) or now_local()) + timedelta(days=1)
     
     users = User.query.filter(User.is_active_user == True).order_by(User.display_name).all()
     sections = FactorySection.query.order_by(FactorySection.name).all()
@@ -160,7 +160,7 @@ def reports_advanced():
         # Monthly breakdown (last 6 months)
         chart_data = []
         for i in range(5, -1, -1):
-            m_start = (datetime.utcnow().replace(day=1) - timedelta(days=i*30)).replace(day=1)
+            m_start = (now_local().replace(day=1) - timedelta(days=i*30)).replace(day=1)
             m_end = (m_start + timedelta(days=32)).replace(day=1)
             m_key = m_start.strftime('%Y-%m')
             r_qty = db.session.query(db.func.coalesce(db.func.sum(CylinderOrder.quantity), 0)).filter(
@@ -210,15 +210,15 @@ def reports_advanced():
 def reports_export():
     report_type = request.args.get('type', 'activity')
     format_type = request.args.get('format', 'csv')
-    date_from = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    date_to = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
+    date_from = request.args.get('date_from', (now_local() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    date_to = request.args.get('date_to', now_local().strftime('%Y-%m-%d'))
     user_id = request.args.get('user_id', '')
     section_id = request.args.get('section_id', '')
     import io
     from flask import send_file
     
-    d_from = safe_date(date_from) or (datetime.utcnow() - timedelta(days=30))
-    d_to = (safe_date(date_to) or datetime.utcnow()) + timedelta(days=1)
+    d_from = safe_date(date_from) or (now_local() - timedelta(days=30))
+    d_to = (safe_date(date_to) or now_local()) + timedelta(days=1)
     
     # Collect data
     headers = []
@@ -366,7 +366,7 @@ def reports_export():
         # Title
         doc.add_heading(title, level=1)
         doc.add_paragraph(f'Период: {period}')
-        doc.add_paragraph(f'Сгенерировано: {datetime.utcnow().strftime("%d.%m.%Y %H:%M")}')
+        doc.add_paragraph(f'Сгенерировано: {now_local().strftime("%d.%m.%Y %H:%M")}')
         
         # Table
         table = doc.add_table(rows=1, cols=len(headers))
@@ -488,7 +488,7 @@ def report_period():
             flash(_('Invalid date format'), 'error')
             return redirect(url_for('reports.report_period'))
     else:
-        d_to = datetime.utcnow()
+        d_to = now_local()
         d_from = d_to - timedelta(days=30)
     orders = Opdracht.query.filter(Opdracht.aangemaakt >= d_from, Opdracht.aangemaakt < d_to).order_by(Opdracht.aangemaakt.desc()).all()
     omzet = sum(o.totaal for o in orders if o.status == 'afgeleverd')
@@ -518,8 +518,8 @@ def report_period():
 @role_required('admin', 'director', 'technician')
 def report_worker(worker_id):
     w = Monteur.query.get_or_404(worker_id)
-    df = request.args.get('date_from', (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    dt = request.args.get('date_to', datetime.utcnow().strftime('%Y-%m-%d'))
+    df = request.args.get('date_from', (now_local() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    dt = request.args.get('date_to', now_local().strftime('%Y-%m-%d'))
     orders = Opdracht.query.filter(Opdracht.monteur_id == worker_id,
         Opdracht.aangemaakt >= datetime.strptime(df, '%Y-%m-%d'),
         Opdracht.aangemaakt < datetime.strptime(dt, '%Y-%m-%d') + timedelta(days=1)

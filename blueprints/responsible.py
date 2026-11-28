@@ -11,7 +11,7 @@ import os, io, json
 
 from config import SECTIONS_LIST
 from sqlalchemy import func
-from models import (db, FactorySection, GroupPermission, Machine, MaintenancePlan, Monteur, Opdracht, ResponsibleGroup, User, Verantwoordelijke)
+from models import (db, FactorySection, GroupPermission, Machine, MaintenancePlan, Monteur, Opdracht, ResponsibleGroup, User, Verantwoordelijke, now_local)
 from utils import log_audit, role_required, safe_commit, safe_int
 
 bp = Blueprint('responsible', __name__)
@@ -216,7 +216,7 @@ def responsible_detail(resp_id):
     orders = Opdracht.query.filter_by(responsible_id=c.id).order_by(Opdracht.aangemaakt.desc()).limit(20).all()
     # Find linked workers (via group)
     workers = Monteur.query.filter_by(group_id=c.group_id).all() if c.group_id else []
-    today = datetime.utcnow().date()
+    today = now_local().date()
     return render_template('responsible_detail.html',
         person=c, machines=machines, users=users, sections=sections, orders=orders, workers=workers, today=today)
 

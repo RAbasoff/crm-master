@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from flask_wtf.csrf import generate_csrf
 
-from models import db, OfflineMutation
+from models import db, OfflineMutation, now_local
 from utils import safe_commit
 
 bp = Blueprint('offline', __name__)
@@ -55,7 +55,7 @@ def remember_mutation(client_id, path, method, temp_number, title, status, resul
         rec.title = (title or '')[:200] or None
         rec.status = status
         rec.result_json = result_obj
-        rec.completed_at = datetime.utcnow()
+        rec.completed_at = now_local()
         safe_commit()
     except Exception:
         db.session.rollback()

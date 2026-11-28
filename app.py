@@ -222,6 +222,7 @@ def _set_sqlite_pragma(dbapi_conn, connection_record):
             pass
 
 from flask_login import LoginManager
+from models import now_local
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -269,7 +270,7 @@ def backup_database(force=False, suffix=''):
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'werkplaats.db')
     backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
-    date_str = datetime.now().strftime('%Y%m%d')
+    date_str = now_local().strftime('%Y%m%d')
     backup_path = os.path.join(backup_dir, f'werkplaats_{date_str}{suffix}.db')
     if not os.path.exists(db_path):
         return None
@@ -289,7 +290,7 @@ def scheduled_backup():
     Вызывается из фонового цикла — не зависит от запросов пользователей.
     Имена: werkplaats_YYYYMMDD.db (вечерний) и werkplaats_YYYYMMDD_1230.db (дневной).
     Хранение — последние 30 файлов."""
-    now = datetime.now()
+    now = now_local()
     slot, suffix = None, ''
     # окна по ЦЕЛОМУ часу: фоновый цикл тикает произвольной минутой,
     # узкое окно (напр. 23:30-23:59) могло никогда не совпасть с тиком
@@ -1706,7 +1707,7 @@ def me_day_plan():
     orders = _get_user_two_plan(current_user)
     blocker = _get_blocking_open_two(current_user)
     to_plans = _get_today_to_plans(current_user)
-    today = datetime.now().date()
+    today = now_local().date()
     today_orders = [o for o in orders if o.planned_date == today]
     later_orders = [o for o in orders if o.planned_date and o.planned_date > today]
     no_date_orders = [o for o in orders if not o.planned_date]
@@ -1782,9 +1783,14 @@ def profile():
 @login_required
 def change_password():
     if request.method == 'POST':
+        # Текущий пароль обязателен: раньше его не спрашивали, и достаточно
+        # было минуты у чужого открытого сессии, чтобы навсегда забрать аккаунт.
+        cur_pass = request.form.get('current_password', '')
         new_pass = request.form.get('new_password', '').strip()
         confirm_pass = request.form.get('confirm_password', '').strip()
-        if not new_pass or len(new_pass) < 8:
+        if not cur_pass or not current_user.check_password(cur_pass):
+            flash(_('Current password is incorrect'), 'error')
+        elif not new_pass or len(new_pass) < 8:
             flash(_('Password must be at least 8 characters'), 'error')
         elif new_pass != confirm_pass:
             flash(_('Passwords do not match'), 'error')

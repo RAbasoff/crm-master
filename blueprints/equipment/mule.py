@@ -15,6 +15,7 @@ from utils import (ensure_fpdf, find_pdf_font, log_audit, log_system,
 
 from . import bp
 from . import _mule_devices, _norm_serial, _pdf_response
+from models import now_local
 
 
 @bp.route('/equipment/mule-list')
@@ -204,7 +205,7 @@ def equipment_mule_list_pdf():
         s = str(s if s is not None else '')
         return s if unicode_font else s.encode('latin-1', 'replace').decode('latin-1')
 
-    date_str = datetime.now().strftime('%d-%m-%Y %H:%M')
+    date_str = now_local().strftime('%d-%m-%Y %H:%M')
 
     class ListPDF(FPDF):
         def header(self):
@@ -283,4 +284,4 @@ def equipment_mule_list_pdf():
             pdf.set_text_color(0)
             pdf.set_font(base, '', 8)
 
-    return _pdf_response(pdf, f'mule-list-{datetime.now():%Y%m%d}.pdf')
+    return _pdf_response(pdf, f'mule-list-{now_local():%Y%m%d}.pdf')

@@ -19,7 +19,7 @@ from . import bp
 @login_required
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
 def gas_quality_list():
-    today = datetime.utcnow().date()
+    today = now_local().date()
     month = request.args.get('month', today.strftime('%Y-%m'))
     try:
         y, m = map(int, month.split('-'))

@@ -13,8 +13,9 @@ import io
 from models import (db, FaultReport, Machine, MachinePart, VoorraadItem, VoorraadMutatie,
                     User, TechnicalWorkOrder, WorkReport, TimeEntry, MaintenancePlan,
                     Opdracht, Monteur, FactorySection, GasCylinder, ResponsibleGroup,
-                    UserActivityLog)
+                    UserActivityLog, now_local)
 from utils import role_required, safe_int, safe_date
+from models import now_local
 
 bp = Blueprint('stats', __name__)
 
@@ -79,8 +80,8 @@ def stats_full():
         period = (d_to - d_from).days
     else:
         period = safe_int(request.args.get('period'), 30)
-        d_from = datetime.utcnow() - timedelta(days=period)
-        d_to = datetime.utcnow() + timedelta(days=1)
+        d_from = now_local() - timedelta(days=period)
+        d_to = now_local() + timedelta(days=1)
         date_from = d_from.strftime('%Y-%m-%d')
         date_to = (d_to - timedelta(days=1)).strftime('%Y-%m-%d')
     
@@ -112,7 +113,7 @@ def stats_full():
     
     # Users stats
     users_total = User.query.filter(User.is_active_user == True).count()
-    users_online = UserActivityLog.query.filter(UserActivityLog.action == 'login', UserActivityLog.created_at >= datetime.utcnow() - timedelta(hours=1)).count()
+    users_online = UserActivityLog.query.filter(UserActivityLog.action == 'login', UserActivityLog.created_at >= now_local() - timedelta(hours=1)).count()
     
     # TWO stats
     two_total = TechnicalWorkOrder.query.count()
@@ -227,15 +228,15 @@ def stats_export():
         period = (d_to - d_from).days
     else:
         period = safe_int(request.args.get('period'), 30)
-        d_from = datetime.utcnow() - timedelta(days=period)
-        d_to = datetime.utcnow() + timedelta(days=1)
+        d_from = now_local() - timedelta(days=period)
+        d_to = now_local() + timedelta(days=1)
         date_from = d_from.strftime('%Y-%m-%d')
         date_to = (d_to - timedelta(days=1)).strftime('%Y-%m-%d')
     
     # Collect all stats
     stats = {
         'period': f'{date_from} — {date_to}',
-        'date': datetime.utcnow().strftime('%d.%m.%Y %H:%M'),
+        'date': now_local().strftime('%d.%m.%Y %H:%M'),
         'faults': {
             'total': FaultReport.query.count(),
             'period': FaultReport.query.filter(FaultReport.created_at >= d_from).count(),
@@ -288,7 +289,7 @@ def stats_export():
         FaultReport.priority, db.func.count(FaultReport.id)
     ).filter(FaultReport.created_at >= d_from).group_by(FaultReport.priority).all()
     
-    filename = f'statistics_{period}days_{datetime.utcnow().strftime("%Y%m%d")}'
+    filename = f'statistics_{period}days_{now_local().strftime("%Y%m%d")}'
     
     # === TXT ===
     if format_type == 'txt':
@@ -654,7 +655,7 @@ def stats_parts():
 def api_stats():
     days = []
     for i in range(29, -1, -1):
-        dag = datetime.utcnow().date() - timedelta(days=i)
+        dag = now_local().date() - timedelta(days=i)
         c = Opdracht.query.filter(Opdracht.aangemaakt >= datetime.combine(dag, datetime.min.time()),
             Opdracht.aangemaakt < datetime.combine(dag + timedelta(days=1), datetime.min.time())).count()
         days.append({'date': dag.strftime('%d.%m'), 'count': c})

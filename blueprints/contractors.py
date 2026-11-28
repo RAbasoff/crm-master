@@ -6,7 +6,7 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template
 from flask_login import login_required
 from flask_babel import gettext as _
 
-from models import db, Contractor, ContractorEmployee
+from models import db, Contractor, ContractorEmployee, now_local
 from utils import role_required, log_audit, safe_commit, safe_int, safe_float, safe_date
 
 bp = Blueprint('contractors', __name__, url_prefix='/contractors')
@@ -63,7 +63,7 @@ def contractor_new():
 @role_required('admin', 'director')
 def contractor_detail(contractor_id):
     c = Contractor.query.get_or_404(contractor_id)
-    today = datetime.utcnow().date()
+    today = now_local().date()
     return render_template('contractor_detail.html', contractor=c, today=today)
 
 

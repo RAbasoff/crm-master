@@ -38,7 +38,6 @@ def _anchor_date():
     try:
         return datetime.strptime(raw, '%Y-%m-%d').date()
     except Exception:
-        from models import now_local
         return now_local().date()
 
 
@@ -155,7 +154,6 @@ def planning_purchase_save():
     d = safe_date(request.form.get('planned_date'))
     item.planned_date = d.date() if hasattr(d, 'date') else (d or item.planned_date)
     if item.planned_date is None:
-        from models import now_local
         item.planned_date = now_local().date()
     item.notes = (request.form.get('notes') or '').strip()
     if not pid:
@@ -261,7 +259,6 @@ def planning_production_save():
     d = safe_date(request.form.get('prod_date'))
     item.prod_date = d.date() if hasattr(d, 'date') else (d or item.prod_date)
     if item.prod_date is None:
-        from models import now_local
         item.prod_date = now_local().date()
     item.notes = (request.form.get('notes') or '').strip()
     if not pid:
@@ -424,7 +421,6 @@ def planning_shipment_save():
     d = safe_date(request.form.get('ship_date'))
     item.ship_date = d.date() if hasattr(d, 'date') else (d or item.ship_date)
     if item.ship_date is None:
-        from models import now_local
         item.ship_date = now_local().date()
     item.notes = (request.form.get('notes') or '').strip()
     if not pid:

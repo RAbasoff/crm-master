@@ -344,7 +344,7 @@ def log_exception(exc, category='http', source=None):
     details = tb[-4000:] if tb else str(exc)
     try:
         with open(_errors_log_path(), 'a', encoding='utf-8') as f:
-            f.write(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+            f.write(f"\n[{now_local().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
             f.write(details or '')
             f.write('\n')
     except Exception:

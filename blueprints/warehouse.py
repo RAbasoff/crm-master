@@ -730,7 +730,7 @@ def warehouse_transfer_print():
         return redirect(url_for('warehouse.warehouse_list'))
     item_ids = [safe_int(x) for x in ids.split(',') if x.strip()]
     items = VoorraadItem.query.filter(VoorraadItem.id.in_(item_ids)).all()
-    return render_template('warehouse_transfer.html', items=items, now=datetime.utcnow())
+    return render_template('warehouse_transfer.html', items=items, now=now_local())
 
 
 @bp.route('/<int:item_id>/transfer', methods=['GET', 'POST'])

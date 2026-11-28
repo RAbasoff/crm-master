@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, Invoice, InvoiceItem, VoorraadItem)
+from models import (db, Invoice, InvoiceItem, VoorraadItem, now_local)
 from utils import resolve_user_id
 from utils import role_required, safe_commit, safe_date, safe_float
 from security import director_only
@@ -132,7 +132,7 @@ def invoice_approve(invoice_id):
     inv = Invoice.query.get_or_404(invoice_id)
     inv.status = 'approved'
     inv.signed_by = current_user.id
-    inv.signed_at = datetime.utcnow()
+    inv.signed_at = now_local()
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('invoices.invoice_detail', invoice_id=inv.id))
@@ -149,7 +149,7 @@ def invoice_reject(invoice_id):
     inv.status = 'rejected'
     inv.rejection_reason = request.form.get('rejection_reason', '')
     inv.signed_by = current_user.id
-    inv.signed_at = datetime.utcnow()
+    inv.signed_at = now_local()
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('invoices.invoice_detail', invoice_id=inv.id))

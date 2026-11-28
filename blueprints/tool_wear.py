@@ -7,7 +7,7 @@ from flask import Blueprint, request, redirect, url_for, flash, render_template,
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 
-from models import db, ToolWear, ToolWearActDocument, Notification
+from models import db, ToolWear, ToolWearActDocument, Notification, now_local
 from utils import (role_required, safe_commit, safe_int, check_tool_wear_notifications,
                    user_has_section_access, log_system, save_uploaded_file, log_audit)
 
@@ -22,14 +22,14 @@ def tool_wear_page():
     if not tools:
         for m in default_machines:
             t = ToolWear(machine_name=m, tool_name='Knives / Cutter', cycle_days=14,
-                         last_replaced=datetime.utcnow().date())
+                         last_replaced=now_local().date())
             db.session.add(t)
         if not safe_commit():
             flash(_('Save failed'), 'error')
             return redirect(request.referrer or '/')
         tools = ToolWear.query.order_by(ToolWear.machine_name).all()
 
-    today = datetime.utcnow().date()
+    today = now_local().date()
     for t in tools:
         cycle = t.cycle_days or 14
         if t.last_replaced:
@@ -52,7 +52,7 @@ def tool_wear_add():
     cycle_days = safe_int(request.form.get('cycle_days'), 14)
     if machine_name:
         t = ToolWear(machine_name=machine_name, tool_name=tool_name, cycle_days=cycle_days,
-                     last_replaced=datetime.utcnow().date())
+                     last_replaced=now_local().date())
         db.session.add(t)
         if not safe_commit():
             flash(_('Save failed'), 'error')
@@ -100,7 +100,7 @@ def tool_wear_delete(tool_id):
 def tool_wear_reset(tool_id):
     tool = ToolWear.query.get_or_404(tool_id)
     tool.wear_percent = 0
-    tool.last_replaced = datetime.utcnow().date()
+    tool.last_replaced = now_local().date()
     tool.updated_by = current_user.id
     if not safe_commit():
         flash(_('Save failed'), 'error')
@@ -129,7 +129,7 @@ def api_tool_wear_warnings():
     if not allowed:
         return jsonify({'warnings': []})
 
-    today = datetime.utcnow().date()
+    today = now_local().date()
     warnings = []
     for t in ToolWear.query.all():
         cycle = t.cycle_days or 14

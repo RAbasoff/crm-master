@@ -15,6 +15,7 @@ from utils import (resolve_user_id, role_required, log_audit, safe_commit,
                    safe_int, ensure_fpdf, find_pdf_font)
 
 from . import bp, _inventory_balance, GAS_TYPES, GAS_LABELS
+from models import now_local
 
 
 @bp.route('/archive', methods=['POST'])
@@ -22,7 +23,7 @@ from . import bp, _inventory_balance, GAS_TYPES, GAS_LABELS
 @role_required('admin')
 def gas_archive():
     """Snapshot empty cylinders to MonthlyArchive (keep them in stock — balance identity)."""
-    now = datetime.utcnow()
+    now = now_local()
     month_key = now.strftime('%Y-%m')
 
     empty = GasCylinder.query.filter_by(status='empty').all()
@@ -250,11 +251,11 @@ def gas_report_pdf():
     date_from = request.args.get('from') or request.args.get('date_from') or ''
     date_to = request.args.get('to') or request.args.get('date_to') or ''
     try:
-        d_from = datetime.strptime(date_from, '%Y-%m-%d') if date_from else datetime.utcnow().replace(day=1) - timedelta(days=180)
-        d_to = datetime.strptime(date_to, '%Y-%m-%d') if date_to else datetime.utcnow() + timedelta(days=1)
+        d_from = datetime.strptime(date_from, '%Y-%m-%d') if date_from else now_local().replace(day=1) - timedelta(days=180)
+        d_to = datetime.strptime(date_to, '%Y-%m-%d') if date_to else now_local() + timedelta(days=1)
     except ValueError:
-        d_from = datetime.utcnow().replace(day=1) - timedelta(days=180)
-        d_to = datetime.utcnow() + timedelta(days=1)
+        d_from = now_local().replace(day=1) - timedelta(days=180)
+        d_to = now_local() + timedelta(days=1)
 
     # Собираем месяцы
     months = []

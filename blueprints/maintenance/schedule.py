@@ -131,7 +131,7 @@ def maintenance_schedule_generate():
         flash(_('No active schedules'), 'error')
         return redirect(url_for('maintenance.maintenance_schedule'))
 
-    today = datetime.utcnow().date()
+    today = now_local().date()
     end_date = today + timedelta(days=months * 31)
     created = 0
     skipped = 0

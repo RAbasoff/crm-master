@@ -8,6 +8,7 @@
 import os
 import time as _time
 from datetime import datetime, timedelta
+from models import now_local
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
 _STAMP_DIR = os.path.join(_BASE, 'backups')
@@ -158,7 +159,7 @@ def _run_cleanup(force=False, do_vacuum=True):
                 f.seek(-200 * 1024, os.SEEK_END)
                 tail = f.read()
             with open(log_path, 'wb') as f:
-                f.write(b'... rotated by auto-clean %s ...\n' % datetime.now().strftime('%Y-%m-%d %H:%M').encode())
+                f.write(b'... rotated by auto-clean %s ...\n' % now_local().strftime('%Y-%m-%d %H:%M').encode())
                 f.write(tail)
             stats['errors_log'] = 'rotated'
     except Exception as e:
@@ -190,7 +191,7 @@ def _run_cleanup(force=False, do_vacuum=True):
     try:
         os.makedirs(_STAMP_DIR, exist_ok=True)
         with open(_STAMP, 'w', encoding='utf-8') as f:
-            f.write(datetime.now().strftime('%Y%m%d'))
+            f.write(now_local().strftime('%Y%m%d'))
     except Exception:
         pass
     return stats
@@ -198,7 +199,7 @@ def _run_cleanup(force=False, do_vacuum=True):
 
 def maybe_auto_cleanup():
     """Раз в сутки в час AUTO_CLEANUP_HOUR (первый запрос в окне часа)."""
-    now = datetime.now()
+    now = now_local()
     if now.hour != _cleanup_hour():
         return
     os.makedirs(_STAMP_DIR, exist_ok=True)
@@ -220,7 +221,7 @@ def maybe_planning_reminders():
 
     Шлёт один раз в день (штамп backups/.planning_reminders_stamp).
     """
-    now = datetime.now()
+    now = now_local()
     if now.hour != 7:
         return
     stamp = os.path.join(_STAMP_DIR, '.planning_reminders_stamp')

@@ -169,7 +169,7 @@ def _get_or_create_device(name, model, serial, machine_id=None):
 
 
 def gen_eq_order_number():
-    day = datetime.utcnow().strftime('%Y%m%d')
+    day = now_local().strftime('%Y%m%d')
     num = next_number_suffix(EquipmentPartOrder, 'order_number', f'EPO-{day}')
     return f'EPO-{day}-{num:04d}'
 
@@ -310,3 +310,4 @@ def _equipment_ids_query(ids_param):
 
 # Sub-modules attach their routes to `bp` via `from . import bp` at import time.
 from . import crud, mule, exports  # noqa: E402,F401
+from models import now_local

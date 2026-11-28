@@ -18,6 +18,7 @@ from utils import (role_required, safe_commit, safe_int, safe_float, safe_date,
                    get_belgian_holidays, save_uploaded_file, log_audit, create_notification,
                    add_work_report)
 from security import director_only
+from models import now_local
 
 bp = Blueprint('two', __name__)
 
@@ -91,8 +92,18 @@ def _load_machine_to_checklist(machine_id, period=None):
 @role_required('admin', 'director', 'technician', 'user', 'responsible')
 def two_list():
     status_f = (request.args.get('status') or '').strip()
-    mine = request.args.get('mine') == '1'
-    q = TechnicalWorkOrder.query
+    mine = (request.args.get('mine') == '1')
+    # joinedload — иначе каждая строка списка тянула machine/workers/fault
+    # отдельным запросом (N+1) и страница тормозила с ростом истории
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import case as _case
+    q = TechnicalWorkOrder.query.options(
+        joinedload(TechnicalWorkOrder.machine),
+        joinedload(TechnicalWorkOrder.fault),
+        joinedload(TechnicalWorkOrder.creator),
+        joinedload(TechnicalWorkOrder.workers),
+        joinedload(TechnicalWorkOrder.photos),
+    )
     if status_f:
         q = q.filter(TechnicalWorkOrder.status == status_f)
     if mine and current_user.is_authenticated:
@@ -101,24 +112,20 @@ def two_list():
         if monteur:
             q = q.join(two_workers, two_workers.c.two_id == TechnicalWorkOrder.id).filter(
                 two_workers.c.worker_id == monteur.id)
-    if current_user.has_role('admin', 'director', 'technician'):
-        orders = q.order_by(TechnicalWorkOrder.created_at.desc()).all()
-    elif getattr(current_user, 'role', '') in ('user', 'responsible') or hasattr(current_user, '_person'):
-        orders = q.order_by(TechnicalWorkOrder.created_at.desc()).all()
-    else:
+    if not (current_user.has_role('admin', 'director', 'technician')
+            or getattr(current_user, 'role', '') in ('user', 'responsible')
+            or hasattr(current_user, '_person')):
         try:
-            orders = q.filter_by(created_by=resolve_user_id()).order_by(TechnicalWorkOrder.created_at.desc()).all()
+            q = q.filter_by(created_by=resolve_user_id())
         except Exception:
-            orders = []
-
-    # Открытые TWO — всегда СВЕРХУ (независимо от даты).
-    # completed/cancelled — по дате и порядковому номеру.
-    # Сортировка по полному номеру (год сбрасывает NNNN — сортируем по всей строке)
-    orders = sorted(orders, key=lambda o: o.number or '', reverse=True)
-    def _two_open_key(o):
-        st = (o.status or '').lower()
-        return 1 if st in ('completed', 'cancelled', 'done', 'closed', 'finished') else 0
-    orders = sorted(orders, key=_two_open_key)
+            pass
+    # Сортировка на стороне SQL: сначала открытые, затем по номеру (убыв.).
+    # Раньше список грузился целиком и сортировался дважды в Python.
+    _OPEN_ST = ('completed', 'cancelled', 'done', 'closed', 'finished')
+    orders = q.order_by(
+        _case((TechnicalWorkOrder.status.in_(_OPEN_ST), 1), else_=0),
+        TechnicalWorkOrder.number.desc(),
+    ).all()
 
     # Группировка: сначала блок «Открытые», затем по году → месяцу.
     from collections import OrderedDict

@@ -12,6 +12,7 @@ from utils import (log_audit, resolve_user_id, role_required, safe_commit, adjus
                    safe_date, safe_float, safe_int)
 
 from . import bp
+from models import now_local
 
 # ============================================================
 # CONSUMABLES — link, write-off (consume), update-date, unlink

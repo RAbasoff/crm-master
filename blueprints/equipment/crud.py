@@ -11,7 +11,7 @@ from flask_babel import gettext as _
 
 from models import (db, EquipmentMaintenance, EquipmentPart, EquipmentComponent,
                     EquipmentPartOrder, EquipmentMROPhoto, EquipmentMRODocument,
-                    VoorraadItem, VoorraadMutatie, MuleDevice)
+                    VoorraadItem, VoorraadMutatie, MuleDevice, now_local)
 from utils import (resolve_user_id, log_audit, role_required, safe_commit, adjust_stock,
                    safe_date, safe_float, safe_int, sanitize_like,
                    save_uploaded_file)
@@ -397,7 +397,7 @@ def equipment_order_status(order_id):
     if new_status in ('pending', 'ordered', 'delivered', 'cancelled'):
         o.status = new_status
         if new_status == 'delivered':
-            o.delivered_at = datetime.utcnow()
+            o.delivered_at = now_local()
     if not safe_commit():
         flash(_('Save failed'), 'error')
         return redirect(url_for('equipment.equipment_list'))

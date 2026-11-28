@@ -9,7 +9,7 @@ from flask_babel import gettext as _
 from werkzeug.utils import secure_filename
 import os, io, json
 
-from models import (db, FaultReport, Machine, MaintenanceRecord, User, VoorraadItem, VoorraadMutatie)
+from models import (db, FaultReport, Machine, MaintenanceRecord, User, VoorraadItem, VoorraadMutatie, now_local)
 from utils import role_required
 
 bp = Blueprint('export', __name__)
@@ -31,7 +31,7 @@ def export_machines():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
                      mimetype='text/csv', as_attachment=True,
-                     download_name=f'machines_{datetime.utcnow().strftime("%Y%m%d")}.csv')
+                     download_name=f'machines_{now_local().strftime("%Y%m%d")}.csv')
 
 
 @bp.route('/export/warehouse')
@@ -50,7 +50,7 @@ def export_warehouse():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
                      mimetype='text/csv', as_attachment=True,
-                     download_name=f'warehouse_{datetime.utcnow().strftime("%Y%m%d")}.csv')
+                     download_name=f'warehouse_{now_local().strftime("%Y%m%d")}.csv')
 
 
 @bp.route('/export/movements')
@@ -83,7 +83,7 @@ def export_movements():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
                      mimetype='text/csv', as_attachment=True,
-                     download_name=f'movements_{datetime.utcnow().strftime("%Y%m%d")}.csv')
+                     download_name=f'movements_{now_local().strftime("%Y%m%d")}.csv')
 
 
 @bp.route('/export/maintenance')
@@ -104,7 +104,7 @@ def export_maintenance():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
                      mimetype='text/csv', as_attachment=True,
-                     download_name=f'maintenance_{datetime.utcnow().strftime("%Y%m%d")}.csv')
+                     download_name=f'maintenance_{now_local().strftime("%Y%m%d")}.csv')
 
 
 @bp.route('/export/faults')
@@ -127,4 +127,4 @@ def export_faults():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
                      mimetype='text/csv', as_attachment=True,
-                     download_name=f'faults_{datetime.utcnow().strftime("%Y%m%d")}.csv')
+                     download_name=f'faults_{now_local().strftime("%Y%m%d")}.csv')
